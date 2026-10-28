@@ -34,15 +34,29 @@ export const ProofOfDeliveryModal: React.FC = () => {
           </button>
         </div>
 
-        {/* Verification Photo Simulation */}
+        {/* Verification Photo */}
         <div className="mt-4 rounded-2xl overflow-hidden border border-gray-200 bg-gray-100 relative">
-          <div className="h-44 bg-slate-800 flex flex-col items-center justify-center p-4 text-center">
-            <div className="w-20 h-16 rounded-lg bg-amber-100 border-2 border-amber-300 flex items-center justify-center shadow-inner mb-2">
-              <span className="text-[10px] font-mono font-bold text-amber-900">📦 SPX POUCH</span>
+          {order.parcelImageUrl ? (
+            <div className="relative">
+              <img
+                src={order.parcelImageUrl}
+                alt={`Proof of Delivery for ${order.trackingNumber}`}
+                className="h-44 w-full object-cover"
+              />
+              <div className="absolute bottom-2 left-2 right-2 bg-slate-900/80 backdrop-blur-xs px-2.5 py-1 rounded-xl flex items-center justify-between text-[11px] text-white font-mono">
+                <span>{order.trackingNumber}</span>
+                <span className="text-[#10b780] font-bold">✔ Verified</span>
+              </div>
             </div>
-            <p className="text-xs font-mono text-[#10b780] font-bold">MATCH: {order.trackingNumber}</p>
-            <span className="text-[10px] text-gray-400">Hub Counter Camera • Verified Intact</span>
-          </div>
+          ) : (
+            <div className="h-44 bg-slate-800 flex flex-col items-center justify-center p-4 text-center">
+              <div className="w-20 h-16 rounded-lg bg-amber-100 border-2 border-amber-300 flex items-center justify-center shadow-inner mb-2">
+                <span className="text-[10px] font-mono font-bold text-amber-900">📦 POUCH</span>
+              </div>
+              <p className="text-xs font-mono text-[#10b780] font-bold">MATCH: {order.trackingNumber}</p>
+              <span className="text-[10px] text-gray-400">Hub Counter Camera • Verified Intact</span>
+            </div>
+          )}
         </div>
 
         {/* Details Summary */}

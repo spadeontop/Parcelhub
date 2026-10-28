@@ -11,9 +11,11 @@ export default defineConfig({
     port: 3000,
     open: true
   },
+  envPrefix: ['VITE_', 'HANDOFF_'],
   test: {
     globals: true,
     environment: 'jsdom',
-    setupFiles: ['./src/test/setup.ts']
+    setupFiles: ['./src/test/setup.ts'],
+    pool: 'vmThreads'
   }
 });

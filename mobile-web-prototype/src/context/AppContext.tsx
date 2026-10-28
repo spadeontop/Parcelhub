@@ -12,6 +12,12 @@ import {
   ScenarioId,
   ToastState,
 } from '../types';
+import {
+  orderApi,
+  getStatedFee,
+  isClaimUnlocked,
+  getClaimTimeRemainingSeconds,
+} from '../services/orderApi';
 
 const INITIAL_ORDERS: Order[] = [
   {
@@ -33,6 +39,9 @@ const INITIAL_ORDERS: Order[] = [
     dateLabel: 'October 10, 2026 10:30',
     carrier: 'ShopeeXpress (SPX)',
     hubLocation: "Lily's Catering Hub • Yati, Liloan, Cebu",
+    courierPaid: true,
+    parcelImageUrl: './assets/receipt_thumbnail.png',
+    claimInitiatedAt: null,
   },
   {
     id: 'ORD-408',
@@ -53,6 +62,9 @@ const INITIAL_ORDERS: Order[] = [
     dateLabel: 'October 7, 2026 7:41',
     carrier: 'J&T Express',
     hubLocation: "Lily's Catering Hub • Yati, Liloan, Cebu",
+    courierPaid: false,
+    parcelImageUrl: null,
+    claimInitiatedAt: null,
   },
   {
     id: 'ORD-388',
@@ -73,6 +85,9 @@ const INITIAL_ORDERS: Order[] = [
     dateLabel: 'October 1, 2026 10:00',
     carrier: 'Flash Express',
     hubLocation: "Lily's Catering Hub • Yati, Liloan, Cebu",
+    courierPaid: true,
+    parcelImageUrl: './assets/receipt_thumbnail.png',
+    claimInitiatedAt: null,
   },
 ];
 
@@ -146,9 +161,17 @@ interface AppContextType {
   resetPingTimer: () => void;
   simulateStaffFlow: () => void;
   applyScenario: (scenario: ScenarioId) => void;
-  staffAcceptPayment: (orderId: string) => void;
+  staffAcceptPayment: (orderId: string, amountReceived?: number) => boolean;
+  staffActivateOrder: (orderId: string, amountReceived: number) => boolean;
+  staffPayCourier: (orderId: string) => void;
+  staffAttachPhoto: (orderId: string, imageUrl: string) => boolean;
+  customerInitiateClaim: (orderId: string) => void;
+  staffReleaseOrder: (orderId: string) => boolean;
   staffReceiveCourier: (orderId: string) => void;
   staffReleaseParcel: (orderId: string) => void;
+  isOrderClaimUnlocked: (order: Order) => boolean;
+  getOrderClaimRemainingSeconds: (order: Order) => number;
+  getOrderStatedFee: (order: Order) => number;
   copyToClipboard: (text: string, label: string) => void;
   completeMpinClaim: () => void;
   getCurrentOrder: () => Order;
@@ -197,19 +220,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return orders.find((o) => o.id === selectedOrderId) || orders[0];
   }, [orders, selectedOrderId]);
 
-  // Timer lifecycle for payment_verification
+  // Periodic ticker to trigger re-renders for active handoff claim countdowns
+  const [, setTicker] = useState<number>(0);
   useEffect(() => {
-    let timer: ReturnType<typeof setInterval> | null = null;
-    if (activeScreen === 'payment_verification') {
-      setPingCountdown(298);
-      timer = setInterval(() => {
-        setPingCountdown((prev) => (prev > 0 ? prev - 1 : 0));
-      }, 1000);
-    }
-    return () => {
-      if (timer) clearInterval(timer);
-    };
-  }, [activeScreen]);
+    const interval = setInterval(() => {
+      setTicker((prev) => (prev + 1) % 1000000);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const resetPingTimer = useCallback(() => {
     setPingCountdown(298);
@@ -407,70 +425,171 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast(`MPIN Authorized! Parcel claimed & change (${finalChange}) returned.`);
   }, [orders, selectedOrderId, showToast]);
 
-  const staffAcceptPayment = useCallback(
-    (orderId: string) => {
-      setOrders((prev) =>
-        prev.map((o) =>
-          o.id === orderId
-            ? { ...o, status: 'AWAITING_PARCEL', awaitingParcelTime: 'Just now' }
-            : o
-        )
-      );
-      showToast(`Cash deposit received for ${orderId}. Order is active and awaiting parcel delivery.`);
+  const staffActivateOrder = useCallback(
+    (orderId: string, amountReceived: number): boolean => {
+      const ord = orders.find((o) => o.id === orderId);
+      if (!ord) return false;
+      const res = orderApi.staffActivate(ord, amountReceived);
+      if (res.success && res.data) {
+        setOrders((prev) => prev.map((o) => (o.id === orderId ? res.data! : o)));
+        showToast(res.message);
+        return true;
+      } else {
+        showToast(res.message);
+        return false;
+      }
     },
-    [showToast]
+    [orders, showToast]
+  );
+
+  const staffAcceptPayment = useCallback(
+    (orderId: string, amountReceived?: number): boolean => {
+      const ord = orders.find((o) => o.id === orderId);
+      if (!ord) return false;
+      const amt = amountReceived !== undefined ? amountReceived : getStatedFee(ord);
+      return staffActivateOrder(orderId, amt);
+    },
+    [orders, staffActivateOrder]
+  );
+
+  const staffPayCourier = useCallback(
+    (orderId: string) => {
+      const ord = orders.find((o) => o.id === orderId);
+      if (!ord) return;
+      const res = orderApi.staffPayCourier(ord);
+      if (res.success && res.data) {
+        setOrders((prev) => prev.map((o) => (o.id === orderId ? res.data! : o)));
+        showToast(res.message);
+      } else {
+        showToast(res.message);
+      }
+    },
+    [orders, showToast]
+  );
+
+  const staffAttachPhoto = useCallback(
+    (orderId: string, imageUrl: string): boolean => {
+      const ord = orders.find((o) => o.id === orderId);
+      if (!ord) return false;
+      const res = orderApi.staffAttachPhoto(ord, imageUrl);
+      if (res.success && res.data) {
+        setOrders((prev) => prev.map((o) => (o.id === orderId ? res.data! : o)));
+        showToast(res.message);
+        return true;
+      } else {
+        showToast(res.message);
+        return false;
+      }
+    },
+    [orders, showToast]
+  );
+
+  const customerInitiateClaim = useCallback(
+    (orderId: string) => {
+      const ord = orders.find((o) => o.id === orderId);
+      if (!ord) return;
+      const res = orderApi.customerInitiateClaim(ord);
+      if (res.success && res.data) {
+        setOrders((prev) => prev.map((o) => (o.id === orderId ? res.data! : o)));
+        showToast(res.message);
+      } else {
+        showToast(res.message);
+      }
+    },
+    [orders, showToast]
+  );
+
+  const staffReleaseOrder = useCallback(
+    (orderId: string): boolean => {
+      const ord = orders.find((o) => o.id === orderId);
+      if (!ord) return false;
+      const res = orderApi.staffRelease(ord);
+      if (res.success && res.data) {
+        setOrders((prev) => prev.map((o) => (o.id === orderId ? res.data! : o)));
+        setClaimConfirmed(false);
+        showToast(res.message);
+        return true;
+      } else {
+        showToast(res.message);
+        return false;
+      }
+    },
+    [orders, showToast]
   );
 
   const staffReceiveCourier = useCallback(
     (orderId: string) => {
-      let codVal = '';
+      const ord = orders.find((o) => o.id === orderId);
+      if (!ord) return;
       setOrders((prev) =>
-        prev.map((o) => {
-          if (o.id === orderId) {
-            codVal = o.codAmount;
-            return { ...o, status: 'READY_TO_CLAIM', readyToClaimTime: 'Just now' };
-          }
-          return o;
-        })
+        prev.map((o) =>
+          o.id === orderId
+            ? {
+                ...o,
+                courierPaid: true,
+                parcelImageUrl: './assets/receipt_thumbnail.png',
+                status: 'READY_TO_CLAIM',
+                readyToClaimTime: 'Just now',
+              }
+            : o
+        )
       );
-      showToast(`Courier payment verified (${codVal || 'COD'}). Parcel ready for pickup!`);
+      showToast(`Courier payment verified (${ord.codAmount || 'COD'}) & parcel photo attached!`);
     },
-    [showToast]
+    [orders, showToast]
   );
 
   const staffReleaseParcel = useCallback(
     (orderId: string) => {
       const ord = orders.find((o) => o.id === orderId);
-      const changeVal = ord?.change || '₱0';
-      setOrders((prev) =>
-        prev.map((o) => {
-          if (o.id === orderId) {
-            return { ...o, status: 'CLAIMED', claimedTime: 'Just now' };
-          }
-          return o;
-        })
-      );
-      showToast(`Key verified! Handed parcel and change (${changeVal}) to customer.`);
+      if (ord && !isClaimUnlocked(ord)) {
+        // Unlock if needed for legacy/convenience
+        ord.claimInitiatedAt = Date.now();
+      }
+      staffReleaseOrder(orderId);
     },
-    [orders, showToast]
+    [orders, staffReleaseOrder]
   );
+
+  const isOrderClaimUnlocked = useCallback((order: Order): boolean => {
+    return isClaimUnlocked(order);
+  }, []);
+
+  const getOrderClaimRemainingSeconds = useCallback((order: Order): number => {
+    return getClaimTimeRemainingSeconds(order);
+  }, []);
+
+  const getOrderStatedFee = useCallback((order: Order): number => {
+    return getStatedFee(order);
+  }, []);
 
   const simulateStaffFlow = useCallback(() => {
     const cur = orders.find((o) => o.id === selectedOrderId) || orders[0];
     if (cur.status === 'PAYMENT_REQUIRED') {
-      setOrders((prev) =>
-        prev.map((o) => (o.id === cur.id ? { ...o, status: 'AWAITING_PARCEL', awaitingParcelTime: 'Just now' } : o))
-      );
-      showToast('Counter cash deposit confirmed! Order status: Awaiting Parcel');
+      staffActivateOrder(cur.id, getStatedFee(cur));
     } else if (cur.status === 'AWAITING_PARCEL') {
       setOrders((prev) =>
-        prev.map((o) => (o.id === cur.id ? { ...o, status: 'READY_TO_CLAIM', readyToClaimTime: 'Just now' } : o))
+        prev.map((o) =>
+          o.id === cur.id
+            ? {
+                ...o,
+                courierPaid: true,
+                parcelImageUrl: './assets/receipt_thumbnail.png',
+                status: 'READY_TO_CLAIM',
+                readyToClaimTime: 'Just now',
+              }
+            : o
+        )
       );
       showToast('Courier package received! Order status: Ready to Claim');
     } else if (cur.status === 'READY_TO_CLAIM') {
-      setIsMpinModalOpen(true);
+      if (!isClaimUnlocked(cur)) {
+        customerInitiateClaim(cur.id);
+      } else {
+        staffReleaseOrder(cur.id);
+      }
     }
-  }, [orders, selectedOrderId, showToast]);
+  }, [orders, selectedOrderId, showToast, staffActivateOrder, customerInitiateClaim, staffReleaseOrder]);
 
   const applyScenario = useCallback(
     (scenario: ScenarioId) => {
@@ -602,8 +721,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         simulateStaffFlow,
         applyScenario,
         staffAcceptPayment,
+        staffActivateOrder,
+        staffPayCourier,
+        staffAttachPhoto,
+        customerInitiateClaim,
+        staffReleaseOrder,
         staffReceiveCourier,
         staffReleaseParcel,
+        isOrderClaimUnlocked,
+        getOrderClaimRemainingSeconds,
+        getOrderStatedFee,
         copyToClipboard,
         completeMpinClaim,
         getCurrentOrder,

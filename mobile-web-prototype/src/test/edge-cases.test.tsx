@@ -1,20 +1,24 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import App from '../App';
+import { MpinModal } from '../components/modals/MpinModal';
+import { AppProvider, useApp } from '../context/AppContext';
+
+const MpinTestOpener = () => {
+  const { openMpinModal } = useApp();
+  return <button onClick={openMpinModal}>Open MPIN Modal</button>;
+};
 
 describe('Edge cases and boundary handling', () => {
   it('handles MPIN modal physical keyboard events (0-9, Backspace, Escape)', () => {
-    render(<App />);
+    render(
+      <AppProvider>
+        <MpinTestOpener />
+        <MpinModal />
+      </AppProvider>
+    );
 
-    // Open MPIN modal via Scenario 9
-    const scenarioSelect = screen.getByLabelText('Select Figma Screen Scenario');
-    fireEvent.change(scenarioSelect, { target: { value: 'figma-9' } });
-
-    // Check confirmation checkbox and initiate claim
-    const confirmCheckbox = screen.getByLabelText(/I confirm that I want to claim the order/i);
-    fireEvent.click(confirmCheckbox);
-    fireEvent.click(screen.getByRole('button', { name: 'Initiate Claim' }));
-
+    fireEvent.click(screen.getByText('Open MPIN Modal'));
     expect(screen.getByText('Authorize Release')).toBeInTheDocument();
 
     // Type via window keyboard
@@ -135,7 +139,7 @@ describe('Edge cases and boundary handling', () => {
 
     // It should automatically switch to Ready tab and display the matched order
     expect(screen.getByText(/PH-402-5544/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Verify Key & Handover/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Release/i })).toBeInTheDocument();
   });
 
   it('advances order lifecycle stages via simulateStaffFlow (Step Flow button)', () => {
@@ -156,9 +160,9 @@ describe('Edge cases and boundary handling', () => {
     fireEvent.click(stepFlowBtn);
     expect(screen.getAllByText(/Ready to Claim/i).length).toBeGreaterThanOrEqual(1);
 
-    // Step 3: Initiate MPIN release
+    // Step 3: Initiate claim window
     fireEvent.click(stepFlowBtn);
-    expect(screen.getByText('Authorize Release')).toBeInTheDocument();
+    expect(screen.getByText(/Claim Window Active:/i)).toBeInTheDocument();
   });
 
   it('marks all notifications as read and removes red badge from bell button', () => {
@@ -180,13 +184,13 @@ describe('Edge cases and boundary handling', () => {
     expect(bellBtn.querySelector('.bg-\\[\\#ef4444\\]')).not.toBeInTheDocument();
   });
 
-  it('renews countdown timer on Payment Verification screen when expired', () => {
+  it('verifies counter hold timer is removed from Payment Verification screen', () => {
     render(<App />);
 
     const scenarioSelect = screen.getByLabelText('Select Figma Screen Scenario');
     fireEvent.change(scenarioSelect, { target: { value: 'figma-5' } });
 
     expect(screen.getByText('Awaiting Payment')).toBeInTheDocument();
-    expect(screen.getByText('Counter Hold Timer:')).toBeInTheDocument();
+    expect(screen.queryByText('Counter Hold Timer:')).not.toBeInTheDocument();
   });
 });

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { StaffFilter, Order } from '../../types';
 
@@ -10,12 +10,19 @@ export const StaffTerminalScreen: React.FC = () => {
     staffSearchQuery,
     setStaffSearchQuery,
     setRoleMode,
-    staffAcceptPayment,
-    staffReceiveCourier,
-    staffReleaseParcel,
+    staffActivateOrder,
+    staffPayCourier,
+    staffAttachPhoto,
+    staffReleaseOrder,
+    isOrderClaimUnlocked,
+    getOrderClaimRemainingSeconds,
+    getOrderStatedFee,
     getCurrentOrder,
     showToast,
   } = useApp();
+
+  const [cashInputs, setCashInputs] = useState<Record<string, string>>({});
+  const [attachedPhotos, setAttachedPhotos] = useState<Record<string, string>>({});
 
   // Filter list by tab
   let list: Order[] = [];
@@ -222,35 +229,208 @@ export const StaffTerminalScreen: React.FC = () => {
               </p>
 
               <div className="pt-2 border-t border-slate-700/80 flex items-center justify-between gap-2">
-                {staffFilter === 'inactive' && (
-                  <button
-                    type="button"
-                    onClick={() => staffAcceptPayment(order.id)}
-                    className="flex-1 py-2 rounded-xl bg-[#c58b12] hover:bg-amber-600 text-white font-bold text-xs btn-press focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#215cd4]"
-                  >
-                    Receive Cash &amp; Activate
-                  </button>
-                )}
+                {staffFilter === 'inactive' && (() => {
+                  const fee = getOrderStatedFee(order);
+                  const entered = cashInputs[order.id] ?? '';
+                  const numericEntered = parseInt(entered, 10);
+                  const isValid = !isNaN(numericEntered) && numericEntered >= fee;
+
+                  return (
+                    <div className="w-full space-y-2">
+                      <div className="flex items-center justify-between text-[11px] text-slate-300">
+                        <span>Stated Fee: <strong className="text-amber-400 font-mono">₱{fee.toLocaleString()}</strong></span>
+                        <span className="text-slate-400">COD: {order.codAmount}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="relative flex-1">
+                          <span className="absolute left-2.5 top-2 text-xs font-bold text-slate-400">₱</span>
+                          <input
+                            type="number"
+                            aria-label={`Amount Received for ${order.id}`}
+                            placeholder={`Min ${fee}`}
+                            value={entered}
+                            onChange={(e) => setCashInputs((prev) => ({ ...prev, [order.id]: e.target.value }))}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && isValid) {
+                                const ok = staffActivateOrder(order.id, numericEntered);
+                                if (ok) {
+                                  setCashInputs((prev) => {
+                                    const next = { ...prev };
+                                    delete next[order.id];
+                                    return next;
+                                  });
+                                }
+                              }
+                            }}
+                            className="w-full bg-slate-900 border border-slate-700 text-white rounded-xl pl-6 pr-2 py-1.5 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-amber-500"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          disabled={!isValid}
+                          onClick={() => {
+                            const ok = staffActivateOrder(order.id, numericEntered);
+                            if (ok) {
+                              setCashInputs((prev) => {
+                                const next = { ...prev };
+                                delete next[order.id];
+                                return next;
+                              });
+                            }
+                          }}
+                          className={`py-2 px-3 rounded-xl font-bold text-xs transition-all btn-press focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#215cd4] ${
+                            isValid
+                              ? 'bg-[#c58b12] hover:bg-amber-600 text-white cursor-pointer'
+                              : 'bg-slate-800 text-slate-500 border border-slate-700 opacity-60 cursor-not-allowed'
+                          }`}
+                        >
+                          Receive Cash &amp; Activate
+                        </button>
+                      </div>
+                      {entered !== '' && !isValid && (
+                        <p className="text-[11px] text-red-400 font-medium">Amount received must be ≥ ₱{fee}</p>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {staffFilter === 'active' && (
-                  <button
-                    type="button"
-                    onClick={() => staffReceiveCourier(order.id)}
-                    className="flex-1 py-2 rounded-xl bg-[#215cd4] hover:bg-[#194cb5] text-white font-bold text-xs btn-press focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#215cd4]"
-                  >
-                    Log Courier Arrival (1:1 Payout)
-                  </button>
+                  <div className="w-full space-y-2">
+                    {!order.courierPaid ? (
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="text-[11px] text-slate-400 font-medium">
+                          Step 1: Pay courier COD
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => staffPayCourier(order.id)}
+                          className="flex-1 py-2 rounded-xl bg-[#215cd4] hover:bg-[#194cb5] text-white font-bold text-xs btn-press focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#215cd4]"
+                        >
+                          Pay Courier ({order.codAmount})
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-emerald-400 font-semibold font-mono">✔ Courier Paid ({order.codAmount})</span>
+                          <span className="text-slate-400 text-[11px]">Step 2: Attach Parcel Photo</span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          {attachedPhotos[order.id] || order.parcelImageUrl ? (
+                            <div className="flex items-center gap-2 flex-1">
+                              <img
+                                src={attachedPhotos[order.id] || order.parcelImageUrl!}
+                                alt="Parcel preview"
+                                className="w-10 h-10 object-cover rounded-lg border border-slate-600 shrink-0"
+                              />
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  staffAttachPhoto(order.id, attachedPhotos[order.id] || order.parcelImageUrl!)
+                                }
+                                className="flex-1 py-2 rounded-xl bg-[#10b780] hover:bg-emerald-600 text-white font-bold text-xs btn-press focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#215cd4]"
+                              >
+                                Verify Photo &amp; Make Ready
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setAttachedPhotos((prev) => {
+                                    const next = { ...prev };
+                                    delete next[order.id];
+                                    return next;
+                                  });
+                                }}
+                                className="px-2.5 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-semibold shrink-0"
+                                title="Change or retake photo"
+                              >
+                                Retake
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2 flex-1">
+                              <label className="flex-1 py-2 px-3 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold text-xs cursor-pointer text-center border border-slate-600">
+                                <span>Attach Parcel Photo</span>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  className="hidden"
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                      const reader = new FileReader();
+                                      reader.onload = (ev) => {
+                                        setAttachedPhotos((prev) => ({
+                                          ...prev,
+                                          [order.id]: ev.target?.result as string,
+                                        }));
+                                      };
+                                      reader.readAsDataURL(file);
+                                    }
+                                  }}
+                                />
+                              </label>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setAttachedPhotos((prev) => ({
+                                    ...prev,
+                                    [order.id]: './assets/receipt_thumbnail.png',
+                                  }));
+                                  showToast('Parcel pouch photo attached. Please verify.');
+                                }}
+                                className="py-2 px-3 rounded-xl bg-blue-600/30 hover:bg-blue-600/50 text-blue-300 font-semibold text-xs border border-blue-500/40"
+                              >
+                                Sample Photo
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 )}
 
-                {staffFilter === 'ready_to_claim' && (
-                  <button
-                    type="button"
-                    onClick={() => staffReleaseParcel(order.id)}
-                    className="flex-1 py-2 rounded-xl bg-[#10b780] hover:bg-emerald-600 text-white font-bold text-xs btn-press focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#215cd4]"
-                  >
-                    Verify Key &amp; Handover
-                  </button>
-                )}
+                {staffFilter === 'ready_to_claim' && (() => {
+                  const unlocked = isOrderClaimUnlocked(order);
+                  const remaining = getOrderClaimRemainingSeconds(order);
+                  const mm = Math.floor(remaining / 60);
+                  const ss = remaining % 60;
+                  const timeFormatted = `${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
+
+                  if (!unlocked) {
+                    return (
+                      <div className="w-full flex items-center justify-between gap-2">
+                        <span className="text-[11px] text-slate-400 font-mono">
+                          🔒 Locked (Awaiting Customer Prompt)
+                        </span>
+                        <button
+                          type="button"
+                          disabled
+                          className="py-2 px-4 rounded-xl bg-slate-800 text-slate-500 font-bold text-xs border border-slate-700 cursor-not-allowed opacity-60"
+                        >
+                          Release
+                        </button>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="w-full flex items-center justify-between gap-3">
+                      <span className="text-xs font-mono font-bold text-emerald-400">
+                        Claim Active ({timeFormatted})
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => staffReleaseOrder(order.id)}
+                        className="flex-1 py-2 rounded-xl bg-[#10b780] hover:bg-emerald-600 text-white font-bold text-xs btn-press focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#215cd4]"
+                      >
+                        Release
+                      </button>
+                    </div>
+                  );
+                })()}
 
                 {staffFilter === 'claimed' && (
                   <span className="text-xs text-emerald-400 font-mono font-semibold">
