@@ -1,12 +1,12 @@
 /* ==========================================================================
-   ParcelHub Mobile Web v2 - Minimalist & Harmonious Design System
+   ParcelHub Mobile Web v3 - React + TypeScript + Vite Design System
    Conforming to Tailwind CSS v4 and agentskills.io UI/UX Specification
    ========================================================================== */
 
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Google Sans Flex", "Google Sans", "Plus Jakarta Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: "JetBrains Mono", monospace;
 
   --color-brand-blue: #215cd4;
@@ -24,7 +24,7 @@
 }
 
 :root {
-  --font-main: "Google Sans Flex", "Google Sans", "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-main: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: "JetBrains Mono", monospace;
 
   --primary-blue: #215cd4;
@@ -171,7 +171,7 @@ body {
   background-repeat: no-repeat;
 }
 
-/* Offline & Browser Fallback Styles for Core Design System */
+/* Brand Utility Helpers */
 .bg-brand-blue, .bg-\[\#215cd4\] { background-color: #215cd4; }
 .bg-brand-navy, .bg-\[\#163b86\] { background-color: #163b86; }
 .bg-brand-dark, .bg-\[\#1e1e1e\] { background-color: #1e1e1e; }
@@ -193,5 +193,3 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
-
-
