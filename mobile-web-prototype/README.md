@@ -7,27 +7,34 @@ A fully modular, strictly typed React 18 + Vite refactor of ParcelHub (`web-v2`)
 ## 🚀 Quick Start
 
 ### 1. Installation
+
 ```bash
-cd web-v3
+cd mobile-web-prototype
 npm install
 ```
 
 ### 2. Development Server
+
 ```bash
 npm run dev
 ```
+
 Runs the Vite development server with Hot Module Replacement (HMR) at `http://localhost:3000`.
 
 ### 3. Production Build
+
 ```bash
 npm run build
 ```
+
 Executes TypeScript type check (`tsc`) and bundles optimized production assets into `dist/`.
 
 ### 4. Run Automated Tests
+
 ```bash
 npm test
 ```
+
 Runs the Vitest test suite with JSDOM and React Testing Library (18 automated tests covering all critical user flows, edge cases, keyboard interactions, and state sync).
 
 ---
@@ -88,19 +95,18 @@ web-v3/
 
 Use the top **Studio Control Bar** to review any specific scenario or toggle roles:
 
-| Scenario | View / State | Key Verification |
-|---|---|---|
-| **1. Zero Active Orders** | `home` | Empty state artwork, quick start guide, create button |
-| **2. Home With Active Orders** | `home` | Current active order card with status badge |
-| **3. Create Order** | `create_order` | Form fields with instant Shopee receipt OCR loader |
-| **4. Confirm Order Details** | `confirm_order` | Parcel and recipient summary before lock-in |
-| **5. Payment Verification** | `payment_verification` | Live 5-minute countdown ping counter & renew button |
-| **6. Tracking Stage 1: Order Placed** | `qr_screen` | QR code display, pass canvas photo exporter, clipboard copy |
-| **7. Order Details (Payment Required)** | `order_details` | Red alert banner with direct resolve payment action |
-| **8. Tracking Stage 2: Awaiting Parcel** | `order_details` | Amber status indicator & timeline |
-| **9. Tracking Stage 3: Ready to Claim** | `order_details` | Green ready banner, confirmation checkbox unchecked |
-| **10. Claim Request Confirmation** | `order_details` | Claim checkbox checked; enables claim release action |
-| **11. Ready to Claim (Hub Closed)** | `order_details` | Hub closed warning banner, operating hours notice |
-| **12. Order Claimed (History)** | `order_details` | Final purple status with Proof of Delivery button |
-| **Staff Counter Terminal** | `staff_ui` | Real-time barcode scan match, status filter tabs, parcel release |
-
+| Scenario                                 | View / State           | Key Verification                                                 |
+| ---------------------------------------- | ---------------------- | ---------------------------------------------------------------- |
+| **1. Zero Active Orders**                | `home`                 | Empty state artwork, quick start guide, create button            |
+| **2. Home With Active Orders**           | `home`                 | Current active order card with status badge                      |
+| **3. Create Order**                      | `create_order`         | Form fields with instant Shopee receipt OCR loader               |
+| **4. Confirm Order Details**             | `confirm_order`        | Parcel and recipient summary before lock-in                      |
+| **5. Payment Verification**              | `payment_verification` | Live 5-minute countdown ping counter & renew button              |
+| **6. Tracking Stage 1: Order Placed**    | `qr_screen`            | QR code display, pass canvas photo exporter, clipboard copy      |
+| **7. Order Details (Payment Required)**  | `order_details`        | Red alert banner with direct resolve payment action              |
+| **8. Tracking Stage 2: Awaiting Parcel** | `order_details`        | Amber status indicator & timeline                                |
+| **9. Tracking Stage 3: Ready to Claim**  | `order_details`        | Green ready banner, confirmation checkbox unchecked              |
+| **10. Claim Request Confirmation**       | `order_details`        | Claim checkbox checked; enables claim release action             |
+| **11. Ready to Claim (Hub Closed)**      | `order_details`        | Hub closed warning banner, operating hours notice                |
+| **12. Order Claimed (History)**          | `order_details`        | Final purple status with Proof of Delivery button                |
+| **Staff Counter Terminal**               | `staff_ui`             | Real-time barcode scan match, status filter tabs, parcel release |
