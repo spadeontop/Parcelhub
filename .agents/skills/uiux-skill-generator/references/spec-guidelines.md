@@ -91,3 +91,10 @@ To eliminate divergent assumptions across model turns:
 1. **Canonical Recipes**: All UI components must have a single source-of-truth recipe in `references/`. The agent is instructed to copy or adapt that exact recipe rather than inventing CSS classes or markup.
 2. **Token Locking**: Colors and elevations must strictly map to defined semantic tokens (`bg-primary`, `bg-surface`, `border-border`, etc.). Hardcoded hex values or arbitrary utility values are forbidden.
 3. **Linter Enforcement**: Every generated UI snippet or page must be passed through `scripts/verify-ui-compliance.js` before being declared complete.
+
+---
+
+## 6. Workspace Scope Isolation (`web/` Boundary)
+
+For this repository, all UI/UX skill generation, audits, token checks, and recipe extractions must reference **ONLY** the `web/` directory (`web/index.html`, `web/style.css`, `web/app.js`, `web/assets/`).
+Agents, generators, and linters must **NEVER** scan, inspect, or traverse other folders or files in the repository.

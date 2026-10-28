@@ -1,0 +1,197 @@
+/* ==========================================================================
+   ParcelHub Mobile Web v2 - Minimalist & Harmonious Design System
+   Conforming to Tailwind CSS v4 and agentskills.io UI/UX Specification
+   ========================================================================== */
+
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Google Sans Flex", "Google Sans", "Plus Jakarta Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  --color-brand-blue: #215cd4;
+  --color-brand-blue-hover: #194cb5;
+  --color-brand-blue-dark: #1a4bb0;
+  --color-brand-navy: #163b86;
+  --color-brand-navy-dark: #102d6b;
+  --color-brand-dark: #1e1e1e;
+  --color-brand-emerald: #10b780;
+  --color-brand-gold: #c58b12;
+  --color-brand-pill-green: #93eb99;
+  --color-brand-pill-green-hover: #82e088;
+  --color-brand-surface: #f8f8f8;
+  --color-brand-danger: #ef4444;
+}
+
+:root {
+  --font-main: "Google Sans Flex", "Google Sans", "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  --primary-blue: #215cd4;
+  --primary-blue-hover: #194cb5;
+  --navy-dark: #163b86;
+  --card-dark: #1e1e1e;
+  --success-green: #10b780;
+  --warning-gold: #c58b12;
+  --pill-green: #93eb99;
+  --danger-red: #ef4444;
+  --surface-muted: #f8f8f8;
+}
+
+body {
+  font-family: var(--font-main);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.font-mono-numbers {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(160, 174, 192, 0.35);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(160, 174, 192, 0.6);
+}
+
+/* Pulse Animations for Live Status Indicators */
+@keyframes ringPulseGreen {
+  0% { box-shadow: 0 0 0 0 rgba(16, 183, 128, 0.6); }
+  70% { box-shadow: 0 0 0 8px rgba(16, 183, 128, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(16, 183, 128, 0); }
+}
+
+@keyframes ringPulseGold {
+  0% { box-shadow: 0 0 0 0 rgba(197, 139, 18, 0.6); }
+  70% { box-shadow: 0 0 0 8px rgba(197, 139, 18, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(197, 139, 18, 0); }
+}
+
+@keyframes ringPulseBlue {
+  0% { box-shadow: 0 0 0 0 rgba(33, 92, 212, 0.6); }
+  70% { box-shadow: 0 0 0 8px rgba(33, 92, 212, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(33, 92, 212, 0); }
+}
+
+.pulse-green {
+  animation: ringPulseGreen 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+.pulse-gold {
+  animation: ringPulseGold 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+.pulse-blue {
+  animation: ringPulseBlue 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+/* Micro-interaction Button Press */
+.btn-press {
+  transition: transform 0.12s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+.btn-press:active {
+  transform: scale(0.975);
+}
+
+/* Modal Animations */
+@keyframes slideUpModal {
+  from {
+    transform: translateY(24px) scale(0.98);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-slide-up {
+  animation: slideUpModal 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fadeInModal {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-fade-in {
+  animation: fadeInModal 0.18s ease-out forwards;
+}
+
+/* Phone Mockup Frame */
+.phone-mockup {
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.5), 0 0 0 12px #1f2937, 0 0 0 14px #374151;
+  border-radius: 48px;
+}
+
+.dynamic-island {
+  width: 110px;
+  height: 28px;
+  background-color: #000000;
+  border-radius: 20px;
+}
+
+/* Floating Navigation Bar - Glassmorphism Pill */
+.floating-nav {
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Vertical Stepper Timeline Line */
+.stepper-line {
+  position: absolute;
+  left: 11px;
+  top: 14px;
+  bottom: 14px;
+  width: 2px;
+  background-color: #e2e8f0;
+  z-index: 0;
+}
+
+/* Receipt dropzone dotted pattern */
+.dropzone-dashed {
+  background-image: repeating-linear-gradient(0deg, #d1d5db, #d1d5db 8px, transparent 8px, transparent 16px),
+                    repeating-linear-gradient(90deg, #d1d5db, #d1d5db 8px, transparent 8px, transparent 16px),
+                    repeating-linear-gradient(180deg, #d1d5db, #d1d5db 8px, transparent 8px, transparent 16px),
+                    repeating-linear-gradient(270deg, #d1d5db, #d1d5db 8px, transparent 8px, transparent 16px);
+  background-size: 2px 100%, 100% 2px, 2px 100%, 100% 2px;
+  background-position: 0 0, 0 0, 100% 0, 0 100%;
+  background-repeat: no-repeat;
+}
+
+/* Offline & Browser Fallback Styles for Core Design System */
+.bg-brand-blue, .bg-\[\#215cd4\] { background-color: #215cd4; }
+.bg-brand-navy, .bg-\[\#163b86\] { background-color: #163b86; }
+.bg-brand-dark, .bg-\[\#1e1e1e\] { background-color: #1e1e1e; }
+.bg-brand-emerald, .bg-\[\#10b780\] { background-color: #10b780; }
+.bg-brand-gold, .bg-\[\#c58b12\] { background-color: #c58b12; }
+.bg-brand-pill-green, .bg-\[\#93eb99\] { background-color: #93eb99; }
+.bg-brand-surface, .bg-\[\#f8f8f8\] { background-color: #f8f8f8; }
+
+.text-brand-blue, .text-\[\#215cd4\] { color: #215cd4; }
+.text-brand-navy, .text-\[\#163b86\] { color: #163b86; }
+.text-brand-emerald, .text-\[\#10b780\] { color: #10b780; }
+.text-brand-gold, .text-\[\#c58b12\] { color: #c58b12; }
+
+/* Hide scrollbars for clean filter pills */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+

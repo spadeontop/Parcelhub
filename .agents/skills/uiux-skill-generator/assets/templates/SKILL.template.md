@@ -24,12 +24,13 @@ A deterministic, procedural UI/UX skill enforcing the **{{ARCHETYPE}}** design s
 
 ## Hard Control Principles
 
-1. **CANONICAL RECIPES ONLY**: Do not invent CSS classes or structure from scratch. Copy and adapt exact recipes from the [references/](./references) directory.
-2. **ZERO ARBITRARY VALUES**: Never use arbitrary hex codes (`bg-[#...]`) or unmapped Tailwind color palettes (`bg-blue-500`). Use predefined semantic tokens (`bg-primary`, `bg-surface`, `text-foreground`, `border-border`).
-3. **MANDATORY VERIFICATION**: After creating or modifying any UI file, run `node scripts/verify-ui-compliance.js <path>` to deterministically verify compliance.
-4. **NO EMOJIS IN UI**: Never use emojis as decorative or icon elements. Use clean SVG icons or semantic badges.
-5. **APPLICATION SHELL FIRST (NO LANDING PAGE DRIFT)**: For dashboards, admin panels, and SaaS tools, ALWAYS build within an application shell (`<aside>` sidebar navigation + clean main workspace). Never default to marketing hero banners, giant splash headlines, or single-page marketing scroll containers for functional tasks.
-6. **PROGRESSIVE DISCLOSURE (PoLP)**: Complex mutations (entity creation, credential changes) and deep detail inspections must use **Modals or Slide-Over Drawers** from `references/feedback-dialogs.md` rather than cluttering page surfaces.
+1. **CANONICAL RECIPES ONLY**: Do not invent CSS classes or structure from scratch. Copy and adapt exact recipes from the [references/](./references) directory referencing `web/`.
+2. **ZERO ARBITRARY VALUES**: Never use unmapped arbitrary hex codes. Use predefined semantic tokens and brand tokens matching `web/style.css` (`bg-[#215cd4]`, `bg-[#163b86]`, `bg-[#1e1e1e]`, `text-[#10b780]`, `bg-[#93eb99]`, etc.).
+3. **MANDATORY VERIFICATION**: After creating or modifying any UI file in `web/`, run `node scripts/verify-ui-compliance.js web/` to deterministically verify compliance.
+4. **NO EMOJIS IN UI**: Never use emojis as decorative or icon elements. Use clean SVG icons matching `web/assets/` (`home_icon.svg`, `orders_icon.svg`, `help_icon.svg`, `profile_icon.svg`, `bell_icon.svg`).
+5. **MOBILE APPLICATION SHELL FIRST**: For mobile prototypes and hub operations, ALWAYS build within the mobile phone mockup frame (`.phone-mockup`, `.dynamic-island`, status bar, floating bottom nav bar). Do not default to desktop sidebar navigation.
+6. **PROGRESSIVE DISCLOSURE (PoLP)**: Complex mutations (entity creation, deposit verification, MPIN authorization) and details inspections must use **Modals or Bottom Drawers** from `references/feedback-dialogs.md` rather than cluttering the screen viewport.
+7. **WORKSPACE SCOPE ISOLATION**: Strictly reference ONLY `web/`. Never check or modify files outside `web/`.
 
 ---
 
@@ -39,13 +40,13 @@ Before writing any markup, consult the corresponding canonical recipe:
 
 | Component | Reference File | Primary Recipe |
 | :--- | :--- | :--- |
-| **Tokens & Theme** | [semantic-tokens.md](./references/semantic-tokens.md) | 60-30-10 distribution and CSS variables |
-| **Typography** | [typography.md](./references/typography.md) | Responsive scales, heading hierarchy, tracking |
-| **Buttons & Inputs** | [buttons-inputs.md](./references/buttons-inputs.md) | Primary, secondary, outline, text fields, selects |
-| **Cards & Panels** | [cards.md](./references/cards.md) | KPI metric cards, action cards, containers |
-| **Navigation & Header** | [navbar.md](./references/navbar.md) | App header, breadcrumbs, theme switcher |
-| **Layouts & Tables** | [layouts-tables.md](./references/layouts-tables.md) | App shell, sidebar, responsive data tables |
-| **Modals & Drawers** | [feedback-dialogs.md](./references/feedback-dialogs.md) | Form modals, slide-over sheets, alerts, empty states |
+| **Tokens & Theme** | [semantic-tokens.md](./references/semantic-tokens.md) | 60-30-10 distribution and CSS variables from `web/` |
+| **Typography** | [typography.md](./references/typography.md) | Google Sans Flex / Plus Jakarta Sans & JetBrains Mono |
+| **Buttons & Inputs** | [buttons-inputs.md](./references/buttons-inputs.md) | Primary Blue, Navy, Pill Green, receipt dropzone |
+| **Cards & Panels** | [cards.md](./references/cards.md) | Welcome Dark Card, Activities List, Zero Orders Empty State |
+| **Navigation & Header** | [navbar.md](./references/navbar.md) | Mobile brand header, floating bottom nav, labeled bottom nav |
+| **Layouts & Tables** | [layouts-tables.md](./references/layouts-tables.md) | Phone frame mockup, dynamic island, stepper timeline |
+| **Modals & Drawers** | [feedback-dialogs.md](./references/feedback-dialogs.md) | 6-Digit MPIN modal, PoD modal, Escrow modal, Drawer, Toast |
 
 ---
 
@@ -55,15 +56,15 @@ Execute these scripts directly in the terminal to scaffold and verify UI code:
 
 - **Extract Component Boilerplate**:
   ```bash
-  node scripts/scaffold-component.js --type <card|button|navbar|input|modal|drawer|table>
+  node scripts/scaffold-component.js --type <card|button|navbar|input|modal|drawer|layout>
   ```
 - **Audit WCAG Contrast**:
   ```bash
   node scripts/check-contrast.js
   ```
-- **Lint UI Compliance (Mandatory Step)**:
+- **Lint UI Compliance (Mandatory Step - Scoped to `web/`)**:
   ```bash
-  node scripts/verify-ui-compliance.js <path-to-html-or-component>
+  node scripts/verify-ui-compliance.js web/
   ```
 - **Extend Skill with New Component**:
   ```bash
@@ -76,8 +77,8 @@ Execute these scripts directly in the terminal to scaffold and verify UI code:
 
 ### Step 0: Layout Archetype Gate & Scope
 Classify the view before writing markup:
-- **Application Tool / Dashboard (DEFAULT)**: Must use an application shell (`<aside>` sidebar navigation, view router, structured metric/table grid from `references/layouts-tables.md`). Entity mutations and inspections must use **Modals or Drawer Sheets** (`references/feedback-dialogs.md`). Marketing hero banners are **strictly forbidden**.
-- **Marketing / Content Page**: Dedicated landing page, documentation, or public announcement. Uses hero section, feature grid, and footer CTA.
+- **Mobile Application Shell (DEFAULT)**: Must use the mobile viewport (`#mobile-screen-content` inside `#phone-frame`, floating bottom nav from `references/navbar.md`). Entity mutations and inspections must use **Modals or Bottom Drawers** (`references/feedback-dialogs.md`). Desktop sidebar layouts are **strictly forbidden**.
+- **Studio Wrapper**: Ambient background (`bg-slate-900`) containing the top control bar (`#screen-select`, `#hub-status-toggle`) hosting the phone frame.
 
 ### Step 1: Identify Required Components
 Scan requirements and identify components (e.g. Sidebar + Metric Cards + Data Table + Creation Modal). Open the corresponding reference file(s) in `references/`.

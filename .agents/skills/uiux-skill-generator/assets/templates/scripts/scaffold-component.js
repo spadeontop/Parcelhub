@@ -14,9 +14,11 @@ function showHelp() {
   console.log(`
 Usage: node scaffold-component.js [options]
 
+Scoped strictly to reference ONLY web/ (web/index.html, web/style.css, web/app.js, web/assets/).
+
 Options:
-  --type <name>       Component recipe name (e.g., card, button, navbar, modal, table, input)
-  --variant <name>    Specific variant (e.g., primary, secondary, metric, action)
+  --type <name>       Component recipe name (e.g., card, button, navbar, modal, layout, dropzone, mpin)
+  --variant <name>    Specific variant (e.g., welcome, activity, floating, mpin, pod, escrow, toast)
   --target <path>     Optional output file to append or write the snippet to
   --list              List all available component recipes and variants
   --help              Show this help message
@@ -58,55 +60,63 @@ function parseRecipes() {
       let key = title.replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
 
       if (file === 'buttons-inputs.md') {
-        if (title.includes('input') || title.includes('select') || title.includes('text field')) {
+        if (title.includes('dropzone') || title.includes('receipt') || title.includes('file')) {
+          ensureType('dropzone', file);
+          catalog.dropzone.variants['receipt'] = snippet;
+        } else if (title.includes('checkbox') || title.includes('confirm')) {
           ensureType('input', file);
-          let v = key.includes('select') ? 'select' : (key.includes('error') ? 'error' : 'standard');
-          catalog.input.variants[v] = snippet;
+          catalog.input.variants['checkbox'] = snippet;
+        } else if (title.includes('keypad') || title.includes('key')) {
+          ensureType('button', file);
+          catalog.button.variants['keypad'] = snippet;
+        } else if (title.includes('pill') || title.includes('notification')) {
+          ensureType('button', file);
+          catalog.button.variants['pill'] = snippet;
+        } else if (title.includes('navy')) {
+          ensureType('button', file);
+          catalog.button.variants['navy'] = snippet;
         } else {
           ensureType('button', file);
-          let v = key.includes('secondary') || key.includes('outline') ? 'secondary'
-            : (key.includes('ghost') ? 'ghost'
-            : (key.includes('destructive') ? 'destructive'
-            : (key.includes('icon') ? 'icon' : 'primary')));
-          catalog.button.variants[v] = snippet;
+          catalog.button.variants['primary'] = snippet;
         }
       } else if (file === 'cards.md') {
         ensureType('card', file);
-        let v = key.includes('action') ? 'action' : (key.includes('elevated') || key.includes('container') ? 'container' : 'metric');
+        let v = title.includes('welcome') ? 'welcome'
+          : (title.includes('empty') || title.includes('zero') ? 'empty' : 'activity');
         catalog.card.variants[v] = snippet;
       } else if (file === 'navbar.md') {
         ensureType('navbar', file);
-        let v = key.includes('breadcrumb') ? 'breadcrumb' : (key.includes('drawer') || key.includes('mobile') ? 'mobile' : 'header');
+        let v = title.includes('floating') ? 'floating'
+          : (title.includes('labeled') ? 'labeled' : 'brand-header');
         catalog.navbar.variants[v] = snippet;
       } else if (file === 'layouts-tables.md') {
-        if (title.includes('table')) {
-          ensureType('table', file);
-          catalog.table.variants['responsive'] = snippet;
-        } else {
-          ensureType('layout', file);
-          catalog.layout.variants['shell'] = snippet;
-        }
+        ensureType('layout', file);
+        let v = title.includes('phone') || title.includes('bezel') ? 'phone-frame'
+          : (title.includes('stepper') || title.includes('timeline') ? 'stepper' : 'studio-header');
+        catalog.layout.variants[v] = snippet;
       } else if (file === 'feedback-dialogs.md') {
-        if (title.includes('drawer') || title.includes('slide-over')) {
+        if (title.includes('mpin') || title.includes('pin')) {
+          ensureType('modal', file);
+          catalog.modal.variants['mpin'] = snippet;
+        } else if (title.includes('pod') || title.includes('delivery')) {
+          ensureType('modal', file);
+          catalog.modal.variants['pod'] = snippet;
+        } else if (title.includes('escrow')) {
+          ensureType('modal', file);
+          catalog.modal.variants['escrow'] = snippet;
+        } else if (title.includes('toast')) {
+          ensureType('toast', file);
+          catalog.toast.variants['pill'] = snippet;
+        } else if (title.includes('drawer') || title.includes('notification')) {
           ensureType('drawer', file);
-          catalog.drawer.variants['detail'] = snippet;
-        } else if (title.includes('form') || title.includes('creation') || title.includes('entity')) {
+          catalog.drawer.variants['notifications'] = snippet;
+        } else {
           ensureType('modal', file);
-          catalog.modal.variants['form'] = snippet;
-        } else if (title.includes('modal') || title.includes('dialog')) {
-          ensureType('modal', file);
-          catalog.modal.variants['dialog'] = snippet;
-        } else if (title.includes('empty')) {
-          ensureType('empty', file);
-          catalog.empty.variants['default'] = snippet;
-        } else if (title.includes('status') || title.includes('notification') || title.includes('alert') || title.includes('success') || title.includes('warning')) {
-          ensureType('alert', file);
-          let v = key.includes('warning') ? 'warning' : 'success';
-          catalog.alert.variants[v] = snippet;
+          catalog.modal.variants['default'] = snippet;
         }
       } else if (file === 'typography.md') {
         ensureType('typography', file);
-        catalog.typography.variants['hero'] = snippet;
+        catalog.typography.variants['header'] = snippet;
       } else {
         const customType = path.basename(file, '.md').toLowerCase();
         ensureType(customType, file);
