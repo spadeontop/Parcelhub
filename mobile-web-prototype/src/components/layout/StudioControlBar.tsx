@@ -23,6 +23,10 @@ export const StudioControlBar: React.FC = () => {
     if (activeScreen === 'staff_ui' || roleMode === 'staff') {
       return 'figma-staff';
     }
+    if (activeScreen === 'login') return 'figma-login';
+    if (activeScreen === 'register') return 'figma-register';
+    if (activeScreen === 'mpin_login') return 'figma-mpin-login';
+    if (activeScreen === 'mpin_create') return 'figma-mpin-create';
     if (activeScreen === 'home') {
       return hasOrders ? 'figma-2' : 'figma-1';
     }
@@ -97,6 +101,12 @@ export const StudioControlBar: React.FC = () => {
             <option value="figma-11">11. If Hub Closed (Disabled state)</option>
             <option value="figma-12">12. Tracking Stage 4: Claimed</option>
             <option value="figma-staff">Staff UI: Counter Ops (Figma Flow)</option>
+            <optgroup label="Authentication Flows">
+              <option value="figma-login">Auth: Login Interface</option>
+              <option value="figma-register">Auth: Register Interface</option>
+              <option value="figma-mpin-login">Auth: MPIN Login</option>
+              <option value="figma-mpin-create">Auth: MPIN Create (Confirmation)</option>
+            </optgroup>
           </select>
         </div>
 

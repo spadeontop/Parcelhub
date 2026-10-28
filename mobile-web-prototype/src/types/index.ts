@@ -12,7 +12,11 @@ export type ScreenId =
   | 'qr_screen'
   | 'order_details'
   | 'transactions'
-  | 'staff_ui';
+  | 'staff_ui'
+  | 'login'
+  | 'register'
+  | 'mpin_login'
+  | 'mpin_create';
 
 export type RoleMode = 'user' | 'staff';
 
@@ -40,7 +44,11 @@ export type ScenarioId =
   | 'figma-10'
   | 'figma-11'
   | 'figma-12'
-  | 'figma-staff';
+  | 'figma-staff'
+  | 'figma-login'
+  | 'figma-register'
+  | 'figma-mpin-login'
+  | 'figma-mpin-create';
 
 export interface Order {
   id: string;
@@ -61,6 +69,9 @@ export interface Order {
   dateLabel: string;
   carrier: string;
   hubLocation: string;
+  courierPaid?: boolean;
+  parcelImageUrl?: string | null;
+  claimInitiatedAt?: number | null;
 }
 
 export interface DraftOrder {
@@ -82,4 +93,56 @@ export interface NotificationItem {
 export interface ToastState {
   show: boolean;
   message: string;
+}
+
+export interface CustomerRegisterRequest {
+  password: string;
+  email: string;
+  firstname: string;
+  lastname: string;
+  middleinitial?: string;
+  phonenumber: string;
+}
+
+export interface CustomerRegisterResponse {
+  statusMessage: string;
+  refreshToken: string;
+}
+
+export interface CustomerLoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface CustomerLoginResponse {
+  statusMessage: string;
+  refreshToken: string;
+}
+
+export interface CustomerCreateMpinRequest {
+  refreshToken: string;
+  mpin: string;
+}
+
+export interface CustomerCreateMpinResponse {
+  statusMessage: string;
+  authToken: string;
+}
+
+export interface CustomerVerifyMpinRequest {
+  refreshToken: string;
+  mpin: string;
+}
+
+export interface CustomerVerifyMpinResponse {
+  statusMessage: string;
+  authToken: string;
+}
+
+export interface AuthCustomer {
+  email: string;
+  firstname: string;
+  lastname: string;
+  middleinitial?: string;
+  phonenumber: string;
 }
