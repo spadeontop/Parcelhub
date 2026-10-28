@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
 import App from '../App';
 
 describe('ParcelHub v3 Modular React Application', () => {
@@ -107,7 +107,7 @@ describe('ParcelHub v3 Modular React Application', () => {
     expect(screen.getByText('Generate QR')).toBeInTheDocument();
   });
 
-  it('authorizes parcel claim via 6-digit MPIN modal and marks order CLAIMED', async () => {
+  it('unlocks staff terminal when user initiates claim and staff manually releases parcel', () => {
     render(<App />);
 
     // Select Scenario 9 (Ready to Claim)
@@ -122,24 +122,34 @@ describe('ParcelHub v3 Modular React Application', () => {
     const initiateBtn = screen.getByRole('button', { name: 'Initiate Claim' });
     fireEvent.click(initiateBtn);
 
-    // MPIN modal is visible
-    expect(screen.getByText('Authorize Release')).toBeInTheDocument();
+    // Customer app now displays active claim window
+    expect(screen.getByText(/Claim Window Active:/i)).toBeInTheDocument();
+    expect(screen.getByText(/Staff counter unlocked!/i)).toBeInTheDocument();
 
-    // Enter 6 digits: 1 2 3 4 5 6
-    fireEvent.click(screen.getByRole('button', { name: '1' }));
-    fireEvent.click(screen.getByRole('button', { name: '2' }));
-    fireEvent.click(screen.getByRole('button', { name: '3' }));
-    fireEvent.click(screen.getByRole('button', { name: '4' }));
-    fireEvent.click(screen.getByRole('button', { name: '5' }));
-    fireEvent.click(screen.getByRole('button', { name: '6' }));
+    // Switch to Staff Terminal
+    const staffRoleBtn = screen.getByRole('button', { name: 'Staff Counter' });
+    fireEvent.click(staffRoleBtn);
 
-    // Advance fake timer by 300ms for claim commitment
-    act(() => {
-      vi.advanceTimersByTime(300);
-    });
+    // Switch to Ready tab
+    const readyTab = screen.getByRole('button', { name: 'Ready' });
+    fireEvent.click(readyTab);
 
-    // Should now be CLAIMED
-    expect(screen.getByText('Claimed')).toBeInTheDocument();
+    // Staff release button is now UNLOCKED
+    const releaseBtn = screen.getByRole('button', { name: 'Release' });
+    expect(releaseBtn).not.toBeDisabled();
+
+    // Staff manually presses "Release"
+    fireEvent.click(releaseBtn);
+
+    // Switch back to customer app and open order details to verify CLAIMED status
+    const exitBtn = screen.getByRole('button', { name: 'Exit to App' });
+    fireEvent.click(exitBtn);
+
+    // On Home screen, click on the released order
+    fireEvent.click(screen.getByText('VXE R1 Nearlink'));
+
+    // Should now be on Order Details in CLAIMED status
+    expect(screen.getByText('Complete Details')).toBeInTheDocument();
     expect(screen.getByText(/Handover verified. Cash change returned./i)).toBeInTheDocument();
   });
 

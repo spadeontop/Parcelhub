@@ -5,11 +5,7 @@ import { BottomNav } from '../layout/BottomNav';
 import { QrCodeIcon } from '../common/Icons';
 
 export const PaymentVerificationScreen: React.FC = () => {
-  const { navigateTo, openEscrowModal, pingCountdown, resetPingTimer } = useApp();
-
-  const minutes = Math.floor(pingCountdown / 60);
-  const seconds = pingCountdown % 60;
-  const formattedTimer = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  const { navigateTo, openEscrowModal } = useApp();
 
   return (
     <div className="flex flex-col min-h-[780px] bg-white px-5 pt-3 pb-8 justify-between select-none">
@@ -27,25 +23,6 @@ export const PaymentVerificationScreen: React.FC = () => {
             <span className="font-bold">Next step:</span> Please head to Lily’s Catering Hub to complete the cash
             payment. We will begin tracking your parcel once the payment is verified.
           </p>
-
-          {/* Countdown timer ticker */}
-          <div className="mt-4 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 text-xs font-mono font-medium text-slate-700">
-            <span>Counter Hold Timer:</span>
-            {pingCountdown === 0 ? (
-              <span className="text-[#ef4444] font-bold">00:00 (Expired)</span>
-            ) : (
-              <span className="font-bold text-[#215cd4]">{formattedTimer}</span>
-            )}
-            {pingCountdown === 0 && (
-              <button
-                type="button"
-                onClick={resetPingTimer}
-                className="ml-1 text-[11px] text-[#215cd4] font-semibold underline hover:text-[#194cb5]"
-              >
-                Renew
-              </button>
-            )}
-          </div>
 
           {/* Learn more toggle */}
           <div className="mt-5 flex justify-center">

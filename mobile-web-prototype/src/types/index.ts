@@ -61,6 +61,9 @@ export interface Order {
   dateLabel: string;
   carrier: string;
   hubLocation: string;
+  courierPaid?: boolean;
+  parcelImageUrl?: string | null;
+  claimInitiatedAt?: number | null;
 }
 
 export interface DraftOrder {
