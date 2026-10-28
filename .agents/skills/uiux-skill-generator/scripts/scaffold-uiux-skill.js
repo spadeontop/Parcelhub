@@ -14,11 +14,14 @@ function showHelp() {
   console.log(`
 Usage: node scaffold-uiux-skill.js [options]
 
+Scoped strictly to reference ONLY web/ (web/index.html, web/style.css, web/app.js, web/assets/).
+
 Options:
-  --name <slug>         Descriptive skill name (e.g. monochrome-saas-modern-design-skill) [Required]
-  --archetype <name>    Design archetype: "Monochrome SaaS Modern", "Ultra-Minimal Clean",
-                        "Cyber Dark", "Warm Editorial", "Enterprise Portal" [Default: Monochrome SaaS Modern]
-  --brand-color <hex>   Primary brand/accent hex color [Default: archetype default]
+  --name <slug>         Descriptive skill name (e.g. parcelhub-mobile-web-skill) [Required]
+  --archetype <name>    Design archetype: "ParcelHub Mobile Web", "Monochrome SaaS Modern",
+                        "Ultra-Minimal Clean", "Cyber Dark", "Warm Editorial", "Enterprise Portal"
+                        [Default: ParcelHub Mobile Web]
+  --brand-color <hex>   Primary brand/accent hex color [Default: #215cd4]
   --target-dir <path>   Output directory path [Default: .agents/skills/<name>]
   --framework <name>    Styling framework: tailwind-v4 or vanilla-css [Default: tailwind-v4]
   --json                Output results as JSON
@@ -27,6 +30,31 @@ Options:
 }
 
 const ARCHETYPES = {
+  'ParcelHub Mobile Web': {
+    slug: 'parcelhub-mobile-web',
+    fontPrimary: "'Google Sans Flex', 'Google Sans', 'Plus Jakarta Sans', system-ui, sans-serif",
+    fontMono: "'JetBrains Mono', monospace",
+    bgLight: '#ffffff',
+    bgDark: '#1e1e1e',
+    surfaceLight: '#f8f8f8',
+    surfaceDark: '#163b86',
+    surfaceElevatedLight: '#ffffff',
+    surfaceElevatedDark: '#215cd4',
+    textLight: '#111827',
+    textDark: '#ffffff',
+    textMutedLight: '#6b7280',
+    textMutedDark: '#9ca3af',
+    borderLight: '#e5e7eb',
+    borderDark: '#374151',
+    borderSubtleLight: '#f3f4f6',
+    borderSubtleDark: '#1f2937',
+    primaryLight: '#215cd4',
+    primaryDark: '#215cd4',
+    primaryFgLight: '#ffffff',
+    primaryFgDark: '#ffffff',
+    mutedLight: '#f8f8f8',
+    mutedDark: '#163b86',
+  },
   'Monochrome SaaS Modern': {
     slug: 'monochrome-saas',
     fontPrimary: 'Inter',
@@ -176,8 +204,8 @@ function main() {
   }
 
   const archIdx = args.indexOf('--archetype');
-  const archetypeInput = archIdx !== -1 ? args[archIdx + 1] : 'Monochrome SaaS Modern';
-  const archetypeKey = Object.keys(ARCHETYPES).find(k => k.toLowerCase() === archetypeInput.toLowerCase()) || 'Monochrome SaaS Modern';
+  const archetypeInput = archIdx !== -1 ? args[archIdx + 1] : 'ParcelHub Mobile Web';
+  const archetypeKey = Object.keys(ARCHETYPES).find(k => k.toLowerCase() === archetypeInput.toLowerCase()) || 'ParcelHub Mobile Web';
   const arch = ARCHETYPES[archetypeKey];
 
 function parseHex(hex) {

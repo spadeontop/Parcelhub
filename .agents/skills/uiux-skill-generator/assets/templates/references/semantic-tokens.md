@@ -40,59 +40,58 @@ Used strictly for state communication (not decorative styling):
 
 ---
 
-## 3. Tailwind v4 Theme & CSS Variables Definition
+## 3. Tailwind Configuration & CSS Variables (from `web/`)
 
-When mounting into HTML/Vite:
+When configuring Tailwind and CSS in `web/index.html` and `web/style.css`:
+
 ```html
-<style type="text/tailwindcss">
-@theme {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-surface: var(--surface);
-  --color-surface-elevated: var(--surface-elevated);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-border: var(--border);
-  --color-border-subtle: var(--border-subtle);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-ring: var(--ring);
-}
+<!-- Tailwind CDN & Brand Palette Extension -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          brand: {
+            blue: '#215cd4',
+            blueHover: '#194cb5',
+            navy: '#163b86',
+            dark: '#1e1e1e',
+            emerald: '#10b780',
+            gold: '#c58b12',
+            pillGreen: '#93eb99'
+          }
+        },
+        fontFamily: {
+          sans: ['"Google Sans Flex"', '"Google Sans"', '"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+          mono: ['"JetBrains Mono"', 'monospace']
+        }
+      }
+    }
+  }
+</script>
+```
 
+In `web/style.css`:
+```css
 :root {
-  --background: {{COLOR_BG_LIGHT}};
-  --foreground: {{COLOR_TEXT_LIGHT}};
-  --surface: {{COLOR_SURFACE_LIGHT}};
-  --surface-elevated: {{COLOR_SURFACE_ELEVATED_LIGHT}};
-  --muted: {{COLOR_MUTED_LIGHT}};
-  --muted-foreground: {{COLOR_TEXT_MUTED_LIGHT}};
-  --border: {{COLOR_BORDER_LIGHT}};
-  --border-subtle: {{COLOR_BORDER_SUBTLE_LIGHT}};
-  --primary: {{COLOR_PRIMARY_LIGHT}};
-  --primary-foreground: {{COLOR_PRIMARY_FG_LIGHT}};
-  --ring: {{COLOR_PRIMARY_LIGHT}};
+  --font-main: 'Google Sans Flex', 'Google Sans', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  
+  --primary-blue: #215cd4;
+  --primary-blue-hover: #194cb5;
+  --navy-dark: #163b86;
+  --card-dark: #1e1e1e;
+  --success-green: #10b780;
+  --warning-gold: #c58b12;
+  --danger-red: #ef4444;
 }
-
-.dark {
-  --background: {{COLOR_BG_DARK}};
-  --foreground: {{COLOR_TEXT_DARK}};
-  --surface: {{COLOR_SURFACE_DARK}};
-  --surface-elevated: {{COLOR_SURFACE_ELEVATED_DARK}};
-  --muted: {{COLOR_MUTED_DARK}};
-  --muted-foreground: {{COLOR_TEXT_MUTED_DARK}};
-  --border: {{COLOR_BORDER_DARK}};
-  --border-subtle: {{COLOR_BORDER_SUBTLE_DARK}};
-  --primary: {{COLOR_PRIMARY_DARK}};
-  --primary-foreground: {{COLOR_PRIMARY_FG_DARK}};
-  --ring: {{COLOR_PRIMARY_DARK}};
-}
-</style>
 ```
 
 ---
 
 ## 4. Anti-Patterns & Hard Constraints
 
-1. **NO Arbitrary Hex Inlining**: Never write `<div class="bg-[#121212]">`. Always use `<div class="bg-surface">`.
-2. **NO Hardcoded Grays**: Do not use `text-gray-400` or `border-zinc-800`. Always use `text-muted-foreground` and `border-border`.
-3. **Contrast Verification**: Run `node scripts/check-contrast.js` if tweaking variable values.
+1. **NO Unregistered Hex Colors**: All colors must resolve to the verified `web/` palette (`#215cd4`, `#163b86`, `#1e1e1e`, `#10b780`, `#93eb99`, `#c58b12`, `#ef4444`).
+2. **Strict Workspace Boundary**: This token contract references ONLY `web/`. Never check or import styles from other workspace directories.
+3. **Contrast Verification**: Run `node scripts/check-contrast.js` to ensure text-to-surface contrast remains >= 4.5:1.

@@ -1,94 +1,90 @@
 # Cards & Containers Reference
 
-This document provides canonical, copy-pasteable recipes for card layouts and containers in **{{SKILL_NAME}}**.
-Cards use the 30% secondary surface depth (`bg-surface` or `bg-surface-elevated`) with crisp borders (`border-border`).
+This document provides canonical, copy-pasteable recipes for cards and activity containers in **{{SKILL_NAME}}**, derived strictly from `web/` (`web/app.js` and `web/index.html`).
 
 ---
 
-## 1. Metric / Stat Card (KPI)
+## 1. Welcome Dark Card (Main Home Dashboard CTA)
 
-Used for dashboards, analytics, and overview panels.
-
-```html
-<div class="p-5 rounded-lg bg-surface border border-border shadow-xs space-y-3">
-  <div class="flex items-center justify-between text-muted-foreground">
-    <span class="text-xs font-medium tracking-wide uppercase">Active Requests</span>
-    <span class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-success-subtle text-success">
-      +14.2%
-    </span>
-  </div>
-  <div class="space-y-1">
-    <div class="text-2xl font-bold font-mono tracking-tight text-foreground">1,429,820</div>
-    <p class="text-xs text-muted-foreground">Recorded over the past 24 hours.</p>
-  </div>
-</div>
-```
-
----
-
-## 2. Interactive Action Card
-
-Clickable cards with subtle hover scale/border transitions.
+Dark contrast card (`#1e1e1e`) featuring primary call-to-action buttons for order creation and ledger inspection.
 
 ```html
-<div class="group relative p-5 rounded-lg bg-surface border border-border hover:border-border-subtle hover:bg-surface-elevated transition-all duration-150 cursor-pointer">
-  <div class="flex items-start justify-between">
-    <div class="space-y-1.5">
-      <h3 class="text-base font-semibold text-foreground group-hover:text-primary transition-colors">
-        Database Replication
-      </h3>
-      <p class="text-xs text-muted-foreground line-clamp-2">
-        Manage cross-region read replicas and automated point-in-time recovery intervals.
-      </p>
-    </div>
-    <div class="text-muted-foreground group-hover:text-foreground transition-colors">
-      <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-      </svg>
-    </div>
-  </div>
-  <div class="mt-4 flex items-center gap-2 pt-3 border-t border-border-subtle">
-    <span class="inline-block w-2 h-2 rounded-full bg-success"></span>
-    <span class="text-xs text-muted-foreground font-mono">Cluster: ap-southeast-1</span>
-  </div>
-</div>
-```
+<section class="rounded-2xl bg-[#1e1e1e] p-6 text-white shadow-lg select-none">
+  <h2 class="text-2xl font-bold tracking-tight text-white">Welcome Nyeowsz!</h2>
+  <p class="text-sm text-gray-400 mt-1">Create an order to get started</p>
 
----
-
-## 3. Elevated Content Container with Header & Footer
-
-```html
-<div class="rounded-lg bg-surface border border-border overflow-hidden">
-  <!-- Card Header -->
-  <div class="px-5 py-4 border-b border-border-subtle flex items-center justify-between">
-    <div>
-      <h3 class="text-sm font-semibold text-foreground">API Token Management</h3>
-      <p class="text-xs text-muted-foreground">Tokens grant programmatic access to your deployment.</p>
-    </div>
-    <button class="px-3 py-1.5 text-xs font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring">
-      Generate Token
+  <div class="flex items-center gap-3 mt-6">
+    <button 
+      type="button"
+      onclick="navigateTo('create_order')"
+      class="flex-1 py-3 px-4 rounded-xl bg-[#215cd4] hover:bg-[#1a4bb0] text-white font-semibold text-sm tracking-wide transition-all shadow-md btn-press text-center"
+    >
+      Create Order
+    </button>
+    <button 
+      type="button"
+      onclick="showToast('Transactions history: 2 completed consignments in ledger.')"
+      class="flex-1 py-3 px-4 rounded-xl bg-[#163b86] hover:bg-[#102d6b] text-white font-semibold text-sm tracking-wide transition-all btn-press text-center"
+    >
+      Transactions
     </button>
   </div>
-  
-  <!-- Card Body -->
-  <div class="p-5 space-y-4">
-    <div class="p-3 rounded-md bg-muted text-xs font-mono text-muted-foreground border border-border-subtle">
-      ag_live_9f82d1c7400bc94...
-    </div>
-  </div>
+</section>
+```
 
-  <!-- Card Footer -->
-  <div class="px-5 py-3 bg-muted/30 border-t border-border-subtle flex items-center justify-between text-xs text-muted-foreground">
-    <span>Last used 3 minutes ago</span>
-    <a href="#docs" class="text-primary hover:underline">Read API Docs</a>
+---
+
+## 2. Activities List Card (Consignment Order Item)
+
+Card listing ongoing and claimed consignments, with dynamic tracking status color indicators.
+
+```html
+<div class="rounded-2xl bg-[#f8f8f8] border border-gray-100 p-5 divide-y divide-gray-200 select-none">
+  <!-- Active Consignment Item -->
+  <div 
+    onclick="navigateTo('order_details', { orderId: 'ORD-402' })"
+    class="py-4 first:pt-1 last:pb-1 flex items-center justify-between cursor-pointer group hover:opacity-90 transition-all"
+  >
+    <div>
+      <h4 class="text-base font-bold text-gray-900 group-hover:text-[#215cd4] transition-colors">VXE R1 Nearlink</h4>
+      <p class="text-xs text-gray-500 mt-0.5">October 10, 2026 10:30</p>
+    </div>
+    <div class="text-right">
+      <span class="text-sm font-bold text-[#10b780] flex items-center gap-1">
+        Ready to Claim
+        <svg class="w-4 h-4 text-gray-400 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+        </svg>
+      </span>
+    </div>
   </div>
 </div>
 ```
 
 ---
 
-## 4. Anti-Patterns & Guidelines
+## 3. Zero-Orders Empty State Card
 
-1. **NO Deep Shadows**: Avoid exaggerated `shadow-2xl`. Keep elevation defined by crisp `border-border` and subtle tone changes (`bg-surface-elevated`).
-2. **Padding Consistency**: Standardize internal card padding to `p-5` (desktop) and `p-4` (mobile).
+Displayed when the student or customer has zero pending activities.
+
+```html
+<div class="flex-1 min-h-[360px] rounded-2xl bg-[#f8f8f8] border border-gray-100 flex flex-col items-center justify-center p-6 text-center select-none">
+  <p class="text-gray-700 text-sm font-medium">You don’t have any activites yet</p>
+  <button 
+    type="button" 
+    onclick="navigateTo('create_order')" 
+    class="text-sm font-semibold text-[#215cd4] hover:underline mt-1 cursor-pointer"
+  >
+    Create an order
+  </button>
+</div>
+```
+
+---
+
+## 4. Anti-Patterns & Rules
+
+1. **Strict Reference Scope**: Card components reference ONLY patterns found in `web/`.
+2. **Tactile Radii**: Cards must use `rounded-2xl` matching `web/app.js`.
+3. **Button Press Physics**: Always include `.btn-press` on interactive buttons within cards.
+

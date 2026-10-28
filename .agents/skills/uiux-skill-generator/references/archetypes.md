@@ -2,6 +2,9 @@
 
 This reference catalogues standard design archetypes used by `uiux-skill-generator` to scaffold descriptive, domain-specific procedural skills. Each archetype provides predefined color contracts, typography pairings, and semantic token defaults.
 
+> [!IMPORTANT]
+> **Reference Scope Restriction**: This generator and its archetypes are strictly bound to reference **ONLY** `web/` (`web/index.html`, `web/style.css`, `web/app.js`, `web/assets/`). Do not check or inspect other folders.
+
 ---
 
 ## 1. Naming Convention for Generated Skills
@@ -11,17 +14,25 @@ All generated UI/UX skills must be named descriptively following the pattern:
 <archetype-slug>-<domain>-skill
 ```
 *Examples*:
+- `parcelhub-mobile-web-skill` (Default for `web/`)
 - `monochrome-saas-modern-design-skill`
-- `ultra-minimal-clean-docs-skill`
 - `cyber-dark-fintech-analytics-skill`
-- `warm-editorial-content-skill`
-- `enterprise-data-dense-portal-skill`
 
 ---
 
 ## 2. Archetype Catalog
 
-### 1. Monochrome SaaS Modern
+### 1. ParcelHub Mobile Web (Primary Default)
+- **Default Skill Name**: `parcelhub-mobile-web-skill`
+- **Reference Target**: Sourced 1:1 from `web/` (`web/style.css`, `web/index.html`, `web/app.js`).
+- **Vibe**: High-trust mobile fintech, delivery hub operations, zero-credit escrow security, tactile device ergonomics.
+- **Dominant (60%)**: Background `#ffffff` (Mobile canvas) / `#0f172a` (Studio backdrop), Surface `#f8f8f8`, Dark Card `#1e1e1e`.
+- **Secondary (30%)**: Surface Elevated `#163b86` (Navy), Borders `#e5e7eb` (Light) / `#374151` (Dark frame), Muted Text `#6b7280`.
+- **Accent (10%)**: Primary Blue `#215cd4` (Hover `#194cb5`), Pill Green `#93eb99`, Emerald `#10b780`, Warning Gold `#c58b12`, Danger Red `#ef4444`.
+- **Typography**: Google Sans Flex / Plus Jakarta Sans for UI headers/body, JetBrains Mono for monetary amounts, order IDs, and timestamps.
+- **Corner Radii & Framing**: Phone bezel `rounded-[48px]`, dynamic island `rounded-[20px]`, floating nav `rounded-full`, cards `rounded-2xl` to `rounded-3xl`.
+
+### 2. Monochrome SaaS Modern
 - **Default Skill Name**: `monochrome-saas-modern-design-skill`
 - **Vibe**: High-contrast, clean, confident, minimalist product engineering (Vercel / Raycast aesthetic).
 - **Dominant (60%)**: Background `#09090b` (Dark) / `#ffffff` (Light), Surface `#121215` (Dark) / `#f4f4f5` (Light).
@@ -72,6 +83,7 @@ All generated UI/UX skills must be named descriptively following the pattern:
 
 | Archetype Slug | Suggested Domain | Primary Accent | Base Font | Default Framework |
 | :--- | :--- | :--- | :--- | :--- |
+| `parcelhub-mobile-web` | Mobile Fintech, Delivery Hub (`web/`) | `#215cd4` | Google Sans / Plus Jakarta | Tailwind / CSS |
 | `monochrome-saas` | SaaS, DevTools | `#18181b` / `#ffffff` | Inter / Geist | Tailwind v4 |
 | `ultra-minimal` | Documentation, Blogs | `#0369a1` | Inter | Tailwind v4 / CSS |
 | `cyber-dark` | Analytics, Crypto | `#5e6ad2` | Geist / Mono | Tailwind v4 |

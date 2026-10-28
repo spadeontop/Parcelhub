@@ -12,7 +12,10 @@ const process = require('node:process');
 
 function showHelp() {
   console.log(`
-Usage: node verify-ui-compliance.js <target-file-or-dir> [options]
+Usage: node verify-ui-compliance.js [target-file-or-dir] [options]
+
+Scoped strictly to reference ONLY web/ (web/index.html, web/style.css, web/app.js, web/assets/).
+Default target: web/
 
 Options:
   --strict            Treat warnings (e.g. non-semantic gray palettes) as hard errors
@@ -20,14 +23,20 @@ Options:
   --help              Show this help message
 
 Rules Enforced:
-  1. NO_ARBITRARY_HEX     Detects inline hex codes like bg-[#121212] or text-[#fff]
-  2. RAW_COLOR_PALETTES   Flags hardcoded Tailwind colors (e.g. bg-blue-600, text-zinc-400)
+  1. NO_ARBITRARY_HEX     Detects inline hex codes outside web/ brand palette
+  2. RAW_COLOR_PALETTES   Flags non-semantic palette classes outside web/
   3. INTERACTIVE_STATES   Ensures buttons have hover: and focus-visible:ring states
   4. ACCESSIBLE_NAMES     Ensures buttons have text or aria-label; images have alt attributes
   5. FORM_LABEL_LINK      Ensures inputs have associated label[for] or aria-label
   6. HEADING_HIERARCHY    Detects skipped heading levels (e.g. h1 directly to h3)
 `);
 }
+
+const ALLOWED_WEB_HEX = [
+  '#215cd4', '#194cb5', '#1a4bb0', '#163b86', '#102d6b',
+  '#1e1e1e', '#10b780', '#c58b12', '#93eb99', '#82e088',
+  '#f8f8f8', '#ef4444'
+];
 
 function lintContent(content, filePath, strict = false) {
   const lines = content.split('\n');
@@ -42,13 +51,15 @@ function lintContent(content, filePath, strict = false) {
     const arbitraryHexMatch = line.match(/(bg|text|border|ring|fill|stroke)-\[#[0-9a-fA-F]{3,8}\]/g);
     if (arbitraryHexMatch) {
       for (const match of arbitraryHexMatch) {
+        const hex = match.match(/#[0-9a-fA-F]{3,8}/)[0].toLowerCase();
+        if (ALLOWED_WEB_HEX.includes(hex)) continue;
         diagnostics.push({
           file: filePath,
           line: lineNum,
           level: 'error',
           rule: 'NO_ARBITRARY_HEX',
           message: `Found arbitrary hex token "${match}".`,
-          remediation: `Replace "${match}" with a semantic token (e.g. bg-primary, bg-surface, text-foreground, border-border).`
+          remediation: `Replace "${match}" with a recognized brand token from web/ (e.g. #215cd4, #163b86, #1e1e1e, #10b780, #c58b12).`
         });
       }
     }
@@ -249,17 +260,33 @@ function main() {
 
   const isJson = args.includes('--json');
   const strict = args.includes('--strict');
-  const targetPath = args.find(a => !a.startsWith('--'));
+  let targetPath = args.find(a => !a.startsWith('--'));
 
   if (!targetPath) {
-    console.error('Error: Missing target file or directory.');
-    process.exit(1);
+    const defaultWeb = path.resolve(process.cwd(), 'web');
+    if (fs.existsSync(defaultWeb)) {
+      targetPath = defaultWeb;
+    } else {
+      targetPath = path.resolve(__dirname, '../../../../web');
+    }
   }
 
   const resolved = path.resolve(targetPath);
   if (!fs.existsSync(resolved)) {
     console.error(`Error: Target not found at: ${resolved}`);
     process.exit(1);
+  }
+
+  // Strict boundary check: only allow files inside web/
+  const cwdWeb = path.resolve(process.cwd(), 'web');
+  if (fs.existsSync(cwdWeb)) {
+    const rel = path.relative(cwdWeb, resolved);
+    const isInsideWeb = !rel.startsWith('..') && !path.isAbsolute(rel);
+    const isWebItself = rel === '';
+    if (!isInsideWeb && !isWebItself) {
+      console.error(`Error: Access denied. This skill strictly references ONLY the web/ directory. Cannot inspect "${resolved}".`);
+      process.exit(1);
+    }
   }
 
   const diagnostics = processTarget(resolved, strict);

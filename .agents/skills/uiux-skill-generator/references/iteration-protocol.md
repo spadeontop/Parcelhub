@@ -77,3 +77,4 @@ If extending `references/<component>.md` manually, adhere strictly to this 4-sec
 After any manual or automated skill iteration:
 1. Run `node scripts/check-contrast.js` to ensure token changes did not break WCAG contrast.
 2. Run `node scripts/validate-skill-spec.js .` to confirm frontmatter and file integrity remain intact.
+3. Validate modified or new components strictly against `web/` (`node scripts/verify-ui-compliance.js web/`). Never scan other folders.
