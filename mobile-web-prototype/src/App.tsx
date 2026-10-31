@@ -10,6 +10,10 @@ import { QrScreen } from './components/screens/QrScreen';
 import { OrderDetailsScreen } from './components/screens/OrderDetailsScreen';
 import { TransactionsScreen } from './components/screens/TransactionsScreen';
 import { StaffTerminalScreen } from './components/screens/StaffTerminalScreen';
+import { LoginScreen } from './components/screens/LoginScreen';
+import { RegisterScreen } from './components/screens/RegisterScreen';
+import { MpinLoginScreen } from './components/screens/MpinLoginScreen';
+import { MpinCreateScreen } from './components/screens/MpinCreateScreen';
 import { MpinModal } from './components/modals/MpinModal';
 import { ProofOfDeliveryModal } from './components/modals/ProofOfDeliveryModal';
 import { EscrowPolicyModal } from './components/modals/EscrowPolicyModal';
@@ -36,6 +40,14 @@ const ScreenContent: React.FC = () => {
       return <TransactionsScreen />;
     case 'staff_ui':
       return <StaffTerminalScreen />;
+    case 'login':
+      return <LoginScreen />;
+    case 'register':
+      return <RegisterScreen />;
+    case 'mpin_login':
+      return <MpinLoginScreen />;
+    case 'mpin_create':
+      return <MpinCreateScreen />;
     default:
       return <HomeScreen />;
   }

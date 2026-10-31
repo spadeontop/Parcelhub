@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
+﻿import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import {
   Order,
   OrderStatus,
@@ -11,7 +11,15 @@ import {
   StaffFilter,
   ScenarioId,
   ToastState,
+  CustomerRegisterRequest,
+  CustomerRegisterResponse,
+  CustomerLoginRequest,
+  CustomerLoginResponse,
+  CustomerCreateMpinResponse,
+  CustomerVerifyMpinResponse,
+  AuthCustomer,
 } from '../types';
+import { customerApi } from '../services/customerApi';
 import {
   orderApi,
   getStatedFee,
@@ -130,6 +138,15 @@ interface AppContextType {
   isEscrowModalOpen: boolean;
   isNotificationsModalOpen: boolean;
 
+  // Customer Auth
+  refreshToken: string | null;
+  authToken: string | null;
+  authCustomer: AuthCustomer;
+  loginCustomer: (payload: CustomerLoginRequest) => Promise<CustomerLoginResponse>;
+  registerCustomer: (payload: CustomerRegisterRequest) => Promise<CustomerRegisterResponse>;
+  createCustomerMpin: (mpin: string) => Promise<CustomerCreateMpinResponse>;
+  verifyCustomerMpin: (mpin: string) => Promise<CustomerVerifyMpinResponse>;
+
   // Actions
   navigateTo: (screenId: ScreenId, params?: { orderId?: string; status?: OrderStatus; filter?: TransactionFilter }) => void;
   setRoleMode: (role: RoleMode) => void;
@@ -180,6 +197,16 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | null>(null);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Customer Auth State
+  const [refreshToken, setRefreshToken] = useState<string | null>('rt_demo_john_dumaguit');
+  const [authToken, setAuthToken] = useState<string | null>(null);
+  const [authCustomer, setAuthCustomer] = useState<AuthCustomer>({
+    email: 'johnvincekeyedu@gmail.com',
+    firstname: 'John Vince',
+    lastname: 'Dumaguit',
+    phonenumber: '0917 123 4567',
+  });
+
   const [activeScreen, setActiveScreen] = useState<ScreenId>('home');
   const [roleMode, setRoleModeState] = useState<RoleMode>('user');
   const [hasOrders, setHasOrdersState] = useState<boolean>(true);
@@ -370,6 +397,91 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setActiveScreen('payment_verification');
     showToast('Order registered! Complete counter deposit to activate.');
   }, [draftOrder, showToast]);
+
+  const loginCustomer = useCallback(
+    async (payload: CustomerLoginRequest): Promise<CustomerLoginResponse> => {
+      try {
+        const res = await customerApi.login(payload);
+        if (res.refreshToken) {
+          setRefreshToken(res.refreshToken);
+        }
+        setAuthCustomer((prev) => ({
+          ...prev,
+          email: payload.email,
+        }));
+        showToast(res.statusMessage || 'Login verified! Please enter your MPIN.');
+        navigateTo('mpin_login');
+        return res;
+      } catch (err: any) {
+        showToast(err?.message || 'Login failed. Please check your credentials.');
+        throw err;
+      }
+    },
+    [navigateTo, showToast]
+  );
+
+  const registerCustomer = useCallback(
+    async (payload: CustomerRegisterRequest): Promise<CustomerRegisterResponse> => {
+      try {
+        const res = await customerApi.register(payload);
+        if (res.refreshToken) {
+          setRefreshToken(res.refreshToken);
+        }
+        setAuthCustomer({
+          email: payload.email,
+          firstname: payload.firstname,
+          lastname: payload.lastname,
+          middleinitial: payload.middleinitial,
+          phonenumber: payload.phonenumber,
+        });
+        showToast(res.statusMessage || 'Registration successful! Setup your MPIN.');
+        navigateTo('mpin_create');
+        return res;
+      } catch (err: any) {
+        showToast(err?.message || 'Registration failed. Please check your information.');
+        throw err;
+      }
+    },
+    [navigateTo, showToast]
+  );
+
+  const createCustomerMpin = useCallback(
+    async (mpin: string): Promise<CustomerCreateMpinResponse> => {
+      try {
+        const token = refreshToken || 'rt_demo_john_dumaguit';
+        const res = await customerApi.createMpin({ refreshToken: token, mpin });
+        if (res.authToken) {
+          setAuthToken(res.authToken);
+        }
+        showToast(res.statusMessage || 'MPIN created! Welcome to ParcelHub.');
+        navigateTo('home');
+        return res;
+      } catch (err: any) {
+        showToast(err?.message || 'Failed to create MPIN. Please try again.');
+        throw err;
+      }
+    },
+    [navigateTo, refreshToken, showToast]
+  );
+
+  const verifyCustomerMpin = useCallback(
+    async (mpin: string): Promise<CustomerVerifyMpinResponse> => {
+      try {
+        const token = refreshToken || 'rt_demo_john_dumaguit';
+        const res = await customerApi.verifyMpin({ refreshToken: token, mpin });
+        if (res.authToken) {
+          setAuthToken(res.authToken);
+        }
+        showToast(res.statusMessage || 'Welcome back to ParcelHub!');
+        navigateTo('home');
+        return res;
+      } catch (err: any) {
+        showToast(err?.message || 'MPIN verification failed. Please try again.');
+        throw err;
+      }
+    },
+    [navigateTo, refreshToken, showToast]
+  );
 
   const copyToClipboard = useCallback(
     (text: string, label: string) => {
@@ -662,6 +774,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setRoleModeState('staff');
           setActiveScreen('staff_ui');
           break;
+        case 'figma-login':
+          setActiveScreen('login');
+          break;
+        case 'figma-register':
+          setActiveScreen('register');
+          break;
+        case 'figma-mpin-login':
+          setActiveScreen('mpin_login');
+          break;
+        case 'figma-mpin-create':
+          setActiveScreen('mpin_create');
+          break;
       }
     },
     [selectedOrderId]
@@ -734,6 +858,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         copyToClipboard,
         completeMpinClaim,
         getCurrentOrder,
+        refreshToken,
+        authToken,
+        authCustomer,
+        loginCustomer,
+        registerCustomer,
+        createCustomerMpin,
+        verifyCustomerMpin,
       }}
     >
       {children}

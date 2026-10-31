@@ -8,6 +8,7 @@ interface BrandHeaderProps {
   subtitle?: string;
   showBack?: boolean;
   backTarget?: ScreenId;
+  onBack?: () => void;
 }
 
 export const BrandHeader: React.FC<BrandHeaderProps> = ({
@@ -15,6 +16,7 @@ export const BrandHeader: React.FC<BrandHeaderProps> = ({
   subtitle = "LILY'S CATERING HUB",
   showBack = false,
   backTarget = 'home',
+  onBack,
 }) => {
   const {
     hubOpen,
@@ -33,7 +35,13 @@ export const BrandHeader: React.FC<BrandHeaderProps> = ({
         {showBack ? (
           <button
             type="button"
-            onClick={() => navigateTo(backTarget)}
+            onClick={() => {
+              if (onBack) {
+                onBack();
+              } else {
+                navigateTo(backTarget);
+              }
+            }}
             aria-label="Navigate back"
             className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 flex items-center justify-center transition-all btn-press focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#215cd4]"
           >

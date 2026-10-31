@@ -174,4 +174,17 @@ describe('ParcelHub v3 Modular React Application', () => {
     fireEvent.click(understoodBtn);
     expect(screen.queryByText('ParcelHub Counter Policy')).not.toBeInTheDocument();
   });
+  it('handles figma-login scenario navigation', () => {
+    render(<App />);
+    const select = screen.getByLabelText(/Select Figma Screen Scenario/i) as HTMLSelectElement;
+    fireEvent.change(select, { target: { value: 'figma-login' } });
+    expect(screen.getByRole('button', { name: /^Login$/i })).toBeInTheDocument();
+  });
+
+  it('handles figma-register scenario navigation', () => {
+    render(<App />);
+    const select = screen.getByLabelText(/Select Figma Screen Scenario/i) as HTMLSelectElement;
+    fireEvent.change(select, { target: { value: 'figma-register' } });
+    expect(screen.getByText(/Step 1 of 2/i)).toBeInTheDocument();
+  });
 });
