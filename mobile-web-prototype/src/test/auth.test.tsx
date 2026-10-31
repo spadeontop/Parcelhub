@@ -270,6 +270,7 @@ describe('Customer Auth API Routes & Screens (/api/customer)', () => {
       expect(screen.getByLabelText('Email')).toBeInTheDocument();
       expect(screen.getByLabelText('Phone number')).toBeInTheDocument();
       expect(screen.getByLabelText('Password')).toBeInTheDocument();
+      expect(screen.getByLabelText('Confirm password')).toBeInTheDocument();
 
       // Test Back to Step 1
       const backBtn = screen.getByRole('button', { name: /^Back$/i });
@@ -284,6 +285,7 @@ describe('Customer Auth API Routes & Screens (/api/customer)', () => {
       fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'maria.santos@gmail.com' } });
       fireEvent.change(screen.getByLabelText('Phone number'), { target: { value: '0918 765 4321' } });
       fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'SuperSecret123!' } });
+      fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: 'SuperSecret123!' } });
 
       // Submit registration
       const registerBtn = screen.getByRole('button', { name: /^Register$/i });
@@ -306,16 +308,28 @@ describe('Customer Auth API Routes & Screens (/api/customer)', () => {
       expect(screen.getByText(/1\. Enter MPIN/i)).toBeInTheDocument();
       expect(screen.getByText(/2\. Confirm MPIN/i)).toBeInTheDocument();
 
+      // Step 1: Button is Create MPIN and is disabled/not clickable
+      const createMpinBtn = screen.getByRole('button', { name: 'Create MPIN' });
+      expect(createMpinBtn).toBeDisabled();
+
       // Enter 4 digits on keypad: 5 8 2 0
       fireEvent.click(screen.getByRole('button', { name: '5' }));
       fireEvent.click(screen.getByRole('button', { name: '8' }));
       fireEvent.click(screen.getByRole('button', { name: '2' }));
+      expect(createMpinBtn).toBeDisabled();
       fireEvent.click(screen.getByRole('button', { name: '0' }));
 
-      // Wait for auto-advance to step 2
-      await waitFor(() => {
-        expect(screen.getByText(/Re-enter MPIN to Confirm/i)).toBeInTheDocument();
-      });
+      // Button is still Create MPIN and becomes clickable
+      expect(createMpinBtn).not.toBeDisabled();
+      expect(createMpinBtn).toHaveTextContent('Create MPIN');
+
+      // Click Create MPIN to advance to Step 2
+      fireEvent.click(createMpinBtn);
+
+      // In Step 2: Button should be Confirm MPIN and disabled until match
+      expect(screen.getByText(/Re-enter MPIN to Confirm/i)).toBeInTheDocument();
+      const confirmMpinBtn = screen.getByRole('button', { name: 'Confirm MPIN' });
+      expect(confirmMpinBtn).toBeDisabled();
 
       // Enter mismatched digits: 5 8 2 1
       fireEvent.click(screen.getByRole('button', { name: '5' }));
@@ -323,8 +337,9 @@ describe('Customer Auth API Routes & Screens (/api/customer)', () => {
       fireEvent.click(screen.getByRole('button', { name: '2' }));
       fireEvent.click(screen.getByRole('button', { name: '1' }));
 
-      // Mismatch message should appear
+      // Mismatch message appears, Confirm MPIN should NOT be clickable
       expect(screen.getByText(/Digits do not match/i)).toBeInTheDocument();
+      expect(confirmMpinBtn).toBeDisabled();
 
       // Clear pin2 and enter matching digits: 5 8 2 0
       fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
@@ -333,12 +348,12 @@ describe('Customer Auth API Routes & Screens (/api/customer)', () => {
       fireEvent.click(screen.getByRole('button', { name: '2' }));
       fireEvent.click(screen.getByRole('button', { name: '0' }));
 
-      // Should indicate match
+      // Should indicate match and Confirm MPIN becomes clickable
       expect(screen.getByText(/MPIN verified & ready!/i)).toBeInTheDocument();
+      expect(confirmMpinBtn).not.toBeDisabled();
 
-      // Submit MPIN creation
-      const submitBtn = screen.getByRole('button', { name: 'Create MPIN' });
-      fireEvent.click(submitBtn);
+      // Submit MPIN confirmation
+      fireEvent.click(confirmMpinBtn);
 
       // Should navigate to Home
       await waitFor(() => {
@@ -358,9 +373,9 @@ describe('Customer Auth API Routes & Screens (/api/customer)', () => {
       fireEvent.click(screen.getByRole('button', { name: '1' }));
       fireEvent.click(screen.getByRole('button', { name: '1' }));
 
-      await waitFor(() => {
-        expect(screen.getByText(/Re-enter MPIN to Confirm/i)).toBeInTheDocument();
-      });
+      // Advance to Step 2
+      fireEvent.click(screen.getByRole('button', { name: 'Create MPIN' }));
+      expect(screen.getByText(/Re-enter MPIN to Confirm/i)).toBeInTheDocument();
 
       // Step 2: enter mismatch 2 2 2 2
       fireEvent.click(screen.getByRole('button', { name: '2' }));
@@ -380,34 +395,40 @@ describe('Customer Auth API Routes & Screens (/api/customer)', () => {
       fireEvent.click(screen.getByRole('button', { name: '1' }));
 
       expect(screen.getByText(/MPIN verified & ready!/i)).toBeInTheDocument();
+      const confirmMpinBtn = screen.getByRole('button', { name: 'Confirm MPIN' });
+      expect(confirmMpinBtn).not.toBeDisabled();
 
-      // Test Change Step 1 MPIN button returns to Step 1
-      const changeStep1Btn = screen.getByRole('button', { name: /Change Step 1 MPIN/i });
-      fireEvent.click(changeStep1Btn);
-      expect(screen.getByRole('button', { name: /Next: Confirm MPIN/i })).toBeInTheDocument();
+      // Verify Change Step 1 MPIN button is removed per spec
+      expect(screen.queryByRole('button', { name: /Change Step 1 MPIN/i })).not.toBeInTheDocument();
+
+      // Clicking Step 1 container returns to Step 1
+      fireEvent.click(screen.getByText(/1\. Enter MPIN/i));
+      const step1Btn = screen.getByRole('button', { name: 'Create MPIN' });
+      expect(step1Btn).toBeInTheDocument();
+      expect(step1Btn).not.toBeDisabled();
     });
 
-    it('cancels auto-advance timer when hitting backspace on Step 1', async () => {
+    it('disables Create MPIN button when digits are incomplete or backspaced', async () => {
       render(<App />);
 
       const scenarioSelect = screen.getByLabelText('Select Figma Screen Scenario');
       fireEvent.change(scenarioSelect, { target: { value: 'figma-mpin-create' } });
 
-      // Enter 4 digits
+      const createBtn = screen.getByRole('button', { name: 'Create MPIN' });
+      expect(createBtn).toBeDisabled();
+
+      // Enter digits
       fireEvent.click(screen.getByRole('button', { name: '9' }));
       fireEvent.click(screen.getByRole('button', { name: '8' }));
       fireEvent.click(screen.getByRole('button', { name: '7' }));
+      expect(createBtn).toBeDisabled();
+
       fireEvent.click(screen.getByRole('button', { name: '6' }));
+      expect(createBtn).not.toBeDisabled();
 
-      // Immediately backspace before the 200ms timer expires
+      // Backspace disables it again
       fireEvent.click(screen.getByLabelText('Backspace'));
-
-      // Wait 300ms
-      await new Promise((resolve) => setTimeout(resolve, 300));
-
-      // Should remain on Step 1 because timer was cleared, pin1 has 3 digits
-      expect(screen.getByText('Enter 4 Digits')).toBeInTheDocument();
-      expect(screen.queryByText(/Re-enter MPIN to Confirm/i)).not.toBeInTheDocument();
+      expect(createBtn).toBeDisabled();
     });
   });
 
@@ -438,11 +459,10 @@ describe('Customer Auth API Routes & Screens (/api/customer)', () => {
       fireEvent.click(screen.getByRole('button', { name: '3' }));
       fireEvent.click(screen.getByRole('button', { name: '4' }));
 
-      // Click Sign in with MPIN
-      const signinBtn = screen.getByRole('button', { name: /Sign in with MPIN/i });
-      fireEvent.click(signinBtn);
+      // Verify Sign in with MPIN button is removed per spec
+      expect(screen.queryByRole('button', { name: /Sign in with MPIN/i })).not.toBeInTheDocument();
 
-      // Navigates to Home
+      // Automatically logs in and navigates to Home without manual button click
       await waitFor(() => {
         expect(screen.getByText(/Welcome Nyeowsz!/i)).toBeInTheDocument();
       });
