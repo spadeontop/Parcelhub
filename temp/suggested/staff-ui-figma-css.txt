@@ -1,0 +1,214 @@
+/* Staff UI */
+
+/* Auto layout */
+display: flex;
+flex-direction: column;
+justify-content: center;
+align-items: center;
+padding: 10px;
+gap: 10px;
+
+position: relative;
+width: 720px;
+height: 1280px;
+
+background: #ffffff;
+
+/* Frame 108 */
+
+width: 700px;
+height: 1260px;
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+align-self: stretch;
+flex-grow: 1;
+
+/* Frame 109 */
+
+position: absolute;
+width: 700px;
+height: 104px;
+left: 0px;
+top: -9px;
+
+background: #647b92;
+
+/* Header */
+
+position: absolute;
+width: 70px;
+height: 24px;
+left: 315px;
+top: 40px;
+
+font-family: "Inter";
+font-style: normal;
+font-weight: 400;
+font-size: 20px;
+line-height: 24px;
+
+color: #ffffff;
+
+/* Frame 111 */
+
+position: absolute;
+width: 700px;
+height: 87px;
+left: 11px;
+top: 1071px;
+
+background: #647b92;
+
+/* Filter Area */
+
+position: absolute;
+width: 97px;
+height: 24px;
+left: 299px;
+top: 25px;
+
+font-family: "Inter";
+font-style: normal;
+font-weight: 400;
+font-size: 20px;
+line-height: 24px;
+
+color: #ffffff;
+
+/* Active, Ready, Claimed */
+
+position: absolute;
+width: 217px;
+height: 24px;
+left: 266px;
+top: 51px;
+
+font-family: "Inter";
+font-style: normal;
+font-weight: 400;
+font-size: 20px;
+line-height: 24px;
+
+color: #ffffff;
+
+/* Frame 114 */
+
+position: absolute;
+width: 700px;
+height: 806px;
+left: 0px;
+top: 113px;
+
+background: #647b92;
+
+/* Cards Area */
+
+position: absolute;
+width: 105px;
+height: 24px;
+left: 299px;
+top: 25px;
+
+font-family: "Inter";
+font-style: normal;
+font-weight: 400;
+font-size: 20px;
+line-height: 24px;
+
+color: #ffffff;
+
+/* Active, Ready, Claimed */
+
+position: absolute;
+width: 217px;
+height: 24px;
+left: 266px;
+top: 51px;
+
+font-family: "Inter";
+font-style: normal;
+font-weight: 400;
+font-size: 20px;
+line-height: 24px;
+
+color: #ffffff;
+
+/* Frame 113 */
+
+position: absolute;
+width: 700px;
+height: 87px;
+left: 9px;
+top: 1165px;
+
+background: #647b92;
+
+/* Navigation Area */
+
+position: absolute;
+width: 151px;
+height: 24px;
+left: 299px;
+top: 25px;
+
+font-family: "Inter";
+font-style: normal;
+font-weight: 400;
+font-size: 20px;
+line-height: 24px;
+
+color: #ffffff;
+
+/* Home, Notifications, Account/Settings */
+
+position: absolute;
+width: 362px;
+height: 24px;
+left: 194px;
+top: 49px;
+
+font-family: "Inter";
+font-style: normal;
+font-weight: 400;
+font-size: 20px;
+line-height: 24px;
+
+color: #ffffff;
+
+/* Frame 112 */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 27px 31px;
+gap: 10px;
+
+position: absolute;
+width: 143px;
+height: 102px;
+left: 557px;
+top: 948px;
+
+background: #647b92;
+
+/* Scan QR Button */
+
+width: 81px;
+height: 48px;
+
+font-family: "Inter";
+font-style: normal;
+font-weight: 400;
+font-size: 20px;
+line-height: 24px;
+
+color: #ffffff;
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
