@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useApp } from '../../context/AppContext';
 
 export const MpinCreateScreen: React.FC = () => {
@@ -8,32 +8,12 @@ export const MpinCreateScreen: React.FC = () => {
   const [pin2, setPin2] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [mismatch, setMismatch] = useState<boolean>(false);
-  const stepTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const clearStepTimer = useCallback(() => {
-    if (stepTimerRef.current) {
-      clearTimeout(stepTimerRef.current);
-      stepTimerRef.current = null;
-    }
-  }, []);
-
-  useEffect(() => {
-    return () => clearStepTimer();
-  }, [clearStepTimer]);
 
   const handleKeyPress = useCallback((digit: string) => {
     if (activeStep === 1) {
       setMismatch(false);
       if (pin1.length < 4) {
-        const nextPin = pin1 + digit;
-        setPin1(nextPin);
-        if (nextPin.length === 4) {
-          clearStepTimer();
-          stepTimerRef.current = setTimeout(() => {
-            setActiveStep(2);
-            setMismatch(false);
-          }, 200);
-        }
+        setPin1((prev) => (prev.length < 4 ? prev + digit : prev));
       }
     } else {
       // If previous entry was mismatched, typing starts fresh immediately without freezing
@@ -56,10 +36,9 @@ export const MpinCreateScreen: React.FC = () => {
         }
       }
     }
-  }, [activeStep, pin1, pin2, mismatch, showToast, clearStepTimer]);
+  }, [activeStep, pin1, pin2, mismatch, showToast]);
 
   const handleBackspace = useCallback(() => {
-    clearStepTimer();
     setMismatch(false);
     if (activeStep === 1) {
       if (pin1.length > 0) {
@@ -73,28 +52,15 @@ export const MpinCreateScreen: React.FC = () => {
         setActiveStep(1);
       }
     }
-  }, [activeStep, pin1.length, pin2.length, clearStepTimer]);
+  }, [activeStep, pin1.length, pin2.length]);
 
-  // Support physical keyboard
-  useEffect(() => {
-    if (isMpinModalOpen) return;
+  const isMatched = pin1.length === 4 && pin2.length === 4 && pin1 === pin2;
+  const isStep1Valid = pin1.length === 4;
+  const isStep2Valid = isMatched;
+  const isCurrentStepValid = activeStep === 1 ? isStep1Valid : isStep2Valid;
+  const isButtonDisabled = isSubmitting || !isCurrentStepValid;
 
-    const onKeyDown = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement;
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return;
-
-      if (/^[0-9]$/.test(e.key)) {
-        handleKeyPress(e.key);
-      } else if (e.key === 'Backspace') {
-        handleBackspace();
-      }
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [handleKeyPress, handleBackspace, isMpinModalOpen]);
-
-  const handleSubmit = async () => {
-    clearStepTimer();
+  const handleSubmit = useCallback(async () => {
     if (pin1.length < 4) {
       showToast('Please enter a 4-digit MPIN first.');
       setActiveStep(1);
@@ -120,12 +86,55 @@ export const MpinCreateScreen: React.FC = () => {
     } finally {
       setIsSubmitting(false);
     }
+  }, [pin1, pin2, createCustomerMpin, showToast]);
+
+  const handleButtonClick = () => {
+    if (activeStep === 1) {
+      if (isStep1Valid) {
+        setActiveStep(2);
+        setMismatch(false);
+      }
+    } else {
+      if (isStep2Valid) {
+        handleSubmit();
+      }
+    }
   };
 
-  const isMatched = pin1.length === 4 && pin2.length === 4 && pin1 === pin2;
+  // Support physical keyboard
+  useEffect(() => {
+    if (isMpinModalOpen) return;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return;
+
+      if (/^[0-9]$/.test(e.key)) {
+        handleKeyPress(e.key);
+      } else if (e.key === 'Backspace') {
+        handleBackspace();
+      } else if (e.key === 'Enter') {
+        if (activeStep === 1 && pin1.length === 4) {
+          setActiveStep(2);
+          setMismatch(false);
+        } else if (activeStep === 2 && isMatched) {
+          handleSubmit();
+        }
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [handleKeyPress, handleBackspace, handleSubmit, activeStep, pin1.length, isMatched, isMpinModalOpen]);
+
   const displayName = authCustomer.firstname
     ? `${authCustomer.firstname} ${authCustomer.lastname}`
     : 'John Vince Dumaguit';
+
+  const buttonLabel = isSubmitting
+    ? 'Activating MPIN...'
+    : activeStep === 1
+    ? 'Create MPIN'
+    : 'Confirm MPIN';
 
   return (
     <div className="flex flex-col min-h-[720px] bg-white px-6 py-6 relative select-none animate-fadeIn justify-between">
@@ -168,7 +177,6 @@ export const MpinCreateScreen: React.FC = () => {
           {/* Step 1: Create 4-digit MPIN */}
           <div
             onClick={() => {
-              clearStepTimer();
               setActiveStep(1);
               setMismatch(false);
             }}
@@ -285,7 +293,6 @@ export const MpinCreateScreen: React.FC = () => {
           <button
             type="button"
             onClick={() => {
-              clearStepTimer();
               if (activeStep === 2) {
                 setPin2('');
                 setMismatch(false);
@@ -332,35 +339,16 @@ export const MpinCreateScreen: React.FC = () => {
         {/* Primary Action Button */}
         <button
           type="button"
-          disabled={isSubmitting || (activeStep === 2 && pin2.length < 4)}
-          onClick={activeStep === 1 && pin1.length === 4 ? () => setActiveStep(2) : handleSubmit}
-          className="w-full h-11 bg-[#215cd4] hover:bg-[#194cb5] text-white rounded-lg font-semibold text-[14.5px] shadow-xs transition-all flex items-center justify-center cursor-pointer active:scale-[0.99] disabled:opacity-50"
+          disabled={isButtonDisabled}
+          onClick={handleButtonClick}
+          className={`w-full h-11 rounded-lg font-semibold text-[14.5px] transition-all flex items-center justify-center ${
+            isButtonDisabled
+              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+              : 'bg-[#215cd4] hover:bg-[#194cb5] text-white shadow-xs cursor-pointer active:scale-[0.99]'
+          }`}
         >
-          {isSubmitting
-            ? 'Activating MPIN...'
-            : activeStep === 1
-            ? pin1.length === 4
-              ? 'Next: Confirm MPIN &rarr;'
-              : 'Enter 4 Digits'
-            : 'Create MPIN'}
+          {buttonLabel}
         </button>
-
-        {activeStep === 2 && (
-          <div className="text-center mt-2.5">
-            <button
-              type="button"
-              onClick={() => {
-                clearStepTimer();
-                setActiveStep(1);
-                setPin2('');
-                setMismatch(false);
-              }}
-              className="text-[12px] text-[#215cd4] hover:underline font-semibold cursor-pointer bg-transparent border-none"
-            >
-              &larr; Change Step 1 MPIN
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );
