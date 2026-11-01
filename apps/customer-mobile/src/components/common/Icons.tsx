@@ -1,5 +1,5 @@
 import React from 'react';
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Path, Line, Circle } from 'react-native-svg';
 
 export const HomeIcon: React.FC<{ size?: number; color?: string }> = ({ size = 22, color = '#215cd4' }) => (
   <Svg width={size} height={size} viewBox="0 0 110 104" fill="none">
@@ -86,7 +86,46 @@ export const BackArrowIcon: React.FC<{ size?: number; color?: string }> = ({ siz
       strokeLinejoin="round"
       strokeWidth="2"
       stroke={color}
-      d="M10 19l-7-7m0 0l7-7m-7 7h18"
+      d="M3 10h10a5 5 0 0 1 5 5v2m-15-7l4-4m-4 4l4 4"
+    />
+  </Svg>
+);
+
+export const BackspaceIcon: React.FC<{ size?: number; color?: string }> = ({ size = 20, color = '#374151' }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      stroke={color}
+      d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"
+    />
+    <Line x1="18" y1="9" x2="12" y2="15" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    <Line x1="12" y1="9" x2="18" y2="15" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
+export const EyeIcon: React.FC<{ size?: number; color?: string }> = ({ size = 18, color = '#9ca3af' }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Circle cx="12" cy="12" r="3" stroke={color} strokeWidth="2" />
+    <Path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      stroke={color}
+      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+    />
+  </Svg>
+);
+
+export const EyeOffIcon: React.FC<{ size?: number; color?: string }> = ({ size = 18, color = '#9ca3af' }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      stroke={color}
+      d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18"
     />
   </Svg>
 );
