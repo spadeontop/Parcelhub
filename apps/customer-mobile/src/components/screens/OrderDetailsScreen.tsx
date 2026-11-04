@@ -33,13 +33,13 @@ export const OrderDetailsScreen: React.FC = () => {
   let bannerSubtitle = 'Payment Required';
 
   if (status === 'AWAITING_PARCEL') {
-    bannerBg = 'bg-[#215cd4]';
+    bannerBg = 'bg-[#1b65e8]';
     bannerSubtitle = 'Awaiting Parcel';
   } else if (status === 'READY_TO_CLAIM') {
     bannerBg = 'bg-[#10b780]';
     bannerSubtitle = 'Ready To Claim';
   } else if (status === 'CLAIMED') {
-    bannerBg = 'bg-white border-b border-gray-200';
+    bannerBg = 'bg-[#181b20]';
     bannerSubtitle = 'Claimed';
   }
 
@@ -49,6 +49,66 @@ export const OrderDetailsScreen: React.FC = () => {
       return;
     }
     customerInitiateClaim(order.id);
+  };
+
+  // Stepper completion checks
+  const isStep1Done = status === 'AWAITING_PARCEL' || status === 'READY_TO_CLAIM' || status === 'CLAIMED';
+  const isStep1Active = status === 'PAYMENT_REQUIRED';
+
+  const isStep2Done = status === 'READY_TO_CLAIM' || status === 'CLAIMED';
+  const isStep2Active = status === 'AWAITING_PARCEL';
+
+  const isStep3Done = status === 'CLAIMED';
+  const isStep3Active = status === 'READY_TO_CLAIM';
+
+  const isStep4Done = status === 'CLAIMED';
+
+  // Helper for tracking node (hollow green check for completed)
+  const renderStepNode = (isDone: boolean, isActive: boolean, activeColor: string, activeRing: string) => {
+    if (isDone) {
+      return (
+        <View
+          style={{
+            width: 20,
+            height: 20,
+            borderRadius: 10,
+            backgroundColor: '#ffffff',
+            borderWidth: 2,
+            borderColor: '#10b780',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Text style={{ color: '#10b780', fontSize: 11, fontWeight: 'bold', lineHeight: 12 }}>✓</Text>
+        </View>
+      );
+    }
+    if (isActive) {
+      return (
+        <View
+          style={{
+            width: 20,
+            height: 20,
+            borderRadius: 10,
+            backgroundColor: activeColor,
+            borderWidth: 3,
+            borderColor: activeRing,
+          }}
+        />
+      );
+    }
+    return (
+      <View
+        style={{
+          width: 18,
+          height: 18,
+          borderRadius: 9,
+          backgroundColor: '#ffffff',
+          borderWidth: 2,
+          borderColor: '#cbd5e1',
+        }}
+      />
+    );
   };
 
   return (
@@ -61,7 +121,7 @@ export const OrderDetailsScreen: React.FC = () => {
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={() => navigateTo('home')}
-              className="absolute left-4 top-4 p-1.5 rounded-full bg-white/20"
+              className="absolute left-4 top-4 w-8 h-8 rounded-full bg-white/20 border border-white/30 items-center justify-center"
               accessibilityLabel="Back to Home"
             >
               <BackArrowIcon size={16} color="#ffffff" />
@@ -83,13 +143,13 @@ export const OrderDetailsScreen: React.FC = () => {
           </View>
 
           {/* Minimal Essential Content - Single Glance */}
-          <View className="px-5 pt-4 pb-6 space-y-3.5">
+          <View className="px-4 pt-4 pb-6 space-y-3.5">
             <Text className="text-xs font-semibold text-center text-[#10b780]">
               Present this pass or your pickup key to the counter staff.
             </Text>
 
             {/* Minimal Essential Order Card */}
-            <View className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm mb-3.5">
+            <View className="bg-[#f8fafc] rounded-2xl border border-gray-200 p-4 shadow-sm mb-3.5">
               <Text className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
                 Product
               </Text>
@@ -97,7 +157,7 @@ export const OrderDetailsScreen: React.FC = () => {
                 {order.product}
               </Text>
 
-              <View className="flex-row justify-between pt-2.5 border-t border-gray-100 mt-2.5">
+              <View className="flex-row justify-between pt-2.5 border-t border-gray-200 mt-2.5">
                 <View>
                   <Text className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
                     Pickup Key
@@ -126,7 +186,7 @@ export const OrderDetailsScreen: React.FC = () => {
                 </View>
               </View>
 
-              <View className="pt-2 border-t border-gray-100 mt-2 flex-row items-center justify-between">
+              <View className="pt-2 border-t border-gray-200 mt-2 flex-row items-center justify-between">
                 <Text className="text-xs text-gray-500">
                   Tracking ID: <Text className="font-mono font-medium text-gray-700">{order.trackingNumber}</Text>
                 </Text>
@@ -144,7 +204,7 @@ export const OrderDetailsScreen: React.FC = () => {
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={() => navigateTo('qr_screen')}
-              className="w-full py-3.5 px-6 rounded-2xl bg-[#215cd4] active:bg-[#194cb5] shadow-md flex-row items-center justify-center gap-2 mb-3"
+              className="w-full py-3.5 px-6 rounded-2xl bg-[#1b65e8] active:bg-[#1652be] shadow-md flex-row items-center justify-center gap-2 mb-3"
             >
               <Text className="text-white font-bold text-sm tracking-wide">
                 View QR Code
@@ -171,8 +231,17 @@ export const OrderDetailsScreen: React.FC = () => {
       ) : (
         /* Normal Progress Stepper & Action Area when not claim active */
         <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-          {/* Top Colored Status Banner */}
-          <View className={`${bannerBg} py-5 px-6 items-center shadow-xs`}>
+          {/* Top Colored Status Banner with Circular Back Button */}
+          <View className={`${bannerBg} py-5 px-6 items-center relative shadow-xs`}>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => navigateTo('home')}
+              className="absolute left-4 top-4 w-8 h-8 rounded-full bg-white/20 border border-white/30 items-center justify-center"
+              accessibilityLabel="Back to Home"
+            >
+              <BackArrowIcon size={16} color="#ffffff" />
+            </TouchableOpacity>
+
             <Text
               className={`text-2xl font-bold tracking-tight ${
                 status === 'CLAIMED' ? 'text-gray-900' : 'text-white'
@@ -189,123 +258,108 @@ export const OrderDetailsScreen: React.FC = () => {
             </Text>
           </View>
 
-          <View className="px-5 pt-4 pb-8 space-y-4">
-            {/* Section: Order Overview */}
-            <View>
-              <View className="flex-row items-center justify-between">
-                <Text className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-                  ORDER OVERVIEW
-                </Text>
-                <TouchableOpacity
-                  activeOpacity={0.7}
-                  onPress={() => navigateTo('home')}
-                  className="flex-row items-center gap-1"
-                >
-                  <Text className="text-sm font-semibold text-gray-700">Back</Text>
-                  <BackArrowIcon size={16} color="#374151" />
-                </TouchableOpacity>
+          <View className="px-4 pt-4 pb-8">
+            {/* Card 1: Order Overview */}
+            <View
+              style={{
+                marginBottom: 14,
+                backgroundColor: '#fafbfd',
+                borderColor: '#f1f5f9',
+              }}
+              className="rounded-2xl border p-4"
+            >
+              <Text className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2.5">
+                ORDER OVERVIEW
+              </Text>
+
+              <View className="flex-row items-center justify-between py-1">
+                <Text className="text-xs text-gray-500 font-medium">Product</Text>
+                <Text className="text-sm font-bold text-gray-900">{order.product}</Text>
               </View>
 
-              <View className="mt-2.5">
-                <Text className="text-xs text-gray-500">Product</Text>
-                <Text className="text-xl font-bold text-gray-900 leading-tight mt-0.5">
-                  {order.product}
+              <View className="flex-row items-center justify-between py-1">
+                <Text className="text-xs text-gray-500 font-medium">Recipient</Text>
+                <Text className="text-xs font-semibold text-gray-800">{order.recipient}</Text>
+              </View>
+
+              <View className="flex-row items-center justify-between py-1">
+                <Text className="text-xs text-gray-500 font-medium">Paid Amount</Text>
+                <Text className="text-xs font-bold font-mono text-gray-900">
+                  {order.paidAmount || '—'}
                 </Text>
               </View>
 
-              <View className="flex-row flex-wrap mt-3">
-                <View className="w-1/2 pr-2 mb-3">
-                  <Text className="text-xs text-gray-500">Recipient</Text>
-                  <Text className="text-base font-bold text-gray-900 mt-0.5">
-                    {order.recipient}
+              <View className="flex-row items-center justify-between py-1">
+                <Text className="text-xs text-gray-500 font-medium">Tracking Number</Text>
+                <View className="flex-row items-center gap-1.5 bg-gray-200 px-2 py-0.5 rounded-md">
+                  <Text className="text-xs font-mono font-semibold text-gray-900">
+                    {order.trackingNumber}
                   </Text>
+                  <TouchableOpacity
+                    onPress={() => copyToClipboard(order.trackingNumber, 'Tracking Number')}
+                    className="p-0.5"
+                    accessibilityLabel="Copy Tracking Number"
+                  >
+                    <CopyIcon size={12} color="#4b5563" />
+                  </TouchableOpacity>
                 </View>
-                <View className="w-1/2 pl-2 mb-3">
-                  <Text className="text-xs text-gray-500">Paid Amount</Text>
-                  <Text className="text-base font-bold text-gray-900 mt-0.5 font-mono">
-                    {order.paidAmount}
-                  </Text>
-                </View>
-                <View className="w-1/2 pr-2">
-                  <Text className="text-xs text-gray-500">Tracking Number</Text>
-                  <View className="flex-row items-center gap-1.5 mt-0.5">
-                    <Text className="text-sm font-mono font-semibold text-gray-900" numberOfLines={1}>
-                      {order.trackingNumber}
-                    </Text>
-                    <TouchableOpacity
-                      onPress={() => copyToClipboard(order.trackingNumber, 'Tracking Number')}
-                      className="p-0.5"
-                    >
-                      <CopyIcon size={14} color="#9ca3af" />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-                <View className="w-1/2 pl-2">
-                  <Text className="text-xs text-gray-500">Change</Text>
-                  <Text className="text-base font-bold text-gray-900 mt-0.5 font-mono">
-                    {status === 'PAYMENT_REQUIRED' ? 'To Be Determined' : order.change}
-                  </Text>
-                </View>
+              </View>
+
+              <View className="h-[1px] bg-gray-200 my-2" />
+
+              <View className="flex-row items-center justify-between py-1">
+                <Text className="text-xs text-gray-500 font-medium">Change</Text>
+                <Text className="text-xs font-bold font-mono text-gray-900">
+                  {status === 'PAYMENT_REQUIRED' ? 'To Be Determined' : order.change}
+                </Text>
               </View>
             </View>
 
-            <View className="h-[1px] bg-gray-200 my-4" />
-
-            {/* Section: Pick-up Hub Location */}
-            <View>
-              <Text className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-                PICK-UP HUB LOCATION
-              </Text>
-              <View className="flex-row items-center gap-2 mt-1">
-                <Text className="text-lg font-bold text-gray-900">
-                  Lily’s Catering Hub
-                </Text>
-                <View className="flex-row items-center gap-1">
+            {/* Card 2: Pick-up Hub Location */}
+            <View
+              style={{
+                marginBottom: 14,
+                backgroundColor: '#fafbfd',
+                borderColor: '#f1f5f9',
+              }}
+              className="rounded-2xl border p-4"
+            >
+              <View className="flex-row items-center justify-between">
+                <Text className="text-sm font-bold text-gray-900">Lily’s Catering Hub</Text>
+                <View className="flex-row items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200">
                   <View
-                    className={`w-2 h-2 rounded-full ${hubOpen ? 'bg-[#10b780]' : 'bg-red-500'}`}
+                    className={`w-1.5 h-1.5 rounded-full ${hubOpen ? 'bg-[#10b780]' : 'bg-red-500'}`}
                   />
                   <Text
-                    className={`text-xs font-semibold ${hubOpen ? 'text-[#10b780]' : 'text-red-500'}`}
+                    className={`text-[11px] font-bold ${hubOpen ? 'text-emerald-700' : 'text-red-600'}`}
                   >
                     {hubOpen ? 'Open' : 'Closed'}
                   </Text>
                 </View>
               </View>
-              <Text className="text-xs text-gray-500 mt-0.5">
-                Yati, Liloan, Cebu, 6002
-              </Text>
-
-              {status === 'READY_TO_CLAIM' && (
-                <View className="mt-3 pt-3 border-t border-gray-100 flex-row items-center gap-2">
-                  <View
-                    className={`w-2.5 h-2.5 rounded-full ${hubOpen ? 'bg-[#10b780]' : 'bg-red-500'}`}
-                  />
-                  <Text
-                    className={`text-xs font-semibold ${
-                      hubOpen ? 'text-gray-800' : 'text-gray-500'
-                    }`}
-                  >
-                    Lily’s Catering Hub is currently {hubOpen ? 'open' : 'closed'}
-                  </Text>
-                </View>
-              )}
+              <Text className="text-xs text-gray-500 mt-1">Yati, Liloan, Cebu, 6002</Text>
             </View>
 
-            <View className="h-[1px] bg-gray-200 my-4" />
-
-            {/* Section: Tracking Progress Stepper */}
-            <View>
+            {/* Card 3: Tracking Progress Stepper */}
+            <View
+              style={{
+                marginBottom: 14,
+                backgroundColor: '#fafbfd',
+                borderColor: '#f1f5f9',
+              }}
+              className="rounded-2xl border p-4"
+            >
               <View className="flex-row items-center justify-between mb-4">
-                <Text className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                <Text className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
                   TRACKING PROGRESS
                 </Text>
                 <TouchableOpacity
                   activeOpacity={0.7}
                   onPress={() => navigateTo('qr_screen')}
-                  className="p-1 rounded bg-gray-50"
+                  className="p-1 rounded bg-gray-100"
                   accessibilityLabel="View QR Code"
                 >
-                  <QrCodeIcon size={24} color="#374151" />
+                  <QrCodeIcon size={20} color="#374151" />
                 </TouchableOpacity>
               </View>
 
@@ -314,7 +368,7 @@ export const OrderDetailsScreen: React.FC = () => {
                 <View
                   style={{
                     position: 'absolute',
-                    left: 11,
+                    left: 9,
                     top: 6,
                     bottom: 12,
                     width: 2,
@@ -328,27 +382,30 @@ export const OrderDetailsScreen: React.FC = () => {
                     style={{
                       position: 'absolute',
                       left: -28,
-                      top: 2,
-                      width: 24,
-                      height: 24,
+                      top: 1,
+                      width: 20,
+                      height: 20,
                       alignItems: 'center',
                       justifyContent: 'center',
                     }}
                   >
-                    <View
-                      style={{
-                        width: 14,
-                        height: 14,
-                        borderRadius: 7,
-                        borderWidth: 2,
-                        borderColor: '#ffffff',
-                        backgroundColor: status === 'PAYMENT_REQUIRED' ? '#c58b12' : '#94a3b8',
-                      }}
-                    />
+                    {renderStepNode(isStep1Done, isStep1Active, '#c58b12', '#fef08a')}
                   </View>
                   <View className="flex-row items-baseline justify-between">
-                    <Text className="text-sm font-bold text-gray-900">Order Placed</Text>
-                    <Text className="text-[11px] font-mono text-gray-500">{order.orderPlacedTime}</Text>
+                    <Text
+                      className={`text-sm font-bold ${
+                        isStep1Active ? 'text-[#c58b12]' : 'text-gray-900'
+                      }`}
+                    >
+                      Order Placed
+                    </Text>
+                    <Text
+                      className={`text-[11px] font-mono ${
+                        isStep1Active ? 'text-[#c58b12] font-bold' : 'text-gray-500'
+                      }`}
+                    >
+                      {order.orderPlacedTime}
+                    </Text>
                   </View>
                   <Text className="text-xs text-gray-500 mt-0.5">Order by the user from the app</Text>
                 </View>
@@ -359,44 +416,42 @@ export const OrderDetailsScreen: React.FC = () => {
                     style={{
                       position: 'absolute',
                       left: -28,
-                      top: 2,
-                      width: 24,
-                      height: 24,
+                      top: 1,
+                      width: 20,
+                      height: 20,
                       alignItems: 'center',
                       justifyContent: 'center',
                     }}
                   >
-                    <View
-                      style={{
-                        width: 14,
-                        height: 14,
-                        borderRadius: 7,
-                        borderWidth: 2,
-                        borderColor: '#ffffff',
-                        backgroundColor:
-                          status === 'AWAITING_PARCEL'
-                            ? '#215cd4'
-                            : status === 'READY_TO_CLAIM' || status === 'CLAIMED'
-                            ? '#94a3b8'
-                            : '#d1d5db',
-                      }}
-                    />
+                    {renderStepNode(isStep2Done, isStep2Active, '#1b65e8', '#bfdbfe')}
                   </View>
                   <View className="flex-row items-baseline justify-between">
                     <Text
                       className={`text-sm font-bold ${
-                        status === 'PAYMENT_REQUIRED' ? 'text-gray-400' : 'text-gray-900'
+                        isStep2Active
+                          ? 'text-[#1b65e8]'
+                          : isStep2Done
+                          ? 'text-gray-900'
+                          : 'text-gray-400'
                       }`}
                     >
                       Awaiting Parcel
                     </Text>
-                    {status !== 'PAYMENT_REQUIRED' && (
-                      <Text className="text-[11px] font-mono text-gray-500">
+                    {(isStep2Done || isStep2Active) && (
+                      <Text
+                        className={`text-[11px] font-mono ${
+                          isStep2Active ? 'text-[#1b65e8] font-bold' : 'text-gray-500'
+                        }`}
+                      >
                         {order.awaitingParcelTime || '17 Oct 18:32'}
                       </Text>
                     )}
                   </View>
-                  <Text className="text-xs text-gray-500 mt-0.5">
+                  <Text
+                    className={`text-xs mt-0.5 ${
+                      isStep2Active || isStep2Done ? 'text-gray-500' : 'text-gray-400'
+                    }`}
+                  >
                     The hub is actively waiting for the product
                   </Text>
                 </View>
@@ -407,55 +462,51 @@ export const OrderDetailsScreen: React.FC = () => {
                     style={{
                       position: 'absolute',
                       left: -28,
-                      top: 2,
-                      width: 24,
-                      height: 24,
+                      top: 1,
+                      width: 20,
+                      height: 20,
                       alignItems: 'center',
                       justifyContent: 'center',
                     }}
                   >
-                    <View
-                      style={{
-                        width: 14,
-                        height: 14,
-                        borderRadius: 7,
-                        borderWidth: 2,
-                        borderColor: '#ffffff',
-                        backgroundColor:
-                          status === 'READY_TO_CLAIM'
-                            ? '#10b780'
-                            : status === 'CLAIMED'
-                            ? '#94a3b8'
-                            : '#d1d5db',
-                      }}
-                    />
+                    {renderStepNode(isStep3Done, isStep3Active, '#10b780', '#bbf7d0')}
                   </View>
                   <View className="flex-row items-baseline justify-between">
                     <Text
                       className={`text-sm font-bold ${
-                        status === 'READY_TO_CLAIM' || status === 'CLAIMED'
+                        isStep3Active
+                          ? 'text-[#10b780]'
+                          : isStep3Done
                           ? 'text-gray-900'
                           : 'text-gray-400'
                       }`}
                     >
                       Ready to Claim
                     </Text>
-                    {(status === 'READY_TO_CLAIM' || status === 'CLAIMED') && (
-                      <Text className="text-[11px] font-mono text-gray-500">
+                    {(isStep3Done || isStep3Active) && (
+                      <Text
+                        className={`text-[11px] font-mono ${
+                          isStep3Active ? 'text-[#10b780] font-bold' : 'text-gray-500'
+                        }`}
+                      >
                         {order.readyToClaimTime || '17 Oct 22:32'}
                       </Text>
                     )}
                   </View>
-                  <Text className="text-xs text-gray-500 mt-0.5">
+                  <Text
+                    className={`text-xs mt-0.5 ${
+                      isStep3Active || isStep3Done ? 'text-gray-500' : 'text-gray-400'
+                    }`}
+                  >
                     The product already is in the hub, waiting for claim
                   </Text>
-                  {(status === 'READY_TO_CLAIM' || status === 'CLAIMED') && (
+                  {(isStep3Active || isStep3Done) && (
                     <TouchableOpacity
                       activeOpacity={0.7}
                       onPress={openProofOfDeliveryModal}
                       className="mt-1"
                     >
-                      <Text className="text-xs font-semibold text-[#215cd4]">
+                      <Text className="text-xs font-semibold text-[#1b65e8]">
                         View Proof of Delivery
                       </Text>
                     </TouchableOpacity>
@@ -468,39 +519,30 @@ export const OrderDetailsScreen: React.FC = () => {
                     style={{
                       position: 'absolute',
                       left: -28,
-                      top: 2,
-                      width: 24,
-                      height: 24,
+                      top: 1,
+                      width: 20,
+                      height: 20,
                       alignItems: 'center',
                       justifyContent: 'center',
                     }}
                   >
-                    <View
-                      style={{
-                        width: 14,
-                        height: 14,
-                        borderRadius: 7,
-                        borderWidth: 2,
-                        borderColor: '#ffffff',
-                        backgroundColor: status === 'CLAIMED' ? '#10b780' : '#d1d5db',
-                      }}
-                    />
+                    {renderStepNode(isStep4Done, false, '#10b780', '#bbf7d0')}
                   </View>
                   <View className="flex-row items-baseline justify-between">
                     <Text
                       className={`text-sm font-bold ${
-                        status === 'CLAIMED' ? 'text-gray-900' : 'text-gray-400'
+                        isStep4Done ? 'text-gray-900' : 'text-gray-400'
                       }`}
                     >
                       Parcel Claimed
                     </Text>
-                    {status === 'CLAIMED' && (
+                    {isStep4Done && (
                       <Text className="text-[11px] font-mono text-gray-500">
                         {order.claimedTime || '18 Oct 08:11'}
                       </Text>
                     )}
                   </View>
-                  {status === 'CLAIMED' && (
+                  {isStep4Done && (
                     <Text className="text-xs text-gray-500 mt-0.5">
                       Handover verified. Cash change returned.
                     </Text>
@@ -510,12 +552,12 @@ export const OrderDetailsScreen: React.FC = () => {
             </View>
 
             {/* Dynamic Action Area by Status */}
-            <View className="pt-2 space-y-3 mt-4">
+            <View className="pt-1 space-y-3">
               {status === 'PAYMENT_REQUIRED' && (
                 <TouchableOpacity
                   activeOpacity={0.8}
                   onPress={() => navigateTo('qr_screen')}
-                  className="w-full py-3.5 px-6 rounded-2xl bg-[#215cd4] active:bg-[#1a4bb0] shadow-md flex-row items-center justify-center gap-2"
+                  className="w-full py-3.5 px-6 rounded-2xl bg-[#1b65e8] active:bg-[#1652be] shadow-md flex-row items-center justify-center gap-2"
                 >
                   <Text className="text-white font-bold text-sm tracking-wide">
                     Generate QR
@@ -526,15 +568,16 @@ export const OrderDetailsScreen: React.FC = () => {
 
               {status === 'READY_TO_CLAIM' &&
                 (hubOpen ? (
-                  <View className="space-y-4">
+                  <View>
                     <TouchableOpacity
                       activeOpacity={0.8}
                       onPress={() => setClaimConfirmed(!claimConfirmed)}
-                      className="flex-row items-start gap-2.5 pt-2"
+                      style={{ marginBottom: 14 }}
+                      className="flex-row items-start gap-2.5 pt-1"
                     >
                       <View
                         className={`w-4 h-4 mt-0.5 rounded border items-center justify-center ${
-                          claimConfirmed ? 'bg-[#215cd4] border-[#215cd4]' : 'border-gray-300 bg-white'
+                          claimConfirmed ? 'bg-[#1b65e8] border-[#1b65e8]' : 'border-gray-300 bg-white'
                         }`}
                       >
                         {claimConfirmed && (
@@ -551,9 +594,9 @@ export const OrderDetailsScreen: React.FC = () => {
                       </View>
                     </TouchableOpacity>
 
-                    <View className="space-y-2 mt-2">
+                    <View>
                       {order.claimInitiatedAt && (
-                        <View className="bg-amber-50 py-1.5 px-3 rounded-xl border border-amber-200 mb-2">
+                        <View className="bg-amber-50 py-1.5 px-3 rounded-xl border border-amber-200 mb-2.5">
                           <Text className="text-xs text-amber-600 font-semibold text-center">
                             Previous claim window elapsed. Press Initiate Claim to unlock counter.
                           </Text>
@@ -563,9 +606,11 @@ export const OrderDetailsScreen: React.FC = () => {
                         activeOpacity={0.8}
                         onPress={handleInitiateClaim}
                         disabled={!claimConfirmed}
-                        className={`w-full py-3.5 px-6 rounded-2xl shadow-md items-center justify-center ${claimConfirmed ? "bg-[#215cd4] active:bg-[#194cb5]" : "bg-gray-300 opacity-80"}`}
+                        className={`w-full py-3.5 px-6 rounded-2xl shadow-md items-center justify-center ${
+                          claimConfirmed ? 'bg-[#1b65e8] active:bg-[#1652be]' : 'bg-gray-300 opacity-80'
+                        }`}
                       >
-                        <Text className="text-white font-bold text-base tracking-wide text-center">
+                        <Text className="text-white font-bold text-sm tracking-wide text-center">
                           Initiate Claim
                         </Text>
                       </TouchableOpacity>
@@ -585,7 +630,7 @@ export const OrderDetailsScreen: React.FC = () => {
                 ))}
 
               {/* Return to Home link */}
-              <View className="items-center pt-2 pb-4">
+              <View className="items-center pt-2 pb-2">
                 <TouchableOpacity
                   activeOpacity={0.7}
                   onPress={() => navigateTo('home')}

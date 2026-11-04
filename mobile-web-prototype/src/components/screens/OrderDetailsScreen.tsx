@@ -32,13 +32,13 @@ export const OrderDetailsScreen: React.FC = () => {
   let bannerSubtitle = 'Payment Required';
 
   if (status === 'AWAITING_PARCEL') {
-    bannerBg = 'bg-[#215cd4] text-white';
+    bannerBg = 'bg-[#1b65e8] text-white';
     bannerSubtitle = 'Awaiting Parcel';
   } else if (status === 'READY_TO_CLAIM') {
     bannerBg = 'bg-[#10b780] text-white';
     bannerSubtitle = 'Ready To Claim';
   } else if (status === 'CLAIMED') {
-    bannerBg = 'bg-white border-b border-gray-200 text-gray-900';
+    bannerBg = 'bg-[#181b20] text-white';
     bannerSubtitle = 'Claimed';
   }
 
@@ -48,6 +48,40 @@ export const OrderDetailsScreen: React.FC = () => {
       return;
     }
     customerInitiateClaim(order.id);
+  };
+
+  // Stepper completion checks
+  const isStep1Done = status === 'AWAITING_PARCEL' || status === 'READY_TO_CLAIM' || status === 'CLAIMED';
+  const isStep1Active = status === 'PAYMENT_REQUIRED';
+
+  const isStep2Done = status === 'READY_TO_CLAIM' || status === 'CLAIMED';
+  const isStep2Active = status === 'AWAITING_PARCEL';
+
+  const isStep3Done = status === 'CLAIMED';
+  const isStep3Active = status === 'READY_TO_CLAIM';
+
+  const isStep4Done = status === 'CLAIMED';
+
+  // Helper for tracking node (hollow green check for completed)
+  const renderStepNode = (isDone: boolean, isActive: boolean, activeColor: string, activeRing: string) => {
+    if (isDone) {
+      return (
+        <div className="w-5 h-5 rounded-full bg-white border-2 border-[#10b780] flex items-center justify-center text-[#10b780] text-[11px] font-bold leading-none">
+          ✓
+        </div>
+      );
+    }
+    if (isActive) {
+      return (
+        <div
+          className="w-5 h-5 rounded-full border-3"
+          style={{ backgroundColor: activeColor, borderColor: activeRing }}
+        />
+      );
+    }
+    return (
+      <div className="w-4.5 h-4.5 rounded-full bg-white border-2 border-gray-300" />
+    );
   };
 
   return (
@@ -60,7 +94,7 @@ export const OrderDetailsScreen: React.FC = () => {
             <button
               type="button"
               onClick={() => navigateTo('home')}
-              className="absolute left-4 top-4 p-1.5 rounded-full bg-white/20 hover:bg-white/30 text-white transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              className="absolute left-4 top-4 w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 border border-white/30 flex items-center justify-center text-white transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
               title="Return to Home"
               aria-label="Back to Home"
             >
@@ -79,20 +113,20 @@ export const OrderDetailsScreen: React.FC = () => {
           </div>
 
           {/* Minimal Essential Content - Single Glance */}
-          <div className="px-5 pt-4 space-y-3.5 flex-1 flex flex-col justify-between">
+          <div className="px-4 pt-4 space-y-3.5 flex-1 flex flex-col justify-between">
             <div className="space-y-3.5">
               <p className="text-xs font-semibold text-center text-[#10b780]">
                 Present this pass or your pickup key to the counter staff.
               </p>
 
               {/* Minimal Essential Order Card */}
-              <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-2xs space-y-3">
+              <div className="bg-[#f8fafc] rounded-2xl border border-gray-200 p-4 shadow-2xs space-y-3">
                 <div>
                   <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block">Product</span>
                   <h3 className="text-lg font-bold text-gray-900 leading-tight mt-0.5 break-words">{order.product}</h3>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 pt-2.5 border-t border-gray-100">
+                <div className="grid grid-cols-2 gap-3 pt-2.5 border-t border-gray-200">
                   <div>
                     <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block">Pickup Key</span>
                     <div className="flex items-center gap-1.5 mt-1">
@@ -102,7 +136,7 @@ export const OrderDetailsScreen: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => copyToClipboard(order.alphanumericKey, 'Pickup Key')}
-                        className="p-1 text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#215cd4]"
+                        className="p-1 text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1b65e8]"
                         title="Copy Pickup Key"
                         aria-label="Copy Pickup Key"
                       >
@@ -119,14 +153,14 @@ export const OrderDetailsScreen: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="pt-2 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
+                <div className="pt-2 border-t border-gray-200 flex items-center justify-between text-xs text-gray-500">
                   <span>
                     Tracking ID: <span className="font-mono font-medium text-gray-700">{order.trackingNumber}</span>
                   </span>
                   <button
                     type="button"
                     onClick={() => copyToClipboard(order.trackingNumber, 'Tracking Number')}
-                    className="p-0.5 text-gray-400 hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#215cd4]"
+                    className="p-0.5 text-gray-400 hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1b65e8]"
                     title="Copy Tracking Number"
                     aria-label="Copy Tracking Number"
                   >
@@ -139,7 +173,7 @@ export const OrderDetailsScreen: React.FC = () => {
               <button
                 type="button"
                 onClick={() => navigateTo('qr_screen')}
-                className="w-full py-3.5 px-6 rounded-2xl bg-[#215cd4] hover:bg-[#194cb5] text-white font-bold text-sm tracking-wide transition-all shadow-md btn-press flex items-center justify-center gap-2 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#215cd4]"
+                className="w-full py-3.5 px-6 rounded-2xl bg-[#1b65e8] hover:bg-[#1652be] text-white font-bold text-sm tracking-wide transition-all shadow-md btn-press flex items-center justify-center gap-2 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1b65e8]"
               >
                 <span>View QR Code</span>
                 <QrCodeIcon className="w-5 h-5" />
@@ -155,7 +189,7 @@ export const OrderDetailsScreen: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => navigateTo('home')}
-                  className="text-sm font-semibold text-gray-700 hover:text-black cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#215cd4]"
+                  className="text-sm font-semibold text-gray-700 hover:text-black cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1b65e8]"
                 >
                   Return to Home
                 </button>
@@ -166,187 +200,174 @@ export const OrderDetailsScreen: React.FC = () => {
       ) : (
         /* Normal Progress Stepper & Action Area when not claim active */
         <>
-          {/* Top Colored Status Banner */}
-          <div className={`${bannerBg} py-5 px-6 text-center shadow-xs transition-colors duration-300`}>
+          {/* Top Colored Status Banner with Circular Back Button */}
+          <div className={`${bannerBg} py-5 px-6 text-center shadow-xs relative transition-colors duration-300`}>
+            <button
+              type="button"
+              onClick={() => navigateTo('home')}
+              className="absolute left-4 top-4 w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 border border-white/30 flex items-center justify-center text-white cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              title="Return to Home"
+              aria-label="Back to Home"
+            >
+              <BackArrowIcon className="w-4 h-4" />
+            </button>
+
             <h2 className="text-2xl font-bold tracking-tight">{bannerTitle}</h2>
-            <p className={`text-sm font-medium mt-0.5 ${status === 'CLAIMED' ? 'text-gray-500' : 'opacity-90'}`}>
+            <p className={`text-sm font-medium mt-0.5 ${status === 'CLAIMED' ? 'text-gray-400' : 'opacity-90'}`}>
               {bannerSubtitle}
             </p>
           </div>
 
-          <div className="px-5 pt-4 space-y-4">
-            {/* Section: Order Overview */}
-            <div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">ORDER OVERVIEW</span>
-                <button
-                  type="button"
-                  onClick={() => navigateTo('home')}
-                  className="flex items-center gap-1 text-sm font-semibold text-gray-700 hover:text-black cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#215cd4]"
-                >
-                  <span>Back</span>
-                  <BackArrowIcon className="w-4 h-4" />
-                </button>
+          <div className="px-4 pt-4 pb-8 space-y-3.5">
+            {/* Card 1: Order Overview */}
+            <div className="bg-[#fafbfd] rounded-2xl border border-[#f1f5f9] p-4 space-y-2">
+              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block mb-2.5">
+                ORDER OVERVIEW
+              </span>
+
+              <div className="flex items-center justify-between py-0.5">
+                <span className="text-xs text-gray-500 font-medium">Product</span>
+                <span className="text-sm font-bold text-gray-900">{order.product}</span>
               </div>
 
-              <div className="mt-2.5">
-                <span className="text-xs text-gray-500">Product</span>
-                <h3 className="text-xl font-bold text-gray-900 leading-tight mt-0.5">{order.product}</h3>
+              <div className="flex items-center justify-between py-0.5">
+                <span className="text-xs text-gray-500 font-medium">Recipient</span>
+                <span className="text-xs font-semibold text-gray-800">{order.recipient}</span>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 mt-3">
-                <div>
-                  <span className="text-xs text-gray-500">Recipient</span>
-                  <p className="text-base font-bold text-gray-900">{order.recipient}</p>
-                </div>
-                <div>
-                  <span className="text-xs text-gray-500">Paid Amount</span>
-                  <p className="text-base font-bold text-gray-900 font-mono-numbers">{order.paidAmount}</p>
-                </div>
-                <div>
-                  <span className="text-xs text-gray-500">Tracking Number</span>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <p className="text-sm font-mono font-semibold text-gray-900 truncate max-w-[130px]">
-                      {order.trackingNumber}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => copyToClipboard(order.trackingNumber, 'Tracking Number')}
-                      className="p-0.5 text-gray-400 hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#215cd4]"
-                      title="Copy Tracking Number"
-                      aria-label="Copy Tracking Number"
-                    >
-                      <CopyIcon className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <span className="text-xs text-gray-500">Change</span>
-                  <p className="text-base font-bold text-gray-900 font-mono-numbers">
-                    {status === 'PAYMENT_REQUIRED' ? 'To Be Determined' : order.change}
-                  </p>
+              <div className="flex items-center justify-between py-0.5">
+                <span className="text-xs text-gray-500 font-medium">Paid Amount</span>
+                <span className="text-xs font-bold font-mono text-gray-900">{order.paidAmount || '—'}</span>
+              </div>
+
+              <div className="flex items-center justify-between py-0.5">
+                <span className="text-xs text-gray-500 font-medium">Tracking Number</span>
+                <div className="flex items-center gap-1.5 bg-gray-200 px-2 py-0.5 rounded-md">
+                  <span className="text-xs font-mono font-semibold text-gray-900">{order.trackingNumber}</span>
+                  <button
+                    type="button"
+                    onClick={() => copyToClipboard(order.trackingNumber, 'Tracking Number')}
+                    className="p-0.5 text-gray-600 hover:text-black cursor-pointer"
+                    title="Copy Tracking Number"
+                    aria-label="Copy Tracking Number"
+                  >
+                    <CopyIcon className="w-3 h-3" />
+                  </button>
                 </div>
               </div>
-            </div>
 
-            <hr className="border-gray-200" />
+              <div className="h-[1px] bg-gray-200 my-1" />
 
-            {/* Section: Pick-up Hub Location */}
-            <div>
-              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">PICK-UP HUB LOCATION</span>
-              <div className="flex items-center gap-2 mt-1">
-                <h4 className="text-lg font-bold text-gray-900">Lily’s Catering Hub</h4>
-                <span className={`inline-flex items-center gap-1 text-xs font-semibold ${hubOpen ? 'text-[#10b780]' : 'text-red-500'}`}>
-                  <span className={`w-2 h-2 rounded-full ${hubOpen ? 'bg-[#10b780]' : 'bg-red-500'}`} />
-                  {hubOpen ? 'Open' : 'Closed'}
+              <div className="flex items-center justify-between py-0.5">
+                <span className="text-xs text-gray-500 font-medium">Change</span>
+                <span className="text-xs font-bold font-mono text-gray-900">
+                  {status === 'PAYMENT_REQUIRED' ? 'To Be Determined' : order.change}
                 </span>
               </div>
-              <p className="text-xs text-gray-500 mt-0.5">Yati, Liloan, Cebu, 6002</p>
-
-              {status === 'READY_TO_CLAIM' && (
-                <div
-                  className={`mt-3 pt-3 border-t border-gray-100 flex items-center gap-2 text-xs font-semibold ${
-                    hubOpen ? 'text-gray-800' : 'text-gray-500'
-                  }`}
-                >
-                  <span className={`w-2.5 h-2.5 rounded-full ${hubOpen ? 'bg-[#10b780]' : 'bg-red-500'}`} />
-                  <span>Lily’s Catering Hub is currently {hubOpen ? 'open' : 'closed'}</span>
-                </div>
-              )}
             </div>
 
-            <hr className="border-gray-200" />
+            {/* Card 2: Pick-up Hub Location */}
+            <div className="bg-[#fafbfd] rounded-2xl border border-[#f1f5f9] p-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-bold text-gray-900">Lily’s Catering Hub</h4>
+                <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200">
+                  <span className={`w-1.5 h-1.5 rounded-full ${hubOpen ? 'bg-[#10b780]' : 'bg-red-500'}`} />
+                  <span className={`text-[11px] font-bold ${hubOpen ? 'text-emerald-700' : 'text-red-600'}`}>
+                    {hubOpen ? 'Open' : 'Closed'}
+                  </span>
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">Yati, Liloan, Cebu, 6002</p>
+            </div>
 
-            {/* Section: Tracking Progress Stepper */}
-            <div>
+            {/* Card 3: Tracking Progress Stepper */}
+            <div className="bg-[#fafbfd] rounded-2xl border border-[#f1f5f9] p-4">
               <div className="flex items-center justify-between mb-4">
-                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">TRACKING PROGRESS</span>
+                <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">TRACKING PROGRESS</span>
                 <button
                   type="button"
                   onClick={() => navigateTo('qr_screen')}
-                  className="p-1 rounded hover:bg-gray-100 text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#215cd4]"
+                  className="p-1 rounded bg-gray-100 text-gray-700 hover:bg-gray-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1b65e8]"
                   title="View QR Code"
                   aria-label="View QR Code"
                 >
-                  <QrCodeIcon className="w-6 h-6" />
+                  <QrCodeIcon className="w-5 h-5" />
                 </button>
               </div>
 
               {/* Vertical Timeline Stepper */}
-              <div className="relative pl-7 space-y-6">
-                <div className="stepper-line" />
+              <div className="relative pl-7 space-y-5">
+                <div
+                  className="absolute left-[9px] top-1.5 bottom-3 w-[2px] bg-gray-200"
+                />
 
                 {/* Step 1: Order Placed */}
                 <div className="relative">
-                  <div className="absolute -left-7 top-0.5 w-6 h-6 flex items-center justify-center">
-                    <div
-                      className={`w-3.5 h-3.5 rounded-full ring-4 ring-white ${
-                        status === 'PAYMENT_REQUIRED' ? 'bg-[#c58b12] pulse-gold' : 'bg-[#94a3b8]'
-                      }`}
-                    />
+                  <div className="absolute -left-7 top-0.5 w-5 h-5 flex items-center justify-center">
+                    {renderStepNode(isStep1Done, isStep1Active, '#c58b12', '#fef08a')}
                   </div>
                   <div className="flex items-baseline justify-between">
-                    <h5 className="text-sm font-bold text-gray-900">Order Placed</h5>
-                    <span className="text-[11px] font-mono text-gray-500">{order.orderPlacedTime}</span>
+                    <h5 className={`text-sm font-bold ${isStep1Active ? 'text-[#c58b12]' : 'text-gray-900'}`}>
+                      Order Placed
+                    </h5>
+                    <span className={`text-[11px] font-mono ${isStep1Active ? 'text-[#c58b12] font-bold' : 'text-gray-500'}`}>
+                      {order.orderPlacedTime}
+                    </span>
                   </div>
                   <p className="text-xs text-gray-500 mt-0.5">Order by the user from the app</p>
                 </div>
 
                 {/* Step 2: Awaiting Parcel */}
                 <div className="relative">
-                  <div className="absolute -left-7 top-0.5 w-6 h-6 flex items-center justify-center">
-                    <div
-                      className={`w-3.5 h-3.5 rounded-full ring-4 ring-white ${
-                        status === 'AWAITING_PARCEL'
-                          ? 'bg-[#215cd4] pulse-blue'
-                          : status === 'READY_TO_CLAIM' || status === 'CLAIMED'
-                          ? 'bg-[#94a3b8]'
-                          : 'bg-gray-300'
-                      }`}
-                    />
-                  </div>
-                  <div className="flex items-baseline justify-between">
-                    <h5 className={`text-sm font-bold ${status === 'PAYMENT_REQUIRED' ? 'text-gray-400' : 'text-gray-900'}`}>
-                      Awaiting Parcel
-                    </h5>
-                    {status !== 'PAYMENT_REQUIRED' && (
-                      <span className="text-[11px] font-mono text-gray-500">{order.awaitingParcelTime || '17 Oct 18:32'}</span>
-                    )}
-                  </div>
-                  <p className="text-xs text-gray-500 mt-0.5">The hub is actively waiting for the product</p>
-                </div>
-
-                {/* Step 3: Ready to Claim */}
-                <div className="relative">
-                  <div className="absolute -left-7 top-0.5 w-6 h-6 flex items-center justify-center">
-                    <div
-                      className={`w-3.5 h-3.5 rounded-full ring-4 ring-white ${
-                        status === 'READY_TO_CLAIM'
-                          ? 'bg-[#10b780] pulse-green'
-                          : status === 'CLAIMED'
-                          ? 'bg-[#94a3b8]'
-                          : 'bg-gray-300'
-                      }`}
-                    />
+                  <div className="absolute -left-7 top-0.5 w-5 h-5 flex items-center justify-center">
+                    {renderStepNode(isStep2Done, isStep2Active, '#1b65e8', '#bfdbfe')}
                   </div>
                   <div className="flex items-baseline justify-between">
                     <h5
                       className={`text-sm font-bold ${
-                        status === 'READY_TO_CLAIM' || status === 'CLAIMED' ? 'text-gray-900' : 'text-gray-400'
+                        isStep2Active ? 'text-[#1b65e8]' : isStep2Done ? 'text-gray-900' : 'text-gray-400'
+                      }`}
+                    >
+                      Awaiting Parcel
+                    </h5>
+                    {(isStep2Done || isStep2Active) && (
+                      <span className={`text-[11px] font-mono ${isStep2Active ? 'text-[#1b65e8] font-bold' : 'text-gray-500'}`}>
+                        {order.awaitingParcelTime || '17 Oct 18:32'}
+                      </span>
+                    )}
+                  </div>
+                  <p className={`text-xs mt-0.5 ${isStep2Active || isStep2Done ? 'text-gray-500' : 'text-gray-400'}`}>
+                    The hub is actively waiting for the product
+                  </p>
+                </div>
+
+                {/* Step 3: Ready to Claim */}
+                <div className="relative">
+                  <div className="absolute -left-7 top-0.5 w-5 h-5 flex items-center justify-center">
+                    {renderStepNode(isStep3Done, isStep3Active, '#10b780', '#bbf7d0')}
+                  </div>
+                  <div className="flex items-baseline justify-between">
+                    <h5
+                      className={`text-sm font-bold ${
+                        isStep3Active ? 'text-[#10b780]' : isStep3Done ? 'text-gray-900' : 'text-gray-400'
                       }`}
                     >
                       Ready to Claim
                     </h5>
-                    {(status === 'READY_TO_CLAIM' || status === 'CLAIMED') && (
-                      <span className="text-[11px] font-mono text-gray-500">{order.readyToClaimTime || '17 Oct 22:32'}</span>
+                    {(isStep3Done || isStep3Active) && (
+                      <span className={`text-[11px] font-mono ${isStep3Active ? 'text-[#10b780] font-bold' : 'text-gray-500'}`}>
+                        {order.readyToClaimTime || '17 Oct 22:32'}
+                      </span>
                     )}
                   </div>
-                  <p className="text-xs text-gray-500 mt-0.5">The product already is in the hub, waiting for claim</p>
+                  <p className={`text-xs mt-0.5 ${isStep3Active || isStep3Done ? 'text-gray-500' : 'text-gray-400'}`}>
+                    The product already is in the hub, waiting for claim
+                  </p>
                   {(status === 'READY_TO_CLAIM' || status === 'CLAIMED') && (
                     <button
                       type="button"
                       onClick={openProofOfDeliveryModal}
-                      className="text-xs font-semibold text-[#215cd4] hover:underline mt-1 block cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#215cd4]"
+                      className="text-xs font-semibold text-[#1b65e8] hover:underline mt-1 block cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1b65e8]"
                     >
                       View Proof of Delivery
                     </button>
@@ -355,22 +376,18 @@ export const OrderDetailsScreen: React.FC = () => {
 
                 {/* Step 4: Parcel Claimed */}
                 <div className="relative">
-                  <div className="absolute -left-7 top-0.5 w-6 h-6 flex items-center justify-center">
-                    <div
-                      className={`w-3.5 h-3.5 rounded-full ring-4 ring-white ${
-                        status === 'CLAIMED' ? 'bg-[#10b780]' : 'bg-gray-300'
-                      }`}
-                    />
+                  <div className="absolute -left-7 top-0.5 w-5 h-5 flex items-center justify-center">
+                    {renderStepNode(isStep4Done, false, '#10b780', '#bbf7d0')}
                   </div>
                   <div className="flex items-baseline justify-between">
-                    <h5 className={`text-sm font-bold ${status === 'CLAIMED' ? 'text-gray-900' : 'text-gray-400'}`}>
+                    <h5 className={`text-sm font-bold ${isStep4Done ? 'text-gray-900' : 'text-gray-400'}`}>
                       Parcel Claimed
                     </h5>
-                    {status === 'CLAIMED' && (
+                    {isStep4Done && (
                       <span className="text-[11px] font-mono text-gray-500">{order.claimedTime || '18 Oct 08:11'}</span>
                     )}
                   </div>
-                  {status === 'CLAIMED' && (
+                  {isStep4Done && (
                     <p className="text-xs text-gray-500 mt-0.5">Handover verified. Cash change returned.</p>
                   )}
                 </div>
@@ -378,12 +395,12 @@ export const OrderDetailsScreen: React.FC = () => {
             </div>
 
             {/* Dynamic Action Area by Status */}
-            <div className="pt-2 space-y-3">
+            <div className="pt-1 space-y-3">
               {status === 'PAYMENT_REQUIRED' && (
                 <button
                   type="button"
                   onClick={() => navigateTo('qr_screen')}
-                  className="w-full py-3.5 px-6 rounded-2xl bg-[#215cd4] hover:bg-[#1a4bb0] text-white font-bold text-sm tracking-wide transition-all shadow-md btn-press flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#215cd4]"
+                  className="w-full py-3.5 px-6 rounded-2xl bg-[#1b65e8] hover:bg-[#1652be] text-white font-bold text-sm tracking-wide transition-all shadow-md btn-press flex items-center justify-center gap-2 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1b65e8]"
                 >
                   <span>Generate QR</span>
                   <QrCodeIcon className="w-5 h-5" />
@@ -393,57 +410,66 @@ export const OrderDetailsScreen: React.FC = () => {
               {status === 'READY_TO_CLAIM' &&
                 (hubOpen ? (
                   <div className="space-y-4">
-                    <div className="flex items-start gap-2.5 pt-2">
-                      <input
-                        type="checkbox"
-                        id="claim-confirm-check"
-                        checked={claimConfirmed}
-                        onChange={(e) => setClaimConfirmed(e.target.checked)}
-                        className="w-4 h-4 mt-0.5 rounded text-[#215cd4] focus:ring-[#215cd4] cursor-pointer"
-                      />
-                      <div>
-                        <label htmlFor="claim-confirm-check" className="text-sm font-bold text-gray-900 cursor-pointer block">
+                    <div
+                      onClick={() => setClaimConfirmed(!claimConfirmed)}
+                      className="flex items-start gap-2.5 pt-1 cursor-pointer select-none"
+                    >
+                      <div
+                        className={`w-4 h-4 mt-0.5 rounded border flex items-center justify-center transition-colors ${
+                          claimConfirmed ? 'bg-[#1b65e8] border-[#1b65e8]' : 'border-gray-300 bg-white'
+                        }`}
+                      >
+                        {claimConfirmed && <span className="text-white text-[10px] font-bold">✓</span>}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-bold text-gray-900">
                           I confirm that I want to claim the order
-                        </label>
-                        <p className="text-xs text-gray-500 mt-0.5">Only initiate claim when you’re physically claiming at the hub</p>
+                        </p>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          Only initiate claim when you’re physically claiming at the hub
+                        </p>
                       </div>
                     </div>
 
-                    <div className="space-y-2">
+                    <div className="space-y-2 mt-2">
                       {order.claimInitiatedAt && (
-                        <p className="text-xs text-amber-600 font-semibold text-center bg-amber-50 py-1.5 px-3 rounded-xl border border-amber-200">
-                          Previous claim window elapsed. Press Initiate Claim to unlock counter.
-                        </p>
+                        <div className="bg-amber-50 py-1.5 px-3 rounded-xl border border-amber-200 text-center">
+                          <p className="text-xs text-amber-600 font-semibold">
+                            Previous claim window elapsed. Press Initiate Claim to unlock counter.
+                          </p>
+                        </div>
                       )}
                       <button
                         type="button"
                         onClick={handleInitiateClaim}
                         disabled={!claimConfirmed}
-                        className={`w-full py-3.5 px-6 rounded-2xl text-white font-bold text-base tracking-wide transition-all shadow-md btn-press text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#215cd4] ${claimConfirmed ? "bg-[#215cd4] hover:bg-[#194cb5] cursor-pointer" : "bg-gray-300 opacity-80 cursor-not-allowed"}`}
+                        className={`w-full py-3.5 px-6 rounded-2xl shadow-md text-center transition-all ${
+                          claimConfirmed
+                            ? 'bg-[#1b65e8] hover:bg-[#1652be] text-white font-bold text-sm tracking-wide cursor-pointer btn-press focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1b65e8]'
+                            : 'bg-gray-300 opacity-80 text-white font-bold text-sm tracking-wide cursor-not-allowed'
+                        }`}
                       >
                         Initiate Claim
                       </button>
                     </div>
                   </div>
                 ) : (
-                  <>
-                    <p className="text-xs text-gray-500 text-center">Only initiate claim when you’re physically claiming at the hub</p>
-                    <button
-                      type="button"
-                      disabled
-                      className="w-full py-3.5 px-6 rounded-2xl bg-[#647b92] text-white font-semibold text-sm tracking-wide opacity-80 cursor-not-allowed text-center"
-                    >
+                  <div className="space-y-2">
+                    <p className="text-xs text-gray-500 text-center">
+                      Only initiate claim when you’re physically claiming at the hub
+                    </p>
+                    <div className="w-full py-3.5 px-6 rounded-2xl bg-[#647b92] opacity-80 text-white font-semibold text-sm tracking-wide text-center">
                       Cannot initiate claim when the hub is closed
-                    </button>
-                  </>
+                    </div>
+                  </div>
                 ))}
 
               {/* Return to Home link */}
-              <div className="text-center pt-2">
+              <div className="text-center pt-2 pb-2">
                 <button
                   type="button"
                   onClick={() => navigateTo('home')}
-                  className="text-sm font-semibold text-gray-700 hover:text-black cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#215cd4]"
+                  className="text-sm font-semibold text-gray-700 hover:text-black cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1b65e8]"
                 >
                   Return to Home
                 </button>
@@ -456,3 +482,4 @@ export const OrderDetailsScreen: React.FC = () => {
   );
 };
 
+export default OrderDetailsScreen;
