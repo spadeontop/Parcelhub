@@ -6,7 +6,7 @@ import { BackArrowIcon } from '../common/Icons';
 
 export const ConfirmOrderScreen: React.FC = () => {
   const { draftOrder, updateDraftOrder, submitDraftOrder, navigateTo, showToast } = useApp();
-  const [isConfirmed, setIsConfirmed] = useState<boolean>(true);
+  const [isConfirmed, setIsConfirmed] = useState<boolean>(false);
 
   const handleSubmit = () => {
     if (!isConfirmed) {
@@ -122,7 +122,8 @@ export const ConfirmOrderScreen: React.FC = () => {
       <button
         type="button"
         onClick={handleSubmit}
-        className="w-full mt-3 py-3.5 px-6 rounded-2xl bg-[#215cd4] hover:bg-[#194cb5] text-white font-bold text-sm tracking-wide transition-all shadow-md btn-press text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#215cd4]"
+        disabled={!isConfirmed}
+        className={`w-full mt-3 py-3.5 px-6 rounded-2xl text-white font-bold text-sm tracking-wide transition-all shadow-md btn-press text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#215cd4] ${isConfirmed ? 'bg-[#215cd4] hover:bg-[#194cb5] cursor-pointer' : 'bg-gray-300 opacity-80 cursor-not-allowed'}`}
       >
         Submit Order &amp; Proceed to Payment
       </button>

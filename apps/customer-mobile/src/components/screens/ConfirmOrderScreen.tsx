@@ -14,7 +14,7 @@ export const ConfirmOrderScreen: React.FC = () => {
     openEscrowModal,
     showToast,
   } = useApp();
-  const [isConfirmed, setIsConfirmed] = useState<boolean>(true);
+  const [isConfirmed, setIsConfirmed] = useState<boolean>(false);
 
   const handleSubmit = () => {
     if (!isConfirmed) {
@@ -140,9 +140,10 @@ export const ConfirmOrderScreen: React.FC = () => {
 
         {/* Create Order Button */}
         <TouchableOpacity
-          activeOpacity={0.8}
+          activeOpacity={isConfirmed ? 0.8 : 1}
+          disabled={!isConfirmed}
           onPress={handleSubmit}
-          className="w-full mt-4 py-3.5 px-6 rounded-2xl bg-[#215cd4] shadow-md items-center mb-4"
+          className={`w-full mt-4 py-3.5 px-6 rounded-2xl shadow-md items-center mb-4 ${isConfirmed ? 'bg-[#215cd4] active:bg-[#194cb5]' : 'bg-gray-300 opacity-80'}`}
         >
           <Text className="text-white font-bold text-sm tracking-wide">
             Submit Order &amp; Proceed to Payment
