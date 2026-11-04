@@ -20,7 +20,7 @@ export const TransactionsScreen: React.FC = () => {
   return (
     <View style={{ flex: 1, backgroundColor: '#ffffff' }} className="flex-1 bg-white px-5 pt-3 pb-2">
       {/* Header */}
-      <BrandHeader title="Transactions" subtitle="ORDER HISTORY" showBack={true} backTarget="home" />
+      <BrandHeader title="Transactions" subtitle="ORDER HISTORY" />
 
       {/* Filter Pills */}
       <View className="py-2">
@@ -32,7 +32,7 @@ export const TransactionsScreen: React.FC = () => {
               onPress={() => setTransactionFilter(f)}
               className={`px-3.5 py-1.5 rounded-full mr-2 ${
                 transactionFilter === f
-                  ? 'bg-[#215cd4]'
+                  ? 'bg-[#1b65e8]'
                   : 'bg-gray-100'
               }`}
             >

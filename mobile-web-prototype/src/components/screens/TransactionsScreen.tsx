@@ -18,7 +18,7 @@ export const TransactionsScreen: React.FC = () => {
   return (
     <div className="flex flex-col min-h-[780px] bg-white px-5 pt-3 pb-8 relative select-none">
       {/* Unified Header */}
-      <BrandHeader title="Transactions" subtitle="ORDER HISTORY" showBack={true} backTarget="home" />
+      <BrandHeader title="Transactions" subtitle="ORDER HISTORY" />
 
       {/* Filter Pills */}
       <div className="flex items-center gap-2 overflow-x-auto py-2 scrollbar-none mt-2">
@@ -27,9 +27,9 @@ export const TransactionsScreen: React.FC = () => {
             key={f}
             type="button"
             onClick={() => setTransactionFilter(f)}
-            className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#215cd4] ${
+            className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1b65e8] ${
               transactionFilter === f
-                ? 'bg-[#215cd4] text-white shadow-xs'
+                ? 'bg-[#1b65e8] text-white shadow-xs'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
           >
