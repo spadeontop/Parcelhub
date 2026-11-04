@@ -2,14 +2,23 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
+import { resolve } from 'path';
 
 // https://vite.dev/config/
 export default defineConfig({
   base: './',
   plugins: [react(), tailwindcss()],
   server: {
-    port: 3000,
+    port: 5173,
     open: true
+  },
+  build: {
+    rollupOptions: {
+      input: {
+        main: resolve(__dirname, 'index.html'),
+        staff: resolve(__dirname, 'staff.html'),
+      },
+    },
   },
   envPrefix: ['VITE_', 'HANDOFF_'],
   test: {
