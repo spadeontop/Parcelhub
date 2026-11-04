@@ -1,15 +1,15 @@
 import React from 'react';
-import { View, TouchableOpacity } from 'react-native';
+import { View, TouchableOpacity, Text } from 'react-native';
 import { useApp } from '../../context/AppContext';
 import { HomeIcon, OrdersIcon, BellIcon, HelpIcon } from '../common/Icons';
 
 interface BottomNavProps {
-  activeTab?: 'home' | 'transactions' | 'help' | 'profile';
+  activeTab?: 'home' | 'transactions' | 'notifications' | 'help' | 'profile';
 }
 
 export const BottomNav: React.FC<BottomNavProps> = ({ activeTab = 'home' }) => {
-  const { navigateTo, openEscrowModal, openNotificationsModal, notifications } = useApp();
-  const hasUnread = notifications.some((n) => n.unread);
+  const { navigateTo, openEscrowModal, notifications } = useApp();
+  const unreadCount = notifications.filter((n) => n.unread).length;
 
   return (
     <View className="h-16 rounded-full bg-white/95 flex-row items-center justify-around px-5 border border-gray-100 shadow-lg mt-auto mb-2">
@@ -52,15 +52,26 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab = 'home' }) => {
       {/* 3. Notifications */}
       <TouchableOpacity
         activeOpacity={0.7}
-        onPress={openNotificationsModal}
+        onPress={() => navigateTo('notifications')}
         className="items-center justify-center p-2 relative"
         accessibilityLabel="Notifications"
       >
-        <BellIcon size={22} color="#9ca3af" />
-        {hasUnread && (
-          <View className="w-2 h-2 rounded-full bg-red-500 absolute top-2 right-2 border border-white" />
+        <BellIcon
+          size={22}
+          color={activeTab === 'notifications' ? '#215cd4' : '#9ca3af'}
+        />
+        {unreadCount > 0 && (
+          <View className="min-w-[16px] h-4 px-1 rounded-full bg-red-500 absolute top-1.5 right-1 items-center justify-center border border-white">
+            <Text className="text-[9px] font-bold text-white text-center leading-none">
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </Text>
+          </View>
         )}
-        <View className="w-1.5 h-1.5 mt-1 opacity-0" />
+        {activeTab === 'notifications' ? (
+          <View className="w-1.5 h-1.5 rounded-full bg-[#215cd4] mt-1" />
+        ) : (
+          <View className="w-1.5 h-1.5 mt-1 opacity-0" />
+        )}
       </TouchableOpacity>
 
       {/* 4. Help / Escrow Info */}
@@ -70,8 +81,15 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab = 'home' }) => {
         className="items-center justify-center p-2"
         accessibilityLabel="Help"
       >
-        <HelpIcon size={22} color="#9ca3af" />
-        <View className="w-1.5 h-1.5 mt-1 opacity-0" />
+        <HelpIcon
+          size={22}
+          color={activeTab === 'help' ? '#215cd4' : '#9ca3af'}
+        />
+        {activeTab === 'help' ? (
+          <View className="w-1.5 h-1.5 rounded-full bg-[#215cd4] mt-1" />
+        ) : (
+          <View className="w-1.5 h-1.5 mt-1 opacity-0" />
+        )}
       </TouchableOpacity>
     </View>
   );

@@ -3,13 +3,13 @@ import { useApp } from '../../context/AppContext';
 import { HomeIcon, OrdersIcon, HelpIcon, BellIcon } from '../common/Icons';
 
 interface BottomNavProps {
-  activeTab?: 'home' | 'transactions' | 'help' | 'faq' | 'profile';
+  activeTab?: 'home' | 'transactions' | 'notifications' | 'help' | 'faq' | 'profile';
 }
 
 export const BottomNav: React.FC<BottomNavProps> = ({ activeTab = 'home' }) => {
-  const { navigateTo, openNotificationsModal, notifications } = useApp();
+  const { navigateTo, notifications } = useApp();
   const isHelpActive = activeTab === 'help' || activeTab === 'faq';
-  const hasUnread = notifications.some((n) => n.unread);
+  const unreadCount = notifications.filter((n) => n.unread).length;
 
   return (
     <nav
@@ -53,15 +53,23 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab = 'home' }) => {
       {/* 3. Notifications */}
       <button
         type="button"
-        onClick={openNotificationsModal}
-        className="relative flex flex-col items-center justify-center p-2 rounded-full transition-all hover:scale-110 active:scale-95 text-gray-400 hover:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#215cd4]"
+        onClick={() => navigateTo('notifications')}
+        className={`relative flex flex-col items-center justify-center p-2 rounded-full transition-all hover:scale-110 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#215cd4] ${
+          activeTab === 'notifications' ? 'text-[#215cd4]' : 'text-gray-400 hover:text-gray-600'
+        }`}
         aria-label="Notifications"
       >
         <BellIcon className="w-5 h-5" />
-        {hasUnread && (
-          <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500 border border-white" />
+        {unreadCount > 0 && (
+          <span className="absolute top-1.5 right-1 min-w-[16px] h-4 px-1 rounded-full bg-red-500 border border-white text-[9px] font-bold text-white flex items-center justify-center leading-none">
+            {unreadCount > 99 ? '99+' : unreadCount}
+          </span>
         )}
-        <span className="w-1.5 h-1.5 mt-0.5 opacity-0" />
+        {activeTab === 'notifications' ? (
+          <span className="w-1.5 h-1.5 rounded-full bg-[#215cd4] mt-0.5" />
+        ) : (
+          <span className="w-1.5 h-1.5 mt-0.5 opacity-0" />
+        )}
       </button>
 
       {/* 4. Help and FAQ */}

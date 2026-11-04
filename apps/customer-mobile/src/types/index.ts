@@ -48,6 +48,7 @@ export type ScreenId =
   | 'qr_screen'
   | 'order_details'
   | 'transactions'
+  | 'notifications'
   | 'login'
   | 'register'
   | 'mpin_login'
