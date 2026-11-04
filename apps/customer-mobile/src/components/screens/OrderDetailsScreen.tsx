@@ -562,7 +562,8 @@ export const OrderDetailsScreen: React.FC = () => {
                       <TouchableOpacity
                         activeOpacity={0.8}
                         onPress={handleInitiateClaim}
-                        className="w-full py-3.5 px-6 rounded-2xl bg-[#215cd4] active:bg-[#194cb5] shadow-md items-center justify-center"
+                        disabled={!claimConfirmed}
+                        className={`w-full py-3.5 px-6 rounded-2xl shadow-md items-center justify-center ${claimConfirmed ? "bg-[#215cd4] active:bg-[#194cb5]" : "bg-gray-300 opacity-80"}`}
                       >
                         <Text className="text-white font-bold text-base tracking-wide text-center">
                           Initiate Claim

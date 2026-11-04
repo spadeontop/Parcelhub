@@ -402,7 +402,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (res.success && res.data) {
         setOrders((prev) => prev.map((o) => (o.id === orderId ? res.data! : o)));
         showToast(res.message);
-        openMpinModal();
+        // openMpinModal removed on initiate claim
       } else {
         showToast(res.message);
       }

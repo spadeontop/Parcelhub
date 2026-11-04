@@ -418,7 +418,8 @@ export const OrderDetailsScreen: React.FC = () => {
                       <button
                         type="button"
                         onClick={handleInitiateClaim}
-                        className="w-full py-3.5 px-6 rounded-2xl bg-[#215cd4] hover:bg-[#194cb5] text-white font-bold text-base tracking-wide transition-all shadow-md btn-press text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#215cd4]"
+                        disabled={!claimConfirmed}
+                        className={`w-full py-3.5 px-6 rounded-2xl text-white font-bold text-base tracking-wide transition-all shadow-md btn-press text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#215cd4] ${claimConfirmed ? "bg-[#215cd4] hover:bg-[#194cb5] cursor-pointer" : "bg-gray-300 opacity-80 cursor-not-allowed"}`}
                       >
                         Initiate Claim
                       </button>
