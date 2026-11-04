@@ -86,18 +86,8 @@ export const HomeScreen: React.FC = () => {
 
         {/* Activities Section */}
         <View className="mt-6 flex-1">
-          <View className="flex-row items-center justify-between mb-3">
+          <View className="mb-3">
             <Text className="text-lg font-bold text-gray-900">Activities</Text>
-            {orders.length > 5 && (
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() => navigateTo('transactions')}
-              >
-                <Text className="text-xs text-[#215cd4] font-semibold">
-                  View All ({orders.length})
-                </Text>
-              </TouchableOpacity>
-            )}
           </View>
 
           {isOrderListEmpty ? (
@@ -165,18 +155,6 @@ export const HomeScreen: React.FC = () => {
                   </View>
                 </TouchableOpacity>
               ))}
-
-              {orders.length > 5 && (
-                <TouchableOpacity
-                  activeOpacity={0.7}
-                  onPress={() => navigateTo('transactions')}
-                  className="pt-3 mt-1 border-t border-gray-200/70 items-center"
-                >
-                  <Text className="text-xs font-semibold text-[#215cd4]">
-                    See all {orders.length} activities in Transactions →
-                  </Text>
-                </TouchableOpacity>
-              )}
             </View>
           )}
         </View>

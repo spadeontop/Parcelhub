@@ -73,17 +73,8 @@ export const HomeScreen: React.FC = () => {
 
       {/* Activities Section */}
       <section className="mt-6 flex-1 flex flex-col">
-        <div className="flex items-center justify-between mb-3">
+        <div className="mb-3">
           <h3 className="text-lg font-bold text-gray-900">Activities</h3>
-          {orders.length > 5 && (
-            <button
-              type="button"
-              onClick={() => navigateTo('transactions')}
-              className="text-xs text-[#215cd4] hover:underline font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#215cd4] cursor-pointer"
-            >
-              View All ({orders.length})
-            </button>
-          )}
         </div>
 
         {isOrderListEmpty ? (
@@ -127,18 +118,6 @@ export const HomeScreen: React.FC = () => {
                 </div>
               </div>
             ))}
-
-            {orders.length > 5 && (
-              <div className="pt-3 text-center">
-                <button
-                  type="button"
-                  onClick={() => navigateTo('transactions')}
-                  className="text-xs font-semibold text-[#215cd4] hover:underline cursor-pointer"
-                >
-                  See all {orders.length} activities in Transactions →
-                </button>
-              </div>
-            )}
           </div>
         )}
       </section>
