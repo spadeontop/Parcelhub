@@ -11,7 +11,7 @@ interface OrderItem {
   statusMessage: string;
 }
 
-const BACKEND_URL = 'http://localhost:3000';
+const BACKEND_URL = '';
 
 export const StaffStandaloneApp: React.FC = () => {
   const [authToken, setAuthToken] = useState<string>(() => localStorage.getItem('ph_staff_token') || '');
