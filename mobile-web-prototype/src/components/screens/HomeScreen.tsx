@@ -21,15 +21,15 @@ export const HomeScreen: React.FC = () => {
       <BrandHeader />
 
       {/* Welcome Dark Card */}
-      <section className="mt-4 rounded-3xl bg-[#1e1e1e] p-6 text-white shadow-lg relative overflow-hidden">
+      <section className="mt-4 rounded-3xl bg-[#181b20] p-5 text-white shadow-lg relative overflow-hidden">
         <div className="relative z-10">
           {/* Status Pills inside Card (above Welcome) */}
-          <div className="flex items-center gap-2 mb-3 flex-wrap">
+          <div className="flex items-center gap-2 mb-2.5 flex-wrap">
             {/* Ready */}
             <button
               type="button"
               onClick={() => navigateTo('transactions')}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/10 hover:bg-white/15 border border-white/5 text-[11px] font-semibold text-gray-200 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/5 hover:bg-white/10 border border-white/5 text-[10px] font-medium text-gray-300 transition-colors cursor-pointer"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-[#10b780]" />
               <span>{readyCount} Ready</span>
@@ -39,9 +39,9 @@ export const HomeScreen: React.FC = () => {
             <button
               type="button"
               onClick={() => navigateTo('transactions')}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/10 hover:bg-white/15 border border-white/5 text-[11px] font-semibold text-gray-200 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/5 hover:bg-white/10 border border-white/5 text-[10px] font-medium text-gray-300 transition-colors cursor-pointer"
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-[#3b82f6]" />
+              <span className="w-1.5 h-1.5 rounded-full bg-[#1b65e8]" />
               <span>{inTransitCount} In Transit</span>
             </button>
 
@@ -49,7 +49,7 @@ export const HomeScreen: React.FC = () => {
             <button
               type="button"
               onClick={() => navigateTo('transactions')}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/10 hover:bg-white/15 border border-white/5 text-[11px] font-semibold text-gray-200 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/5 hover:bg-white/10 border border-white/5 text-[10px] font-medium text-gray-300 transition-colors cursor-pointer"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-[#f59e0b]" />
               <span>{unpaidCount} Unpaid</span>
@@ -59,11 +59,26 @@ export const HomeScreen: React.FC = () => {
           <h2 className="text-2xl font-bold tracking-tight text-white">Welcome Nyeowsz!</h2>
           <p className="text-sm text-gray-400 mt-1">Create an order or track existing deliveries</p>
 
-          <div className="mt-5">
+          <div className="mt-4 flex">
             <button
               type="button"
               onClick={() => navigateTo('create_order')}
-              className="w-full py-3.5 px-4 rounded-2xl bg-[#215cd4] hover:bg-[#194cb5] text-white font-bold text-sm tracking-wide transition-all shadow-md btn-press text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#215cd4]"
+              style={{
+                flex: 1,
+                background: '#1b65e8',
+                color: 'white',
+                border: 'none',
+                padding: '12px 14px',
+                borderRadius: '12px',
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+              }}
+              className="hover:brightness-105 active:scale-[0.99] transition-all"
             >
               + Create Order
             </button>

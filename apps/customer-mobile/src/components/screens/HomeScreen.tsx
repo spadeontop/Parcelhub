@@ -24,17 +24,17 @@ export const HomeScreen: React.FC = () => {
 
       <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
         {/* Welcome Dark Card */}
-        <View className="mt-3 rounded-3xl bg-[#1e1e1e] p-6 shadow-lg">
+        <View className="mt-3 rounded-3xl bg-[#181b20] p-5 shadow-lg">
           {/* Status Pills inside Card (above Welcome) */}
-          <View className="flex-row items-center gap-2 mb-3">
+          <View className="flex-row items-center gap-2 mb-2.5">
             {/* Ready */}
             <TouchableOpacity
               activeOpacity={0.7}
               onPress={() => navigateTo('transactions')}
-              className="flex-row items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/10 border border-white/5"
+              className="flex-row items-center gap-1 px-2 py-0.5 rounded-md bg-white/5 border border-white/5"
             >
               <View className="w-1.5 h-1.5 rounded-full bg-[#10b780]" />
-              <Text className="text-[11px] font-semibold text-gray-200">
+              <Text className="text-[10px] font-medium text-gray-300">
                 {readyCount} Ready
               </Text>
             </TouchableOpacity>
@@ -43,10 +43,10 @@ export const HomeScreen: React.FC = () => {
             <TouchableOpacity
               activeOpacity={0.7}
               onPress={() => navigateTo('transactions')}
-              className="flex-row items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/10 border border-white/5"
+              className="flex-row items-center gap-1 px-2 py-0.5 rounded-md bg-white/5 border border-white/5"
             >
-              <View className="w-1.5 h-1.5 rounded-full bg-[#3b82f6]" />
-              <Text className="text-[11px] font-semibold text-gray-200">
+              <View className="w-1.5 h-1.5 rounded-full bg-[#1b65e8]" />
+              <Text className="text-[10px] font-medium text-gray-300">
                 {inTransitCount} In Transit
               </Text>
             </TouchableOpacity>
@@ -55,10 +55,10 @@ export const HomeScreen: React.FC = () => {
             <TouchableOpacity
               activeOpacity={0.7}
               onPress={() => navigateTo('transactions')}
-              className="flex-row items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/10 border border-white/5"
+              className="flex-row items-center gap-1 px-2 py-0.5 rounded-md bg-white/5 border border-white/5"
             >
               <View className="w-1.5 h-1.5 rounded-full bg-[#f59e0b]" />
-              <Text className="text-[11px] font-semibold text-gray-200">
+              <Text className="text-[10px] font-medium text-gray-300">
                 {unpaidCount} Unpaid
               </Text>
             </TouchableOpacity>
@@ -71,13 +71,24 @@ export const HomeScreen: React.FC = () => {
             Create an order or track existing deliveries
           </Text>
 
-          <View className="mt-5">
+          <View className="mt-4 flex-row">
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={() => navigateTo('create_order')}
-              className="w-full py-3.5 px-4 rounded-xl bg-[#215cd4] active:bg-[#194cb5] shadow-md items-center justify-center"
+              style={{
+                flex: 1,
+                backgroundColor: '#1b65e8',
+                paddingVertical: 12,
+                paddingHorizontal: 14,
+                borderRadius: 12,
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexDirection: 'row',
+                gap: 6,
+              }}
+              className="active:opacity-90 shadow-sm"
             >
-              <Text className="text-white font-bold text-sm tracking-wide">
+              <Text style={{ color: '#ffffff', fontSize: 13, fontWeight: '600' }}>
                 + Create Order
               </Text>
             </TouchableOpacity>
