@@ -42,6 +42,8 @@ const ScreenContent: React.FC = () => {
       return <OrderDetailsScreen />;
     case 'transactions':
       return <TransactionsScreen />;
+    case 'notifications':
+      return <NotificationsScreen />;
     case 'staff_ui':
       return <StaffTerminalScreen />;
     case 'login':

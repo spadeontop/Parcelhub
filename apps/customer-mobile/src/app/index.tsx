@@ -32,6 +32,8 @@ export default function IndexPage() {
       return <OrderDetailsScreen />;
     case 'transactions':
       return <TransactionsScreen />;
+    case 'notifications':
+      return <NotificationsScreen />;
     case 'login':
       return <LoginScreen />;
     case 'register':
