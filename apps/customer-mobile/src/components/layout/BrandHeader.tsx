@@ -1,14 +1,15 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, Image } from 'react-native';
+﻿import React from 'react';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { useApp } from '../../context/AppContext';
 import { ScreenId } from '../../types';
 import { BackArrowIcon, ParcelHubLogoSvg } from '../common/Icons';
-import Svg, { Path } from 'react-native-svg';
 
 interface BrandHeaderProps {
   title?: string;
   subtitle?: string;
   showBack?: boolean;
+  showLogo?: boolean;
+  showProfile?: boolean;
   backTarget?: ScreenId;
   onBack?: () => void;
 }
@@ -17,17 +18,12 @@ export const BrandHeader: React.FC<BrandHeaderProps> = ({
   title = 'ParcelHub',
   subtitle = "LILY'S CATERING HUB",
   showBack = false,
+  showLogo = true,
+  showProfile = true,
   backTarget = 'home',
   onBack,
 }) => {
-  const {
-    hubOpen,
-    notifications,
-    openNotificationsModal,
-    navigateTo,
-  } = useApp();
-
-  const hasUnread = notifications.some((n) => n.unread);
+  const { hubOpen, navigateTo } = useApp();
 
   return (
     <View className="flex-row items-center justify-between py-2 border-b border-gray-100/90 pb-3 mb-2">
@@ -39,15 +35,17 @@ export const BrandHeader: React.FC<BrandHeaderProps> = ({
               if (onBack) onBack();
               else navigateTo(backTarget);
             }}
-            className="w-9 h-9 rounded-full bg-gray-100 items-center justify-center"
+            className="w-8 h-8 rounded-full bg-gray-100 items-center justify-center"
+            accessibilityLabel="Back"
           >
-            <BackArrowIcon size={18} color="#374151" />
+            <BackArrowIcon size={16} color="#374151" />
           </TouchableOpacity>
-        ) : (
+        ) : showLogo ? (
           <View className="w-9 h-9 rounded-xl bg-blue-50 items-center justify-center border border-blue-100">
             <ParcelHubLogoSvg size={24} />
           </View>
-        )}
+        ) : null}
+
         <View>
           <Text className="text-xl font-extrabold tracking-tight text-gray-900 leading-none">
             {title}
@@ -66,17 +64,18 @@ export const BrandHeader: React.FC<BrandHeaderProps> = ({
       </View>
 
       {/* User Profile Avatar */}
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onPress={() => navigateTo('mpin_login')}
-        className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 items-center justify-center shadow-xs"
-        accessibilityLabel="User Profile (Nyeowsz)"
-      >
-        <Text className="text-xs font-bold text-slate-600 tracking-wider">
-          NY
-        </Text>
-      </TouchableOpacity>
+      {showProfile ? (
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => navigateTo('mpin_login')}
+          className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 items-center justify-center shadow-xs"
+          accessibilityLabel="User Profile (Nyeowsz)"
+        >
+          <Text className="text-xs font-bold text-slate-600 tracking-wider">
+            NY
+          </Text>
+        </TouchableOpacity>
+      ) : null}
     </View>
   );
 };
-

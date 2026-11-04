@@ -13,9 +13,9 @@ export const NotificationsScreen: React.FC = () => {
       <BrandHeader
         title="Notifications"
         subtitle="ACTIVITY UPDATES"
-        showBack
-        backTarget="home"
-        onBack={() => navigateTo('home')}
+        showBack={false}
+        showLogo={false}
+        showProfile={false}
       />
 
       {/* Screen Title & Quick Actions */}

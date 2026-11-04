@@ -18,7 +18,7 @@ export const TransactionsScreen: React.FC = () => {
   return (
     <div className="flex flex-col min-h-[780px] bg-white px-5 pt-3 pb-8 relative select-none">
       {/* Unified Header */}
-      <BrandHeader title="Transactions" subtitle="ORDER HISTORY" />
+      <BrandHeader title="Transactions" subtitle="ORDER HISTORY" showBack={false} showLogo={false} showProfile={false} />
 
       {/* Filter Pills */}
       <div className="flex items-center gap-2 overflow-x-auto py-2 scrollbar-none mt-2">

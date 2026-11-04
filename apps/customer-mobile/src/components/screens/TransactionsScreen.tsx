@@ -20,7 +20,7 @@ export const TransactionsScreen: React.FC = () => {
   return (
     <View style={{ flex: 1, backgroundColor: '#ffffff' }} className="flex-1 bg-white px-5 pt-3 pb-2">
       {/* Header */}
-      <BrandHeader title="Transactions" subtitle="ORDER HISTORY" />
+      <BrandHeader title="Transactions" subtitle="ORDER HISTORY" showBack={false} showLogo={false} showProfile={false} />
 
       {/* Filter Pills */}
       <View className="py-2">
