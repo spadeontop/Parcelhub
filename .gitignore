@@ -2,3 +2,6 @@ node_modules
 .env
 auth.html
 dist
+
+!packages/contracts/dist/
+!packages/contracts/dist/**
