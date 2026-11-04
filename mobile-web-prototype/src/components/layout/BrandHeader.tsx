@@ -62,29 +62,14 @@ export const BrandHeader: React.FC<BrandHeaderProps> = ({
       </div>
 
       <div className="flex items-center gap-2">
-        {/* Notification Toggle Pill */}
+        {/* User Profile Avatar */}
         <button
           type="button"
-          onClick={toggleNotificationAlerts}
-          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#93eb99] text-gray-900 hover:bg-[#82e088] transition-all btn-press shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#215cd4]"
+          onClick={() => navigateTo('mpin_login')}
+          className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 flex items-center justify-center text-xs font-bold text-slate-600 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#215cd4]"
+          aria-label="User Profile (Nyeowsz)"
         >
-          <span>{notificationActive ? 'Alerts On' : 'Turn on'}</span>
-          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" />
-          </svg>
-        </button>
-
-        {/* Bell Notification Button */}
-        <button
-          type="button"
-          onClick={openNotificationsModal}
-          className="p-2 rounded-full hover:bg-gray-100 text-gray-900 transition-colors relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#215cd4]"
-          aria-label="View notifications"
-        >
-          <img src="./assets/bell_icon.svg" alt="Bell Icon" className="w-6 h-6 object-contain" />
-          {hasUnreadNotifications && (
-            <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-[#ef4444] rounded-full ring-2 ring-white" />
-          )}
+          NY
         </button>
       </div>
     </header>

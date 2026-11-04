@@ -10,6 +10,10 @@ import Svg, { Path } from 'react-native-svg';
 export const HomeScreen: React.FC = () => {
   const { hasOrders, setHasOrders, orders, navigateTo } = useApp();
 
+  const readyCount = orders.filter((o) => o.status === 'READY_TO_CLAIM').length;
+  const inTransitCount = orders.filter((o) => o.status === 'AWAITING_PARCEL').length;
+  const unpaidCount = orders.filter((o) => o.status === 'PAYMENT_REQUIRED').length;
+
   return (
     <View style={{ flex: 1, backgroundColor: '#ffffff' }} className="flex-1 bg-white px-5 pt-3 pb-2">
       {/* Brand Header */}
@@ -18,31 +22,60 @@ export const HomeScreen: React.FC = () => {
       <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
         {/* Welcome Dark Card */}
         <View className="mt-3 rounded-3xl bg-[#1e1e1e] p-6 shadow-lg">
+          {/* Status Pills inside Card (above Welcome) */}
+          <View className="flex-row items-center gap-2 mb-3">
+            {/* Ready */}
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => navigateTo('transactions')}
+              className="flex-row items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/10 border border-white/5"
+            >
+              <View className="w-1.5 h-1.5 rounded-full bg-[#10b780]" />
+              <Text className="text-[11px] font-semibold text-gray-200">
+                {readyCount} Ready
+              </Text>
+            </TouchableOpacity>
+
+            {/* In Transit */}
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => navigateTo('transactions')}
+              className="flex-row items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/10 border border-white/5"
+            >
+              <View className="w-1.5 h-1.5 rounded-full bg-[#3b82f6]" />
+              <Text className="text-[11px] font-semibold text-gray-200">
+                {inTransitCount} In Transit
+              </Text>
+            </TouchableOpacity>
+
+            {/* Unpaid */}
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => navigateTo('transactions')}
+              className="flex-row items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/10 border border-white/5"
+            >
+              <View className="w-1.5 h-1.5 rounded-full bg-[#f59e0b]" />
+              <Text className="text-[11px] font-semibold text-gray-200">
+                {unpaidCount} Unpaid
+              </Text>
+            </TouchableOpacity>
+          </View>
+
           <Text className="text-2xl font-bold tracking-tight text-white">
             Welcome Nyeowsz!
           </Text>
           <Text className="text-sm text-gray-400 mt-1">
-            Create an order to get started
+            Create an order or track existing deliveries
           </Text>
 
-          <View className="flex-row items-center gap-3 mt-6">
+          <View className="mt-5">
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={() => navigateTo('create_order')}
-              className="flex-1 py-3 px-4 rounded-xl bg-[#215cd4] active:bg-[#194cb5] shadow-md items-center"
+              className="w-full py-3.5 px-4 rounded-xl bg-[#215cd4] active:bg-[#194cb5] shadow-md items-center justify-center"
             >
-              <Text className="text-white font-bold text-xs tracking-wide">
+              <Text className="text-white font-bold text-sm tracking-wide">
                 + Create Order
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={() => navigateTo('transactions')}
-              className="flex-1 py-3 px-4 rounded-xl bg-[#163b86] active:bg-[#102d6b] items-center"
-            >
-              <Text className="text-white font-bold text-xs tracking-wide">
-                Transactions
               </Text>
             </TouchableOpacity>
           </View>
@@ -137,4 +170,3 @@ export const HomeScreen: React.FC = () => {
     </View>
   );
 };
-

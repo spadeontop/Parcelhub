@@ -65,24 +65,16 @@ export const BrandHeader: React.FC<BrandHeaderProps> = ({
         </View>
       </View>
 
-      {/* Bell / Notifications Button */}
+      {/* User Profile Avatar */}
       <TouchableOpacity
-        activeOpacity={0.7}
-        onPress={openNotificationsModal}
-        className="w-9 h-9 rounded-full bg-gray-50 border border-gray-200/60 items-center justify-center relative"
+        activeOpacity={0.8}
+        onPress={() => navigateTo('mpin_login')}
+        className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 items-center justify-center shadow-xs"
+        accessibilityLabel="User Profile (Nyeowsz)"
       >
-        <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-          <Path
-            d="M15 17H20L18.595 15.595C18.2141 15.2141 18 14.6973 18 14.158V11C18 7.686 15.314 5 12 5C8.686 5 6 7.686 6 11V14.158C6 14.6973 5.78586 15.2141 5.405 15.595L4 17H9M15 17V18C15 19.657 13.657 21 12 21C10.343 21 9 19.657 9 18V17M15 17H9"
-            stroke="#475569"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </Svg>
-        {hasUnread && (
-          <View className="w-2.5 h-2.5 rounded-full bg-red-500 absolute top-1 right-1 border-2 border-white" />
-        )}
+        <Text className="text-xs font-bold text-slate-600 tracking-wider">
+          NY
+        </Text>
       </TouchableOpacity>
     </View>
   );

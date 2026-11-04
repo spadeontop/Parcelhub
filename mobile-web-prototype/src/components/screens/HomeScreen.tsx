@@ -8,6 +8,10 @@ import { getStatusLabel, getStatusTextColor, getStatusDotClass } from '../../uti
 export const HomeScreen: React.FC = () => {
   const { hasOrders, setHasOrders, orders, navigateTo } = useApp();
 
+  const readyCount = orders.filter((o) => o.status === 'READY_TO_CLAIM').length;
+  const inTransitCount = orders.filter((o) => o.status === 'AWAITING_PARCEL').length;
+  const unpaidCount = orders.filter((o) => o.status === 'PAYMENT_REQUIRED').length;
+
   return (
     <div className="flex flex-col min-h-[780px] bg-white px-5 pt-3 pb-8 relative select-none">
       {/* Consistent Brand Header */}
@@ -16,23 +20,49 @@ export const HomeScreen: React.FC = () => {
       {/* Welcome Dark Card */}
       <section className="mt-4 rounded-3xl bg-[#1e1e1e] p-6 text-white shadow-lg relative overflow-hidden">
         <div className="relative z-10">
-          <h2 className="text-2xl font-bold tracking-tight text-white">Welcome Nyeowsz!</h2>
-          <p className="text-sm text-gray-400 mt-1">Create an order to get started</p>
-
-          <div className="flex items-center gap-3 mt-6">
-            <button
-              type="button"
-              onClick={() => navigateTo('create_order')}
-              className="flex-1 py-3 px-4 rounded-xl bg-[#215cd4] hover:bg-[#194cb5] text-white font-semibold text-xs tracking-wide transition-all shadow-md btn-press text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#215cd4]"
-            >
-              + Create Order
-            </button>
+          {/* Status Pills inside Card (above Welcome) */}
+          <div className="flex items-center gap-2 mb-3 flex-wrap">
+            {/* Ready */}
             <button
               type="button"
               onClick={() => navigateTo('transactions')}
-              className="flex-1 py-3 px-4 rounded-xl bg-[#163b86] hover:bg-[#102d6b] text-white font-semibold text-xs tracking-wide transition-all btn-press text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#215cd4]"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/10 hover:bg-white/15 border border-white/5 text-[11px] font-semibold text-gray-200 transition-colors cursor-pointer"
             >
-              Transactions
+              <span className="w-1.5 h-1.5 rounded-full bg-[#10b780]" />
+              <span>{readyCount} Ready</span>
+            </button>
+
+            {/* In Transit */}
+            <button
+              type="button"
+              onClick={() => navigateTo('transactions')}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/10 hover:bg-white/15 border border-white/5 text-[11px] font-semibold text-gray-200 transition-colors cursor-pointer"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-[#3b82f6]" />
+              <span>{inTransitCount} In Transit</span>
+            </button>
+
+            {/* Unpaid */}
+            <button
+              type="button"
+              onClick={() => navigateTo('transactions')}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/10 hover:bg-white/15 border border-white/5 text-[11px] font-semibold text-gray-200 transition-colors cursor-pointer"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-[#f59e0b]" />
+              <span>{unpaidCount} Unpaid</span>
+            </button>
+          </div>
+
+          <h2 className="text-2xl font-bold tracking-tight text-white">Welcome Nyeowsz!</h2>
+          <p className="text-sm text-gray-400 mt-1">Create an order or track existing deliveries</p>
+
+          <div className="mt-5">
+            <button
+              type="button"
+              onClick={() => navigateTo('create_order')}
+              className="w-full py-3.5 px-4 rounded-2xl bg-[#215cd4] hover:bg-[#194cb5] text-white font-bold text-sm tracking-wide transition-all shadow-md btn-press text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#215cd4]"
+            >
+              + Create Order
             </button>
           </div>
         </div>
