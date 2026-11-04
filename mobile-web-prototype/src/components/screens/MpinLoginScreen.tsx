@@ -24,8 +24,13 @@ export const MpinLoginScreen: React.FC = () => {
       setPin(nextPin);
       if (nextPin.length === 4) {
         clearAutoSubmitTimer();
+        setIsVerifying(true);
         autoSubmitTimerRef.current = setTimeout(() => {
-          verifyCustomerMpin(nextPin).catch(() => {});
+          verifyCustomerMpin(nextPin)
+            .catch(() => {})
+            .finally(() => {
+              setIsVerifying(false);
+            });
         }, 220);
       }
     }
@@ -33,6 +38,7 @@ export const MpinLoginScreen: React.FC = () => {
 
   const handleBackspace = useCallback(() => {
     clearAutoSubmitTimer();
+    setIsVerifying(false);
     setPin((prev) => prev.slice(0, -1));
   }, [clearAutoSubmitTimer]);
 
@@ -53,23 +59,6 @@ export const MpinLoginScreen: React.FC = () => {
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [handleKeyPress, handleBackspace, isMpinModalOpen]);
-
-  const handleVerify = async () => {
-    clearAutoSubmitTimer();
-    if (pin.length < 4) {
-      showToast('Please enter your 4-digit MPIN.');
-      return;
-    }
-
-    setIsVerifying(true);
-    try {
-      await verifyCustomerMpin(pin);
-    } catch (err: any) {
-      showToast(err?.message || 'MPIN verification failed. Please try again.');
-    } finally {
-      setIsVerifying(false);
-    }
-  };
 
   const displayName = authCustomer.firstname
     ? `${authCustomer.firstname} ${authCustomer.lastname}`
@@ -152,6 +141,7 @@ export const MpinLoginScreen: React.FC = () => {
             type="button"
             onClick={() => {
               clearAutoSubmitTimer();
+              setIsVerifying(false);
               setPin('');
             }}
             className="w-[58px] h-[58px] rounded-full border border-gray-200 bg-white text-gray-500 text-xs font-semibold flex items-center justify-center shadow-xs hover:bg-gray-50 active:scale-95 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#215cd4]"
@@ -190,18 +180,17 @@ export const MpinLoginScreen: React.FC = () => {
       </div>
 
       <div>
-        {/* Primary Submit Button */}
-        <button
-          type="button"
-          disabled={isVerifying || pin.length < 4}
-          onClick={handleVerify}
-          className="w-full h-11 bg-[#215cd4] hover:bg-[#194cb5] text-white rounded-lg font-semibold text-[14.5px] shadow-xs transition-all flex items-center justify-center cursor-pointer active:scale-[0.99] disabled:opacity-50"
-        >
-          {isVerifying ? 'Verifying...' : 'Sign in with MPIN'}
-        </button>
+        {/* Verifying Indicator */}
+        {isVerifying && (
+          <div className="text-center mb-3">
+            <span className="text-[13px] font-semibold text-[#215cd4] animate-pulse">
+              Verifying MPIN...
+            </span>
+          </div>
+        )}
 
         {/* Forgot MPIN Link */}
-        <div className="text-center mt-3">
+        <div className="text-center">
           <button
             type="button"
             onClick={() => {

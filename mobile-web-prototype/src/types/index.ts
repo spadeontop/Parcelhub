@@ -73,6 +73,8 @@ export interface Order {
   courierPaid?: boolean;
   parcelImageUrl?: string | null;
   claimInitiatedAt?: number | null;
+  notes?: string;
+  statedFee?: number;
 }
 
 export interface DraftOrder {

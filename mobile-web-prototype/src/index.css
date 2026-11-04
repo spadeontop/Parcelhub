@@ -193,3 +193,52 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Scanning Laser Animation for QR Viewfinder */
+@keyframes scanLaser {
+  0% {
+    top: 5%;
+    opacity: 0.8;
+  }
+  50% {
+    top: 92%;
+    opacity: 1;
+  }
+  100% {
+    top: 5%;
+    opacity: 0.8;
+  }
+}
+
+.scanner-laser {
+  position: absolute;
+  left: 5%;
+  right: 5%;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(59, 130, 246, 0) 0%, #60a5fa 50%, rgba(59, 130, 246, 0) 100%);
+  box-shadow: 0 0 14px 3px rgba(96, 165, 250, 0.75);
+  animation: scanLaser 2.2s ease-in-out infinite;
+}
+
+/* Corner Viewfinder brackets */
+.viewfinder-corner {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border-color: #60a5fa;
+  pointer-events: none;
+}
+.corner-tl { top: 12px; left: 12px; border-top-width: 3px; border-left-width: 3px; border-top-left-radius: 8px; }
+.corner-tr { top: 12px; right: 12px; border-top-width: 3px; border-right-width: 3px; border-top-right-radius: 8px; }
+.corner-bl { bottom: 12px; left: 12px; border-bottom-width: 3px; border-left-width: 3px; border-bottom-left-radius: 8px; }
+.corner-br { bottom: 12px; right: 12px; border-bottom-width: 3px; border-right-width: 3px; border-bottom-right-radius: 8px; }
+
+/* Floating Action Button: Fixed on Lower Right Side */
+.terminal-fab-wrapper {
+  position: absolute;
+  right: 18px;
+  bottom: 148px;
+  z-index: 35;
+  transition: bottom 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.15s ease;
+}
+
