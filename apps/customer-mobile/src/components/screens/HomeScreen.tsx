@@ -166,6 +166,18 @@ export const HomeScreen: React.FC = () => {
                   </View>
                 </TouchableOpacity>
               ))}
+
+              {/* View All link below the list */}
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => navigateTo('transactions')}
+                className="mt-1 pt-3.5 border-t border-gray-200/70 flex-row items-center justify-center gap-1.5"
+              >
+                <Text className="text-xs font-bold text-[#1b65e8]">
+                  View all activities
+                </Text>
+                <ChevronRightIcon size={13} color="#1b65e8" />
+              </TouchableOpacity>
             </View>
           )}
         </View>

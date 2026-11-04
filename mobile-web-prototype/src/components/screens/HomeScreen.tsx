@@ -133,6 +133,18 @@ export const HomeScreen: React.FC = () => {
                 </div>
               </div>
             ))}
+
+            {/* View All link below the list */}
+            <div className="pt-3.5 border-t border-gray-200/70 text-center">
+              <button
+                type="button"
+                onClick={() => navigateTo('transactions')}
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-[#1b65e8] hover:underline cursor-pointer focus-visible:outline-none"
+              >
+                <span>View all activities</span>
+                <ChevronRightIcon className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         )}
       </section>
