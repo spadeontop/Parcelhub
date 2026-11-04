@@ -3,3 +3,6 @@ node_modules
 auth.html
 dist
 temp
+
+!packages/contracts/dist/
+!packages/contracts/dist/**
