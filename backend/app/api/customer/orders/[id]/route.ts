@@ -1,0 +1,117 @@
+import { NextRequest } from "next/server";
+import { authenticateRequest } from "@/app/lib/auth";
+import { jsonError, jsonSuccess } from "@/app/lib/response";
+import { db } from "@/app/lib/store";
+import {
+  CustomerId,
+  CustomerCancelOrderRes,
+  CustomerGetOrderRes,
+  CustomerOrderDetail,
+  CustomerUpdateOrderReq,
+  CustomerUpdateOrderRes,
+  OrderId,
+} from "@/app/types/api";
+
+interface RouteParams {
+  params: Promise<{ id: string }>;
+}
+
+export async function GET(request: NextRequest, { params }: RouteParams) {
+  const auth = authenticateRequest(request, ["CUSTOMER", "STAFF", "ADMIN"]);
+  if (!auth.session) {
+    return jsonError(auth.error || "Unauthorized", 401, "Unauthorized");
+  }
+
+  const { id } = await params;
+  const order = db.getOrder(id as OrderId);
+
+  if (!order) {
+    return jsonError("Order not found", 404, "Not Found");
+  }
+
+  if (auth.session.role === "CUSTOMER" && order.customerId !== auth.session.userId) {
+    return jsonError("Unauthorized access to this order", 403, "Forbidden");
+  }
+
+  const orderDetail: CustomerOrderDetail = {
+    id: order.id,
+    trackingId: order.trackingId,
+    productName: order.productName,
+    recipientName: order.recipientName,
+    price: order.price,
+    change: order.change,
+    status: order.status,
+    statusTimeline: order.statusTimeline,
+    qrImageUrl: order.qrImageUrl,
+  };
+
+  const response: CustomerGetOrderRes = {
+    statusMessage: "Order details retrieved",
+    order: orderDetail,
+  };
+
+  return jsonSuccess(response);
+}
+
+export async function PUT(request: NextRequest, { params }: RouteParams) {
+  const auth = authenticateRequest(request, ["CUSTOMER"]);
+  if (!auth.session) {
+    return jsonError(auth.error || "Unauthorized", 401, "Unauthorized");
+  }
+
+  const { id } = await params;
+  const order = db.getOrder(id as OrderId);
+  if (!order) {
+    return jsonError("Order not found", 404, "Not Found");
+  }
+
+  if (order.customerId !== auth.session.userId) {
+    return jsonError("Unauthorized access to modify this order", 403, "Forbidden");
+  }
+
+  try {
+    const body = (await request.json()) as CustomerUpdateOrderReq;
+    if (!body.order) {
+      return jsonError("Order payload is required", 400);
+    }
+
+    db.updateOrder(id as OrderId, body.order, auth.session.userId as CustomerId);
+
+    const response: CustomerUpdateOrderRes = {
+      statusMessage: "Order updated successfully",
+    };
+
+    return jsonSuccess(response);
+  } catch {
+    return jsonError("Invalid request body", 400);
+  }
+}
+
+export async function DELETE(request: NextRequest, { params }: RouteParams) {
+  const auth = authenticateRequest(request, ["CUSTOMER"]);
+  if (!auth.session) {
+    return jsonError(auth.error || "Unauthorized", 401, "Unauthorized");
+  }
+
+  const { id } = await params;
+  const order = db.getOrder(id as OrderId);
+  if (!order) {
+    return jsonError("Order not found", 404, "Not Found");
+  }
+
+  if (order.customerId !== auth.session.userId) {
+    return jsonError("Unauthorized access to cancel this order", 403, "Forbidden");
+  }
+
+  if (order.status === "CLAIMED") {
+    return jsonError("Cannot cancel an already claimed order", 400);
+  }
+
+  db.cancelOrder(id as OrderId, auth.session.userId as CustomerId);
+
+  const response: CustomerCancelOrderRes = {
+    statusMessage: "Order cancelled successfully",
+  };
+
+  return jsonSuccess(response);
+}
