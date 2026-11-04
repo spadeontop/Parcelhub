@@ -38,7 +38,7 @@ export const OrderDetailsScreen: React.FC = () => {
     bannerBg = 'bg-[#10b780] text-white';
     bannerSubtitle = 'Ready To Claim';
   } else if (status === 'CLAIMED') {
-    bannerBg = 'bg-[#181b20] text-white';
+    bannerBg = 'bg-white text-gray-900 border-b border-gray-100';
     bannerSubtitle = 'Claimed';
   }
 
@@ -205,7 +205,11 @@ export const OrderDetailsScreen: React.FC = () => {
             <button
               type="button"
               onClick={() => navigateTo('home')}
-              className="absolute left-4 top-4 w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 border border-white/30 flex items-center justify-center text-white cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              className={`absolute left-4 top-4 w-8 h-8 rounded-full flex items-center justify-center cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 ${
+                status === 'CLAIMED'
+                  ? 'bg-gray-100 hover:bg-gray-200 border border-gray-200 text-gray-900 focus-visible:ring-gray-300'
+                  : 'bg-white/20 hover:bg-white/30 border border-white/30 text-white focus-visible:ring-white'
+              }`}
               title="Return to Home"
               aria-label="Back to Home"
             >
@@ -213,7 +217,7 @@ export const OrderDetailsScreen: React.FC = () => {
             </button>
 
             <h2 className="text-2xl font-bold tracking-tight">{bannerTitle}</h2>
-            <p className={`text-sm font-medium mt-0.5 ${status === 'CLAIMED' ? 'text-gray-400' : 'opacity-90'}`}>
+            <p className={`text-sm font-medium mt-0.5 ${status === 'CLAIMED' ? 'text-gray-500' : 'opacity-90'}`}>
               {bannerSubtitle}
             </p>
           </div>

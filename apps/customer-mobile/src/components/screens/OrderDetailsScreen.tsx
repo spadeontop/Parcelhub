@@ -39,7 +39,7 @@ export const OrderDetailsScreen: React.FC = () => {
     bannerBg = 'bg-[#10b780]';
     bannerSubtitle = 'Ready To Claim';
   } else if (status === 'CLAIMED') {
-    bannerBg = 'bg-[#181b20]';
+    bannerBg = 'bg-white border-b border-gray-100';
     bannerSubtitle = 'Claimed';
   }
 
@@ -236,10 +236,14 @@ export const OrderDetailsScreen: React.FC = () => {
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={() => navigateTo('home')}
-              className="absolute left-4 top-4 w-8 h-8 rounded-full bg-white/20 border border-white/30 items-center justify-center"
+              className={`absolute left-4 top-4 w-8 h-8 rounded-full items-center justify-center ${
+                status === 'CLAIMED'
+                  ? 'bg-gray-100 border border-gray-200'
+                  : 'bg-white/20 border border-white/30'
+              }`}
               accessibilityLabel="Back to Home"
             >
-              <BackArrowIcon size={16} color="#ffffff" />
+              <BackArrowIcon size={16} color={status === 'CLAIMED' ? '#181b20' : '#ffffff'} />
             </TouchableOpacity>
 
             <Text

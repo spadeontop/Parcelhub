@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { useApp } from '../../context/AppContext';
 import { BrandHeader } from '../layout/BrandHeader';
@@ -22,19 +22,26 @@ export const NotificationsScreen: React.FC = () => {
 
       {/* Screen Title & Quick Actions */}
       <View className="flex-row items-center justify-between mt-2 mb-4">
-        <View className="flex-row items-center gap-2">
-          <Text className="text-xl font-extrabold text-gray-900 tracking-tight">
+        <View className="flex-row items-center">
+          <Text className="text-xl font-extrabold text-[#181b20] tracking-tight">
             Inbox
           </Text>
           {unreadCount > 0 ? (
-            <View className="px-2 py-0.5 rounded-full bg-red-100 border border-red-200">
-              <Text className="text-[11px] font-bold text-red-600">
+            <View
+              style={{ marginLeft: 8 }}
+              className="flex-row items-center px-2.5 py-0.5 rounded-full bg-[#eff6ff] border border-[#dbeafe]"
+            >
+              <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#1b65e8', marginRight: 5 }} />
+              <Text className="text-[11px] font-bold text-[#1b65e8]">
                 {unreadCount} unread
               </Text>
             </View>
           ) : (
-            <View className="px-2 py-0.5 rounded-full bg-emerald-100 border border-emerald-200">
-              <Text className="text-[11px] font-bold text-emerald-700">
+            <View
+              style={{ marginLeft: 8 }}
+              className="flex-row items-center px-2.5 py-0.5 rounded-full bg-gray-50 border border-gray-200/70"
+            >
+              <Text className="text-[11px] font-medium text-gray-500">
                 All caught up
               </Text>
             </View>
@@ -45,9 +52,9 @@ export const NotificationsScreen: React.FC = () => {
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={markAllNotificationsAsRead}
-            className="px-3 py-1.5 rounded-xl bg-gray-100 active:bg-gray-200"
+            className="px-3 py-1.5 rounded-xl bg-gray-100/90 active:bg-gray-200"
           >
-            <Text className="text-xs font-semibold text-[#215cd4]">
+            <Text className="text-xs font-semibold text-[#1b65e8]">
               Mark all as read
             </Text>
           </TouchableOpacity>
@@ -57,19 +64,19 @@ export const NotificationsScreen: React.FC = () => {
       {/* Notification List or Empty State */}
       <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
         {notifications.length === 0 ? (
-          <View className="min-h-[300px] rounded-3xl bg-[#f8f8f8] border border-gray-100 items-center justify-center p-6 mt-4">
+          <View className="min-h-[300px] rounded-3xl bg-[#fafbfd] border border-gray-100 items-center justify-center p-6 mt-4">
             <View className="w-16 h-16 rounded-full bg-blue-50 items-center justify-center mb-3">
               <Svg width={30} height={30} viewBox="0 0 24 24" fill="none">
                 <Path
                   d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"
-                  stroke="#215cd4"
+                  stroke="#1b65e8"
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
               </Svg>
             </View>
-            <Text className="text-gray-900 font-bold text-base text-center">
+            <Text className="text-[#181b20] font-bold text-base text-center">
               No notifications yet
             </Text>
             <Text className="text-gray-500 text-xs text-center mt-1 max-w-xs leading-relaxed">
@@ -77,25 +84,34 @@ export const NotificationsScreen: React.FC = () => {
             </Text>
           </View>
         ) : (
-          <View className="space-y-3 pb-4">
+          <View className="pb-4">
             {notifications.map((item) => (
               <View
                 key={item.id}
+                style={{ marginBottom: 12 }}
                 className={`p-4 rounded-2xl border transition-all ${
                   item.unread
-                    ? 'bg-blue-50/70 border-blue-200 shadow-xs'
-                    : 'bg-[#fafafa] border-gray-200/80'
+                    ? 'bg-[#f8faff] border-[#dbeafe]'
+                    : 'bg-[#fafbfd] border-[#f1f5f9]'
                 }`}
               >
                 <View className="flex-row items-start justify-between">
                   <View className="flex-1 pr-3">
-                    <View className="flex-row items-center gap-1.5">
+                    <View className="flex-row items-center">
                       {item.unread && (
-                        <View className="w-2 h-2 rounded-full bg-[#215cd4]" />
+                        <View
+                          style={{
+                            width: 6,
+                            height: 6,
+                            borderRadius: 3,
+                            backgroundColor: '#1b65e8',
+                            marginRight: 6,
+                          }}
+                        />
                       )}
                       <Text
                         className={`text-sm font-bold ${
-                          item.unread ? 'text-[#163b86]' : 'text-gray-900'
+                          item.unread ? 'text-[#181b20]' : 'text-gray-700'
                         }`}
                       >
                         {item.title}
