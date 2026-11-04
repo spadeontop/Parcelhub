@@ -16,7 +16,8 @@ export type ScreenId =
   | 'login'
   | 'register'
   | 'mpin_login'
-  | 'mpin_create';
+  | 'mpin_create'
+  | 'faq';
 
 export type RoleMode = 'user' | 'staff';
 

@@ -14,6 +14,7 @@ import { LoginScreen } from './components/screens/LoginScreen';
 import { RegisterScreen } from './components/screens/RegisterScreen';
 import { MpinLoginScreen } from './components/screens/MpinLoginScreen';
 import { MpinCreateScreen } from './components/screens/MpinCreateScreen';
+import { FaqScreen } from './components/screens/FaqScreen';
 import { MpinModal } from './components/modals/MpinModal';
 import { ProofOfDeliveryModal } from './components/modals/ProofOfDeliveryModal';
 import { EscrowPolicyModal } from './components/modals/EscrowPolicyModal';
@@ -21,11 +22,13 @@ import { NotificationsModal } from './components/modals/NotificationsModal';
 import { Toast } from './components/common/Toast';
 
 const ScreenContent: React.FC = () => {
-  const { activeScreen } = useApp();
+  const { activeScreen, navigateTo } = useApp();
 
   switch (activeScreen) {
     case 'home':
       return <HomeScreen />;
+    case 'faq':
+      return <FaqScreen onBack={() => navigateTo('home')} />;
     case 'create_order':
       return <CreateOrderScreen />;
     case 'confirm_order':

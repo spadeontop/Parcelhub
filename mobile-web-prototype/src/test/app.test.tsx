@@ -165,14 +165,82 @@ describe('ParcelHub v3 Modular React Application', () => {
     fireEvent.click(dismissBtn);
     expect(screen.queryByText('4 New')).not.toBeInTheDocument();
 
-    // Open Hub policy modal from bottom nav help button
-    const helpBtn = screen.getByLabelText('Hub Information and Policy');
-    fireEvent.click(helpBtn);
+    // Open Hub policy modal from payment verification scenario
+    const scenarioSelect = screen.getByLabelText('Select Figma Screen Scenario');
+    fireEvent.change(scenarioSelect, { target: { value: 'figma-5' } });
+    const policyBtn = screen.getByText('Hub Policy & Information');
+    fireEvent.click(policyBtn);
     expect(screen.getByText('ParcelHub Counter Policy')).toBeInTheDocument();
 
     const understoodBtn = screen.getByText('Understood');
     fireEvent.click(understoodBtn);
     expect(screen.queryByText('ParcelHub Counter Policy')).not.toBeInTheDocument();
+  });
+
+  it('navigates to FAQ screen via bottom nav help button and supports accordion tabs and back navigation', () => {
+    render(<App />);
+
+    // Click Help button in BottomNav
+    const helpBtn = screen.getByLabelText('Help and FAQ');
+    fireEvent.click(helpBtn);
+
+    // Verify FAQ screen rendered
+    expect(screen.getByText('Help & FAQs')).toBeInTheDocument();
+    expect(screen.getByText('Frequently Asked')).toBeInTheDocument();
+    expect(screen.getByText('Counter Policies')).toBeInTheDocument();
+    expect(screen.getByText('How does ParcelHub COD Escrow work?')).toBeInTheDocument();
+
+    // Toggle Counter Policies tab
+    const policiesTab = screen.getByRole('button', { name: 'Counter Policies' });
+    fireEvent.click(policiesTab);
+    expect(screen.getByText('Exact Courier Payment Rule')).toBeInTheDocument();
+
+    // Back button returns to Home
+    const backBtn = screen.getByLabelText('Back to Home');
+    fireEvent.click(backBtn);
+    expect(screen.getByText('Welcome Nyeowsz!')).toBeInTheDocument();
+  });
+
+  it('supports search filtering, empty states, and keyboard toggling on FaqScreen', () => {
+    render(<App />);
+
+    // Navigate to FAQ
+    fireEvent.click(screen.getByLabelText('Help and FAQ'));
+
+    // Search input filters FAQs
+    const searchInput = screen.getByPlaceholderText('Search questions or policies...');
+    fireEvent.change(searchInput, { target: { value: 'mpin' } });
+    expect(screen.getByText('What is my 4-digit MPIN and what is it used for?')).toBeInTheDocument();
+    expect(screen.queryByText('How does ParcelHub COD Escrow work?')).not.toBeInTheDocument();
+
+    // Clear search using the ✕ button
+    const clearBtn = screen.getByLabelText('Clear search');
+    fireEvent.click(clearBtn);
+    expect(screen.getByText('How does ParcelHub COD Escrow work?')).toBeInTheDocument();
+
+    // Toggle FAQ item via keyboard Enter
+    const mpinQuestionCard = screen.getByRole('button', { name: /What is my 4-digit MPIN and what is it used for\?/i });
+    expect(screen.queryByText(/Your MPIN is a personal 4-digit security code/i)).not.toBeInTheDocument();
+    fireEvent.keyDown(mpinQuestionCard, { key: 'Enter', code: 'Enter' });
+    expect(screen.getByText(/Your MPIN is a personal 4-digit security code/i)).toBeInTheDocument();
+
+    // Search empty state
+    fireEvent.change(searchInput, { target: { value: 'nonexistentquery123' } });
+    expect(screen.getByText('No matching questions')).toBeInTheDocument();
+    const emptyClearButtons = screen.getAllByRole('button', { name: /clear search/i });
+    expect(emptyClearButtons.length).toBe(2);
+    // Click the empty state link button
+    fireEvent.click(emptyClearButtons[1]);
+    expect(screen.getByText('How does ParcelHub COD Escrow work?')).toBeInTheDocument();
+
+    // Switch to Transactions from BottomNav while on FAQ
+    const transactionsBtn = screen.getByLabelText('Transactions History');
+    fireEvent.click(transactionsBtn);
+    expect(screen.getByText('ORDER HISTORY')).toBeInTheDocument();
+
+    // Return to FAQ from Transactions screen BottomNav
+    fireEvent.click(screen.getByLabelText('Help and FAQ'));
+    expect(screen.getByText('Help & FAQs')).toBeInTheDocument();
   });
   it('handles figma-login scenario navigation', () => {
     render(<App />);
