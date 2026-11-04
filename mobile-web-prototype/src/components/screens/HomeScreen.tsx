@@ -6,7 +6,10 @@ import { ChevronRightIcon } from '../common/Icons';
 import { getStatusLabel, getStatusTextColor, getStatusDotClass } from '../../utils/statusHelpers';
 
 export const HomeScreen: React.FC = () => {
-  const { hasOrders, setHasOrders, orders, navigateTo } = useApp();
+  const { hasOrders, orders, navigateTo } = useApp();
+
+  const isOrderListEmpty = !hasOrders || orders.length === 0;
+  const recentOrders = orders.slice(0, 5);
 
   const readyCount = orders.filter((o) => o.status === 'READY_TO_CLAIM').length;
   const inTransitCount = orders.filter((o) => o.status === 'AWAITING_PARCEL').length;
@@ -14,7 +17,7 @@ export const HomeScreen: React.FC = () => {
 
   return (
     <div className="flex flex-col min-h-[780px] bg-white px-5 pt-3 pb-8 relative select-none">
-      {/* Consistent Brand Header */}
+      {/* Consistent Brand Header */} 
       <BrandHeader />
 
       {/* Welcome Dark Card */}
@@ -72,16 +75,18 @@ export const HomeScreen: React.FC = () => {
       <section className="mt-6 flex-1 flex flex-col">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-lg font-bold text-gray-900">Activities</h3>
-          <button
-            type="button"
-            onClick={() => setHasOrders(!hasOrders)}
-            className="text-xs text-[#215cd4] hover:underline font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#215cd4]"
-          >
-            Switch to {hasOrders ? 'Zero' : 'Active'} orders view
-          </button>
+          {orders.length > 5 && (
+            <button
+              type="button"
+              onClick={() => navigateTo('transactions')}
+              className="text-xs text-[#215cd4] hover:underline font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#215cd4] cursor-pointer"
+            >
+              View All ({orders.length})
+            </button>
+          )}
         </div>
 
-        {!hasOrders ? (
+        {isOrderListEmpty ? (
           /* Zero Orders Empty State Box */
           <div className="flex-1 min-h-[360px] rounded-3xl bg-[#f8f8f8] border border-gray-100 flex flex-col items-center justify-center p-6 text-center">
             <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mb-3 text-[#215cd4]">
@@ -99,9 +104,9 @@ export const HomeScreen: React.FC = () => {
             </button>
           </div>
         ) : (
-          /* With Orders List Container */
+          /* With Orders List Container (Limited to 5) */
           <div className="rounded-3xl bg-[#f8f8f8] border border-gray-100 p-4 divide-y divide-gray-200/70">
-            {orders.map((order) => (
+            {recentOrders.map((order) => (
               <div
                 key={order.id}
                 onClick={() => navigateTo('order_details', { orderId: order.id })}
@@ -122,6 +127,18 @@ export const HomeScreen: React.FC = () => {
                 </div>
               </div>
             ))}
+
+            {orders.length > 5 && (
+              <div className="pt-3 text-center">
+                <button
+                  type="button"
+                  onClick={() => navigateTo('transactions')}
+                  className="text-xs font-semibold text-[#215cd4] hover:underline cursor-pointer"
+                >
+                  See all {orders.length} activities in Transactions →
+                </button>
+              </div>
+            )}
           </div>
         )}
       </section>

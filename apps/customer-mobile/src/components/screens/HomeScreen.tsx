@@ -8,7 +8,10 @@ import { getStatusLabel, getStatusTextColor, getStatusDotClass } from '../../uti
 import Svg, { Path } from 'react-native-svg';
 
 export const HomeScreen: React.FC = () => {
-  const { hasOrders, setHasOrders, orders, navigateTo } = useApp();
+  const { hasOrders, orders, navigateTo } = useApp();
+
+  const isOrderListEmpty = !hasOrders || orders.length === 0;
+  const recentOrders = orders.slice(0, 5);
 
   const readyCount = orders.filter((o) => o.status === 'READY_TO_CLAIM').length;
   const inTransitCount = orders.filter((o) => o.status === 'AWAITING_PARCEL').length;
@@ -85,17 +88,19 @@ export const HomeScreen: React.FC = () => {
         <View className="mt-6 flex-1">
           <View className="flex-row items-center justify-between mb-3">
             <Text className="text-lg font-bold text-gray-900">Activities</Text>
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() => setHasOrders(!hasOrders)}
-            >
-              <Text className="text-xs text-[#215cd4] font-semibold">
-                Switch to {hasOrders ? 'Zero' : 'Active'} orders view
-              </Text>
-            </TouchableOpacity>
+            {orders.length > 5 && (
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => navigateTo('transactions')}
+              >
+                <Text className="text-xs text-[#215cd4] font-semibold">
+                  View All ({orders.length})
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
 
-          {!hasOrders ? (
+          {isOrderListEmpty ? (
             /* Zero Orders Empty State Box */
             <View className="min-h-[300px] rounded-3xl bg-[#f8f8f8] border border-gray-100 items-center justify-center p-6">
               <View className="w-16 h-16 rounded-full bg-blue-50 items-center justify-center mb-3">
@@ -123,9 +128,9 @@ export const HomeScreen: React.FC = () => {
               </TouchableOpacity>
             </View>
           ) : (
-            /* With Orders List Container */
+            /* With Orders List Container (Limited to 5) */
             <View className="rounded-3xl bg-[#f8f8f8] border border-gray-100 p-4 mb-4">
-              {orders.map((order, idx) => (
+              {recentOrders.map((order, idx) => (
                 <TouchableOpacity
                   key={order.id}
                   activeOpacity={0.7}
@@ -160,6 +165,18 @@ export const HomeScreen: React.FC = () => {
                   </View>
                 </TouchableOpacity>
               ))}
+
+              {orders.length > 5 && (
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() => navigateTo('transactions')}
+                  className="pt-3 mt-1 border-t border-gray-200/70 items-center"
+                >
+                  <Text className="text-xs font-semibold text-[#215cd4]">
+                    See all {orders.length} activities in Transactions →
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
           )}
         </View>
