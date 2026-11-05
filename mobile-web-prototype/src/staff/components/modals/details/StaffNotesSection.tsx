@@ -1,4 +1,5 @@
 import React from 'react';
+import { StaffSpinner } from '../../common/StaffLoadingIndicator';
 
 export interface StaffNotesSectionProps {
   notesText: string;
@@ -6,6 +7,7 @@ export interface StaffNotesSectionProps {
   onNotesChange: (text: string) => void;
   onSaveNote: () => void;
   onClearNote: () => void;
+  isSaving?: boolean;
 }
 
 export const StaffNotesSection: React.FC<StaffNotesSectionProps> = React.memo(({
@@ -14,6 +16,7 @@ export const StaffNotesSection: React.FC<StaffNotesSectionProps> = React.memo(({
   onNotesChange,
   onSaveNote,
   onClearNote,
+  isSaving = false,
 }) => {
   return (
     <div className="inner-detail-card p-4 rounded-2xl bg-slate-800/90 border border-slate-700/80 shadow-md space-y-3">
@@ -32,7 +35,7 @@ export const StaffNotesSection: React.FC<StaffNotesSectionProps> = React.memo(({
           <h4 className="text-xs font-bold uppercase tracking-wider text-white">STAFF NOTES</h4>
         </div>
         <span id="order-notes-status" className="text-[10px] font-mono text-slate-400">
-          {isNoteSaved ? 'Note saved' : 'No notes added'}
+          {isSaving ? 'Saving...' : isNoteSaved ? 'Note saved' : 'No notes added'}
         </span>
       </div>
 
@@ -41,15 +44,16 @@ export const StaffNotesSection: React.FC<StaffNotesSectionProps> = React.memo(({
           id="order-notes-textarea"
           rows={3}
           value={notesText}
+          disabled={isSaving}
           onChange={(e) => onNotesChange(e.target.value)}
           onKeyDown={(e) => {
-            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && !isSaving) {
               e.preventDefault();
               onSaveNote();
             }
           }}
           placeholder="Add operational notes (e.g., customer called for hold, fragile packaging, authorized rep pickup)..."
-          className="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-3 text-xs placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#215cd4] focus:border-[#215cd4] resize-none font-sans leading-relaxed"
+          className="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-3 text-xs placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#215cd4] focus:border-[#215cd4] resize-none font-sans leading-relaxed disabled:opacity-60"
         />
 
         <div className="flex items-center justify-between pt-1">
@@ -59,8 +63,9 @@ export const StaffNotesSection: React.FC<StaffNotesSectionProps> = React.memo(({
               <button
                 type="button"
                 id="clear-order-notes-btn"
+                disabled={isSaving}
                 onClick={onClearNote}
-                className="btn-press px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 text-xs font-medium border border-slate-700 transition-colors cursor-pointer"
+                className="btn-press px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 text-xs font-medium border border-slate-700 transition-colors cursor-pointer disabled:opacity-60"
               >
                 Clear
               </button>
@@ -68,13 +73,23 @@ export const StaffNotesSection: React.FC<StaffNotesSectionProps> = React.memo(({
             <button
               type="button"
               id="save-order-notes-btn"
+              disabled={isSaving}
               onClick={onSaveNote}
-              className="btn-press px-3.5 py-1.5 rounded-xl bg-[#215cd4] hover:bg-[#194cb5] text-white text-xs font-bold transition-all shadow-md shadow-blue-900/30 flex items-center gap-1.5 cursor-pointer"
+              className="btn-press px-3.5 py-1.5 rounded-xl bg-[#215cd4] hover:bg-[#194cb5] text-white text-xs font-bold transition-all shadow-md shadow-blue-900/30 flex items-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
-              </svg>
-              <span>Save Note</span>
+              {isSaving ? (
+                <>
+                  <StaffSpinner size="xs" color="white" />
+                  <span>Saving...</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>Save Note</span>
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -84,4 +99,3 @@ export const StaffNotesSection: React.FC<StaffNotesSectionProps> = React.memo(({
 });
 
 StaffNotesSection.displayName = 'StaffNotesSection';
-

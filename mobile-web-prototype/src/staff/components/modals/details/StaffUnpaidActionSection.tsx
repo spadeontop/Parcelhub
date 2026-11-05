@@ -1,5 +1,6 @@
 import React from 'react';
 import { Order } from '../../../types';
+import { StaffSpinner } from '../../common/StaffLoadingIndicator';
 
 export interface StaffUnpaidActionSectionProps {
   order: Order;
@@ -7,6 +8,7 @@ export interface StaffUnpaidActionSectionProps {
   cashInput: string;
   onCashInputChange: (val: string) => void;
   onActivateOrder: (orderId: string, amount: number) => boolean | void;
+  isLoading?: boolean;
 }
 
 export const StaffUnpaidActionSection: React.FC<StaffUnpaidActionSectionProps> = React.memo(({
@@ -15,6 +17,7 @@ export const StaffUnpaidActionSection: React.FC<StaffUnpaidActionSectionProps> =
   cashInput,
   onCashInputChange,
   onActivateOrder,
+  isLoading = false,
 }) => {
   const numericCash = parseInt(cashInput, 10);
   const isCashValid = !isNaN(numericCash) && numericCash >= fee;
@@ -22,7 +25,7 @@ export const StaffUnpaidActionSection: React.FC<StaffUnpaidActionSectionProps> =
   const previewChange = isCashValid ? Math.max(0, numericCash - codNum) : 0;
 
   const handleActivate = () => {
-    if (isCashValid) {
+    if (isCashValid && !isLoading) {
       onActivateOrder(order.id, numericCash);
       onCashInputChange('');
     }
@@ -48,49 +51,56 @@ export const StaffUnpaidActionSection: React.FC<StaffUnpaidActionSectionProps> =
         </span>
       </div>
 
-      <div className="space-y-2 pt-1">
-        <label htmlFor="detail-cash-input" className="text-[11px] font-medium text-slate-300 block">
-          Amount Received (PHP):
+      <div className="space-y-2">
+        <label htmlFor="cash-received-input" className="text-xs font-semibold text-slate-300 block">
+          Amount Received (₱)
         </label>
         <div className="relative">
-          <span className="absolute left-3 top-2.5 text-xs font-bold text-slate-400 font-mono">₱</span>
+          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-mono text-slate-400 font-bold">
+            ₱
+          </span>
           <input
             type="number"
-            id="detail-cash-input"
+            id="cash-received-input"
             aria-label={`Amount Received for ${order.id}`}
-            placeholder={`Enter amount (min ${fee})`}
+            placeholder={String(fee)}
             value={cashInput}
+            disabled={isLoading}
             onChange={(e) => onCashInputChange(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && isCashValid) {
+              if (e.key === 'Enter' && isCashValid && !isLoading) {
+                e.preventDefault();
                 handleActivate();
               }
             }}
-            className="w-full bg-slate-900 border border-slate-700 text-white rounded-xl pl-7 pr-3 py-2 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-amber-500"
+            className="w-full bg-slate-900 border border-slate-700 text-white rounded-xl pl-8 pr-4 py-2.5 text-sm font-mono font-bold placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 disabled:opacity-60"
           />
         </div>
 
-        {/* Quick Preset Amount Buttons */}
-        <div className="flex flex-wrap items-center gap-1.5 pt-1">
-          <span className="text-[10px] text-slate-400">Quick Fill:</span>
+        {/* Quick Cash Presets */}
+        <div className="flex items-center gap-2 pt-1 flex-wrap">
+          <span className="text-[10px] text-slate-500 uppercase tracking-wider">Presets:</span>
           <button
             type="button"
+            disabled={isLoading}
             onClick={() => onCashInputChange(String(fee))}
-            className="preset-cash-btn px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-700 border border-slate-700 text-[10px] font-mono text-slate-200 transition-colors cursor-pointer"
+            className="preset-cash-btn px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-700 border border-slate-700 text-[10px] font-mono text-slate-200 transition-colors cursor-pointer disabled:opacity-60"
           >
             Exact ₱{fee}
           </button>
           <button
             type="button"
+            disabled={isLoading}
             onClick={() => onCashInputChange(String(fee + 100))}
-            className="preset-cash-btn px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-700 border border-slate-700 text-[10px] font-mono text-slate-200 transition-colors cursor-pointer"
+            className="preset-cash-btn px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-700 border border-slate-700 text-[10px] font-mono text-slate-200 transition-colors cursor-pointer disabled:opacity-60"
           >
             ₱{(fee + 100).toLocaleString()}
           </button>
           <button
             type="button"
+            disabled={isLoading}
             onClick={() => onCashInputChange('1000')}
-            className="preset-cash-btn px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-700 border border-slate-700 text-[10px] font-mono text-slate-200 transition-colors cursor-pointer"
+            className="preset-cash-btn px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-700 border border-slate-700 text-[10px] font-mono text-slate-200 transition-colors cursor-pointer disabled:opacity-60"
           >
             ₱1,000
           </button>
@@ -111,15 +121,22 @@ export const StaffUnpaidActionSection: React.FC<StaffUnpaidActionSectionProps> =
           type="button"
           id="detail-activate-btn"
           aria-label="Receive Cash & Activate"
-          disabled={!isCashValid}
+          disabled={!isCashValid || isLoading}
           onClick={handleActivate}
-          className={`btn-press w-full py-2.5 px-4 rounded-xl font-bold text-xs transition-all mt-1 ${
-            isCashValid
+          className={`btn-press w-full py-2.5 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all mt-1 ${
+            isCashValid && !isLoading
               ? 'bg-[#c58b12] hover:bg-amber-600 text-white cursor-pointer shadow-lg shadow-amber-900/30'
               : 'bg-slate-800 text-slate-500 border border-slate-700 opacity-60 cursor-not-allowed'
           }`}
         >
-          Receive Cash &amp; Activate Order
+          {isLoading ? (
+            <>
+              <StaffSpinner size="xs" color="white" />
+              <span>Activating Order...</span>
+            </>
+          ) : (
+            'Receive Cash & Activate Order'
+          )}
         </button>
       </div>
     </div>
@@ -127,4 +144,3 @@ export const StaffUnpaidActionSection: React.FC<StaffUnpaidActionSectionProps> =
 });
 
 StaffUnpaidActionSection.displayName = 'StaffUnpaidActionSection';
-

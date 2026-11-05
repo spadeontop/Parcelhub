@@ -1,10 +1,12 @@
 import React from 'react';
+import { StaffSpinner } from '../common/StaffLoadingIndicator';
 
 export interface StaffSearchBarProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   onTriggerSearchOrScan: () => void;
   onClear: () => void;
+  isLoading?: boolean;
 }
 
 export const StaffSearchBar: React.FC<StaffSearchBarProps> = React.memo(({
@@ -12,24 +14,31 @@ export const StaffSearchBar: React.FC<StaffSearchBarProps> = React.memo(({
   onSearchChange,
   onTriggerSearchOrScan,
   onClear,
+  isLoading = false,
 }) => {
   return (
     <div className="mt-3">
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
-          <svg
-            className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            />
-          </svg>
+          {isLoading ? (
+            <div className="absolute left-3 top-2.5">
+              <StaffSpinner size="xs" color="#60a5fa" />
+            </div>
+          ) : (
+            <svg
+              className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+          )}
           <input
             type="text"
             id="staff-search-input"
@@ -73,14 +82,18 @@ export const StaffSearchBar: React.FC<StaffSearchBarProps> = React.memo(({
           className="btn-press px-4 py-2 rounded-xl bg-[#215cd4] hover:bg-[#194cb5] text-white text-xs font-semibold shrink-0 flex items-center gap-1.5 shadow-md shadow-blue-900/30 cursor-pointer"
           title="Manual Search / Scan Barcode"
         >
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            />
-          </svg>
+          {isLoading ? (
+            <StaffSpinner size="xs" color="white" />
+          ) : (
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+          )}
           <span>Search</span>
         </button>
       </div>
@@ -89,4 +102,3 @@ export const StaffSearchBar: React.FC<StaffSearchBarProps> = React.memo(({
 });
 
 StaffSearchBar.displayName = 'StaffSearchBar';
-

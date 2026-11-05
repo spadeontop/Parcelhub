@@ -99,6 +99,7 @@ export type CustomerOrderSummary = {
   readonly productName: string;
   readonly status: OrderStatus;
   readonly timestamp: ISO8601Timestamp;
+  readonly isClaimActive?: boolean;
 };
 
 export type CustomerListOrdersQueryParams = {
@@ -121,6 +122,10 @@ export type CustomerOrderDetail = {
   readonly status: OrderStatus;
   readonly statusTimeline: OrderStatusHistoryTuple;
   readonly qrImageUrl: string;
+  readonly claimInitiatedAt?: ISO8601Timestamp;
+  readonly claimExpiresAt?: ISO8601Timestamp;
+  readonly isClaimActive?: boolean;
+  readonly claimRemainingSeconds?: number;
 };
 
 export type CustomerGetOrderRes = StandardSuccessResponse & {
@@ -153,7 +158,11 @@ export type CustomerCancelOrderRes = StandardSuccessResponse;
 
 // POST /api/customer/orders/{id}/claim
 export type CustomerClaimOrderReq = Record<string, never>;
-export type CustomerClaimOrderRes = StandardSuccessResponse;
+export type CustomerClaimOrderRes = StandardSuccessResponse & {
+  readonly claimInitiatedAt: ISO8601Timestamp;
+  readonly claimExpiresAt: ISO8601Timestamp;
+  readonly durationMinutes: number;
+};
 
 // ==========================================
 // 2. Staff Endpoints Types
@@ -180,6 +189,12 @@ export type StaffOrderSummary = {
   readonly timestamp: ISO8601Timestamp;
   readonly status: OrderStatus;
   readonly statusMessage: string;
+  readonly isClaimActive?: boolean;
+  readonly claimRemainingSeconds?: number;
+  readonly courierPaid?: boolean;
+  readonly courierPaidBy?: StaffId;
+  readonly courierPaidByName?: string;
+  readonly courierPaidAt?: ISO8601Timestamp;
 };
 
 export type StaffListOrdersQueryParams = {
@@ -200,6 +215,12 @@ export type StaffOrderDetail = {
   readonly timestamp: ISO8601Timestamp;
   readonly status: OrderStatus;
   readonly statusMessage: string;
+  readonly isClaimActive?: boolean;
+  readonly claimRemainingSeconds?: number;
+  readonly courierPaid?: boolean;
+  readonly courierPaidBy?: StaffId;
+  readonly courierPaidByName?: string;
+  readonly courierPaidAt?: ISO8601Timestamp;
 };
 
 export type StaffGetOrderRes = StaffOrderDetail;
@@ -375,4 +396,3 @@ export type ApiRoutes =
   | readonly ["POST", `/api/admin/config/${AdminOcrConfigTarget}/ai-ocr-verify/${AdminOcrConfigAction}`]
   | readonly ["POST", "/api/notification/upload-token"]
   | readonly ["POST", "/api/notification/send-notification"];
-

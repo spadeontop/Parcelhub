@@ -61,6 +61,13 @@ export const StaffOrderDetailsModal: React.FC<StaffOrderDetailsModalProps> = Rea
   const [attachedPhoto, setAttachedPhoto] = useState<string | null>(null);
   const [, setTimerTick] = useState<number>(0);
 
+  // Per-action loading state indicators
+  const [isActivating, setIsActivating] = useState<boolean>(false);
+  const [isPayingCourier, setIsPayingCourier] = useState<boolean>(false);
+  const [isAttachingPhoto, setIsAttachingPhoto] = useState<boolean>(false);
+  const [isReleasing, setIsReleasing] = useState<boolean>(false);
+  const [isSavingNotes, setIsSavingNotes] = useState<boolean>(false);
+
   // Claim Unlock status
   const unlocked = order
     ? isOrderClaimUnlocked
@@ -82,6 +89,11 @@ export const StaffOrderDetailsModal: React.FC<StaffOrderDetailsModalProps> = Rea
       setIsNoteSaved(!!(order.notes && order.notes.trim()));
       setCashInput('');
       setAttachedPhoto(order.parcelImageUrl || null);
+      setIsActivating(false);
+      setIsPayingCourier(false);
+      setIsAttachingPhoto(false);
+      setIsReleasing(false);
+      setIsSavingNotes(false);
     }
   }, [order?.id, order?.notes, order?.parcelImageUrl]);
 
@@ -117,12 +129,14 @@ export const StaffOrderDetailsModal: React.FC<StaffOrderDetailsModalProps> = Rea
   };
 
   const handleSaveNote = () => {
+    setIsSavingNotes(true);
     const trimmed = notesText.trim();
     if (onUpdateNotes) {
       onUpdateNotes(order.id, trimmed);
     }
     order.notes = trimmed;
     setIsNoteSaved(!!trimmed);
+    setIsSavingNotes(false);
     showToast(trimmed ? `Staff note saved for ${order.id}.` : `Note cleared for ${order.id}.`);
   };
 
@@ -160,6 +174,42 @@ export const StaffOrderDetailsModal: React.FC<StaffOrderDetailsModalProps> = Rea
     } else {
       order.claimInitiatedAt = Date.now();
       showToast(`Customer prompted claim for ${order.id}! Counter unlocked.`);
+    }
+  };
+
+  const handleActivateOrderAction = (orderId: string, amount: number) => {
+    setIsActivating(true);
+    try {
+      onActivateOrder(orderId, amount);
+    } finally {
+      setIsActivating(false);
+    }
+  };
+
+  const handlePayCourierAction = (orderId: string) => {
+    setIsPayingCourier(true);
+    try {
+      onPayCourier(orderId);
+    } finally {
+      setIsPayingCourier(false);
+    }
+  };
+
+  const handleAttachPhotoAction = (orderId: string, imageUrl: string) => {
+    setIsAttachingPhoto(true);
+    try {
+      return onAttachPhoto(orderId, imageUrl);
+    } finally {
+      setIsAttachingPhoto(false);
+    }
+  };
+
+  const handleReleaseOrderAction = (orderId: string) => {
+    setIsReleasing(true);
+    try {
+      return onReleaseOrder(orderId);
+    } finally {
+      setIsReleasing(false);
     }
   };
 
@@ -216,6 +266,7 @@ export const StaffOrderDetailsModal: React.FC<StaffOrderDetailsModalProps> = Rea
         <StaffNotesSection
           notesText={notesText}
           isNoteSaved={isNoteSaved}
+          isSaving={isSavingNotes}
           onNotesChange={(text) => {
             setNotesText(text);
             setIsNoteSaved(false);
@@ -234,7 +285,8 @@ export const StaffOrderDetailsModal: React.FC<StaffOrderDetailsModalProps> = Rea
             fee={fee}
             cashInput={cashInput}
             onCashInputChange={setCashInput}
-            onActivateOrder={onActivateOrder}
+            onActivateOrder={handleActivateOrderAction}
+            isLoading={isActivating}
           />
         )}
 
@@ -242,11 +294,13 @@ export const StaffOrderDetailsModal: React.FC<StaffOrderDetailsModalProps> = Rea
           <StaffActiveActionSection
             order={order}
             attachedPhoto={attachedPhoto}
-            onPayCourier={onPayCourier}
-            onAttachPhoto={onAttachPhoto}
+            onPayCourier={handlePayCourierAction}
+            onAttachPhoto={handleAttachPhotoAction}
             onPhotoUpload={handlePhotoUpload}
             onUseSamplePhoto={handleUseSamplePhoto}
             onRetakePhoto={() => setAttachedPhoto(null)}
+            isPaying={isPayingCourier}
+            isAttaching={isAttachingPhoto}
           />
         )}
 
@@ -256,7 +310,8 @@ export const StaffOrderDetailsModal: React.FC<StaffOrderDetailsModalProps> = Rea
             unlocked={unlocked}
             timeFormatted={timeFormatted}
             onSimulatePrompt={handleSimulatePromptAction}
-            onReleaseOrder={onReleaseOrder}
+            onReleaseOrder={handleReleaseOrderAction}
+            isReleasing={isReleasing}
           />
         )}
 
@@ -284,4 +339,3 @@ export const StaffOrderDetailsModal: React.FC<StaffOrderDetailsModalProps> = Rea
 });
 
 StaffOrderDetailsModal.displayName = 'StaffOrderDetailsModal';
-
