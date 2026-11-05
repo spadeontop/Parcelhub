@@ -8,7 +8,7 @@ interface BottomNavProps {
 }
 
 export const BottomNav: React.FC<BottomNavProps> = ({ activeTab = 'home' }) => {
-  const { navigateTo, openEscrowModal, notifications } = useApp();
+  const { navigateTo, notifications } = useApp();
   const unreadCount = notifications.filter((n) => n.unread).length;
 
   return (

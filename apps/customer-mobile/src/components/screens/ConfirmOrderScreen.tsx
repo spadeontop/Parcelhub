@@ -9,7 +9,6 @@ export const ConfirmOrderScreen: React.FC = () => {
     updateDraftOrder,
     submitDraftOrder,
     navigateTo,
-    openEscrowModal,
     showToast,
   } = useApp();
   const [isConfirmed, setIsConfirmed] = useState<boolean>(false);
@@ -109,7 +108,7 @@ export const ConfirmOrderScreen: React.FC = () => {
 
         {/* Hub Policy link */}
         <TouchableOpacity
-          onPress={openEscrowModal}
+          onPress={() => navigateTo('faq')}
           className="mt-3 items-center"
         >
           <Text className="text-xs text-[#215cd4] font-semibold">

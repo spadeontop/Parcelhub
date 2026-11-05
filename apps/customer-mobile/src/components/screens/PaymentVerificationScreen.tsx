@@ -4,7 +4,7 @@ import { useApp } from '../../context/AppContext';
 import { QrCodeIcon } from '../common/Icons';
 
 export const PaymentVerificationScreen: React.FC = () => {
-  const { navigateTo, openEscrowModal, selectedOrderId, simulatePaymentReceived } = useApp();
+  const { navigateTo, selectedOrderId, simulatePaymentReceived } = useApp();
 
   return (
     <View style={{ flex: 1, backgroundColor: '#ffffff' }} className="flex-1 bg-white px-5 pt-3 pb-2 justify-between">
@@ -26,7 +26,7 @@ export const PaymentVerificationScreen: React.FC = () => {
             {/* Learn more toggle */}
             <TouchableOpacity
               activeOpacity={0.7}
-              onPress={openEscrowModal}
+              onPress={() => navigateTo('faq')}
               className="mt-5 flex-row items-center gap-1.5"
             >
               <Text className="text-xs text-gray-500 font-semibold">

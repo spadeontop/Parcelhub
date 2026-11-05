@@ -7,7 +7,6 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { AppProvider, useApp } from '../context/AppContext';
 import { MpinModal } from '../components/modals/MpinModal';
 import { ProofOfDeliveryModal } from '../components/modals/ProofOfDeliveryModal';
-import { EscrowPolicyModal } from '../components/modals/EscrowPolicyModal';
 import { NotificationsModal } from '../components/modals/NotificationsModal';
 import { Toast } from '../components/common/Toast';
 import '../global.css';
@@ -37,7 +36,6 @@ function RootAppContent() {
       {/* Global Interactive Modals */}
       <MpinModal />
       <ProofOfDeliveryModal />
-      <EscrowPolicyModal />
       <NotificationsModal />
 
       {/* Global Animated Toast Notification Pill */}

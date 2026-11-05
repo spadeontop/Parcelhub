@@ -399,7 +399,7 @@ export const FaqScreen: React.FC<FaqScreenProps> = ({ onBack, initialTab = 'faq'
       </ScrollView>
 
       {/* Bottom Nav */}
-      <BottomNav activeTab="faq" />
+      <BottomNav />
     </View>
   );
 };

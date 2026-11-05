@@ -27,7 +27,7 @@ export const BrandHeader: React.FC<BrandHeaderProps> = ({
   hideBorder = false,
   hideStatusDot = false,
 }) => {
-  const { hubOpen, navigateTo, openEscrowModal } = useApp();
+  const { hubOpen, navigateTo } = useApp();
 
   return (
     <View
@@ -73,11 +73,11 @@ export const BrandHeader: React.FC<BrandHeaderProps> = ({
         </View>
       </View>
 
-      {/* Help / Escrow Info */}
+      {/* Help / FAQs Screen Navigation */}
       {showHelp ? (
         <TouchableOpacity
           activeOpacity={0.7}
-          onPress={openEscrowModal}
+          onPress={() => navigateTo('faq')}
           className="items-center justify-center p-2"
           accessibilityLabel="Help"
         >
