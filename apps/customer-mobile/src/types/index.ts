@@ -51,7 +51,8 @@ export type ScreenId =
   | 'login'
   | 'register'
   | 'mpin_login'
-  | 'mpin_create';
+  | 'mpin_create'
+  | 'profile';
 
 export type ScenarioId =
   | 'figma-1'
@@ -69,5 +70,7 @@ export type ScenarioId =
   | 'figma-login'
   | 'figma-register'
   | 'figma-mpin-login'
-  | 'figma-mpin-create';
+  | 'figma-mpin-create'
+  | 'figma-profile';
+
 
