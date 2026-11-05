@@ -32,30 +32,18 @@ export const QrScreen: React.FC = () => {
               />
             </View>
 
-            <View className="mt-4 items-center">
-              <Text className="text-sm font-bold text-gray-900 text-center">
-                {order.product}
-              </Text>
-              <Text className="text-xs text-gray-500 mt-1">
-                Recipient: {order.recipient}
-              </Text>
-              <Text className="text-xs text-gray-500">
-                Waybill: {order.trackingNumber}
-              </Text>
-            </View>
-
-            {/* Key box */}
+            {/* Ticket box */}
             <View className="mt-4 w-full bg-blue-50/80 border border-blue-200/70 rounded-2xl p-3 flex-row items-center justify-between">
               <View>
                 <Text className="text-[10px] font-bold text-blue-900 uppercase">
-                  Pickup Key
+                  TICKET
                 </Text>
                 <Text className="text-base font-black font-mono text-[#163b86]">
                   {order.alphanumericKey}
                 </Text>
               </View>
               <TouchableOpacity
-                onPress={() => copyToClipboard(order.alphanumericKey, 'Pickup Key')}
+                onPress={() => copyToClipboard(order.alphanumericKey, 'Ticket')}
                 className="p-1.5 rounded-lg bg-white border border-blue-100"
               >
                 <CopyIcon size={16} color="#163b86" />

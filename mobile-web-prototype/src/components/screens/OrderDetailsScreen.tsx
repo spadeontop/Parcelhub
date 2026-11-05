@@ -128,17 +128,17 @@ export const OrderDetailsScreen: React.FC = () => {
 
                 <div className="grid grid-cols-2 gap-3 pt-2.5 border-t border-gray-200">
                   <div>
-                    <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block">Pickup Key</span>
+                    <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block">TICKET</span>
                     <div className="flex items-center gap-1.5 mt-1">
                       <span className="text-base font-black font-mono text-[#163b86] bg-blue-50 px-2.5 py-0.5 rounded-lg border border-blue-200/70">
                         {order.alphanumericKey}
                       </span>
                       <button
                         type="button"
-                        onClick={() => copyToClipboard(order.alphanumericKey, 'Pickup Key')}
+                        onClick={() => copyToClipboard(order.alphanumericKey, 'Ticket')}
                         className="p-1 text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1b65e8]"
-                        title="Copy Pickup Key"
-                        aria-label="Copy Pickup Key"
+                        title="Copy Ticket"
+                        aria-label="Copy Ticket"
                       >
                         <CopyIcon className="w-3.5 h-3.5" />
                       </button>

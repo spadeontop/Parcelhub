@@ -160,16 +160,16 @@ export const OrderDetailsScreen: React.FC = () => {
               <View className="flex-row justify-between pt-2.5 border-t border-gray-200 mt-2.5">
                 <View>
                   <Text className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
-                    Pickup Key
+                    TICKET
                   </Text>
                   <View className="flex-row items-center gap-1.5 mt-1">
                     <Text className="text-base font-black font-mono text-[#163b86] bg-blue-50 px-2.5 py-0.5 rounded-lg border border-blue-200">
                       {order.alphanumericKey}
                     </Text>
                     <TouchableOpacity
-                      onPress={() => copyToClipboard(order.alphanumericKey, 'Pickup Key')}
+                      onPress={() => copyToClipboard(order.alphanumericKey, 'Ticket')}
                       className="p-1 rounded-lg"
-                      accessibilityLabel="Copy Pickup Key"
+                      accessibilityLabel="Copy Ticket"
                     >
                       <CopyIcon size={14} color="#9ca3af" />
                     </TouchableOpacity>

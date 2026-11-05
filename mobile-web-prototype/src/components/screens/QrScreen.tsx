@@ -99,19 +99,22 @@ export const QrScreen: React.FC = () => {
           </div>
         </div>
 
-        {/* Details below QR */}
-        <h3 className="text-xl font-bold text-gray-900 mt-5">{order.product}</h3>
-
-        <div className="flex items-center justify-center gap-2 mt-1">
-          <p className="text-base font-mono font-bold text-[#163b86] tracking-wider bg-blue-50 px-3 py-1 rounded-xl border border-blue-200/60">
-            {order.alphanumericKey}
-          </p>
+        {/* Ticket box below QR */}
+        <div className="mt-5 w-full max-w-xs bg-blue-50/80 border border-blue-200/70 rounded-2xl p-3 flex items-center justify-between">
+          <div>
+            <span className="text-[10px] font-bold text-blue-900 uppercase block">
+              TICKET
+            </span>
+            <span className="text-base font-black font-mono text-[#163b86]">
+              {order.alphanumericKey}
+            </span>
+          </div>
           <button
             type="button"
-            onClick={() => copyToClipboard(order.alphanumericKey, 'Counter Key')}
-            className="p-1.5 rounded-xl bg-white border border-gray-200 hover:bg-gray-100 text-gray-700 transition-colors shadow-2xs"
-            title="Copy Key"
-            aria-label="Copy Key"
+            onClick={() => copyToClipboard(order.alphanumericKey, 'Ticket')}
+            className="p-1.5 rounded-lg bg-white border border-blue-100 hover:bg-gray-50 text-[#163b86] transition-colors cursor-pointer"
+            title="Copy Ticket"
+            aria-label="Copy Ticket"
           >
             <CopyIcon className="w-4 h-4" />
           </button>
