@@ -28,6 +28,8 @@ export interface StoredOrder {
   modifiedBy: StaffId | CustomerId | "SYSTEM";
   timestamp: ISO8601Timestamp;
   claimRequested?: boolean;
+  claimInitiatedAt?: ISO8601Timestamp;
+  claimExpiresAt?: ISO8601Timestamp;
   courierPaid?: boolean;
 }
 
@@ -52,6 +54,12 @@ export interface StoredStaff {
   lastName: string;
   middleInitial?: string;
   phoneNumber: string;
+}
+
+export function getClientRetrieveTimerMinutes(): number {
+  const envVal = process.env.CLIENT_RETRIEVE_TIMER;
+  const parsed = envVal ? Number(envVal) : 5;
+  return isNaN(parsed) || parsed <= 0 ? 5 : parsed;
 }
 
 class InMemoryStore {
@@ -305,11 +313,31 @@ class InMemoryStore {
     return order;
   }
 
-  public claimByCustomer(id: OrderId): StoredOrder | null {
+  public claimByCustomer(id: OrderId): { order: StoredOrder; durationMinutes: number } | null {
     const order = this.orders.get(id);
     if (!order) return null;
+    const durationMinutes = getClientRetrieveTimerMinutes();
+    const initiatedAt = new Date();
+    const expiresAt = new Date(initiatedAt.getTime() + durationMinutes * 60 * 1000);
+
     order.claimRequested = true;
-    return order;
+    order.claimInitiatedAt = initiatedAt.toISOString();
+    order.claimExpiresAt = expiresAt.toISOString();
+    order.timestamp = initiatedAt.toISOString();
+    return { order, durationMinutes };
+  }
+
+  public isClaimActive(order: StoredOrder): boolean {
+    if (!order.claimRequested || !order.claimExpiresAt) return false;
+    const now = Date.now();
+    const expiry = new Date(order.claimExpiresAt).getTime();
+    return now <= expiry;
+  }
+
+  public getClaimRemainingSeconds(order: StoredOrder): number {
+    if (!order.claimRequested || !order.claimExpiresAt) return 0;
+    const diffMs = new Date(order.claimExpiresAt).getTime() - Date.now();
+    return Math.max(0, Math.floor(diffMs / 1000));
   }
 
   public activateOrder(id: OrderId, amountReceived: number, staffId: StaffId): { order: StoredOrder; change: number } | null {
@@ -356,6 +384,7 @@ class InMemoryStore {
     const order = this.orders.get(id);
     if (!order) return null;
     order.status = "CLAIMED";
+    order.claimRequested = false;
     order.statusTimeline.push({
       status: "CLAIMED",
       timestamp: new Date().toISOString(),

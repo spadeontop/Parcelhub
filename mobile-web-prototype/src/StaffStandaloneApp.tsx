@@ -9,6 +9,8 @@ interface OrderItem {
   timestamp: string;
   status: 'PENDING_INITIALIZATION' | 'PAYMENT_REQUIRED' | 'AWAITING_PARCEL' | 'READY_TO_CLAIM' | 'CLAIMED' | 'CANCELLED';
   statusMessage: string;
+  isClaimActive?: boolean;
+  claimRemainingSeconds?: number;
 }
 
 const BACKEND_URL = '';
@@ -56,7 +58,6 @@ export const StaffStandaloneApp: React.FC = () => {
 
   const fetchOrders = async () => {
     if (!authToken) return;
-    setLoading(true);
     try {
       const res = await fetch(`${BACKEND_URL}/api/staff/orders`, {
         headers: { Authorization: `Bearer ${authToken}` },
@@ -64,20 +65,18 @@ export const StaffStandaloneApp: React.FC = () => {
       const data = await res.json();
       if (res.ok && data.orders) {
         setOrders(data.orders);
-      } else {
+      } else if (!res.ok) {
         notify(data.message || 'Failed to fetch orders', 'error');
       }
     } catch {
       notify('Failed to reach backend server', 'error');
-    } finally {
-      setLoading(false);
     }
   };
 
   useEffect(() => {
     if (authToken) {
       fetchOrders();
-      const interval = setInterval(fetchOrders, 3000);
+      const interval = setInterval(fetchOrders, 2000);
       return () => clearInterval(interval);
     }
   }, [authToken]);
@@ -190,7 +189,7 @@ export const StaffStandaloneApp: React.FC = () => {
                 LIVE API DEBUG
               </span>
             </div>
-            <p className="text-xs text-slate-400">Targeting {BACKEND_URL} • Real-time order dispatch & counter operations</p>
+            <p className="text-xs text-slate-400">Targeting {BACKEND_URL || 'Local Proxy'} • Real-time order dispatch & counter operations</p>
           </div>
         </div>
 
@@ -271,6 +270,12 @@ export const StaffStandaloneApp: React.FC = () => {
             ) : (
               filteredOrders.map((ord) => {
                 const isSelected = selectedOrderId === ord.id;
+                const claimActive = !!ord.isClaimActive;
+                const remainingSecs = ord.claimRemainingSeconds || 0;
+                const mm = Math.floor(remainingSecs / 60);
+                const ss = remainingSecs % 60;
+                const timerStr = `${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
+
                 return (
                   <div
                     key={ord.id}
@@ -290,21 +295,36 @@ export const StaffStandaloneApp: React.FC = () => {
                         <h2 className="text-sm font-semibold text-white mt-1">Customer: {ord.customer}</h2>
                       </div>
 
-                      <span
-                        className={`text-[11px] font-semibold font-mono px-2.5 py-1 rounded-full uppercase border ${
-                          ord.status === 'READY_TO_CLAIM'
-                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                            : ord.status === 'AWAITING_PARCEL'
-                            ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                            : ord.status === 'PAYMENT_REQUIRED'
-                            ? 'bg-purple-500/10 text-purple-400 border-purple-500/20'
-                            : ord.status === 'CLAIMED'
-                            ? 'bg-slate-500/10 text-slate-400 border-slate-500/20'
-                            : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
-                        }`}
-                      >
-                        {ord.status}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        {ord.status === 'READY_TO_CLAIM' && (
+                          claimActive ? (
+                            <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                              CLAIM ACTIVE ({timerStr})
+                            </span>
+                          ) : (
+                            <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                              LOCKED (Awaiting User)
+                            </span>
+                          )
+                        )}
+
+                        <span
+                          className={`text-[11px] font-semibold font-mono px-2.5 py-1 rounded-full uppercase border ${
+                            ord.status === 'READY_TO_CLAIM'
+                              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                              : ord.status === 'AWAITING_PARCEL'
+                              ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                              : ord.status === 'PAYMENT_REQUIRED'
+                              ? 'bg-purple-500/10 text-purple-400 border-purple-500/20'
+                              : ord.status === 'CLAIMED'
+                              ? 'bg-slate-500/10 text-slate-400 border-slate-500/20'
+                              : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                          }`}
+                        >
+                          {ord.status}
+                        </span>
+                      </div>
                     </div>
 
                     <div className="flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-slate-800/80">
@@ -438,14 +458,43 @@ export const StaffStandaloneApp: React.FC = () => {
                       {/* Action 3: Release to Customer */}
                       {ord.status === 'READY_TO_CLAIM' && (
                         <div className="p-4 rounded-xl bg-slate-950 border border-emerald-900/40 flex flex-col gap-3">
-                          <span className="text-xs font-bold text-emerald-400 uppercase tracking-wide">
-                            Step 3: Customer Claim Handover
-                          </span>
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-emerald-400 uppercase tracking-wide">
+                              Step 3: Customer Claim Handover
+                            </span>
+                            {ord.isClaimActive ? (
+                              <span className="text-[10px] font-mono text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                                {Math.floor((ord.claimRemainingSeconds || 0) / 60)}:
+                                {String((ord.claimRemainingSeconds || 0) % 60).padStart(2, '0')} remaining
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-mono text-amber-400 font-bold bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                                Locked
+                              </span>
+                            )}
+                          </div>
+
+                          {!ord.isClaimActive ? (
+                            <div className="bg-amber-950/30 border border-amber-800/40 rounded-xl p-3 text-xs text-amber-300">
+                              <p className="font-semibold flex items-center gap-1.5">
+                                <span>🔒</span> Release Button Locked
+                              </p>
+                              <p className="text-[11px] text-amber-400/80 mt-1">
+                                Customer must initiate claim from their phone (generates active pickup pass valid for 5 mins).
+                              </p>
+                            </div>
+                          ) : null}
+
                           <button
                             onClick={() => handleClaim(ord.id)}
-                            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs py-2.5 rounded-lg transition shadow-lg shadow-emerald-600/20"
+                            disabled={!ord.isClaimActive}
+                            className={`w-full font-semibold text-xs py-2.5 rounded-lg transition shadow-lg ${
+                              ord.isClaimActive
+                                ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/20 cursor-pointer'
+                                : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
+                            }`}
                           >
-                            Verify QR & Hand Over Parcel
+                            {ord.isClaimActive ? 'Verify QR & Hand Over Parcel' : 'Awaiting Customer Claim Initiation...'}
                           </button>
                         </div>
                       )}

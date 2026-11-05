@@ -2,7 +2,12 @@ import { NextRequest } from "next/server";
 import { authenticateRequest } from "@/app/lib/auth";
 import { jsonError, jsonSuccess } from "@/app/lib/response";
 import { db } from "@/app/lib/store";
-import { OrderStatus, StaffListOrdersRes, StaffOrderSummary } from "@/app/types/api";
+import {
+  OrderId,
+  OrderStatus,
+  StaffListOrdersRes,
+  StaffOrderSummary,
+} from "@/app/types/api";
 
 export async function GET(request: NextRequest) {
   const auth = authenticateRequest(request, ["STAFF", "ADMIN"]);
@@ -29,11 +34,20 @@ export async function GET(request: NextRequest) {
     id: o.id,
     trackingId: o.trackingId,
     customer: o.recipientName,
-    amountReceived: o.amountReceived ?? o.price,
-    change: o.change,
+    amountReceived: o.amountReceived || 0,
+    change: o.change || 0,
     timestamp: o.timestamp,
     status: o.status,
-    statusMessage: o.status === "AWAITING_PARCEL" ? "Awaiting parcel arrival" : o.status,
+    statusMessage:
+      o.status === "AWAITING_PARCEL"
+        ? "Awaiting parcel arrival"
+        : o.status === "READY_TO_CLAIM"
+        ? "Ready for customer pickup"
+        : o.status === "PAYMENT_REQUIRED"
+        ? "Awaiting customer cash deposit"
+        : o.status,
+    isClaimActive: db.isClaimActive(o),
+    claimRemainingSeconds: db.getClaimRemainingSeconds(o),
   }));
 
   const response: StaffListOrdersRes = {
