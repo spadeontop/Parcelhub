@@ -25,6 +25,9 @@ export const StaffStandaloneApp: React.FC = () => {
   const [password, setPassword] = useState('staff123');
   const [orders, setOrders] = useState<OrderItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+  const [actionType, setActionType] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>('ALL');
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [depositAmount, setDepositAmount] = useState<number>(500);
@@ -60,8 +63,9 @@ export const StaffStandaloneApp: React.FC = () => {
     }
   };
 
-  const fetchOrders = async () => {
+  const fetchOrders = async (showLoadingIndicator = false) => {
     if (!authToken) return;
+    if (showLoadingIndicator) setIsRefreshing(true);
     try {
       const res = await fetch(`${BACKEND_URL}/api/staff/orders`, {
         headers: { Authorization: `Bearer ${authToken}` },
@@ -74,18 +78,22 @@ export const StaffStandaloneApp: React.FC = () => {
       }
     } catch {
       notify('Failed to reach backend server', 'error');
+    } finally {
+      if (showLoadingIndicator) setIsRefreshing(false);
     }
   };
 
   useEffect(() => {
     if (authToken) {
       fetchOrders();
-      const interval = setInterval(fetchOrders, 2000);
+      const interval = setInterval(() => fetchOrders(false), 2000);
       return () => clearInterval(interval);
     }
   }, [authToken]);
 
   const handleActivate = async (id: string) => {
+    setActionLoadingId(id);
+    setActionType('activate');
     try {
       const res = await fetch(`${BACKEND_URL}/api/staff/orders/${id}/activate`, {
         method: 'POST',
@@ -104,10 +112,15 @@ export const StaffStandaloneApp: React.FC = () => {
       }
     } catch {
       notify('Network error activating order', 'error');
+    } finally {
+      setActionLoadingId(null);
+      setActionType(null);
     }
   };
 
   const handlePayCourier = async (id: string) => {
+    setActionLoadingId(id);
+    setActionType('pay');
     try {
       const res = await fetch(`${BACKEND_URL}/api/staff/orders/${id}/make-claimable/pay`, {
         method: 'POST',
@@ -126,10 +139,15 @@ export const StaffStandaloneApp: React.FC = () => {
       }
     } catch {
       notify('Network error recording payment', 'error');
+    } finally {
+      setActionLoadingId(null);
+      setActionType(null);
     }
   };
 
   const handleAttachPhoto = async (id: string) => {
+    setActionLoadingId(id);
+    setActionType('attach');
     try {
       const res = await fetch(`${BACKEND_URL}/api/staff/orders/${id}/make-claimable/attach-photo`, {
         method: 'POST',
@@ -148,10 +166,15 @@ export const StaffStandaloneApp: React.FC = () => {
       }
     } catch {
       notify('Network error attaching photo', 'error');
+    } finally {
+      setActionLoadingId(null);
+      setActionType(null);
     }
   };
 
   const handleClaim = async (id: string) => {
+    setActionLoadingId(id);
+    setActionType('claim');
     try {
       const res = await fetch(`${BACKEND_URL}/api/staff/orders/${id}/claim`, {
         method: 'POST',
@@ -170,6 +193,9 @@ export const StaffStandaloneApp: React.FC = () => {
       }
     } catch {
       notify('Network error releasing order', 'error');
+    } finally {
+      setActionLoadingId(null);
+      setActionType(null);
     }
   };
 
@@ -256,11 +282,12 @@ export const StaffStandaloneApp: React.FC = () => {
             </div>
 
             <button
-              onClick={fetchOrders}
-              className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition"
+              onClick={() => fetchOrders(true)}
+              disabled={isRefreshing}
+              className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition disabled:opacity-60 cursor-pointer"
             >
-              <span className={`inline-block ${loading ? 'animate-spin' : ''}`}>↻</span>
-              Refresh Queue
+              <span className={`inline-block ${isRefreshing ? 'animate-spin' : ''}`}>↻</span>
+              <span>{isRefreshing ? 'Refreshing...' : 'Refresh Queue'}</span>
             </button>
           </div>
 
@@ -342,45 +369,59 @@ export const StaffStandaloneApp: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Column: Actions / Inspector */}
-        <div className="flex flex-col gap-6">
-          {/* Quick Staff Authentication Card */}
+        {/* Right Column: Actions / Authentication */}
+        <div>
           {!authToken ? (
-            <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex flex-col gap-4">
+            /* Staff Login Form */
+            <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-2xl flex flex-col gap-4 sticky top-24">
               <h2 className="text-sm font-bold text-white flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                Staff Login Credentials
+                Staff Counter Authentication
               </h2>
-              <form onSubmit={handleLogin} className="flex flex-col gap-3">
+              <p className="text-xs text-slate-400">
+                Sign in with official hub credentials to process payments, intakes, and customer handovers.
+              </p>
+
+              <form onSubmit={handleLogin} className="flex flex-col gap-3 mt-2">
                 <div>
-                  <label className="text-xs text-slate-400 block mb-1">Email</label>
+                  <label className="text-[11px] text-slate-400 block mb-1">Email</label>
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-blue-500"
+                    required
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white"
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-slate-400 block mb-1">Password</label>
+                  <label className="text-[11px] text-slate-400 block mb-1">Password</label>
                   <input
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-blue-500"
+                    required
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white"
                   />
                 </div>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="mt-2 w-full bg-blue-600 hover:bg-blue-500 font-semibold text-xs py-2.5 rounded-xl text-white transition shadow-lg shadow-blue-600/30 disabled:opacity-50"
+                  className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs py-2.5 rounded-lg transition mt-2 cursor-pointer flex items-center justify-center gap-2 disabled:opacity-60"
                 >
-                  {loading ? 'Authenticating...' : 'Sign In as Staff'}
+                  {loading ? (
+                    <>
+                      <span className="animate-spin text-sm">↻</span>
+                      <span>Authenticating Staff...</span>
+                    </>
+                  ) : (
+                    'Sign In to Terminal'
+                  )}
                 </button>
               </form>
             </div>
           ) : (
-            <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex flex-col gap-5">
+            /* Staff Operational Actions */
+            <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-2xl flex flex-col gap-4 sticky top-24">
               <div>
                 <h2 className="text-sm font-bold text-white flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
@@ -395,6 +436,8 @@ export const StaffStandaloneApp: React.FC = () => {
                 (() => {
                   const ord = orders.find((o) => o.id === selectedOrderId);
                   if (!ord) return <p className="text-xs text-slate-500">Selected order not found.</p>;
+
+                  const isCurrentActionLoading = actionLoadingId === ord.id;
 
                   return (
                     <div className="flex flex-col gap-4">
@@ -416,14 +459,23 @@ export const StaffStandaloneApp: React.FC = () => {
                               type="number"
                               value={depositAmount}
                               onChange={(e) => setDepositAmount(Number(e.target.value))}
-                              className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs font-mono text-white"
+                              disabled={isCurrentActionLoading}
+                              className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs font-mono text-white disabled:opacity-60"
                             />
                           </div>
                           <button
                             onClick={() => handleActivate(ord.id)}
-                            className="w-full bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs py-2 rounded-lg transition"
+                            disabled={isCurrentActionLoading}
+                            className="w-full bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs py-2 rounded-lg transition cursor-pointer flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                           >
-                            Receive Cash & Activate Order
+                            {isCurrentActionLoading && actionType === 'activate' ? (
+                              <>
+                                <span className="animate-spin text-sm">↻</span>
+                                <span>Activating Order...</span>
+                              </>
+                            ) : (
+                              'Receive Cash & Activate Order'
+                            )}
                           </button>
                         </div>
                       )}
@@ -455,9 +507,17 @@ export const StaffStandaloneApp: React.FC = () => {
                           ) : (
                             <button
                               onClick={() => handlePayCourier(ord.id)}
-                              className="w-full bg-amber-600/80 hover:bg-amber-600 text-white font-semibold text-xs py-2 rounded-lg transition"
+                              disabled={isCurrentActionLoading}
+                              className="w-full bg-amber-600/80 hover:bg-amber-600 text-white font-semibold text-xs py-2 rounded-lg transition cursor-pointer flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                             >
-                              Pay Courier Upon Arrival
+                              {isCurrentActionLoading && actionType === 'pay' ? (
+                                <>
+                                  <span className="animate-spin text-sm">↻</span>
+                                  <span>Recording Courier Payment...</span>
+                                </>
+                              ) : (
+                                'Pay Courier Upon Arrival'
+                              )}
                             </button>
                           )}
 
@@ -467,14 +527,23 @@ export const StaffStandaloneApp: React.FC = () => {
                               type="text"
                               value={proofUrl}
                               onChange={(e) => setProofUrl(e.target.value)}
-                              className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs font-mono text-white"
+                              disabled={isCurrentActionLoading}
+                              className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs font-mono text-white disabled:opacity-60"
                             />
                           </div>
                           <button
                             onClick={() => handleAttachPhoto(ord.id)}
-                            className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs py-2 rounded-lg transition"
+                            disabled={isCurrentActionLoading}
+                            className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs py-2 rounded-lg transition cursor-pointer flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                           >
-                            Attach Photo & Mark Claimable
+                            {isCurrentActionLoading && actionType === 'attach' ? (
+                              <>
+                                <span className="animate-spin text-sm">↻</span>
+                                <span>Attaching Proof Photo...</span>
+                              </>
+                            ) : (
+                              'Attach Photo & Mark Claimable'
+                            )}
                           </button>
                         </div>
                       )}
@@ -511,14 +580,23 @@ export const StaffStandaloneApp: React.FC = () => {
 
                           <button
                             onClick={() => handleClaim(ord.id)}
-                            disabled={!ord.isClaimActive}
-                            className={`w-full font-semibold text-xs py-2.5 rounded-lg transition shadow-lg ${
-                              ord.isClaimActive
+                            disabled={!ord.isClaimActive || isCurrentActionLoading}
+                            className={`w-full font-semibold text-xs py-2.5 rounded-lg transition shadow-lg flex items-center justify-center gap-2 ${
+                              ord.isClaimActive && !isCurrentActionLoading
                                 ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/20 cursor-pointer'
-                                : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
+                                : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700 opacity-60'
                             }`}
                           >
-                            {ord.isClaimActive ? 'Verify QR & Hand Over Parcel' : 'Awaiting Customer Claim Initiation...'}
+                            {isCurrentActionLoading && actionType === 'claim' ? (
+                              <>
+                                <span className="animate-spin text-sm">↻</span>
+                                <span>Releasing Order to Customer...</span>
+                              </>
+                            ) : ord.isClaimActive ? (
+                              'Verify QR & Hand Over Parcel'
+                            ) : (
+                              'Awaiting Customer Claim Initiation...'
+                            )}
                           </button>
                         </div>
                       )}

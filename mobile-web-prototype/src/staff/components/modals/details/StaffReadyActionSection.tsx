@@ -1,5 +1,6 @@
 import React from 'react';
 import { Order } from '../../../types';
+import { StaffSpinner } from '../../common/StaffLoadingIndicator';
 
 export interface StaffReadyActionSectionProps {
   order: Order;
@@ -7,6 +8,7 @@ export interface StaffReadyActionSectionProps {
   timeFormatted: string;
   onSimulatePrompt: () => void;
   onReleaseOrder: (orderId: string) => boolean | void;
+  isReleasing?: boolean;
 }
 
 export const StaffReadyActionSection: React.FC<StaffReadyActionSectionProps> = React.memo(({
@@ -15,6 +17,7 @@ export const StaffReadyActionSection: React.FC<StaffReadyActionSectionProps> = R
   timeFormatted,
   onSimulatePrompt,
   onReleaseOrder,
+  isReleasing = false,
 }) => {
   return (
     <div className="inner-detail-card p-4 rounded-2xl bg-slate-800/90 border border-slate-700/80 shadow-md space-y-3">
@@ -101,10 +104,18 @@ export const StaffReadyActionSection: React.FC<StaffReadyActionSectionProps> = R
             type="button"
             id="detail-release-order-btn"
             aria-label="Release"
+            disabled={isReleasing}
             onClick={() => onReleaseOrder(order.id)}
-            className="btn-press w-full py-2.5 px-3 rounded-xl bg-[#10b780] hover:bg-emerald-600 text-white font-bold text-xs shadow-lg shadow-emerald-900/40 cursor-pointer"
+            className="btn-press w-full py-2.5 px-3 rounded-xl bg-[#10b780] hover:bg-emerald-600 text-white font-bold text-xs shadow-lg shadow-emerald-900/40 cursor-pointer flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            Release Parcel &amp; Hand Over Change ({order.change || '₱0'})
+            {isReleasing ? (
+              <>
+                <StaffSpinner size="xs" color="white" />
+                <span>Releasing Parcel...</span>
+              </>
+            ) : (
+              `Release Parcel & Hand Over Change (${order.change || '₱0'})`
+            )}
           </button>
         </div>
       )}
@@ -113,4 +124,3 @@ export const StaffReadyActionSection: React.FC<StaffReadyActionSectionProps> = R
 });
 
 StaffReadyActionSection.displayName = 'StaffReadyActionSection';
-

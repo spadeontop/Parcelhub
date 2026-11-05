@@ -1,5 +1,6 @@
 import React from 'react';
 import { Order } from '../../../types';
+import { StaffSpinner } from '../../common/StaffLoadingIndicator';
 
 export interface StaffActiveActionSectionProps {
   order: Order;
@@ -9,6 +10,8 @@ export interface StaffActiveActionSectionProps {
   onPhotoUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onUseSamplePhoto: () => void;
   onRetakePhoto: () => void;
+  isPaying?: boolean;
+  isAttaching?: boolean;
 }
 
 export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> = React.memo(({
@@ -19,6 +22,8 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
   onPhotoUpload,
   onUseSamplePhoto,
   onRetakePhoto,
+  isPaying = false,
+  isAttaching = false,
 }) => {
   return (
     <div className="inner-detail-card p-4 rounded-2xl bg-slate-800/90 border border-slate-700/80 shadow-md space-y-4">
@@ -70,10 +75,18 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
             <button
               type="button"
               id="detail-pay-courier-btn"
+              disabled={isPaying}
               onClick={() => onPayCourier(order.id)}
-              className="btn-press w-full py-2.5 px-3 rounded-xl bg-[#215cd4] hover:bg-[#194cb5] text-white font-bold text-xs shadow-md shadow-blue-900/30 cursor-pointer"
+              className="btn-press w-full py-2.5 px-3 rounded-xl bg-[#215cd4] hover:bg-[#194cb5] text-white font-bold text-xs shadow-md shadow-blue-900/30 cursor-pointer flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              Pay Courier ({order.codAmount})
+              {isPaying ? (
+                <>
+                  <StaffSpinner size="xs" color="white" />
+                  <span>Recording Payout...</span>
+                </>
+              ) : (
+                `Pay Courier (${order.codAmount})`
+              )}
             </button>
           </>
         ) : (
@@ -132,8 +145,9 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
               <button
                 type="button"
                 id="detail-retake-photo-btn"
+                disabled={isAttaching}
                 onClick={onRetakePhoto}
-                className="btn-press px-2.5 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 text-[11px] font-semibold shrink-0 cursor-pointer"
+                className="btn-press px-2.5 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 text-[11px] font-semibold shrink-0 cursor-pointer disabled:opacity-60"
               >
                 Retake
               </button>
@@ -142,10 +156,18 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
               type="button"
               id="detail-verify-photo-btn"
               aria-label="Verify Photo & Make Ready"
+              disabled={isAttaching}
               onClick={() => onAttachPhoto(order.id, attachedPhoto)}
-              className="btn-press w-full py-2.5 px-3 rounded-xl bg-[#10b780] hover:bg-emerald-600 text-white font-bold text-xs shadow-md shadow-emerald-900/30 cursor-pointer"
+              className="btn-press w-full py-2.5 px-3 rounded-xl bg-[#10b780] hover:bg-emerald-600 text-white font-bold text-xs shadow-md shadow-emerald-900/30 cursor-pointer flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              Verify Photo &amp; Make Ready to Claim
+              {isAttaching ? (
+                <>
+                  <StaffSpinner size="xs" color="white" />
+                  <span>Attaching Photo & Making Ready...</span>
+                </>
+              ) : (
+                'Verify Photo & Make Ready to Claim'
+              )}
             </button>
           </div>
         ) : (
@@ -171,4 +193,3 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
 });
 
 StaffActiveActionSection.displayName = 'StaffActiveActionSection';
-
