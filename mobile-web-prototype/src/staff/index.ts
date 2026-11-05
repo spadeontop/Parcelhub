@@ -5,6 +5,7 @@ export * from './hooks/useStaffTerminal';
 // Common Components
 export * from './components/common/StaffBadge';
 export * from './components/common/StaffEmptyState';
+export * from './components/common/StaffLoadingIndicator';
 
 // Header Components
 export * from './components/header/StaffHeader';
@@ -35,4 +36,3 @@ export * from './components/modals/scanner/StaffQrScannerModal';
 export * from './components/modals/scanner/StaffScannerViewfinder';
 export * from './components/modals/scanner/StaffScannerUploadTarget';
 export * from './components/modals/scanner/StaffManualLookup';
-

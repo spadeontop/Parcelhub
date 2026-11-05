@@ -29,10 +29,16 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     return jsonError(`Order cannot be claimed in its current status (${order.status})`, 400);
   }
 
-  db.claimByCustomer(id as OrderId);
+  const result = db.claimByCustomer(id as OrderId);
+  if (!result) {
+    return jsonError("Failed to initiate claim", 500);
+  }
 
   const response: CustomerClaimOrderRes = {
     statusMessage: "Order claim initiated",
+    claimInitiatedAt: result.order.claimInitiatedAt!,
+    claimExpiresAt: result.order.claimExpiresAt!,
+    durationMinutes: result.durationMinutes,
   };
 
   return jsonSuccess(response);

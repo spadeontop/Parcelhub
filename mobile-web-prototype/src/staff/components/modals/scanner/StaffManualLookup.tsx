@@ -1,10 +1,12 @@
 import React from 'react';
+import { StaffSpinner } from '../../common/StaffLoadingIndicator';
 
 export interface StaffManualLookupProps {
   manualInput: string;
   inputRef?: React.Ref<HTMLInputElement>;
   onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onLookup: (code: string) => void;
+  isLoading?: boolean;
 }
 
 export const StaffManualLookup: React.FC<StaffManualLookupProps> = React.memo(({
@@ -12,6 +14,7 @@ export const StaffManualLookup: React.FC<StaffManualLookupProps> = React.memo(({
   inputRef,
   onInputChange,
   onLookup,
+  isLoading = false,
 }) => {
   return (
     <div className="qr-frame-box p-4 rounded-2xl bg-slate-800/90 border border-slate-700/80 space-y-2.5 shadow-md">
@@ -33,21 +36,30 @@ export const StaffManualLookup: React.FC<StaffManualLookupProps> = React.memo(({
           autoComplete="off"
           value={manualInput}
           onChange={onInputChange}
+          disabled={isLoading}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') {
+            if (e.key === 'Enter' && !isLoading) {
               e.preventDefault();
               onLookup(manualInput);
             }
           }}
-          className="flex-1 bg-slate-900 border border-slate-700 text-white rounded-xl px-3.5 py-2 text-xs font-mono font-bold tracking-wider uppercase placeholder:text-slate-500 placeholder:normal-case placeholder:font-normal placeholder:tracking-normal focus:outline-none focus:ring-2 focus:ring-[#215cd4] focus:border-[#215cd4]"
+          className="flex-1 bg-slate-900 border border-slate-700 text-white rounded-xl px-3.5 py-2 text-xs font-mono font-bold tracking-wider uppercase placeholder:text-slate-500 placeholder:normal-case placeholder:font-normal placeholder:tracking-normal focus:outline-none focus:ring-2 focus:ring-[#215cd4] focus:border-[#215cd4] disabled:opacity-60"
         />
         <button
           type="button"
           id="manual-scan-btn"
+          disabled={isLoading}
           onClick={() => onLookup(manualInput)}
-          className="btn-press px-4 py-2 rounded-xl bg-[#215cd4] hover:bg-[#194cb5] text-white text-xs font-bold shrink-0 shadow-md border border-blue-500/40 cursor-pointer"
+          className="btn-press flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-[#215cd4] hover:bg-[#194cb5] text-white text-xs font-bold shrink-0 shadow-md border border-blue-500/40 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          Lookup
+          {isLoading ? (
+            <>
+              <StaffSpinner size="xs" color="white" />
+              <span>Searching...</span>
+            </>
+          ) : (
+            'Lookup'
+          )}
         </button>
       </div>
     </div>

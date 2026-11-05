@@ -53,7 +53,8 @@ export type ScreenId =
   | 'register'
   | 'mpin_login'
   | 'mpin_create'
-  | 'profile';
+  | 'profile'
+  | 'faq';
 
 export type ScenarioId =
   | 'figma-1'
