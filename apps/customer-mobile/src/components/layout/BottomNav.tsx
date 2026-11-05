@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, TouchableOpacity, Text } from 'react-native';
 import { useApp } from '../../context/AppContext';
-import { HomeIcon, OrdersIcon, BellIcon, HelpIcon } from '../common/Icons';
+import { HomeIcon, OrdersIcon, BellIcon, HelpIcon, ProfileIcon } from '../common/Icons';
 
 interface BottomNavProps {
   activeTab?: 'home' | 'transactions' | 'notifications' | 'help' | 'profile';
@@ -81,11 +81,21 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab = 'home' }) => {
         className="items-center justify-center p-2"
         accessibilityLabel="Help"
       >
-        <HelpIcon
+        <HelpIcon size={22} color="#9ca3af" />
+        <View className="w-1.5 h-1.5 mt-1 opacity-0" />
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        activeOpacity={0.7}
+        onPress={() => navigateTo('profile')}
+        className="items-center justify-center p-2"
+        accessibilityLabel="Profile"
+      >
+        <ProfileIcon
           size={22}
-          color={activeTab === 'help' ? '#215cd4' : '#9ca3af'}
+          color={activeTab === 'profile' ? '#215cd4' : '#9ca3af'}
         />
-        {activeTab === 'help' ? (
+        {activeTab === 'profile' ? (
           <View className="w-1.5 h-1.5 rounded-full bg-[#215cd4] mt-1" />
         ) : (
           <View className="w-1.5 h-1.5 mt-1 opacity-0" />

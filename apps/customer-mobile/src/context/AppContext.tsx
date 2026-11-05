@@ -195,6 +195,8 @@ export interface AppContextType {
   registerCustomer: (payload: CustomerRegisterRequest) => Promise<CustomerRegisterResponse>;
   createCustomerMpin: (mpin: string) => Promise<CustomerCreateMpinResponse>;
   verifyCustomerMpin: (mpin: string) => Promise<CustomerVerifyMpinResponse>;
+  updateAuthCustomer: (partial: Partial<AuthCustomer>) => void;
+  signOutCustomer: () => void;
 
   // Navigation & Actions
   navigateTo: (screenId: ScreenId, params?: { orderId?: string; status?: OrderStatus; filter?: TransactionFilter }) => void;
@@ -527,6 +529,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     [refreshToken, showToast]
   );
 
+  const updateAuthCustomer = useCallback(
+    (partial: Partial<AuthCustomer>) => {
+      setAuthCustomer((prev) => ({ ...prev, ...partial }));
+      showToast('Profile updated successfully!');
+    },
+    [showToast]
+  );
+
+  const signOutCustomer = useCallback(() => {
+    setAuthToken(null);
+    setRefreshToken(null);
+    showToast('Signed out successfully.');
+    setActiveScreen('login');
+  }, [showToast]);
+
   const applyScenario = useCallback(
     (scenario: ScenarioId) => {
       switch (scenario) {
@@ -586,6 +603,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         case 'figma-mpin-create':
           setActiveScreen('mpin_create');
           break;
+        case 'figma-profile':
+          setActiveScreen('profile');
+          break;
       }
     },
     []
@@ -616,6 +636,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         registerCustomer,
         createCustomerMpin,
         verifyCustomerMpin,
+        updateAuthCustomer,
+        signOutCustomer,
         navigateTo,
         setHasOrders,
         setHubOpen,

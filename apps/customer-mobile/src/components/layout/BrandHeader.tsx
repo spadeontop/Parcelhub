@@ -12,6 +12,8 @@ interface BrandHeaderProps {
   showProfile?: boolean;
   backTarget?: ScreenId;
   onBack?: () => void;
+  hideBorder?: boolean;
+  hideStatusDot?: boolean;
 }
 
 export const BrandHeader: React.FC<BrandHeaderProps> = ({
@@ -22,11 +24,17 @@ export const BrandHeader: React.FC<BrandHeaderProps> = ({
   showProfile = true,
   backTarget = 'home',
   onBack,
+  hideBorder = false,
+  hideStatusDot = false,
 }) => {
   const { hubOpen, navigateTo } = useApp();
 
   return (
-    <View className="flex-row items-center justify-between py-2 border-b border-gray-100/90 pb-3 mb-2">
+    <View
+      className={`flex-row items-center justify-between py-2 ${
+        hideBorder ? 'mb-2' : 'border-b border-gray-100/90 pb-3 mb-2'
+      }`}
+    >
       <View className="flex-row items-center gap-2.5">
         {showBack ? (
           <TouchableOpacity
@@ -51,11 +59,13 @@ export const BrandHeader: React.FC<BrandHeaderProps> = ({
             {title}
           </Text>
           <View className="flex-row items-center gap-1.5 mt-1">
-            <View
-              className={`w-2 h-2 rounded-full ${
-                hubOpen ? 'bg-[#10b780]' : 'bg-[#ef4444]'
-              }`}
-            />
+            {!hideStatusDot && (
+              <View
+                className={`w-2 h-2 rounded-full ${
+                  hubOpen ? 'bg-[#10b780]' : 'bg-[#ef4444]'
+                }`}
+              />
+            )}
             <Text className="text-[10px] font-bold tracking-wider text-gray-500 uppercase">
               {subtitle}
             </Text>
