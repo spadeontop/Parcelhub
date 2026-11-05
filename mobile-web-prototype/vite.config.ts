@@ -23,6 +23,7 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'index.html'),
         staff: resolve(__dirname, 'staff.html'),
+        customer: resolve(__dirname, 'customer.html'),
       },
     },
   },
