@@ -115,97 +115,86 @@ export const OrderDetailsScreen: React.FC = () => {
   return (
     <View style={{ flex: 1, backgroundColor: '#ffffff' }} className="flex-1 bg-white">
       {isClaimActive ? (
-        /* Full-screen Focused Claim Pass conforming to app's design language */
-        <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-          {/* Top Emerald Header Banner */}
-          <View className="bg-[#10b780] py-5 px-6 items-center relative">
+        /* Full-screen Focused Claim Pass (Prototype State 1: Ready Active) */
+        <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1, paddingBottom: 24 }}>
+          {/* Header Bar */}
+          <View className="py-4 px-5 flex-row items-center justify-between relative border-b border-gray-100/60">
             <TouchableOpacity
-              activeOpacity={0.8}
+              activeOpacity={0.7}
               onPress={() => navigateTo('home')}
-              className="absolute left-4 top-5 w-8 h-8 rounded-full bg-white/20 border border-white/30 items-center justify-center"
+              className="w-8 h-8 rounded-full bg-gray-100 items-center justify-center"
               accessibilityLabel="Back to Home"
             >
-              <BackArrowIcon size={16} color="#ffffff" />
+              <BackArrowIcon size={14} color="#1f2937" />
             </TouchableOpacity>
 
-            {/* Countdown Badge */}
-            <View className="flex-row items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 mb-2">
-              <View className="w-2 h-2 rounded-full bg-white" />
-              <Text className="text-white text-xs font-semibold">
-                Valid for: {timeFormatted}
+            <Text className="text-xl font-bold text-[#1e1e1e] tracking-tight">
+              Ready for Release
+            </Text>
+
+            <View className="w-8 h-8" />
+          </View>
+
+          {/* Body Content */}
+          <View className="px-6 pt-5 items-center flex-1">
+            {/* Ticket Label & Value header aligned with QR card */}
+            <View className="w-full max-w-[280px] mb-2">
+              <Text className="text-[10px] font-bold text-gray-400 tracking-wider uppercase">
+                TICKET
+              </Text>
+              <Text className="text-base font-bold font-mono text-[#1e1e1e] mt-0.5">
+                {order.alphanumericKey}
               </Text>
             </View>
 
-            <Text className="text-2xl font-extrabold text-white tracking-tight text-center">
-              Ready for Release
-            </Text>
-            <Text className="text-xs text-white/90 text-center leading-relaxed mt-1 max-w-xs">
-              Please wait by the counter. Show this screen only if requested by staff.
-            </Text>
-          </View>
-
-          {/* Screen Body */}
-          <View className="px-5 pt-4 pb-8 items-center">
-            {/* Center QR & Ticket Card with dashed border */}
-            <View
-              style={{
-                borderStyle: 'dashed',
-                borderWidth: 1.5,
-                borderColor: '#cbd5e1',
-              }}
-              className="w-full max-w-xs rounded-3xl p-6 items-center bg-white"
-            >
-              <View className="w-52 h-52 bg-white p-3 rounded-2xl items-center justify-center border border-gray-100 shadow-xs">
-                <QRCode
-                  value={order.alphanumericKey || order.refCode || 'PARCELHUB-RELEASE'}
-                  size={180}
-                  color="#0f172a"
-                  backgroundColor="#ffffff"
-                />
-              </View>
-
-              {/* Ticket box inside QR card */}
-              <View className="mt-4 w-full bg-blue-50/80 border border-blue-200/70 rounded-2xl p-3 flex-row items-center justify-between">
-                <View>
-                  <Text className="text-[10px] font-bold text-blue-900 uppercase">
-                    TICKET
-                  </Text>
-                  <Text className="text-base font-black font-mono text-[#163b86]">
-                    {order.alphanumericKey}
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  onPress={() => copyToClipboard(order.alphanumericKey, 'Ticket')}
-                  className="p-1.5 rounded-lg bg-white border border-blue-100"
-                  accessibilityLabel="Copy Ticket"
-                >
-                  <CopyIcon size={16} color="#163b86" />
-                </TouchableOpacity>
-              </View>
+            {/* QR Code Panel */}
+            <View className="w-full max-w-[280px] aspect-square rounded-2xl bg-white border border-[#f0f1f3] shadow-sm p-4 items-center justify-center">
+              <QRCode
+                value={order.alphanumericKey || order.refCode || 'PARCELHUB-RELEASE'}
+                size={210}
+                color="#0f172a"
+                backgroundColor="#ffffff"
+              />
             </View>
 
-            {/* Quick Summary Card: Item & Cash Change */}
-            <View className="w-full max-w-xs mt-3.5 rounded-2xl border border-gray-100 bg-[#fafbfd] p-4">
-              <View className="flex-row items-center justify-between py-1">
-                <Text className="text-xs font-medium text-gray-500">Item</Text>
-                <Text className="text-sm font-bold text-gray-900">{order.product}</Text>
+            {/* Validity Box: Proceed to Hub + Live Countdown Timer */}
+            <View className="items-center mt-5 mb-3">
+              <Text className="text-xs font-semibold text-[#3063ca] tracking-wide">
+                Proceed to Hub
+              </Text>
+              <Text className="text-3xl font-extrabold font-mono text-[#3063ca] mt-0.5">
+                {timeFormatted}
+              </Text>
+            </View>
+
+            {/* Instructions */}
+            <Text className="text-xs text-gray-500 text-center leading-relaxed max-w-[290px] mb-6">
+              You have initiated claiming process.{'\n'}
+              Please wait by the counter. Show this screen only if requested by staff.
+            </Text>
+
+            {/* Order Summary Card */}
+            <View className="w-full max-w-[320px] rounded-2xl bg-[#f9fafb] border border-[#f0f1f3] p-4 space-y-3">
+              <View className="flex-row items-center justify-between">
+                <Text className="text-xs text-gray-500 font-normal">Item</Text>
+                <Text className="text-sm font-bold text-[#0f172a]">{order.product}</Text>
               </View>
 
-              <View className="flex-row items-center justify-between py-1 mt-1">
-                <Text className="text-xs font-medium text-gray-500">Cash Change</Text>
-                <Text className="text-base font-black font-mono text-[#10b780]">
+              <View className="flex-row items-center justify-between pt-1">
+                <Text className="text-xs text-gray-500 font-normal">Cash Change</Text>
+                <Text className="text-sm font-bold text-[#3063ca] font-mono">
                   {order.change || '₱0.00'}
                 </Text>
               </View>
             </View>
 
-            {/* Return to Home Button */}
+            {/* Return to Home Action Button */}
             <TouchableOpacity
               activeOpacity={0.7}
               onPress={() => navigateTo('home')}
-              className="mt-5 py-2 px-4"
+              className="w-full max-w-[320px] py-3.5 mt-4 items-center justify-center rounded-xl active:bg-gray-100"
             >
-              <Text className="text-xs font-semibold text-gray-600">
+              <Text className="text-sm font-normal text-gray-600">
                 Return to Home
               </Text>
             </TouchableOpacity>

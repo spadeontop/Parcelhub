@@ -87,86 +87,84 @@ export const OrderDetailsScreen: React.FC = () => {
   return (
     <div className="flex flex-col min-h-full bg-white pb-6 select-none">
       {isClaimActive ? (
-        /* Full-screen Focused Claim Pass conforming to app's design language */
+        /* Full-screen Focused Claim Pass (Prototype State 1: Ready Active) */
         <div className="flex flex-col flex-1 animate-fade-in bg-white">
-          {/* Top Emerald Header Banner */}
-          <div className="bg-[#10b780] py-5 px-6 text-center text-white shadow-xs relative">
+          {/* Header Bar */}
+          <div className="py-4 px-5 flex items-center justify-between relative border-b border-gray-100/60">
             <button
               type="button"
               onClick={() => navigateTo('home')}
-              className="absolute left-4 top-5 w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 border border-white/30 flex items-center justify-center text-white transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-800 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3063ca]"
               title="Return to Home"
               aria-label="Back to Home"
             >
-              <BackArrowIcon className="w-4 h-4" />
+              <BackArrowIcon className="w-3.5 h-3.5" />
             </button>
 
-            {/* Countdown Badge */}
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 text-white text-xs font-semibold mb-2">
-              <span className="w-2 h-2 rounded-full bg-white" />
-              <span>Valid for: {timeFormatted}</span>
-            </div>
+            <h1 className="text-xl font-bold text-[#1e1e1e] tracking-tight text-center">
+              Ready for Release
+            </h1>
 
-            <h2 className="text-2xl font-extrabold tracking-tight">Ready for Release</h2>
-            <p className="text-xs text-white/90 leading-relaxed mt-1 max-w-xs mx-auto">
-              Please wait by the counter. Show this screen only if requested by staff.
-            </p>
+            <div className="w-8 h-8" />
           </div>
 
-          {/* Screen Body */}
-          <div className="px-5 pt-4 pb-8 flex-1 flex flex-col items-center">
-            {/* Center QR & Ticket Card with dashed border */}
-            <div className="w-full max-w-xs rounded-3xl p-6 border-2 border-dashed border-slate-300 flex flex-col items-center bg-white">
-              <div className="w-52 h-52 bg-white p-3 rounded-2xl flex items-center justify-center border border-gray-100 shadow-xs">
-                <img
-                  src="./assets/sample_qr_code.png"
-                  alt="Release QR Code"
-                  className="w-full h-full object-contain"
-                />
-              </div>
-
-              {/* Ticket box inside QR card */}
-              <div className="mt-4 w-full bg-blue-50/80 border border-blue-200/70 rounded-2xl p-3 flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] font-bold text-blue-900 uppercase block">
-                    TICKET
-                  </span>
-                  <span className="text-base font-black font-mono text-[#163b86]">
-                    {order.alphanumericKey}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => copyToClipboard(order.alphanumericKey, 'Ticket')}
-                  className="p-1.5 rounded-lg bg-white border border-blue-100 hover:bg-gray-50 text-[#163b86] transition-colors cursor-pointer"
-                  title="Copy Ticket"
-                  aria-label="Copy Ticket"
-                >
-                  <CopyIcon className="w-4 h-4" />
-                </button>
-              </div>
+          {/* Body Content */}
+          <div className="px-6 pt-5 flex-1 flex flex-col items-center">
+            {/* Ticket Label & Value aligned with QR card */}
+            <div className="w-full max-w-[280px] mb-2">
+              <span className="text-[10px] font-bold text-gray-400 tracking-wider uppercase block">
+                TICKET
+              </span>
+              <span className="text-base font-bold font-mono text-[#1e1e1e] mt-0.5 block">
+                {order.alphanumericKey}
+              </span>
             </div>
 
-            {/* Quick Summary Card: Item & Cash Change */}
-            <div className="w-full max-w-xs mt-3.5 rounded-2xl border border-gray-100 bg-[#fafbfd] p-4">
-              <div className="flex items-center justify-between py-1">
-                <span className="text-xs font-medium text-gray-500">Item</span>
-                <span className="text-sm font-bold text-gray-900">{order.product}</span>
+            {/* QR Code Panel */}
+            <div className="w-full max-w-[280px] aspect-square rounded-2xl bg-white border border-[#f0f1f3] shadow-sm p-4 flex items-center justify-center">
+              <img
+                src="./assets/sample_qr_code.png"
+                alt="Release QR Code"
+                className="w-full h-full object-contain"
+              />
+            </div>
+
+            {/* Validity Box: Proceed to Hub + Live Countdown Timer */}
+            <div className="text-center mt-5 mb-3">
+              <span className="text-xs font-semibold text-[#3063ca] tracking-wide block">
+                Proceed to Hub
+              </span>
+              <span className="text-3xl font-extrabold font-mono text-[#3063ca] mt-0.5 block">
+                {timeFormatted}
+              </span>
+            </div>
+
+            {/* Instructions */}
+            <p className="text-xs text-gray-500 text-center leading-relaxed max-w-[290px] mb-6">
+              You have initiated claiming process.<br />
+              Please wait by the counter. Show this screen only if requested by staff.
+            </p>
+
+            {/* Order Summary Card */}
+            <div className="w-full max-w-[320px] rounded-2xl bg-[#f9fafb] border border-[#f0f1f3] p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-500 font-normal">Item</span>
+                <span className="text-sm font-bold text-[#0f172a]">{order.product}</span>
               </div>
 
-              <div className="flex items-center justify-between py-1 mt-1">
-                <span className="text-xs font-medium text-gray-500">Cash Change</span>
-                <span className="text-base font-black font-mono text-[#10b780]">
+              <div className="flex items-center justify-between pt-1">
+                <span className="text-xs text-gray-500 font-normal">Cash Change</span>
+                <span className="text-sm font-bold text-[#3063ca] font-mono">
                   {order.change || '₱0.00'}
                 </span>
               </div>
             </div>
 
-            {/* Return to Home Button */}
+            {/* Return to Home Action Button */}
             <button
               type="button"
               onClick={() => navigateTo('home')}
-              className="mt-5 py-2 px-4 text-xs font-semibold text-gray-600 hover:text-black transition-colors cursor-pointer"
+              className="w-full max-w-[320px] py-3.5 mt-4 flex items-center justify-center rounded-xl text-sm font-normal text-gray-600 hover:text-[#0f172a] hover:bg-gray-100 transition-colors cursor-pointer"
             >
               Return to Home
             </button>
