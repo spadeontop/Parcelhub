@@ -19,9 +19,13 @@ export const QrScreen: React.FC = () => {
       {/* Unified Header */}
       <BrandHeader showBack={true} backTarget="home" />
 
-      <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
+        className="flex-1"
+      >
         {/* Center QR Card */}
-        <View className="mt-3 items-center">
+        <View className="items-center py-2">
           <View className="p-6 rounded-3xl bg-white border border-gray-200 shadow-sm items-center w-full max-w-xs">
             <View className="bg-white p-4 rounded-2xl items-center justify-center border border-gray-100">
               <QRCode
