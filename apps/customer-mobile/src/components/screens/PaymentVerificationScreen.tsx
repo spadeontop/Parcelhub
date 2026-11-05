@@ -1,8 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { useApp } from '../../context/AppContext';
-import { BrandHeader } from '../layout/BrandHeader';
-import { BottomNav } from '../layout/BottomNav';
 import { QrCodeIcon } from '../common/Icons';
 
 export const PaymentVerificationScreen: React.FC = () => {
@@ -10,9 +8,6 @@ export const PaymentVerificationScreen: React.FC = () => {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#ffffff' }} className="flex-1 bg-white px-5 pt-3 pb-2 justify-between">
-      {/* Header */}
-      <BrandHeader showBack={true} backTarget="home" />
-
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}>
         <View className="py-4">
           <View className="rounded-3xl border border-gray-200 bg-white p-7 items-center shadow-sm">
@@ -67,7 +62,7 @@ export const PaymentVerificationScreen: React.FC = () => {
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={() => navigateTo('home')}
-            className="items-center mt-6"
+            className="items-center mt-6 mb-4"
           >
             <Text className="text-sm font-semibold text-gray-700">
               Return to Home
@@ -75,9 +70,6 @@ export const PaymentVerificationScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
       </ScrollView>
-
-      {/* Bottom Nav */}
-      <BottomNav activeTab="home" />
     </View>
   );
 };

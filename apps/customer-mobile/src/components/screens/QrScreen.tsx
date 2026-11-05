@@ -2,8 +2,6 @@ import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { useApp } from '../../context/AppContext';
-import { BrandHeader } from '../layout/BrandHeader';
-import { BottomNav } from '../layout/BottomNav';
 import { CopyIcon } from '../common/Icons';
 
 export const QrScreen: React.FC = () => {
@@ -16,9 +14,6 @@ export const QrScreen: React.FC = () => {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#ffffff' }} className="flex-1 bg-white px-5 pt-3 pb-2">
-      {/* Unified Header */}
-      <BrandHeader showBack={true} backTarget="home" />
-
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
@@ -71,7 +66,7 @@ export const QrScreen: React.FC = () => {
 
           <TouchableOpacity
             onPress={() => navigateTo('home')}
-            className="py-3 mt-1"
+            className="py-3 mt-1 mb-4"
           >
             <Text className="text-xs font-semibold text-gray-600">
               Return to Home
@@ -79,9 +74,6 @@ export const QrScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
       </ScrollView>
-
-      {/* Bottom Nav */}
-      <BottomNav activeTab="home" />
     </View>
   );
 };
