@@ -21,6 +21,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     return jsonError("Order not found", 404, "Not Found");
   }
 
+  const paidByStaff = order.courierPaidBy ? db.getStaffById(order.courierPaidBy) : null;
+  const courierPaidByName = paidByStaff ? `${paidByStaff.firstName} ${paidByStaff.lastName}` : undefined;
+
   const orderDetail: StaffOrderDetail = {
     orderId: order.id,
     trackingId: order.trackingId,
@@ -38,6 +41,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         : order.status,
     isClaimActive: db.isClaimActive(order),
     claimRemainingSeconds: db.getClaimRemainingSeconds(order),
+    courierPaid: order.courierPaid,
+    courierPaidBy: order.courierPaidBy,
+    courierPaidByName,
+    courierPaidAt: order.courierPaidAt,
   };
 
   const response: StaffGetOrderRes = orderDetail;

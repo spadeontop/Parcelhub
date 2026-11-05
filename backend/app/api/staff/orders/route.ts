@@ -30,25 +30,34 @@ export async function GET(request: NextRequest) {
     allOrders = allOrders.slice(0, limit);
   }
 
-  const orders: StaffOrderSummary[] = allOrders.map((o) => ({
-    id: o.id,
-    trackingId: o.trackingId,
-    customer: o.recipientName,
-    amountReceived: o.amountReceived || 0,
-    change: o.change || 0,
-    timestamp: o.timestamp,
-    status: o.status,
-    statusMessage:
-      o.status === "AWAITING_PARCEL"
-        ? "Awaiting parcel arrival"
-        : o.status === "READY_TO_CLAIM"
-        ? "Ready for customer pickup"
-        : o.status === "PAYMENT_REQUIRED"
-        ? "Awaiting customer cash deposit"
-        : o.status,
-    isClaimActive: db.isClaimActive(o),
-    claimRemainingSeconds: db.getClaimRemainingSeconds(o),
-  }));
+  const orders: StaffOrderSummary[] = allOrders.map((o) => {
+    const paidByStaff = o.courierPaidBy ? db.getStaffById(o.courierPaidBy) : null;
+    const courierPaidByName = paidByStaff ? `${paidByStaff.firstName} ${paidByStaff.lastName}` : undefined;
+
+    return {
+      id: o.id,
+      trackingId: o.trackingId,
+      customer: o.recipientName,
+      amountReceived: o.amountReceived || 0,
+      change: o.change || 0,
+      timestamp: o.timestamp,
+      status: o.status,
+      statusMessage:
+        o.status === "AWAITING_PARCEL"
+          ? "Awaiting parcel arrival"
+          : o.status === "READY_TO_CLAIM"
+          ? "Ready for customer pickup"
+          : o.status === "PAYMENT_REQUIRED"
+          ? "Awaiting customer cash deposit"
+          : o.status,
+      isClaimActive: db.isClaimActive(o),
+      claimRemainingSeconds: db.getClaimRemainingSeconds(o),
+      courierPaid: o.courierPaid,
+      courierPaidBy: o.courierPaidBy,
+      courierPaidByName,
+      courierPaidAt: o.courierPaidAt,
+    };
+  });
 
   const response: StaffListOrdersRes = {
     orders,

@@ -191,6 +191,10 @@ export type StaffOrderSummary = {
   readonly statusMessage: string;
   readonly isClaimActive?: boolean;
   readonly claimRemainingSeconds?: number;
+  readonly courierPaid?: boolean;
+  readonly courierPaidBy?: StaffId;
+  readonly courierPaidByName?: string;
+  readonly courierPaidAt?: ISO8601Timestamp;
 };
 
 export type StaffListOrdersQueryParams = {
@@ -213,6 +217,10 @@ export type StaffOrderDetail = {
   readonly statusMessage: string;
   readonly isClaimActive?: boolean;
   readonly claimRemainingSeconds?: number;
+  readonly courierPaid?: boolean;
+  readonly courierPaidBy?: StaffId;
+  readonly courierPaidByName?: string;
+  readonly courierPaidAt?: ISO8601Timestamp;
 };
 
 export type StaffGetOrderRes = StaffOrderDetail;

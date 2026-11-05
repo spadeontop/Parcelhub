@@ -11,6 +11,10 @@ interface OrderItem {
   statusMessage: string;
   isClaimActive?: boolean;
   claimRemainingSeconds?: number;
+  courierPaid?: boolean;
+  courierPaidBy?: string;
+  courierPaidByName?: string;
+  courierPaidAt?: string;
 }
 
 const BACKEND_URL = '';
@@ -427,15 +431,35 @@ export const StaffStandaloneApp: React.FC = () => {
                       {/* Action 2: Courier Arrival */}
                       {ord.status === 'AWAITING_PARCEL' && (
                         <div className="p-4 rounded-xl bg-slate-950 border border-amber-900/40 flex flex-col gap-3">
-                          <span className="text-xs font-bold text-amber-400 uppercase tracking-wide">
-                            Step 2: Courier Arrival & Proof
-                          </span>
-                          <button
-                            onClick={() => handlePayCourier(ord.id)}
-                            className="w-full bg-amber-600/80 hover:bg-amber-600 text-white font-semibold text-xs py-2 rounded-lg transition"
-                          >
-                            Pay Courier Upon Arrival
-                          </button>
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-amber-400 uppercase tracking-wide">
+                              Step 2: Courier Arrival & Proof
+                            </span>
+                            {ord.courierPaid && (
+                              <span className="text-[10px] font-mono text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                                Paid
+                              </span>
+                            )}
+                          </div>
+
+                          {ord.courierPaid ? (
+                            <div className="bg-emerald-950/30 border border-emerald-800/40 rounded-xl p-2.5 text-xs text-emerald-300">
+                              <p className="font-semibold flex items-center gap-1.5">
+                                <span>🔒</span> Courier Payment Completed
+                              </p>
+                              <p className="text-[11px] text-emerald-400/80 mt-1">
+                                Handled by: {ord.courierPaidByName || ord.courierPaidBy || 'Staff'}
+                                {ord.courierPaidAt ? ` at ${new Date(ord.courierPaidAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}
+                              </p>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => handlePayCourier(ord.id)}
+                              className="w-full bg-amber-600/80 hover:bg-amber-600 text-white font-semibold text-xs py-2 rounded-lg transition"
+                            >
+                              Pay Courier Upon Arrival
+                            </button>
+                          )}
 
                           <div>
                             <label className="text-[11px] text-slate-400 block mb-1">Proof Photo URL</label>

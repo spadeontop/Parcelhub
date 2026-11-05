@@ -31,6 +31,8 @@ export interface StoredOrder {
   claimInitiatedAt?: ISO8601Timestamp;
   claimExpiresAt?: ISO8601Timestamp;
   courierPaid?: boolean;
+  courierPaidBy?: StaffId;
+  courierPaidAt?: ISO8601Timestamp;
 }
 
 export interface StoredCustomer {
@@ -259,6 +261,8 @@ class InMemoryStore {
         modifiedBy: staffId,
         timestamp: "2026-10-17T14:00:00Z",
         courierPaid: true,
+        courierPaidBy: staffId,
+        courierPaidAt: "2026-10-17T14:00:00Z",
       },
 
       // 4. READY_TO_CLAIM
@@ -663,9 +667,12 @@ class InMemoryStore {
   public recordCourierPayment(id: OrderId, staffId: StaffId): StoredOrder | null {
     const order = this.orders.get(id);
     if (!order) return null;
+    const now = new Date().toISOString();
     order.courierPaid = true;
+    order.courierPaidBy = staffId;
+    order.courierPaidAt = now;
     order.modifiedBy = staffId;
-    order.timestamp = new Date().toISOString();
+    order.timestamp = now;
     return order;
   }
 
