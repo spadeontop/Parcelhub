@@ -1,10 +1,10 @@
 import React from 'react';
 import { View, TouchableOpacity, Text } from 'react-native';
 import { useApp } from '../../context/AppContext';
-import { HomeIcon, OrdersIcon, BellIcon, HelpIcon } from '../common/Icons';
+import { HomeIcon, OrdersIcon, BellIcon, ProfileIcon } from '../common/Icons';
 
 interface BottomNavProps {
-  activeTab?: 'home' | 'transactions' | 'notifications' | 'help';
+  activeTab?: 'home' | 'transactions' | 'notifications' | 'profile';
 }
 
 export const BottomNav: React.FC<BottomNavProps> = ({ activeTab = 'home' }) => {
@@ -74,15 +74,22 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab = 'home' }) => {
         )}
       </TouchableOpacity>
 
-      {/* 4. Help / Escrow Info */}
+      {/* 4. Profile */}
       <TouchableOpacity
         activeOpacity={0.7}
-        onPress={openEscrowModal}
+        onPress={() => navigateTo('profile')}
         className="items-center justify-center p-2"
-        accessibilityLabel="Help"
+        accessibilityLabel="Profile"
       >
-        <HelpIcon size={22} color="#9ca3af" />
-        <View className="w-1.5 h-1.5 mt-1 opacity-0" />
+        <ProfileIcon
+          size={22}
+          color={activeTab === 'profile' ? '#215cd4' : '#9ca3af'}
+        />
+        {activeTab === 'profile' ? (
+          <View className="w-1.5 h-1.5 rounded-full bg-[#215cd4] mt-1" />
+        ) : (
+          <View className="w-1.5 h-1.5 mt-1 opacity-0" />
+        )}
       </TouchableOpacity>
     </View>
   );

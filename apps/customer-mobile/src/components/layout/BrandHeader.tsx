@@ -2,14 +2,14 @@ import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { useApp } from '../../context/AppContext';
 import { ScreenId } from '../../types';
-import { BackArrowIcon, ParcelHubLogoSvg, ProfileIcon } from '../common/Icons';
+import { BackArrowIcon, ParcelHubLogoSvg, HelpIcon } from '../common/Icons';
 
 interface BrandHeaderProps {
   title?: string;
   subtitle?: string;
   showBack?: boolean;
   showLogo?: boolean;
-  showProfile?: boolean;
+  showHelp?: boolean;
   backTarget?: ScreenId;
   onBack?: () => void;
   hideBorder?: boolean;
@@ -21,13 +21,13 @@ export const BrandHeader: React.FC<BrandHeaderProps> = ({
   subtitle = "LILY'S CATERING HUB",
   showBack = false,
   showLogo = true,
-  showProfile = true,
+  showHelp = true,
   backTarget = 'home',
   onBack,
   hideBorder = false,
   hideStatusDot = false,
 }) => {
-  const { hubOpen, navigateTo } = useApp();
+  const { hubOpen, navigateTo, openEscrowModal } = useApp();
 
   return (
     <View
@@ -73,15 +73,15 @@ export const BrandHeader: React.FC<BrandHeaderProps> = ({
         </View>
       </View>
 
-      {/* User Profile */}
-      {showProfile ? (
+      {/* Help / Escrow Info */}
+      {showHelp ? (
         <TouchableOpacity
           activeOpacity={0.7}
-          onPress={() => navigateTo('profile')}
+          onPress={openEscrowModal}
           className="items-center justify-center p-2"
-          accessibilityLabel="Profile"
+          accessibilityLabel="Help"
         >
-          <ProfileIcon size={22} color="#9ca3af" />
+          <HelpIcon size={22} color="#9ca3af" />
         </TouchableOpacity>
       ) : null}
     </View>
