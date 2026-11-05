@@ -58,12 +58,19 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab = 'home' }) => {
 
       <TouchableOpacity
         activeOpacity={0.7}
-        onPress={() => navigateTo('mpin_login')}
+        onPress={() => navigateTo('profile')}
         className="items-center justify-center p-2"
-        accessibilityLabel="Security / Switch Account"
+        accessibilityLabel="Profile"
       >
-        <ProfileIcon size={22} color="#9ca3af" />
-        <View className="w-1.5 h-1.5 mt-1 opacity-0" />
+        <ProfileIcon
+          size={22}
+          color={activeTab === 'profile' ? '#215cd4' : '#9ca3af'}
+        />
+        {activeTab === 'profile' ? (
+          <View className="w-1.5 h-1.5 rounded-full bg-[#215cd4] mt-1" />
+        ) : (
+          <View className="w-1.5 h-1.5 mt-1 opacity-0" />
+        )}
       </TouchableOpacity>
     </View>
   );
