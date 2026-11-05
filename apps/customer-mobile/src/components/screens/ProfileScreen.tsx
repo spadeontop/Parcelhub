@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { useApp } from '../../context/AppContext';
-import { BrandHeader } from '../layout/BrandHeader';
 import { BottomNav } from '../layout/BottomNav';
 import { ArrowLeftIcon } from '../common/Icons';
 import { EditContactModal } from '../modals/EditContactModal';
@@ -50,9 +49,6 @@ export const ProfileScreen: React.FC = () => {
       style={{ flex: 1, backgroundColor: '#ffffff' }}
       className="flex-1 bg-white px-5 pt-3 pb-2"
     >
-      {/* Brand Header */}
-      <BrandHeader hideBorder hideStatusDot />
-
       {/* Back Navigation Bar & Screen Title */}
       <View className="flex-row items-center justify-between py-2 mb-3">
         <TouchableOpacity

@@ -8,7 +8,14 @@ import { getStatusLabel, getStatusTextColor, getStatusDotClass } from '../../uti
 import Svg, { Path } from 'react-native-svg';
 
 export const HomeScreen: React.FC = () => {
-  const { hasOrders, setHasOrders, orders, navigateTo } = useApp();
+  const { hasOrders, orders, navigateTo } = useApp();
+
+  const isOrderListEmpty = !hasOrders || orders.length === 0;
+  const recentOrders = orders.slice(0, 5);
+
+  const readyCount = orders.filter((o) => o.status === 'READY_TO_CLAIM').length;
+  const inTransitCount = orders.filter((o) => o.status === 'AWAITING_PARCEL').length;
+  const unpaidCount = orders.filter((o) => o.status === 'PAYMENT_REQUIRED').length;
 
   return (
     <View style={{ flex: 1, backgroundColor: '#ffffff' }} className="flex-1 bg-white px-5 pt-3 pb-2">
@@ -17,32 +24,72 @@ export const HomeScreen: React.FC = () => {
 
       <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
         {/* Welcome Dark Card */}
-        <View className="mt-3 rounded-3xl bg-[#1e1e1e] p-6 shadow-lg">
+        <View className="mt-3 rounded-3xl bg-[#181b20] p-5 shadow-lg">
+          {/* Status Pills inside Card (above Welcome) */}
+          <View className="flex-row items-center gap-2 mb-2.5">
+            {/* Ready */}
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => navigateTo('transactions')}
+              className="flex-row items-center gap-1 px-2 py-0.5 rounded-md bg-white/5 border border-white/5"
+            >
+              <View className="w-1.5 h-1.5 rounded-full bg-[#10b780]" />
+              <Text className="text-[10px] font-medium text-gray-300">
+                {readyCount} Ready
+              </Text>
+            </TouchableOpacity>
+
+            {/* In Transit */}
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => navigateTo('transactions')}
+              className="flex-row items-center gap-1 px-2 py-0.5 rounded-md bg-white/5 border border-white/5"
+            >
+              <View className="w-1.5 h-1.5 rounded-full bg-[#1b65e8]" />
+              <Text className="text-[10px] font-medium text-gray-300">
+                {inTransitCount} In Transit
+              </Text>
+            </TouchableOpacity>
+
+            {/* Unpaid */}
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => navigateTo('transactions')}
+              className="flex-row items-center gap-1 px-2 py-0.5 rounded-md bg-white/5 border border-white/5"
+            >
+              <View className="w-1.5 h-1.5 rounded-full bg-[#f59e0b]" />
+              <Text className="text-[10px] font-medium text-gray-300">
+                {unpaidCount} Unpaid
+              </Text>
+            </TouchableOpacity>
+          </View>
+
           <Text className="text-2xl font-bold tracking-tight text-white">
             Welcome Nyeowsz!
           </Text>
           <Text className="text-sm text-gray-400 mt-1">
-            Create an order to get started
+            Create an order or track existing deliveries
           </Text>
 
-          <View className="flex-row items-center gap-3 mt-6">
+          <View className="mt-4 flex-row">
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={() => navigateTo('create_order')}
-              className="flex-1 py-3 px-4 rounded-xl bg-[#215cd4] active:bg-[#194cb5] shadow-md items-center"
+              style={{
+                flex: 1,
+                backgroundColor: '#1b65e8',
+                paddingVertical: 12,
+                paddingHorizontal: 14,
+                borderRadius: 12,
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexDirection: 'row',
+                gap: 6,
+              }}
+              className="active:opacity-90 shadow-sm"
             >
-              <Text className="text-white font-bold text-xs tracking-wide">
+              <Text style={{ color: '#ffffff', fontSize: 13, fontWeight: '600' }}>
                 + Create Order
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={() => navigateTo('transactions')}
-              className="flex-1 py-3 px-4 rounded-xl bg-[#163b86] active:bg-[#102d6b] items-center"
-            >
-              <Text className="text-white font-bold text-xs tracking-wide">
-                Transactions
               </Text>
             </TouchableOpacity>
           </View>
@@ -50,19 +97,11 @@ export const HomeScreen: React.FC = () => {
 
         {/* Activities Section */}
         <View className="mt-6 flex-1">
-          <View className="flex-row items-center justify-between mb-3">
+          <View className="mb-3">
             <Text className="text-lg font-bold text-gray-900">Activities</Text>
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() => setHasOrders(!hasOrders)}
-            >
-              <Text className="text-xs text-[#215cd4] font-semibold">
-                Switch to {hasOrders ? 'Zero' : 'Active'} orders view
-              </Text>
-            </TouchableOpacity>
           </View>
 
-          {!hasOrders ? (
+          {isOrderListEmpty ? (
             /* Zero Orders Empty State Box */
             <View className="min-h-[300px] rounded-3xl bg-[#f8f8f8] border border-gray-100 items-center justify-center p-6">
               <View className="w-16 h-16 rounded-full bg-blue-50 items-center justify-center mb-3">
@@ -90,9 +129,9 @@ export const HomeScreen: React.FC = () => {
               </TouchableOpacity>
             </View>
           ) : (
-            /* With Orders List Container */
+            /* With Orders List Container (Limited to 5) */
             <View className="rounded-3xl bg-[#f8f8f8] border border-gray-100 p-4 mb-4">
-              {orders.map((order, idx) => (
+              {recentOrders.map((order, idx) => (
                 <TouchableOpacity
                   key={order.id}
                   activeOpacity={0.7}
@@ -127,6 +166,18 @@ export const HomeScreen: React.FC = () => {
                   </View>
                 </TouchableOpacity>
               ))}
+
+              {/* View All link below the list */}
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => navigateTo('transactions')}
+                className="mt-1 pt-3.5 border-t border-gray-200/70 flex-row items-center justify-center gap-1.5"
+              >
+                <Text className="text-xs font-bold text-[#1b65e8]">
+                  View all activities
+                </Text>
+                <ChevronRightIcon size={13} color="#1b65e8" />
+              </TouchableOpacity>
             </View>
           )}
         </View>
@@ -137,4 +188,3 @@ export const HomeScreen: React.FC = () => {
     </View>
   );
 };
-
