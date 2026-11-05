@@ -197,7 +197,7 @@ export const ProfileScreen: React.FC = () => {
       </ScrollView>
 
       {/* Persistent Bottom Navigation */}
-      <BottomNav activeTab="profile" />
+      <BottomNav />
 
       {/* Visual Modals */}
       <EditContactModal

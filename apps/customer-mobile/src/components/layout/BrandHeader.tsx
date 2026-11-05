@@ -1,8 +1,8 @@
-﻿import React from 'react';
+import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { useApp } from '../../context/AppContext';
 import { ScreenId } from '../../types';
-import { BackArrowIcon, ParcelHubLogoSvg } from '../common/Icons';
+import { BackArrowIcon, ParcelHubLogoSvg, ProfileIcon } from '../common/Icons';
 
 interface BrandHeaderProps {
   title?: string;
@@ -73,17 +73,15 @@ export const BrandHeader: React.FC<BrandHeaderProps> = ({
         </View>
       </View>
 
-      {/* User Profile Avatar */}
+      {/* User Profile */}
       {showProfile ? (
         <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={() => navigateTo('mpin_login')}
-          className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 items-center justify-center shadow-xs"
-          accessibilityLabel="User Profile (Nyeowsz)"
+          activeOpacity={0.7}
+          onPress={() => navigateTo('profile')}
+          className="items-center justify-center p-2"
+          accessibilityLabel="Profile"
         >
-          <Text className="text-xs font-bold text-slate-600 tracking-wider">
-            NY
-          </Text>
+          <ProfileIcon size={22} color="#9ca3af" />
         </TouchableOpacity>
       ) : null}
     </View>
