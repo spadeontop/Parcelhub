@@ -1,8 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { useApp } from '../../context/AppContext';
-import { BrandHeader } from '../layout/BrandHeader';
-import { BottomNav } from '../layout/BottomNav';
 import { BackArrowIcon } from '../common/Icons';
 import Svg, { Path } from 'react-native-svg';
 
@@ -11,18 +9,19 @@ export const CreateOrderScreen: React.FC = () => {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#ffffff' }} className="flex-1 bg-white px-5 pt-3 pb-2">
-      {/* Unified Header */}
-      <BrandHeader showBack={true} backTarget="home" />
-
-      <View className="flex-row items-center justify-between mt-2 mb-2">
-        <Text className="text-xl font-bold text-gray-900">Create an Order</Text>
+      {/* Screen Title & Navigation */}
+      <View className="flex-row items-center justify-between py-2 mb-2 border-b border-gray-100/90 pb-3">
+        <Text className="text-xl font-extrabold tracking-tight text-gray-900 leading-none">
+          Create an Order
+        </Text>
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={() => navigateTo('home')}
-          className="flex-row items-center gap-1"
+          className="flex-row items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-100"
+          accessibilityLabel="Back to Home"
         >
-          <Text className="text-sm font-semibold text-gray-700">Back</Text>
           <BackArrowIcon size={14} color="#374151" />
+          <Text className="text-xs font-semibold text-gray-700">Back</Text>
         </TouchableOpacity>
       </View>
 
@@ -74,7 +73,7 @@ export const CreateOrderScreen: React.FC = () => {
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={() => navigateTo('confirm_order')}
-            className="w-full mt-4 py-3.5 px-6 rounded-2xl bg-[#215cd4] shadow-md items-center mb-4"
+            className="w-full mt-4 py-3.5 px-6 rounded-2xl bg-[#215cd4] shadow-md items-center mb-6"
           >
             <Text className="text-white font-bold text-sm tracking-wide">
               Next
@@ -82,9 +81,6 @@ export const CreateOrderScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
       </ScrollView>
-
-      {/* Bottom Nav */}
-      <BottomNav activeTab="home" />
     </View>
   );
 };

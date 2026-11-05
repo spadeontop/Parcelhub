@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView } from 'react-native';
 import { useApp } from '../../context/AppContext';
-import { BrandHeader } from '../layout/BrandHeader';
-import { BottomNav } from '../layout/BottomNav';
 import { BackArrowIcon } from '../common/Icons';
 
 export const ConfirmOrderScreen: React.FC = () => {
@@ -26,18 +24,19 @@ export const ConfirmOrderScreen: React.FC = () => {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#ffffff' }} className="flex-1 bg-white px-5 pt-3 pb-2">
-      {/* Header */}
-      <BrandHeader showBack={true} backTarget="create_order" />
-
-      <View className="flex-row items-center justify-between mt-2 mb-2">
-        <Text className="text-xl font-bold text-gray-900">Confirm Order Details</Text>
+      {/* Screen Title & Navigation */}
+      <View className="flex-row items-center justify-between py-2 mb-2 border-b border-gray-100/90 pb-3">
+        <Text className="text-xl font-extrabold tracking-tight text-gray-900 leading-none">
+          Confirm Order Details
+        </Text>
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={() => navigateTo('create_order')}
-          className="flex-row items-center gap-1"
+          className="flex-row items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-100"
+          accessibilityLabel="Back to Upload"
         >
-          <Text className="text-sm font-semibold text-gray-700">Back</Text>
           <BackArrowIcon size={14} color="#374151" />
+          <Text className="text-xs font-semibold text-gray-700">Back</Text>
         </TouchableOpacity>
       </View>
 
@@ -143,16 +142,13 @@ export const ConfirmOrderScreen: React.FC = () => {
           activeOpacity={isConfirmed ? 0.8 : 1}
           disabled={!isConfirmed}
           onPress={handleSubmit}
-          className={`w-full mt-4 py-3.5 px-6 rounded-2xl shadow-md items-center mb-4 ${isConfirmed ? 'bg-[#215cd4] active:bg-[#194cb5]' : 'bg-gray-300 opacity-80'}`}
+          className={`w-full mt-4 py-3.5 px-6 rounded-2xl shadow-md items-center mb-6 ${isConfirmed ? 'bg-[#215cd4] active:bg-[#194cb5]' : 'bg-gray-300 opacity-80'}`}
         >
           <Text className="text-white font-bold text-sm tracking-wide">
             Submit Order &amp; Proceed to Payment
           </Text>
         </TouchableOpacity>
       </ScrollView>
-
-      {/* Bottom Nav */}
-      <BottomNav activeTab="home" />
     </View>
   );
 };
