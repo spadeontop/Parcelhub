@@ -43,6 +43,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     status: order.status,
     statusTimeline: order.statusTimeline,
     qrImageUrl: order.qrImageUrl,
+    claimInitiatedAt: order.claimInitiatedAt,
+    claimExpiresAt: order.claimExpiresAt,
+    isClaimActive: db.isClaimActive(order),
+    claimRemainingSeconds: db.getClaimRemainingSeconds(order),
   };
 
   const response: CustomerGetOrderRes = {

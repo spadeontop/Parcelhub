@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { authenticateRequest } from "@/app/lib/auth";
 import { jsonError, jsonSuccess } from "@/app/lib/response";
 import { db } from "@/app/lib/store";
-import { OrderId, StaffGetOrderRes } from "@/app/types/api";
+import { OrderId, StaffGetOrderRes, StaffOrderDetail } from "@/app/types/api";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -21,7 +21,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     return jsonError("Order not found", 404, "Not Found");
   }
 
-  const response: StaffGetOrderRes = {
+  const paidByStaff = order.courierPaidBy ? db.getStaffById(order.courierPaidBy) : null;
+  const courierPaidByName = paidByStaff ? `${paidByStaff.firstName} ${paidByStaff.lastName}` : undefined;
+
+  const orderDetail: StaffOrderDetail = {
     orderId: order.id,
     trackingId: order.trackingId,
     customer: order.recipientName,
@@ -29,10 +32,22 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     timestamp: order.timestamp,
     status: order.status,
     statusMessage:
-      order.status === "PAYMENT_REQUIRED"
+      order.status === "AWAITING_PARCEL"
+        ? "Awaiting parcel arrival"
+        : order.status === "READY_TO_CLAIM"
+        ? "Ready for customer pickup"
+        : order.status === "PAYMENT_REQUIRED"
         ? "Ready for staff verification"
         : order.status,
+    isClaimActive: db.isClaimActive(order),
+    claimRemainingSeconds: db.getClaimRemainingSeconds(order),
+    courierPaid: order.courierPaid,
+    courierPaidBy: order.courierPaidBy,
+    courierPaidByName,
+    courierPaidAt: order.courierPaidAt,
   };
+
+  const response: StaffGetOrderRes = orderDetail;
 
   return jsonSuccess(response);
 }

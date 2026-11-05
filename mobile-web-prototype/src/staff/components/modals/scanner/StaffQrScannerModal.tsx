@@ -21,6 +21,7 @@ export const StaffQrScannerModal: React.FC<StaffQrScannerModalProps> = React.mem
 }) => {
   const [manualInput, setManualInput] = useState<string>('');
   const [isWebcamActive, setIsWebcamActive] = useState<boolean>(false);
+  const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -48,11 +49,11 @@ export const StaffQrScannerModal: React.FC<StaffQrScannerModalProps> = React.mem
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.play().catch(() => {});
       }
       setIsWebcamActive(true);
+      showToast('Live camera viewfinder activated.');
     } catch {
-      showToast('Camera access unavailable or denied. Use manual Order ID lookup.');
+      showToast('Camera access denied or unavailable. Using manual lookup fallback.');
       setIsWebcamActive(false);
     }
   }, [showToast]);
@@ -60,10 +61,11 @@ export const StaffQrScannerModal: React.FC<StaffQrScannerModalProps> = React.mem
   const toggleWebcam = useCallback(() => {
     if (isWebcamActive) {
       stopWebcam();
+      showToast('Camera viewfinder paused.');
     } else {
       startWebcam();
     }
-  }, [isWebcamActive, startWebcam, stopWebcam]);
+  }, [isWebcamActive, startWebcam, stopWebcam, showToast]);
 
   const handleLookup = useCallback((code: string) => {
     if (!code || !code.trim()) {
@@ -116,8 +118,10 @@ export const StaffQrScannerModal: React.FC<StaffQrScannerModalProps> = React.mem
   const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setIsProcessing(true);
       showToast('Image uploaded. Analyzing QR matrix...');
       setTimeout(() => {
+        setIsProcessing(false);
         // Find matching demo order (default to ORD-408 or current)
         const target = orders.find((o) => o.id === 'ORD-408') || orders[0];
         if (target) {
@@ -130,6 +134,7 @@ export const StaffQrScannerModal: React.FC<StaffQrScannerModalProps> = React.mem
   useEffect(() => {
     if (isOpen) {
       setManualInput('');
+      setIsProcessing(false);
       if (inputRef.current) {
         inputRef.current.focus();
       }
@@ -171,22 +176,23 @@ export const StaffQrScannerModal: React.FC<StaffQrScannerModalProps> = React.mem
       </div>
 
       <div className="flex-1 overflow-y-auto p-5 space-y-4">
-        {/* Viewfinder Camera Area (30% secondary container, 10% blue accent laser/corners) */}
+        {/* Viewfinder Camera Area */}
         <StaffScannerViewfinder
           isWebcamActive={isWebcamActive}
           videoRef={videoRef}
           onToggleWebcam={toggleWebcam}
         />
 
-        {/* Upload QR Photo (Secondary Upload Target) */}
-        <StaffScannerUploadTarget onFileUpload={handleFileUpload} />
+        {/* Upload QR Photo */}
+        <StaffScannerUploadTarget onFileUpload={handleFileUpload} isLoading={isProcessing} />
 
-        {/* Internal Order ID Lookup (Auto-formats to XXX - XXX) */}
+        {/* Internal Order ID Lookup */}
         <StaffManualLookup
           manualInput={manualInput}
           inputRef={inputRef}
           onInputChange={handleManualInputChange}
           onLookup={handleLookup}
+          isLoading={isProcessing}
         />
 
         {/* Simulate QR Scan Action */}
@@ -224,4 +230,3 @@ export const StaffQrScannerModal: React.FC<StaffQrScannerModalProps> = React.mem
 });
 
 StaffQrScannerModal.displayName = 'StaffQrScannerModal';
-
