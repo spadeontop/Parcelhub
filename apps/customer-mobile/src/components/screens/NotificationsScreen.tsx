@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { useApp } from '../../context/AppContext';
-import { BrandHeader } from '../layout/BrandHeader';
 import { BottomNav } from '../layout/BottomNav';
 import Svg, { Path } from 'react-native-svg';
 
@@ -11,14 +10,15 @@ export const NotificationsScreen: React.FC = () => {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#ffffff' }} className="flex-1 bg-white px-5 pt-3 pb-2">
-      {/* Brand Header with Back to Home */}
-      <BrandHeader
-        title="Notifications"
-        subtitle="ACTIVITY UPDATES"
-        showBack={false}
-        showLogo={false}
-        showProfile={false}
-      />
+      {/* Screen Header Label */}
+      <View className="py-2 border-b border-gray-100/90 pb-3 mb-2">
+        <Text className="text-xl font-extrabold tracking-tight text-gray-900 leading-none">
+          Notifications
+        </Text>
+        <Text className="text-[10px] font-bold tracking-wider text-gray-500 uppercase mt-1">
+          ACTIVITY UPDATES
+        </Text>
+      </View>
 
       {/* Screen Title & Quick Actions */}
       <View className="flex-row items-center justify-between mt-2 mb-4">

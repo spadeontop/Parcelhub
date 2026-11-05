@@ -2,7 +2,6 @@ import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { useApp } from '../../context/AppContext';
 import { TransactionFilter } from '../../types';
-import { BrandHeader } from '../layout/BrandHeader';
 import { BottomNav } from '../layout/BottomNav';
 import { ChevronRightIcon } from '../common/Icons';
 import { getStatusLabel, getStatusTextColor, getStatusDotClass } from '../../utils/statusHelpers';
@@ -19,8 +18,15 @@ export const TransactionsScreen: React.FC = () => {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#ffffff' }} className="flex-1 bg-white px-5 pt-3 pb-2">
-      {/* Header */}
-      <BrandHeader title="Transactions" subtitle="ORDER HISTORY" showBack={false} showLogo={false} showProfile={false} />
+      {/* Screen Header Label */}
+      <View className="py-2 border-b border-gray-100/90 pb-3 mb-2">
+        <Text className="text-xl font-extrabold tracking-tight text-gray-900 leading-none">
+          Transactions
+        </Text>
+        <Text className="text-[10px] font-bold tracking-wider text-gray-500 uppercase mt-1">
+          ORDER HISTORY
+        </Text>
+      </View>
 
       {/* Filter Pills */}
       <View className="py-2">
