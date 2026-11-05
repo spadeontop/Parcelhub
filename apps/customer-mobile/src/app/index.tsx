@@ -13,6 +13,7 @@ import { RegisterScreen } from '../components/screens/RegisterScreen';
 import { MpinLoginScreen } from '../components/screens/MpinLoginScreen';
 import { MpinCreateScreen } from '../components/screens/MpinCreateScreen';
 import { ProfileScreen } from '../components/screens/ProfileScreen';
+import { FaqScreen } from '../components/screens/FaqScreen';
 
 export default function IndexPage() {
   const { activeScreen } = useApp();
@@ -42,6 +43,8 @@ export default function IndexPage() {
       return <MpinCreateScreen />;
     case 'profile':
       return <ProfileScreen />;
+    case 'faq':
+      return <FaqScreen />;
     default:
       return <HomeScreen />;
   }
