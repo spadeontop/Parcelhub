@@ -229,21 +229,25 @@ export const OrderDetailsScreen: React.FC = () => {
                 ORDER OVERVIEW
               </span>
 
+              {/* 1. Product */}
               <div className="flex items-center justify-between py-0.5">
                 <span className="text-xs text-gray-500 font-medium">Product</span>
                 <span className="text-sm font-bold text-gray-900">{order.product}</span>
               </div>
 
+              {/* 2. Price */}
+              <div className="flex items-center justify-between py-0.5">
+                <span className="text-xs text-gray-500 font-medium">Price</span>
+                <span className="text-xs font-bold font-mono text-gray-900">{order.codAmount || '—'}</span>
+              </div>
+
+              {/* 3. Recipient */}
               <div className="flex items-center justify-between py-0.5">
                 <span className="text-xs text-gray-500 font-medium">Recipient</span>
                 <span className="text-xs font-semibold text-gray-800">{order.recipient}</span>
               </div>
 
-              <div className="flex items-center justify-between py-0.5">
-                <span className="text-xs text-gray-500 font-medium">Paid Amount</span>
-                <span className="text-xs font-bold font-mono text-gray-900">{order.paidAmount || '—'}</span>
-              </div>
-
+              {/* 4. Tracking Number */}
               <div className="flex items-center justify-between py-0.5">
                 <span className="text-xs text-gray-500 font-medium">Tracking Number</span>
                 <div className="flex items-center gap-1.5 bg-gray-200 px-2 py-0.5 rounded-md">
@@ -260,8 +264,13 @@ export const OrderDetailsScreen: React.FC = () => {
                 </div>
               </div>
 
-              <div className="h-[1px] bg-gray-200 my-1" />
+              {/* 5. Paid Amount */}
+              <div className="flex items-center justify-between py-0.5">
+                <span className="text-xs text-gray-500 font-medium">Paid Amount</span>
+                <span className="text-xs font-bold font-mono text-gray-900">{order.paidAmount || '—'}</span>
+              </div>
 
+              {/* 6. Change */}
               <div className="flex items-center justify-between py-0.5">
                 <span className="text-xs text-gray-500 font-medium">Change</span>
                 <span className="text-xs font-bold font-mono text-gray-900">

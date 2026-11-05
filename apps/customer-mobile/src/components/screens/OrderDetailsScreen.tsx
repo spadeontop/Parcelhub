@@ -276,23 +276,27 @@ export const OrderDetailsScreen: React.FC = () => {
                 ORDER OVERVIEW
               </Text>
 
+              {/* 1. Product */}
               <View className="flex-row items-center justify-between py-1">
                 <Text className="text-xs text-gray-500 font-medium">Product</Text>
                 <Text className="text-sm font-bold text-gray-900">{order.product}</Text>
               </View>
 
+              {/* 2. Price */}
+              <View className="flex-row items-center justify-between py-1">
+                <Text className="text-xs text-gray-500 font-medium">Price</Text>
+                <Text className="text-xs font-bold font-mono text-gray-900">
+                  {order.codAmount || '—'}
+                </Text>
+              </View>
+
+              {/* 3. Recipient */}
               <View className="flex-row items-center justify-between py-1">
                 <Text className="text-xs text-gray-500 font-medium">Recipient</Text>
                 <Text className="text-xs font-semibold text-gray-800">{order.recipient}</Text>
               </View>
 
-              <View className="flex-row items-center justify-between py-1">
-                <Text className="text-xs text-gray-500 font-medium">Paid Amount</Text>
-                <Text className="text-xs font-bold font-mono text-gray-900">
-                  {order.paidAmount || '—'}
-                </Text>
-              </View>
-
+              {/* 4. Tracking Number */}
               <View className="flex-row items-center justify-between py-1">
                 <Text className="text-xs text-gray-500 font-medium">Tracking Number</Text>
                 <View className="flex-row items-center gap-1.5 bg-gray-200 px-2 py-0.5 rounded-md">
@@ -309,8 +313,15 @@ export const OrderDetailsScreen: React.FC = () => {
                 </View>
               </View>
 
-              <View className="h-[1px] bg-gray-200 my-2" />
+              {/* 5. Paid Amount */}
+              <View className="flex-row items-center justify-between py-1">
+                <Text className="text-xs text-gray-500 font-medium">Paid Amount</Text>
+                <Text className="text-xs font-bold font-mono text-gray-900">
+                  {order.paidAmount || '—'}
+                </Text>
+              </View>
 
+              {/* 6. Change */}
               <View className="flex-row items-center justify-between py-1">
                 <Text className="text-xs text-gray-500 font-medium">Change</Text>
                 <Text className="text-xs font-bold font-mono text-gray-900">
