@@ -87,114 +87,89 @@ export const OrderDetailsScreen: React.FC = () => {
   return (
     <div className="flex flex-col min-h-full bg-white pb-6 select-none">
       {isClaimActive ? (
-        /* Focused, clean, minimal Active Claim Counter Pass in 'one look' */
-        <div className="flex flex-col flex-1 animate-fade-in">
-          {/* Top Emerald Status Banner */}
-          <div className="bg-[#10b780] py-4 px-5 text-center text-white shadow-xs relative">
+        /* Full-screen Focused Claim Pass conforming to app's design language */
+        <div className="flex flex-col flex-1 animate-fade-in bg-white">
+          {/* Top Emerald Header Banner */}
+          <div className="bg-[#10b780] py-5 px-6 text-center text-white shadow-xs relative">
             <button
               type="button"
               onClick={() => navigateTo('home')}
-              className="absolute left-4 top-4 w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 border border-white/30 flex items-center justify-center text-white transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              className="absolute left-4 top-5 w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 border border-white/30 flex items-center justify-center text-white transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
               title="Return to Home"
               aria-label="Back to Home"
             >
               <BackArrowIcon className="w-4 h-4" />
             </button>
 
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 text-white text-xs font-bold font-mono">
-              <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
-              <span>Claim Window Active: {timeFormatted}</span>
+            {/* Countdown Badge */}
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 text-white text-xs font-semibold mb-2">
+              <span className="w-2 h-2 rounded-full bg-white" />
+              <span>Valid for: {timeFormatted}</span>
             </div>
 
-            <h2 className="text-xl font-bold tracking-tight mt-2">Staff counter unlocked!</h2>
+            <h2 className="text-2xl font-extrabold tracking-tight">Ready for Release</h2>
             <p className="text-xs text-white/90 leading-relaxed mt-1 max-w-xs mx-auto">
-              Claiming is now valid. Staff can now interact with your order and release your package.
+              Please wait by the counter. Show this screen only if requested by staff.
             </p>
           </div>
 
-          {/* Minimal Essential Content - Single Glance */}
-          <div className="px-4 pt-4 space-y-3.5 flex-1 flex flex-col justify-between">
-            <div className="space-y-3.5">
-              <p className="text-xs font-semibold text-center text-[#10b780]">
-                Present this pass or your pickup key to the counter staff.
-              </p>
+          {/* Screen Body */}
+          <div className="px-5 pt-4 pb-8 flex-1 flex flex-col items-center">
+            {/* Center QR & Ticket Card with dashed border */}
+            <div className="w-full max-w-xs rounded-3xl p-6 border-2 border-dashed border-slate-300 flex flex-col items-center bg-white">
+              <div className="w-52 h-52 bg-white p-3 rounded-2xl flex items-center justify-center border border-gray-100 shadow-xs">
+                <img
+                  src="./assets/sample_qr_code.png"
+                  alt="Release QR Code"
+                  className="w-full h-full object-contain"
+                />
+              </div>
 
-              {/* Minimal Essential Order Card */}
-              <div className="bg-[#f8fafc] rounded-2xl border border-gray-200 p-4 shadow-2xs space-y-3">
+              {/* Ticket box inside QR card */}
+              <div className="mt-4 w-full bg-blue-50/80 border border-blue-200/70 rounded-2xl p-3 flex items-center justify-between">
                 <div>
-                  <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block">Product</span>
-                  <h3 className="text-lg font-bold text-gray-900 leading-tight mt-0.5 break-words">{order.product}</h3>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 pt-2.5 border-t border-gray-200">
-                  <div>
-                    <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block">TICKET</span>
-                    <div className="flex items-center gap-1.5 mt-1">
-                      <span className="text-base font-black font-mono text-[#163b86] bg-blue-50 px-2.5 py-0.5 rounded-lg border border-blue-200/70">
-                        {order.alphanumericKey}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => copyToClipboard(order.alphanumericKey, 'Ticket')}
-                        className="p-1 text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1b65e8]"
-                        title="Copy Ticket"
-                        aria-label="Copy Ticket"
-                      >
-                        <CopyIcon className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block">Cash Change</span>
-                    <span className="text-lg font-black font-mono text-[#10b780] block mt-1">
-                      {order.change || '₱0.00'}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="pt-2 border-t border-gray-200 flex items-center justify-between text-xs text-gray-500">
-                  <span>
-                    Tracking ID: <span className="font-mono font-medium text-gray-700">{order.trackingNumber}</span>
+                  <span className="text-[10px] font-bold text-blue-900 uppercase block">
+                    TICKET
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => copyToClipboard(order.trackingNumber, 'Tracking Number')}
-                    className="p-0.5 text-gray-400 hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1b65e8]"
-                    title="Copy Tracking Number"
-                    aria-label="Copy Tracking Number"
-                  >
-                    <CopyIcon className="w-3.5 h-3.5" />
-                  </button>
+                  <span className="text-base font-black font-mono text-[#163b86]">
+                    {order.alphanumericKey}
+                  </span>
                 </div>
-              </div>
-
-              {/* View QR Code Action Button */}
-              <button
-                type="button"
-                onClick={() => navigateTo('qr_screen')}
-                className="w-full py-3.5 px-6 rounded-2xl bg-[#1b65e8] hover:bg-[#1652be] text-white font-bold text-sm tracking-wide transition-all shadow-md btn-press flex items-center justify-center gap-2 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1b65e8]"
-              >
-                <span>View QR Code</span>
-                <QrCodeIcon className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Footer Hub Info & Return to Home */}
-            <div className="pt-3 pb-1 space-y-2">
-              <div className="text-center text-xs text-gray-500">
-                <span>📍 Lily’s Catering Hub • Yati, Liloan</span>
-              </div>
-              <div className="text-center">
                 <button
                   type="button"
-                  onClick={() => navigateTo('home')}
-                  className="text-sm font-semibold text-gray-700 hover:text-black cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1b65e8]"
+                  onClick={() => copyToClipboard(order.alphanumericKey, 'Ticket')}
+                  className="p-1.5 rounded-lg bg-white border border-blue-100 hover:bg-gray-50 text-[#163b86] transition-colors cursor-pointer"
+                  title="Copy Ticket"
+                  aria-label="Copy Ticket"
                 >
-                  Return to Home
+                  <CopyIcon className="w-4 h-4" />
                 </button>
               </div>
             </div>
+
+            {/* Quick Summary Card: Item & Cash Change */}
+            <div className="w-full max-w-xs mt-3.5 rounded-2xl border border-gray-100 bg-[#fafbfd] p-4">
+              <div className="flex items-center justify-between py-1">
+                <span className="text-xs font-medium text-gray-500">Item</span>
+                <span className="text-sm font-bold text-gray-900">{order.product}</span>
+              </div>
+
+              <div className="flex items-center justify-between py-1 mt-1">
+                <span className="text-xs font-medium text-gray-500">Cash Change</span>
+                <span className="text-base font-black font-mono text-[#10b780]">
+                  {order.change || '₱0.00'}
+                </span>
+              </div>
+            </div>
+
+            {/* Return to Home Button */}
+            <button
+              type="button"
+              onClick={() => navigateTo('home')}
+              className="mt-5 py-2 px-4 text-xs font-semibold text-gray-600 hover:text-black transition-colors cursor-pointer"
+            >
+              Return to Home
+            </button>
           </div>
         </div>
       ) : (

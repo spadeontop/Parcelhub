@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import QRCode from 'react-native-qrcode-svg';
 import { useApp } from '../../context/AppContext';
 import { BackArrowIcon, CopyIcon, QrCodeIcon } from '../common/Icons';
 
@@ -114,118 +115,100 @@ export const OrderDetailsScreen: React.FC = () => {
   return (
     <View style={{ flex: 1, backgroundColor: '#ffffff' }} className="flex-1 bg-white">
       {isClaimActive ? (
-        /* Focused Active Claim Counter Pass */
+        /* Full-screen Focused Claim Pass conforming to app's design language */
         <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-          {/* Top Emerald Status Banner */}
-          <View className="bg-[#10b780] py-4 px-5 items-center relative">
+          {/* Top Emerald Header Banner */}
+          <View className="bg-[#10b780] py-5 px-6 items-center relative">
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={() => navigateTo('home')}
-              className="absolute left-4 top-4 w-8 h-8 rounded-full bg-white/20 border border-white/30 items-center justify-center"
+              className="absolute left-4 top-5 w-8 h-8 rounded-full bg-white/20 border border-white/30 items-center justify-center"
               accessibilityLabel="Back to Home"
             >
               <BackArrowIcon size={16} color="#ffffff" />
             </TouchableOpacity>
 
-            <View className="flex-row items-center gap-2 px-3 py-1 rounded-full bg-white/20">
+            {/* Countdown Badge */}
+            <View className="flex-row items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 mb-2">
               <View className="w-2 h-2 rounded-full bg-white" />
-              <Text className="text-white text-xs font-bold font-mono">
-                Claim Window Active: {timeFormatted}
+              <Text className="text-white text-xs font-semibold">
+                Valid for: {timeFormatted}
               </Text>
             </View>
 
-            <Text className="text-xl font-bold text-white tracking-tight mt-2 text-center">
-              Staff counter unlocked!
+            <Text className="text-2xl font-extrabold text-white tracking-tight text-center">
+              Ready for Release
             </Text>
             <Text className="text-xs text-white/90 text-center leading-relaxed mt-1 max-w-xs">
-              Claiming is now valid. Staff can now interact with your order and release your package.
+              Please wait by the counter. Show this screen only if requested by staff.
             </Text>
           </View>
 
-          {/* Minimal Essential Content - Single Glance */}
-          <View className="px-4 pt-4 pb-6 space-y-3.5">
-            <Text className="text-xs font-semibold text-center text-[#10b780]">
-              Present this pass or your pickup key to the counter staff.
-            </Text>
-
-            {/* Minimal Essential Order Card */}
-            <View className="bg-[#f8fafc] rounded-2xl border border-gray-200 p-4 shadow-sm mb-3.5">
-              <Text className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
-                Product
-              </Text>
-              <Text className="text-lg font-bold text-gray-900 leading-tight mt-0.5">
-                {order.product}
-              </Text>
-
-              <View className="flex-row justify-between pt-2.5 border-t border-gray-200 mt-2.5">
-                <View>
-                  <Text className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
-                    TICKET
-                  </Text>
-                  <View className="flex-row items-center gap-1.5 mt-1">
-                    <Text className="text-base font-black font-mono text-[#163b86] bg-blue-50 px-2.5 py-0.5 rounded-lg border border-blue-200">
-                      {order.alphanumericKey}
-                    </Text>
-                    <TouchableOpacity
-                      onPress={() => copyToClipboard(order.alphanumericKey, 'Ticket')}
-                      className="p-1 rounded-lg"
-                      accessibilityLabel="Copy Ticket"
-                    >
-                      <CopyIcon size={14} color="#9ca3af" />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-
-                <View className="items-end">
-                  <Text className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
-                    Cash Change
-                  </Text>
-                  <Text className="text-lg font-black font-mono text-[#10b780] mt-1">
-                    {order.change || '₱0.00'}
-                  </Text>
-                </View>
+          {/* Screen Body */}
+          <View className="px-5 pt-4 pb-8 items-center">
+            {/* Center QR & Ticket Card with dashed border */}
+            <View
+              style={{
+                borderStyle: 'dashed',
+                borderWidth: 1.5,
+                borderColor: '#cbd5e1',
+              }}
+              className="w-full max-w-xs rounded-3xl p-6 items-center bg-white"
+            >
+              <View className="w-52 h-52 bg-white p-3 rounded-2xl items-center justify-center border border-gray-100 shadow-xs">
+                <QRCode
+                  value={order.alphanumericKey || order.refCode || 'PARCELHUB-RELEASE'}
+                  size={180}
+                  color="#0f172a"
+                  backgroundColor="#ffffff"
+                />
               </View>
 
-              <View className="pt-2 border-t border-gray-200 mt-2 flex-row items-center justify-between">
-                <Text className="text-xs text-gray-500">
-                  Tracking ID: <Text className="font-mono font-medium text-gray-700">{order.trackingNumber}</Text>
-                </Text>
+              {/* Ticket box inside QR card */}
+              <View className="mt-4 w-full bg-blue-50/80 border border-blue-200/70 rounded-2xl p-3 flex-row items-center justify-between">
+                <View>
+                  <Text className="text-[10px] font-bold text-blue-900 uppercase">
+                    TICKET
+                  </Text>
+                  <Text className="text-base font-black font-mono text-[#163b86]">
+                    {order.alphanumericKey}
+                  </Text>
+                </View>
                 <TouchableOpacity
-                  onPress={() => copyToClipboard(order.trackingNumber, 'Tracking Number')}
-                  className="p-0.5"
-                  accessibilityLabel="Copy Tracking Number"
+                  onPress={() => copyToClipboard(order.alphanumericKey, 'Ticket')}
+                  className="p-1.5 rounded-lg bg-white border border-blue-100"
+                  accessibilityLabel="Copy Ticket"
                 >
-                  <CopyIcon size={14} color="#9ca3af" />
+                  <CopyIcon size={16} color="#163b86" />
                 </TouchableOpacity>
               </View>
             </View>
 
-            {/* View QR Code Action Button */}
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={() => navigateTo('qr_screen')}
-              className="w-full py-3.5 px-6 rounded-2xl bg-[#1b65e8] active:bg-[#1652be] shadow-md flex-row items-center justify-center gap-2 mb-3"
-            >
-              <Text className="text-white font-bold text-sm tracking-wide">
-                View QR Code
-              </Text>
-              <QrCodeIcon size={20} color="#ffffff" />
-            </TouchableOpacity>
+            {/* Quick Summary Card: Item & Cash Change */}
+            <View className="w-full max-w-xs mt-3.5 rounded-2xl border border-gray-100 bg-[#fafbfd] p-4">
+              <View className="flex-row items-center justify-between py-1">
+                <Text className="text-xs font-medium text-gray-500">Item</Text>
+                <Text className="text-sm font-bold text-gray-900">{order.product}</Text>
+              </View>
 
-            {/* Footer Hub Info & Return to Home */}
-            <View className="pt-3 pb-1">
-              <Text className="text-center text-xs text-gray-500 mb-2">
-                📍 Lily’s Catering Hub • Yati, Liloan
-              </Text>
-              <TouchableOpacity
-                onPress={() => navigateTo('home')}
-                className="items-center py-1"
-              >
-                <Text className="text-sm font-semibold text-gray-700">
-                  Return to Home
+              <View className="flex-row items-center justify-between py-1 mt-1">
+                <Text className="text-xs font-medium text-gray-500">Cash Change</Text>
+                <Text className="text-base font-black font-mono text-[#10b780]">
+                  {order.change || '₱0.00'}
                 </Text>
-              </TouchableOpacity>
+              </View>
             </View>
+
+            {/* Return to Home Button */}
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => navigateTo('home')}
+              className="mt-5 py-2 px-4"
+            >
+              <Text className="text-xs font-semibold text-gray-600">
+                Return to Home
+              </Text>
+            </TouchableOpacity>
           </View>
         </ScrollView>
       ) : (
