@@ -216,8 +216,6 @@ export interface AppContextType {
   closePodModal: () => void;
   openProofOfDeliveryModal: () => void;
   closeProofOfDeliveryModal: () => void;
-  openEscrowModal: () => void;
-  closeEscrowModal: () => void;
   openNotificationsModal: () => void;
   closeNotificationsModal: () => void;
   markAllNotificationsAsRead: () => void;
@@ -258,7 +256,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Modals
   const [isMpinModalOpen, setIsMpinModalOpen] = useState<boolean>(false);
   const [isPodModalOpen, setIsPodModalOpen] = useState<boolean>(false);
-  const [isEscrowModalOpen, setIsEscrowModalOpen] = useState<boolean>(false);
   const [isNotificationsModalOpen, setIsNotificationsModalOpen] = useState<boolean>(false);
 
   // Toast
@@ -390,9 +387,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const openProofOfDeliveryModal = useCallback(() => setIsPodModalOpen(true), []);
   const closeProofOfDeliveryModal = useCallback(() => setIsPodModalOpen(false), []);
 
-  const openEscrowModal = useCallback(() => setIsEscrowModalOpen(true), []);
-  const closeEscrowModal = useCallback(() => setIsEscrowModalOpen(false), []);
-
   const openNotificationsModal = useCallback(() => setIsNotificationsModalOpen(true), []);
   const closeNotificationsModal = useCallback(() => setIsNotificationsModalOpen(false), []);
 
@@ -404,7 +398,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (res.success && res.data) {
         setOrders((prev) => prev.map((o) => (o.id === orderId ? res.data! : o)));
         showToast(res.message);
-        openMpinModal();
+        // openMpinModal removed on initiate claim
       } else {
         showToast(res.message);
       }
@@ -627,7 +621,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         claimConfirmed,
         isMpinModalOpen,
         isPodModalOpen,
-        isEscrowModalOpen,
         isNotificationsModalOpen,
         refreshToken,
         authToken,
@@ -655,8 +648,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         closePodModal,
         openProofOfDeliveryModal,
         closeProofOfDeliveryModal,
-        openEscrowModal,
-        closeEscrowModal,
         openNotificationsModal,
         closeNotificationsModal,
         markAllNotificationsAsRead,

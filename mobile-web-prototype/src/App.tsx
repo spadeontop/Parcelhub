@@ -9,6 +9,7 @@ import { PaymentVerificationScreen } from './components/screens/PaymentVerificat
 import { QrScreen } from './components/screens/QrScreen';
 import { OrderDetailsScreen } from './components/screens/OrderDetailsScreen';
 import { TransactionsScreen } from './components/screens/TransactionsScreen';
+import { NotificationsScreen } from './components/screens/NotificationsScreen';
 import { StaffTerminalScreen } from './components/screens/StaffTerminalScreen';
 import { LoginScreen } from './components/screens/LoginScreen';
 import { RegisterScreen } from './components/screens/RegisterScreen';
@@ -41,6 +42,8 @@ const ScreenContent: React.FC = () => {
       return <OrderDetailsScreen />;
     case 'transactions':
       return <TransactionsScreen />;
+    case 'notifications':
+      return <NotificationsScreen />;
     case 'staff_ui':
       return <StaffTerminalScreen />;
     case 'login':

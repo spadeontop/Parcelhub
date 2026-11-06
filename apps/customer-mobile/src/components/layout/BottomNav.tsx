@@ -1,18 +1,19 @@
 import React from 'react';
 import { View, TouchableOpacity, Text } from 'react-native';
 import { useApp } from '../../context/AppContext';
-import { HomeIcon, OrdersIcon, HelpIcon, ProfileIcon } from '../common/Icons';
+import { HomeIcon, OrdersIcon, BellIcon, ProfileIcon } from '../common/Icons';
 
 interface BottomNavProps {
-  activeTab?: 'home' | 'transactions' | 'help' | 'faq' | 'profile';
+  activeTab?: 'home' | 'transactions' | 'notifications' | 'profile';
 }
 
 export const BottomNav: React.FC<BottomNavProps> = ({ activeTab = 'home' }) => {
-  const { navigateTo } = useApp();
-  const isHelpActive = activeTab === 'help' || activeTab === 'faq';
+  const { navigateTo, notifications } = useApp();
+  const unreadCount = notifications.filter((n) => n.unread).length;
 
   return (
     <View className="h-16 rounded-full bg-white/95 flex-row items-center justify-around px-5 border border-gray-100 shadow-lg mt-auto mb-2">
+      {/* 1. Home */}
       <TouchableOpacity
         activeOpacity={0.7}
         onPress={() => navigateTo('home')}
@@ -30,6 +31,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab = 'home' }) => {
         )}
       </TouchableOpacity>
 
+      {/* 2. Transactions */}
       <TouchableOpacity
         activeOpacity={0.7}
         onPress={() => navigateTo('transactions')}
@@ -47,23 +49,32 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab = 'home' }) => {
         )}
       </TouchableOpacity>
 
+      {/* 3. Notifications */}
       <TouchableOpacity
         activeOpacity={0.7}
-        onPress={() => navigateTo('faq')}
-        className="items-center justify-center p-2"
-        accessibilityLabel="Help"
+        onPress={() => navigateTo('notifications')}
+        className="items-center justify-center p-2 relative"
+        accessibilityLabel="Notifications"
       >
-        <HelpIcon
+        <BellIcon
           size={22}
-          color={isHelpActive ? '#215cd4' : '#9ca3af'}
+          color={activeTab === 'notifications' ? '#215cd4' : '#9ca3af'}
         />
-        {isHelpActive ? (
+        {unreadCount > 0 && (
+          <View className="min-w-[16px] h-4 px-1 rounded-full bg-red-500 absolute top-1.5 right-1 items-center justify-center border border-white">
+            <Text className="text-[9px] font-bold text-white text-center leading-none">
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </Text>
+          </View>
+        )}
+        {activeTab === 'notifications' ? (
           <View className="w-1.5 h-1.5 rounded-full bg-[#215cd4] mt-1" />
         ) : (
           <View className="w-1.5 h-1.5 mt-1 opacity-0" />
         )}
       </TouchableOpacity>
 
+      {/* 4. Profile */}
       <TouchableOpacity
         activeOpacity={0.7}
         onPress={() => navigateTo('profile')}
@@ -83,4 +94,3 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab = 'home' }) => {
     </View>
   );
 };
-

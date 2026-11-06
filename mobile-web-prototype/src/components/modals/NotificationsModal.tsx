@@ -29,12 +29,13 @@ export const NotificationsModal: React.FC = () => {
     >
       <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl text-gray-900 animate-slide-up">
         <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center">
             <h2 id="notif-title" className="text-base font-bold text-gray-900">
               Notifications
             </h2>
             {unreadCount > 0 && (
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-600">
+              <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#eff6ff] border border-[#dbeafe] text-[#1b65e8]">
+                <span className="w-1 h-1 rounded-full bg-[#1b65e8]" />
                 {unreadCount} New
               </span>
             )}

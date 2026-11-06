@@ -8,6 +8,7 @@ import { PaymentVerificationScreen } from '../components/screens/PaymentVerifica
 import { QrScreen } from '../components/screens/QrScreen';
 import { OrderDetailsScreen } from '../components/screens/OrderDetailsScreen';
 import { TransactionsScreen } from '../components/screens/TransactionsScreen';
+import { NotificationsScreen } from '../components/screens/NotificationsScreen';
 import { LoginScreen } from '../components/screens/LoginScreen';
 import { RegisterScreen } from '../components/screens/RegisterScreen';
 import { MpinLoginScreen } from '../components/screens/MpinLoginScreen';
@@ -33,6 +34,8 @@ export default function IndexPage() {
       return <OrderDetailsScreen />;
     case 'transactions':
       return <TransactionsScreen />;
+    case 'notifications':
+      return <NotificationsScreen />;
     case 'login':
       return <LoginScreen />;
     case 'register':

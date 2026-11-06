@@ -92,38 +92,43 @@ export const QrScreen: React.FC = () => {
       <BrandHeader showBack={true} backTarget="home" />
 
       {/* Center QR Card */}
-      <div className="mt-4 flex flex-col items-center">
-        <div className="p-6 rounded-3xl bg-white border border-gray-200 shadow-sm flex flex-col items-center">
+      <div className="flex-1 flex flex-col items-center justify-center py-4">
+        <div className="w-full max-w-xs p-6 rounded-3xl bg-white border border-gray-200 shadow-sm flex flex-col items-center">
           <div className="w-52 h-52 bg-white p-2 rounded-2xl flex items-center justify-center">
             <img src="./assets/sample_qr_code.png" alt="Parcelhub QR Code" className="w-full h-full object-contain" />
           </div>
-        </div>
 
-        {/* Details below QR */}
-        <h3 className="text-xl font-bold text-gray-900 mt-5">{order.product}</h3>
+          {/* Ticket box inside QR card container */}
+          <div className="mt-4 w-full bg-blue-50/80 border border-blue-200/70 rounded-2xl p-3 flex items-center justify-between">
+            <div>
+              <span className="text-[10px] font-bold text-blue-900 uppercase block">
+                TICKET
+              </span>
+              <span className="text-base font-black font-mono text-[#163b86]">
+                {order.alphanumericKey}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => copyToClipboard(order.alphanumericKey, 'Ticket')}
+              className="p-1.5 rounded-lg bg-white border border-blue-100 hover:bg-gray-50 text-[#163b86] transition-colors cursor-pointer"
+              title="Copy Ticket"
+              aria-label="Copy Ticket"
+            >
+              <CopyIcon className="w-4 h-4" />
+            </button>
+          </div>
 
-        <div className="flex items-center justify-center gap-2 mt-1">
-          <p className="text-base font-mono font-bold text-[#163b86] tracking-wider bg-blue-50 px-3 py-1 rounded-xl border border-blue-200/60">
-            {order.alphanumericKey}
+          <p className="text-[11px] text-gray-400 text-center mt-3 leading-relaxed">
+            Present this pass at Lily’s Catering Hub counter for scanning &amp; package release.
           </p>
-          <button
-            type="button"
-            onClick={() => copyToClipboard(order.alphanumericKey, 'Counter Key')}
-            className="p-1.5 rounded-xl bg-white border border-gray-200 hover:bg-gray-100 text-gray-700 transition-colors shadow-2xs"
-            title="Copy Key"
-            aria-label="Copy Key"
-          >
-            <CopyIcon className="w-4 h-4" />
-          </button>
         </div>
-
-        <p className="text-xs text-gray-500 mt-2">Show this QR code at the hub counter to pay or claim</p>
 
         {/* Save as Photo Button */}
         <button
           type="button"
           onClick={handleSavePhoto}
-          className="w-full max-w-xs mt-6 py-3.5 px-6 rounded-2xl bg-[#215cd4] hover:bg-[#194cb5] text-white font-bold text-sm tracking-wide transition-all shadow-md btn-press flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#215cd4]"
+          className="w-full max-w-xs mt-4 py-3.5 px-6 rounded-2xl bg-[#215cd4] hover:bg-[#194cb5] text-white font-bold text-sm tracking-wide transition-all shadow-md btn-press flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#215cd4]"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -132,7 +137,7 @@ export const QrScreen: React.FC = () => {
         </button>
 
         {/* Return to Home Link */}
-        <div className="text-center mt-4">
+        <div className="text-center mt-3">
           <button
             type="button"
             onClick={() => navigateTo('home')}

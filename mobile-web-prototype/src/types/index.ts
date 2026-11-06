@@ -12,6 +12,7 @@ export type ScreenId =
   | 'qr_screen'
   | 'order_details'
   | 'transactions'
+  | 'notifications'
   | 'staff_ui'
   | 'login'
   | 'register'

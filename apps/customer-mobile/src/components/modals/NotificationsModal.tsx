@@ -25,13 +25,17 @@ export const NotificationsModal: React.FC = () => {
       <View className="flex-1 bg-black/60 justify-center items-center px-4">
         <View className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl max-h-[80%]">
           <View className="flex-row items-center justify-between pb-3 border-b border-gray-100">
-            <View className="flex-row items-center gap-2">
+            <View className="flex-row items-center">
               <Text className="text-base font-bold text-gray-900">
                 Notifications
               </Text>
               {unreadCount > 0 && (
-                <View className="px-2 py-0.5 rounded-full bg-red-100">
-                  <Text className="text-[10px] font-bold text-red-600">
+                <View
+                  style={{ marginLeft: 8 }}
+                  className="flex-row items-center px-2 py-0.5 rounded-full bg-[#eff6ff] border border-[#dbeafe]"
+                >
+                  <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: '#1b65e8', marginRight: 4 }} />
+                  <Text className="text-[10px] font-bold text-[#1b65e8]">
                     {unreadCount} New
                   </Text>
                 </View>
