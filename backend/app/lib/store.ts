@@ -554,12 +554,25 @@ class InMemoryStore {
     return this.orders.get(id);
   }
 
-  public initializeOrder(customerId: CustomerId, imageUrl: string): StoredOrder {
+  public getActiveOrderByTrackingId(trackingId: string, excludeOrderId?: OrderId): StoredOrder | undefined {
+    const normalized = trackingId.trim().toUpperCase();
+    if (!normalized) return undefined;
+
+    return Array.from(this.orders.values()).find((order) => {
+      if (excludeOrderId && order.id === excludeOrderId) return false;
+      const isSameTracking = order.trackingId.trim().toUpperCase() === normalized;
+      const isActive = order.status !== "CLAIMED" && order.status !== "CANCELLED";
+      return isSameTracking && isActive;
+    });
+  }
+
+  public initializeOrder(customerId: CustomerId, imageUrl: string, trackingId?: string): StoredOrder {
     const id: OrderId = `ORD-${this.orderSeq++}`;
     const now: ISO8601Timestamp = new Date().toISOString();
+    const assignedTrackingId = trackingId?.trim() || `PH${Math.floor(1000000000000 + Math.random() * 9000000000000)}H`;
     const newOrder: StoredOrder = {
       id,
-      trackingId: `PH${Math.floor(1000000000000 + Math.random() * 9000000000000)}H`,
+      trackingId: assignedTrackingId,
       productName: "Initialized Order",
       recipientName: "Customer",
       price: 0,
@@ -684,6 +697,7 @@ class InMemoryStore {
   public attachProofPhoto(id: OrderId, imageUrl: string, staffId: StaffId): StoredOrder | null {
     const order = this.orders.get(id);
     if (!order) return null;
+    if (!order.courierPaid) return null;
     order.proofImageUrl = imageUrl;
     order.status = "READY_TO_CLAIM";
     order.statusTimeline.push({

@@ -16,7 +16,18 @@ export async function POST(request: NextRequest) {
       return jsonError("imageUrl is required to initialize an order", 400);
     }
 
-    const order = db.initializeOrder(auth.session.userId as CustomerId, body.imageUrl);
+    if (body.trackingId) {
+      const activeDuplicate = db.getActiveOrderByTrackingId(body.trackingId);
+      if (activeDuplicate) {
+        return jsonError(
+          `Tracking ID "${body.trackingId}" is already registered to an active order (${activeDuplicate.id}). Tracking IDs must be unique across active orders.`,
+          409,
+          "DuplicateTrackingId"
+        );
+      }
+    }
+
+    const order = db.initializeOrder(auth.session.userId as CustomerId, body.imageUrl, body.trackingId);
 
     const response: CustomerInitOrderRes = {
       orderId: order.id,
