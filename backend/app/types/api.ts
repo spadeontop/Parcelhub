@@ -135,6 +135,7 @@ export type CustomerGetOrderRes = StandardSuccessResponse & {
 // POST /api/customer/orders/initialize
 export type CustomerInitOrderReq = {
   readonly imageUrl: string;
+  readonly trackingId?: string;
 };
 
 export type CustomerInitOrderRes = StandardSuccessResponse & {
@@ -187,6 +188,7 @@ export type StaffOrderSummary = {
   readonly id: OrderId;
   readonly trackingId: string;
   readonly customer: string;
+  readonly amountToPay: number;
   readonly amountReceived: number;
   readonly change: number;
   readonly timestamp: ISO8601Timestamp;

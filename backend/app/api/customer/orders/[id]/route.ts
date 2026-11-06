@@ -88,6 +88,17 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       return jsonError("Order payload is required", 400);
     }
 
+    if (body.order.trackingId) {
+      const activeDuplicate = db.getActiveOrderByTrackingId(body.order.trackingId, id as OrderId);
+      if (activeDuplicate) {
+        return jsonError(
+          `Tracking ID "${body.order.trackingId}" is already registered to an active order (${activeDuplicate.id}). Tracking IDs must be unique across active orders.`,
+          409,
+          "DuplicateTrackingId"
+        );
+      }
+    }
+
     db.updateOrder(id as OrderId, body.order, auth.session.userId as CustomerId);
 
     const response: CustomerUpdateOrderRes = {
