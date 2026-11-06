@@ -73,6 +73,15 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     return jsonError("Unauthorized access to modify this order", 403, "Forbidden");
   }
 
+  // Customer can ONLY edit orders when unpaid/inactive (PENDING_INITIALIZATION or PAYMENT_REQUIRED)
+  if (order.status !== "PENDING_INITIALIZATION" && order.status !== "PAYMENT_REQUIRED") {
+    return jsonError(
+      `Order cannot be edited in its current status (${order.status}). Edits are only permitted while unpaid/inactive.`,
+      400,
+      "OrderNotEditable"
+    );
+  }
+
   try {
     const body = (await request.json()) as CustomerUpdateOrderReq;
     if (!body.order) {

@@ -171,6 +171,17 @@ async function runTests() {
   assert.strictEqual(updateOrderRes.status, 200);
   console.log(`✔ PUT /api/customer/orders/{id} (200 OK)`);
 
+  // 1.8b Verify Edit Guard: Cannot edit once order is paid / not unpaid
+  // We test editing an active/claimable order (ORD-402 is READY_TO_CLAIM)
+  const rejectEditReq = makeReq("http://localhost:3000/api/customer/orders/ORD-402", {
+    method: "PUT",
+    token: customerAuthToken,
+    body: { order: { productName: "Hacked Update" } },
+  });
+  const rejectEditRes = await updateCustomerOrder(rejectEditReq, { params: Promise.resolve({ id: "ORD-402" }) });
+  assert.strictEqual(rejectEditRes.status, 400);
+  console.log("✔ PUT /api/customer/orders/{id} rejected for non-unpaid order (400 OrderNotEditable)");
+
   // 1.9 Claim Order (using ORD-402 which is READY_TO_CLAIM)
   const claimOrderReq = makeReq("http://localhost:3000/api/customer/orders/ORD-402/claim", {
     method: "POST",
@@ -278,6 +289,16 @@ async function runTests() {
   const attachPhotoRes = await attachPhoto(attachPhotoReq, { params: Promise.resolve({ id: orderToActivate }) });
   assert.strictEqual(attachPhotoRes.status, 200);
   console.log("✔ POST /api/staff/orders/{id}/make-claimable/attach-photo (200 OK)");
+
+  // 2.6b Customer initiates claim pass (required before staff release)
+  await customerClaimOrder(
+    makeReq(`http://localhost:3000/api/customer/orders/${orderToActivate}/claim`, {
+      method: "POST",
+      token: customerAuthToken,
+      body: {},
+    }),
+    { params: Promise.resolve({ id: orderToActivate }) }
+  );
 
   // 2.7 Staff Claim
   const staffClaimReq = makeReq(`http://localhost:3000/api/staff/orders/${orderToActivate}/claim`, {
