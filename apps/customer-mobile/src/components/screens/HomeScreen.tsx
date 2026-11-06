@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, RefreshControl } from 'react-native';
 import { useApp } from '../../context/AppContext';
 import { BrandHeader } from '../layout/BrandHeader';
 import { BottomNav } from '../layout/BottomNav';
@@ -8,7 +8,14 @@ import { getStatusLabel, getStatusTextColor, getStatusDotClass } from '../../uti
 import Svg, { Path } from 'react-native-svg';
 
 export const HomeScreen: React.FC = () => {
-  const { hasOrders, orders, navigateTo } = useApp();
+  const { hasOrders, orders, navigateTo, refetchOrders } = useApp();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await refetchOrders();
+    setRefreshing(false);
+  };
 
   const isOrderListEmpty = !hasOrders || orders.length === 0;
   const recentOrders = orders.slice(0, 5);
@@ -22,7 +29,11 @@ export const HomeScreen: React.FC = () => {
       {/* Brand Header */}
       <BrandHeader />
 
-      <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        className="flex-1"
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#215cd4']} />}
+      >
         {/* Welcome Dark Card */}
         <View className="mt-3 rounded-3xl bg-[#181b20] p-5 shadow-lg">
           {/* Status Pills inside Card (above Welcome) */}

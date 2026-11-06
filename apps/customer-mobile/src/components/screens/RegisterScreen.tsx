@@ -58,10 +58,10 @@ export const RegisterScreen: React.FC = () => {
       await registerCustomer({
         password,
         email: email.trim(),
-        firstname: firstName.trim(),
-        lastname: lastName.trim(),
-        middleinitial: middleInitial.trim() || undefined,
-        phonenumber: phone.trim(),
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        middleInitial: middleInitial.trim() || undefined,
+        phoneNumber: phone.trim(),
       });
     } catch (err: any) {
       showToast(err?.message || 'Registration failed. Please check your information.');

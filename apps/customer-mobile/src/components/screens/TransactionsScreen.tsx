@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, RefreshControl } from 'react-native';
 import { useApp } from '../../context/AppContext';
 import { TransactionFilter } from '../../types';
 import { BottomNav } from '../layout/BottomNav';
@@ -9,7 +9,14 @@ import { getStatusLabel, getStatusTextColor, getStatusDotClass } from '../../uti
 const FILTERS: TransactionFilter[] = ['ALL', 'READY_TO_CLAIM', 'AWAITING_PARCEL', 'PAYMENT_REQUIRED', 'CLAIMED'];
 
 export const TransactionsScreen: React.FC = () => {
-  const { orders, transactionFilter, setTransactionFilter, navigateTo } = useApp();
+  const { orders, transactionFilter, setTransactionFilter, navigateTo, refetchOrders } = useApp();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await refetchOrders(transactionFilter);
+    setRefreshing(false);
+  };
 
   const filteredOrders =
     transactionFilter === 'ALL'
@@ -55,7 +62,11 @@ export const TransactionsScreen: React.FC = () => {
       </View>
 
       {/* Orders List Container */}
-      <ScrollView showsVerticalScrollIndicator={false} className="flex-1 mt-2">
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        className="flex-1 mt-2"
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#215cd4']} />}
+      >
         <View className="rounded-3xl bg-[#f8f8f8] border border-gray-100 p-4 mb-4">
           {filteredOrders.length === 0 ? (
             <View className="py-12 items-center">

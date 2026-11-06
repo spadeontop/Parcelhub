@@ -16,9 +16,9 @@ export const MpinModal: React.FC = () => {
   const handleDigit = useCallback(
     (digit: string) => {
       setMpin((prev) => {
-        if (prev.length < 6) {
+        if (prev.length < 4) {
           const next = prev + digit;
-          if (next.length === 6) {
+          if (next.length === 4) {
             setTimeout(() => {
               completeMpinClaim();
             }, 300);
@@ -54,7 +54,7 @@ export const MpinModal: React.FC = () => {
                 Authorize Release
               </Text>
               <Text className="text-xs text-gray-500">
-                Enter your 6-digit MPIN to confirm handover
+                Enter your 4-digit MPIN to confirm handover
               </Text>
             </View>
             <TouchableOpacity
@@ -65,12 +65,12 @@ export const MpinModal: React.FC = () => {
             </TouchableOpacity>
           </View>
 
-          {/* 6 MPIN Indicators */}
-          <View className="flex-row items-center justify-center gap-3.5 py-5">
-            {[0, 1, 2, 3, 4, 5].map((idx) => (
+          {/* 4 MPIN Indicators */}
+          <View className="flex-row items-center justify-center gap-4 py-5">
+            {[0, 1, 2, 3].map((idx) => (
               <View
                 key={idx}
-                className={`w-3.5 h-3.5 rounded-full ${
+                className={`w-4 h-4 rounded-full ${
                   idx < mpin.length ? 'bg-[#215cd4]' : 'bg-gray-200'
                 }`}
               />
