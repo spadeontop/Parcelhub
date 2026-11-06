@@ -589,6 +589,11 @@ class InMemoryStore {
     const order = this.orders.get(id);
     if (!order) return null;
 
+    // Customer / store edit is only permitted while unpaid/inactive
+    if (order.status !== "PENDING_INITIALIZATION" && order.status !== "PAYMENT_REQUIRED") {
+      return null;
+    }
+
     if (updates.trackingId) order.trackingId = updates.trackingId;
     if (updates.productName) order.productName = updates.productName;
     if (updates.recipientName) order.recipientName = updates.recipientName;

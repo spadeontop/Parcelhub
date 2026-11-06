@@ -313,6 +313,11 @@ export const CustomerStandaloneApp: React.FC = () => {
   const handleUpdateOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedOrderId) return;
+    if (orderDetail && orderDetail.status !== 'PENDING_INITIALIZATION' && orderDetail.status !== 'PAYMENT_REQUIRED') {
+      notify('Cannot edit order once paid or active.', 'error');
+      setIsEditOpen(false);
+      return;
+    }
     setActionLoadingId(selectedOrderId);
     setActionType('update');
     try {
@@ -848,7 +853,7 @@ export const CustomerStandaloneApp: React.FC = () => {
 
                   {/* Actions: Edit Details or Cancel */}
                   <div className="flex gap-2">
-                    {orderDetail.status !== 'CLAIMED' && orderDetail.status !== 'CANCELLED' && (
+                    {(orderDetail.status === 'PENDING_INITIALIZATION' || orderDetail.status === 'PAYMENT_REQUIRED') && (
                       <button
                         onClick={() => setIsEditOpen(true)}
                         className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold py-2 rounded-lg transition border border-slate-700 cursor-pointer"

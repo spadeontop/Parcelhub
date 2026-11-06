@@ -142,6 +142,9 @@ export type CustomerInitOrderRes = StandardSuccessResponse & {
 };
 
 // PUT /api/customer/orders/{id}
+// Allowed only when order is unpaid/inactive: PENDING_INITIALIZATION or PAYMENT_REQUIRED
+export type CustomerEditableOrderStatus = 'PENDING_INITIALIZATION' | 'PAYMENT_REQUIRED';
+
 export type CustomerUpdateOrderReq = {
   readonly order: {
     readonly trackingId?: string;
