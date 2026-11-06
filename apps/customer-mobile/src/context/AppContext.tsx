@@ -9,12 +9,12 @@ import {
   TransactionFilter,
   ScenarioId,
   ToastState,
-  CustomerRegisterRequest,
-  CustomerRegisterResponse,
-  CustomerLoginRequest,
-  CustomerLoginResponse,
-  CustomerCreateMpinResponse,
-  CustomerVerifyMpinResponse,
+  CustomerRegisterReq,
+  CustomerRegisterRes,
+  CustomerLoginReq,
+  CustomerLoginRes,
+  CustomerCreateMpinRes,
+  CustomerVerifyMpinRes,
   AuthCustomer,
 } from '../types';
 import { customerApi } from '../services/customerApi';
@@ -23,7 +23,11 @@ import {
   getStatedFee,
   isClaimUnlocked,
   getClaimTimeRemainingSeconds,
+  mapOrderDetailToOrder,
+  mapSummaryToOrder,
+  parseCurrency,
 } from '../services/orderApi';
+import { ENV, getDetectedApiUrl } from '../config/env';
 
 const INITIAL_ORDERS: Order[] = [
   {
@@ -126,31 +130,6 @@ const INITIAL_ORDERS: Order[] = [
     notes: 'Handover complete. Validated with government ID.',
     statedFee: 4200,
   },
-  {
-    id: 'ORD-719',
-    product: 'Sony WH-1000XM5 Headphones',
-    recipient: 'Maria Santos',
-    paidAmount: '₱16,000',
-    codAmount: '₱15,800',
-    change: '₱200',
-    trackingNumber: 'PH719445588312S',
-    refCode: '0001-4455-8831',
-    alphanumericKey: 'PH-719-4455',
-    envelopeNumber: 'ENV-719',
-    status: 'CLAIMED',
-    orderPlacedTime: '15 Oct 11:20',
-    awaitingParcelTime: '15 Oct 14:45',
-    readyToClaimTime: '16 Oct 09:10',
-    claimedTime: '16 Oct 17:00',
-    dateLabel: 'October 15, 2026 11:20',
-    carrier: 'ShopeeXpress (SPX)',
-    hubLocation: "Lily's Catering Hub • Yati, Liloan, Cebu",
-    courierPaid: true,
-    parcelImageUrl: null,
-    claimInitiatedAt: null,
-    notes: '',
-    statedFee: 16000,
-  },
 ];
 
 const INITIAL_NOTIFICATIONS: NotificationItem[] = [
@@ -165,7 +144,7 @@ const INITIAL_DRAFT: DraftOrder = {
   recipient: 'John Vince Dumaguit',
   totalAmount: '₱480',
   trackingId: 'PH2696153366792H',
-  receiptUri: '',
+  receiptUri: 'sample_receipt_image',
 };
 
 export interface AppContextType {
@@ -180,6 +159,17 @@ export interface AppContextType {
   notifications: NotificationItem[];
   toast: ToastState;
   claimConfirmed: boolean;
+  isLoadingOrders: boolean;
+
+  // Live / Dev Network Settings
+  isLiveMode: boolean;
+  setIsLiveMode: (val: boolean) => void;
+  apiUrl: string;
+  setApiUrl: (val: string) => void;
+  isPollingEnabled: boolean;
+  setIsPollingEnabled: (val: boolean) => void;
+  pollingInterval: number;
+  setPollingInterval: (sec: number) => void;
 
   // Modals
   isMpinModalOpen: boolean;
@@ -188,13 +178,14 @@ export interface AppContextType {
   isNotificationsModalOpen: boolean;
 
   // Customer Auth
+  preAuthToken: string | null;
   refreshToken: string | null;
   authToken: string | null;
   authCustomer: AuthCustomer;
-  loginCustomer: (payload: CustomerLoginRequest) => Promise<CustomerLoginResponse>;
-  registerCustomer: (payload: CustomerRegisterRequest) => Promise<CustomerRegisterResponse>;
-  createCustomerMpin: (mpin: string) => Promise<CustomerCreateMpinResponse>;
-  verifyCustomerMpin: (mpin: string) => Promise<CustomerVerifyMpinResponse>;
+  loginCustomer: (payload: CustomerLoginReq) => Promise<CustomerLoginRes>;
+  registerCustomer: (payload: CustomerRegisterReq) => Promise<CustomerRegisterRes>;
+  createCustomerMpin: (mpin: string) => Promise<CustomerCreateMpinRes>;
+  verifyCustomerMpin: (mpin: string) => Promise<CustomerVerifyMpinRes>;
   updateAuthCustomer: (partial: Partial<AuthCustomer>) => void;
   signOutCustomer: () => void;
 
@@ -206,7 +197,7 @@ export interface AppContextType {
   setTransactionFilter: (filter: TransactionFilter) => void;
   setSelectedOrderId: (id: string) => void;
   updateDraftOrder: (partial: Partial<DraftOrder>) => void;
-  submitDraftOrder: () => void;
+  submitDraftOrder: () => Promise<void>;
   loadSampleReceipt: () => void;
   toggleNotificationAlerts: () => void;
   showToast: (msg: string) => void;
@@ -219,7 +210,7 @@ export interface AppContextType {
   openNotificationsModal: () => void;
   closeNotificationsModal: () => void;
   markAllNotificationsAsRead: () => void;
-  customerInitiateClaim: (orderId: string) => void;
+  customerInitiateClaim: (orderId: string) => Promise<void>;
   isOrderClaimUnlocked: (order: Order) => boolean;
   getOrderClaimRemainingSeconds: (order: Order) => number;
   getOrderStatedFee: (order: Order) => number;
@@ -228,21 +219,32 @@ export interface AppContextType {
   getCurrentOrder: () => Order;
   applyScenario: (scenario: ScenarioId) => void;
   simulatePaymentReceived: (orderId: string) => void;
+  advanceOrderStatus: (orderId: string, status: OrderStatus) => void;
+  refetchOrders: (filter?: TransactionFilter) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [refreshToken, setRefreshToken] = useState<string | null>('rt_demo_john_dumaguit');
+  // Live / Dev Config State
+  const [isLiveMode, setIsLiveModeState] = useState<boolean>(true);
+  const [apiUrl, setApiUrlState] = useState<string>(ENV.API_BASE_URL);
+  const [isPollingEnabled, setIsPollingEnabled] = useState<boolean>(true);
+  const [pollingInterval, setPollingInterval] = useState<number>(ENV.DEFAULT_POLL_INTERVAL_SEC);
+
+  // Auth State
+  const [preAuthToken, setPreAuthToken] = useState<string | null>(null);
+  const [refreshToken, setRefreshToken] = useState<string | null>(null);
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [authCustomer, setAuthCustomer] = useState<AuthCustomer>({
-    email: 'johnvincekeyedu@gmail.com',
-    firstname: 'John Vince',
-    lastname: 'Dumaguit',
-    phonenumber: '0917 123 4567',
+    email: 'user@example.com',
+    firstname: 'John',
+    lastname: 'Doe',
+    phonenumber: '+639123456789',
   });
 
-  const [activeScreen, setActiveScreen] = useState<ScreenId>('home');
+  // Strict Auth Gate: Start at 'login' by default until token verification
+  const [activeScreen, setActiveScreen] = useState<ScreenId>('login');
   const [hasOrders, setHasOrdersState] = useState<boolean>(true);
   const [hubOpen, setHubOpenState] = useState<boolean>(true);
   const [notificationActive, setNotificationActive] = useState<boolean>(true);
@@ -252,17 +254,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [draftOrder, setDraftOrder] = useState<DraftOrder>(INITIAL_DRAFT);
   const [orders, setOrders] = useState<Order[]>(INITIAL_ORDERS);
   const [notifications, setNotifications] = useState<NotificationItem[]>(INITIAL_NOTIFICATIONS);
+  const [isLoadingOrders, setIsLoadingOrders] = useState<boolean>(false);
 
   // Modals
   const [isMpinModalOpen, setIsMpinModalOpen] = useState<boolean>(false);
   const [isPodModalOpen, setIsPodModalOpen] = useState<boolean>(false);
+  const [isEscrowModalOpen, setIsEscrowModalOpen] = useState<boolean>(false);
   const [isNotificationsModalOpen, setIsNotificationsModalOpen] = useState<boolean>(false);
 
   // Toast
   const [toast, setToast] = useState<ToastState>({ show: false, message: '' });
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Ticker for live countdown
+  // Second Ticker for live countdown
   const [, setTicker] = useState<number>(0);
   useEffect(() => {
     const interval = setInterval(() => {
@@ -281,8 +285,127 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }, 3200);
   }, []);
 
+  const setIsLiveMode = useCallback((val: boolean) => {
+    setIsLiveModeState(val);
+    customerApi.setStoredIsLiveMode(val);
+  }, []);
+
+  const setApiUrl = useCallback((url: string) => {
+    setApiUrlState(url);
+    customerApi.setStoredApiUrl(url);
+  }, []);
+
+  // Fetch orders from backend
+  const refetchOrders = useCallback(
+    async (filter?: TransactionFilter) => {
+      if (!isLiveMode || !authToken) return;
+      setIsLoadingOrders(true);
+      try {
+        const orderType = filter && filter !== 'ALL' ? filter : undefined;
+        const summaries = await orderApi.getOrders(authToken, apiUrl, isLiveMode, orderType);
+
+        if (summaries && summaries.length > 0) {
+          // Fetch detailed data for each order to ensure rich timeline and pricing
+          const fullOrders = await Promise.all(
+            summaries.map(async (s) => {
+              try {
+                const detail = await orderApi.getOrder(authToken, s.id, apiUrl, isLiveMode);
+                if (detail) return mapOrderDetailToOrder(detail);
+              } catch {}
+              return mapSummaryToOrder(s);
+            })
+          );
+          setOrders(fullOrders);
+          setHasOrdersState(fullOrders.length > 0);
+        } else if (filter && filter !== 'ALL') {
+          // If filtered list is empty, keep current orders but let filtered view show empty
+        } else {
+          setOrders([]);
+          setHasOrdersState(false);
+        }
+      } catch (err: any) {
+        // Fallback to current mock orders if network error
+      } finally {
+        setIsLoadingOrders(false);
+      }
+    },
+    [authToken, apiUrl, isLiveMode]
+  );
+
+  // Strict Auth Gate on Startup
+  useEffect(() => {
+    const initApp = async () => {
+      try {
+        const [storedAuth, storedRefresh, storedLive, storedUrl] = await Promise.all([
+          customerApi.getStoredAuthToken(),
+          customerApi.getStoredRefreshToken(),
+          customerApi.getStoredIsLiveMode(),
+          customerApi.getStoredApiUrl(),
+        ]);
+
+        if (storedLive !== null) setIsLiveModeState(storedLive);
+        if (storedUrl) setApiUrlState(storedUrl);
+
+        if (storedAuth) {
+          setAuthToken(storedAuth);
+          setRefreshToken(storedRefresh);
+          setActiveScreen('home');
+          // Fetch fresh orders
+          try {
+            const summaries = await orderApi.getOrders(storedAuth, storedUrl || apiUrl, true);
+            if (summaries && summaries.length > 0) {
+              const fullOrders = await Promise.all(
+                summaries.map(async (s) => {
+                  try {
+                    const detail = await orderApi.getOrder(storedAuth, s.id, storedUrl || apiUrl, true);
+                    if (detail) return mapOrderDetailToOrder(detail);
+                  } catch {}
+                  return mapSummaryToOrder(s);
+                })
+              );
+              setOrders(fullOrders);
+            }
+          } catch {}
+        } else {
+          setActiveScreen('login');
+        }
+      } catch {
+        setActiveScreen('login');
+      }
+    };
+
+    initApp();
+  }, []);
+
+  // Active Order Polling when viewing OrderDetailsScreen
+  useEffect(() => {
+    if (!isPollingEnabled || !isLiveMode || !authToken || activeScreen !== 'order_details') {
+      return;
+    }
+
+    const intervalId = setInterval(async () => {
+      try {
+        const detail = await orderApi.getOrder(authToken, selectedOrderId, apiUrl, isLiveMode);
+        if (detail) {
+          const updated = mapOrderDetailToOrder(detail);
+          setOrders((prev) => {
+            const idx = prev.findIndex((o) => o.id === selectedOrderId);
+            if (idx >= 0) {
+              const copy = [...prev];
+              copy[idx] = updated;
+              return copy;
+            }
+            return [updated, ...prev];
+          });
+        }
+      } catch {}
+    }, pollingInterval * 1000);
+
+    return () => clearInterval(intervalId);
+  }, [isPollingEnabled, isLiveMode, authToken, activeScreen, selectedOrderId, apiUrl, pollingInterval]);
+
   const getCurrentOrder = useCallback((): Order => {
-    return orders.find((o) => o.id === selectedOrderId) || orders[0];
+    return orders.find((o) => o.id === selectedOrderId) || orders[0] || INITIAL_ORDERS[0];
   }, [orders, selectedOrderId]);
 
   const markAllNotificationsAsRead = useCallback(() => {
@@ -304,9 +427,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       if (params?.filter) {
         setTransactionFilter(params.filter);
+        refetchOrders(params.filter);
       }
     },
-    [selectedOrderId]
+    [selectedOrderId, refetchOrders]
   );
 
   const setHasOrders = useCallback(
@@ -338,84 +462,123 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   const loadSampleReceipt = useCallback(() => {
-    setDraftOrder((prev) => ({ ...prev, receiptUri: 'sample_receipt' }));
+    setDraftOrder((prev) => ({ ...prev, receiptUri: 'sample_receipt_image' }));
     showToast('Sample Shopee receipt attached & OCR parsed!');
     setActiveScreen('confirm_order');
   }, [showToast]);
 
-  const submitDraftOrder = useCallback(() => {
-    const newId = `ORD-${Math.floor(100 + Math.random() * 900)}`;
-    const randomKeyNum = Math.floor(1000 + Math.random() * 9000);
-    const newOrder: Order = {
-      id: newId,
-      product: draftOrder.product || 'Purchased Item',
-      recipient: draftOrder.recipient || authCustomer.firstname + ' ' + authCustomer.lastname,
-      paidAmount: '',
-      codAmount: draftOrder.totalAmount || '₱480',
-      change: 'To Be Determined',
-      trackingNumber: draftOrder.trackingId || 'PH' + Math.floor(100000000000 + Math.random() * 900000000000) + 'X',
-      refCode: `0001-${randomKeyNum}-1122`,
-      alphanumericKey: `PH-${newId.replace('ORD-', '')}-${randomKeyNum}`,
-      envelopeNumber: `ENV-${newId.replace('ORD-', '')}`,
-      status: 'PAYMENT_REQUIRED',
-      orderPlacedTime: 'Just now',
-      awaitingParcelTime: null,
-      readyToClaimTime: null,
-      claimedTime: null,
-      dateLabel: 'Today, Just now',
-      carrier: 'ShopeeXpress (SPX)',
-      hubLocation: "Lily's Catering Hub • Yati, Liloan, Cebu",
-      courierPaid: false,
-      parcelImageUrl: null,
-      claimInitiatedAt: null,
-      notes: 'Counter deposit pending.',
-      statedFee: 500,
-    };
+  // Atomic on Confirm: initialize order + update details
+  const submitDraftOrder = useCallback(async () => {
+    const rawPrice = parseCurrency(draftOrder.totalAmount);
+    const price = rawPrice > 0 ? rawPrice : 480;
 
-    setOrders((prev) => [newOrder, ...prev]);
-    setSelectedOrderId(newOrder.id);
-    showToast(`Order ${newOrder.id} placed! Please deposit cash at Lily's Catering Hub.`);
-    setActiveScreen('payment_verification');
-  }, [draftOrder, authCustomer, showToast]);
+    try {
+      showToast('Initializing & creating order...');
+      // 1. POST /api/customer/orders/initialize
+      const initRes = await orderApi.initializeOrder(
+        authToken,
+        draftOrder.receiptUri || 'sample_receipt_image',
+        apiUrl,
+        isLiveMode
+      );
+      const newOrderId = initRes.orderId;
+
+      // 2. PUT /api/customer/orders/{id}
+      await orderApi.updateOrder(
+        authToken,
+        newOrderId,
+        {
+          trackingId: draftOrder.trackingId,
+          productName: draftOrder.product,
+          recipientName: draftOrder.recipient || `${authCustomer.firstname} ${authCustomer.lastname}`,
+          price,
+        },
+        apiUrl,
+        isLiveMode
+      );
+
+      // Create local order entry
+      const numId = newOrderId.replace('ORD-', '');
+      const newOrder: Order = {
+        id: newOrderId,
+        product: draftOrder.product || 'Purchased Item',
+        recipient: draftOrder.recipient || `${authCustomer.firstname} ${authCustomer.lastname}`,
+        paidAmount: '',
+        codAmount: `₱${price.toLocaleString('en-US')}`,
+        change: 'To Be Determined',
+        trackingNumber: draftOrder.trackingId || `PH${Date.now()}`,
+        refCode: `0001-${numId.padStart(4, '0')}-1122`,
+        alphanumericKey: `PH-${numId}-${numId.padStart(4, '0')}`,
+        envelopeNumber: `ENV-${numId}`,
+        status: 'PAYMENT_REQUIRED',
+        orderPlacedTime: 'Just now',
+        awaitingParcelTime: null,
+        readyToClaimTime: null,
+        claimedTime: null,
+        dateLabel: 'Today, Just now',
+        carrier: 'ShopeeXpress (SPX)',
+        hubLocation: "Lily's Catering Hub • Yati, Liloan, Cebu",
+        courierPaid: false,
+        parcelImageUrl: null,
+        claimInitiatedAt: null,
+        claimExpiresAt: null,
+        notes: 'Counter deposit pending.',
+        statedFee: price,
+        qrImageUrl: null,
+      };
+
+      setOrders((prev) => [newOrder, ...prev]);
+      setSelectedOrderId(newOrder.id);
+      showToast(`Order ${newOrder.id} placed! Please deposit cash at Lily's Catering Hub.`);
+      setActiveScreen('payment_verification');
+    } catch (err: any) {
+      showToast(err?.message || 'Order creation failed. Please try again.');
+    }
+  }, [authToken, draftOrder, authCustomer, apiUrl, isLiveMode, showToast]);
 
   const openMpinModal = useCallback(() => setIsMpinModalOpen(true), []);
   const closeMpinModal = useCallback(() => setIsMpinModalOpen(false), []);
-
   const openPodModal = useCallback(() => setIsPodModalOpen(true), []);
   const closePodModal = useCallback(() => setIsPodModalOpen(false), []);
-
   const openProofOfDeliveryModal = useCallback(() => setIsPodModalOpen(true), []);
   const closeProofOfDeliveryModal = useCallback(() => setIsPodModalOpen(false), []);
-
   const openNotificationsModal = useCallback(() => setIsNotificationsModalOpen(true), []);
   const closeNotificationsModal = useCallback(() => setIsNotificationsModalOpen(false), []);
 
+  // Direct One-Tap Claim Unlock
   const customerInitiateClaim = useCallback(
-    (orderId: string) => {
-      const order = orders.find((o) => o.id === orderId);
-      if (!order) return;
-      const res = orderApi.customerInitiateClaim(order);
-      if (res.success && res.data) {
-        setOrders((prev) => prev.map((o) => (o.id === orderId ? res.data! : o)));
-        showToast(res.message);
-        // openMpinModal removed on initiate claim
-      } else {
-        showToast(res.message);
+    async (orderId: string) => {
+      try {
+        showToast('Unlocking counter pickup pass...');
+        const res = await orderApi.claimOrder(authToken, orderId, apiUrl, isLiveMode);
+
+        setOrders((prev) =>
+          prev.map((o) =>
+            o.id === orderId
+              ? {
+                  ...o,
+                  claimInitiatedAt: new Date(res.claimInitiatedAt).getTime(),
+                  claimExpiresAt: res.claimExpiresAt,
+                }
+              : o
+          )
+        );
+
+        showToast(
+          res.statusMessage || `Pickup pass unlocked! Valid for ${res.durationMinutes || 5} minutes.`
+        );
+      } catch (err: any) {
+        showToast(err?.message || 'Failed to unlock pickup pass.');
       }
     },
-    [orders, showToast, openMpinModal]
+    [authToken, apiUrl, isLiveMode, showToast]
   );
 
   const completeMpinClaim = useCallback(() => {
     closeMpinModal();
     const current = getCurrentOrder();
-    const updated = {
-      ...current,
-      claimInitiatedAt: Date.now(),
-    };
-    setOrders((prev) => prev.map((o) => (o.id === current.id ? updated : o)));
-    showToast('MPIN verified! Active counter handover ticket valid for 5:00 minutes.');
-  }, [closeMpinModal, getCurrentOrder, showToast]);
+    customerInitiateClaim(current.id);
+  }, [closeMpinModal, getCurrentOrder, customerInitiateClaim]);
 
   const simulatePaymentReceived = useCallback(
     (orderId: string) => {
@@ -434,6 +597,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       );
       showToast('Cash deposit verified! ParcelHub is now monitoring your parcel arrival.');
       setActiveScreen('order_details');
+    },
+    [showToast]
+  );
+
+  const advanceOrderStatus = useCallback(
+    (orderId: string, status: OrderStatus) => {
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.id === orderId
+            ? {
+                ...o,
+                status,
+                courierPaid: status === 'READY_TO_CLAIM' || status === 'CLAIMED',
+              }
+            : o
+        )
+      );
+      showToast(`Order ${orderId} moved to ${status}`);
     },
     [showToast]
   );
@@ -462,65 +643,71 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return getStatedFee(order);
   }, []);
 
+  // Auth: Login
   const loginCustomer = useCallback(
-    async (payload: CustomerLoginRequest): Promise<CustomerLoginResponse> => {
-      const res = await customerApi.login(payload);
-      setRefreshToken(res.refreshToken);
+    async (payload: CustomerLoginReq): Promise<CustomerLoginRes> => {
+      const res = await customerApi.login(payload, apiUrl, isLiveMode);
+      setPreAuthToken(res.preAuthToken);
       setAuthCustomer((prev) => ({
         ...prev,
         email: payload.email,
       }));
-      showToast(res.statusMessage);
+      showToast(res.statusMessage || 'Credentials verified. Enter MPIN.');
       setActiveScreen('mpin_login');
       return res;
     },
-    [showToast]
+    [apiUrl, isLiveMode, showToast]
   );
 
+  // Auth: Register
   const registerCustomer = useCallback(
-    async (payload: CustomerRegisterRequest): Promise<CustomerRegisterResponse> => {
-      const res = await customerApi.register(payload);
-      setRefreshToken(res.refreshToken);
+    async (payload: CustomerRegisterReq): Promise<CustomerRegisterRes> => {
+      const res = await customerApi.register(payload, apiUrl, isLiveMode);
+      setPreAuthToken(res.preAuthToken);
       setAuthCustomer({
         email: payload.email,
-        firstname: payload.firstname,
-        lastname: payload.lastname,
-        middleinitial: payload.middleinitial,
-        phonenumber: payload.phonenumber,
+        firstname: payload.firstName,
+        lastname: payload.lastName,
+        middleinitial: payload.middleInitial,
+        phonenumber: payload.phoneNumber,
       });
-      showToast(res.statusMessage);
+      showToast(res.statusMessage || 'Registration successful. Create your MPIN.');
       setActiveScreen('mpin_create');
       return res;
     },
-    [showToast]
+    [apiUrl, isLiveMode, showToast]
   );
 
+  // Auth: Create MPIN
   const createCustomerMpin = useCallback(
-    async (mpin: string): Promise<CustomerCreateMpinResponse> => {
-      const res = await customerApi.createMpin({
-        refreshToken: refreshToken || 'rt_demo',
-        mpin,
-      });
+    async (mpin: string): Promise<CustomerCreateMpinRes> => {
+      const token = preAuthToken || 'preauth_mock_token';
+      const res = await customerApi.createMpin({ preAuthToken: token, mpin }, apiUrl, isLiveMode);
       setAuthToken(res.authToken);
-      showToast(res.statusMessage);
+      setRefreshToken(res.refreshToken);
+      showToast(res.statusMessage || 'MPIN created successfully!');
       setActiveScreen('home');
+      // Fetch initial orders
+      refetchOrders();
       return res;
     },
-    [refreshToken, showToast]
+    [preAuthToken, apiUrl, isLiveMode, showToast, refetchOrders]
   );
 
+  // Auth: Verify MPIN
   const verifyCustomerMpin = useCallback(
-    async (mpin: string): Promise<CustomerVerifyMpinResponse> => {
-      const res = await customerApi.verifyMpin({
-        refreshToken: refreshToken || 'rt_demo',
-        mpin,
-      });
+    async (mpin: string): Promise<CustomerVerifyMpinRes> => {
+      const token = preAuthToken || 'preauth_mock_token';
+      const res = await customerApi.verifyMpin({ preAuthToken: token, mpin }, apiUrl, isLiveMode);
       setAuthToken(res.authToken);
-      showToast(res.statusMessage);
+      setRefreshToken(res.refreshToken);
+      showToast(res.statusMessage || 'Access granted!');
       setActiveScreen('home');
+      // Fetch initial orders
+      refetchOrders();
       return res;
     },
-    [refreshToken, showToast]
+    [preAuthToken, apiUrl, isLiveMode, showToast, refetchOrders]
   );
 
   const updateAuthCustomer = useCallback(
@@ -532,8 +719,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   );
 
   const signOutCustomer = useCallback(() => {
+    customerApi.clearTokens();
     setAuthToken(null);
     setRefreshToken(null);
+    setPreAuthToken(null);
     showToast('Signed out successfully.');
     setActiveScreen('login');
   }, [showToast]);
@@ -619,9 +808,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         notifications,
         toast,
         claimConfirmed,
+        isLoadingOrders,
+        isLiveMode,
+        setIsLiveMode,
+        apiUrl,
+        setApiUrl,
+        isPollingEnabled,
+        setIsPollingEnabled,
+        pollingInterval,
+        setPollingInterval,
         isMpinModalOpen,
         isPodModalOpen,
+        isEscrowModalOpen,
         isNotificationsModalOpen,
+        preAuthToken,
         refreshToken,
         authToken,
         authCustomer,
@@ -660,6 +860,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         getCurrentOrder,
         applyScenario,
         simulatePaymentReceived,
+        advanceOrderStatus,
+        refetchOrders,
       }}
     >
       {children}
@@ -674,4 +876,3 @@ export const useApp = (): AppContextType => {
   }
   return context;
 };
-

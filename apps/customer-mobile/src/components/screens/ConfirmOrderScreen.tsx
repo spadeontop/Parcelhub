@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { useApp } from '../../context/AppContext';
 import { BackArrowIcon } from '../common/Icons';
 
@@ -12,13 +12,19 @@ export const ConfirmOrderScreen: React.FC = () => {
     showToast,
   } = useApp();
   const [isConfirmed, setIsConfirmed] = useState<boolean>(false);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!isConfirmed) {
       showToast('Please check the confirmation box to proceed.');
       return;
     }
-    submitDraftOrder();
+    setIsSubmitting(true);
+    try {
+      await submitDraftOrder();
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -138,14 +144,20 @@ export const ConfirmOrderScreen: React.FC = () => {
 
         {/* Create Order Button */}
         <TouchableOpacity
-          activeOpacity={isConfirmed ? 0.8 : 1}
-          disabled={!isConfirmed}
+          activeOpacity={isConfirmed && !isSubmitting ? 0.8 : 1}
+          disabled={!isConfirmed || isSubmitting}
           onPress={handleSubmit}
-          className={`w-full mt-4 py-3.5 px-6 rounded-2xl shadow-md items-center mb-6 ${isConfirmed ? 'bg-[#215cd4] active:bg-[#194cb5]' : 'bg-gray-300 opacity-80'}`}
+          className={`w-full mt-4 py-3.5 px-6 rounded-2xl shadow-md items-center mb-6 ${
+            isConfirmed && !isSubmitting ? 'bg-[#215cd4] active:bg-[#194cb5]' : 'bg-gray-300 opacity-80'
+          }`}
         >
-          <Text className="text-white font-bold text-sm tracking-wide">
-            Submit Order &amp; Proceed to Payment
-          </Text>
+          {isSubmitting ? (
+            <ActivityIndicator color="#ffffff" />
+          ) : (
+            <Text className="text-white font-bold text-sm tracking-wide">
+              Submit Order &amp; Proceed to Payment
+            </Text>
+          )}
         </TouchableOpacity>
       </ScrollView>
     </View>
