@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
       id: o.id,
       trackingId: o.trackingId,
       customer: o.recipientName,
+      amountToPay: o.price,
       amountReceived: o.amountReceived || 0,
       change: o.change || 0,
       timestamp: o.timestamp,

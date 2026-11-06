@@ -171,6 +171,20 @@ async function runTests() {
   assert.strictEqual(updateOrderRes.status, 200);
   console.log(`✔ PUT /api/customer/orders/{id} (200 OK)`);
 
+  // 1.8b Reject duplicate active tracking ID
+  const duplicateTrackingReq = makeReq(`http://localhost:3000/api/customer/orders/${newOrderId}`, {
+    method: "PUT",
+    token: customerAuthToken,
+    body: {
+      order: {
+        trackingId: "PH-PEND-001", // Already active
+      },
+    },
+  });
+  const duplicateTrackingRes = await updateCustomerOrder(duplicateTrackingReq, { params: Promise.resolve({ id: newOrderId }) });
+  assert.strictEqual(duplicateTrackingRes.status, 409);
+  console.log("✔ PUT /api/customer/orders/{id} rejected duplicate active tracking ID (409 DuplicateTrackingId)");
+
   // 1.8b Verify Edit Guard: Cannot edit once order is paid / not unpaid
   // We test editing an active/claimable order (ORD-402 is READY_TO_CLAIM)
   const rejectEditReq = makeReq("http://localhost:3000/api/customer/orders/ORD-402", {
@@ -229,7 +243,11 @@ async function runTests() {
   const staffListJson = await staffListRes.json();
   assert.strictEqual(staffListRes.status, 200);
   assert.ok(Array.isArray(staffListJson.orders));
-  console.log(`✔ GET /api/staff/orders (200 OK, retrieved ${staffListJson.orders.length} orders)`);
+  assert.ok(
+    staffListJson.orders.every((o: any) => typeof o.amountToPay === "number"),
+    "All orders in staff list must have amountToPay as number"
+  );
+  console.log(`✔ GET /api/staff/orders (200 OK, retrieved ${staffListJson.orders.length} orders, verified amountToPay)`);
 
   // 2.3 Staff Get Order
   const staffGetReq = makeReq("http://localhost:3000/api/staff/orders/ORD-402", {
@@ -269,6 +287,16 @@ async function runTests() {
   assert.strictEqual(activateRes.status, 200);
   assert.strictEqual(activateJson.change, 50);
   console.log(`✔ POST /api/staff/orders/{id}/activate (200 OK, change: ${activateJson.change})`);
+
+  // 2.4b Staff cannot attach photo before courier payout is logged
+  const prematureAttachReq = makeReq(`http://localhost:3000/api/staff/orders/${orderToActivate}/make-claimable/attach-photo`, {
+    method: "POST",
+    token: staffAuthToken,
+    body: { imageUrl: "https://storage.parcelhub.com/proof/ORD-pre.jpg" },
+  });
+  const prematureAttachRes = await attachPhoto(prematureAttachReq, { params: Promise.resolve({ id: orderToActivate }) });
+  assert.strictEqual(prematureAttachRes.status, 400);
+  console.log("✔ POST /api/staff/orders/{id}/make-claimable/attach-photo rejected when courier not yet paid (400 CourierPaymentRequired)");
 
   // 2.5 Courier Pay
   const payReq = makeReq(`http://localhost:3000/api/staff/orders/${orderToActivate}/make-claimable/pay`, {
