@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import {
   StaffOrder,
@@ -15,6 +16,53 @@ const AUTH_TOKEN_KEY = 'parcelhub_staff_auth_token';
 const REFRESH_TOKEN_KEY = 'parcelhub_staff_refresh_token';
 const STAFF_EMAIL_KEY = 'parcelhub_staff_email';
 
+// In-memory cache for fast, reliable synchronous access across web & native
+let memoryAuthToken: string | null = null;
+let memoryRefreshToken: string | null = null;
+let memoryStaffEmail: string | null = null;
+
+const isWeb = Platform.OS === 'web';
+
+const storage = {
+  async getItem(key: string): Promise<string | null> {
+    try {
+      if (isWeb) {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          return window.localStorage.getItem(key);
+        }
+        return null;
+      }
+      return await SecureStore.getItemAsync(key);
+    } catch {
+      return null;
+    }
+  },
+
+  async setItem(key: string, value: string): Promise<void> {
+    try {
+      if (isWeb) {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          window.localStorage.setItem(key, value);
+        }
+        return;
+      }
+      await SecureStore.setItemAsync(key, value);
+    } catch {}
+  },
+
+  async deleteItem(key: string): Promise<void> {
+    try {
+      if (isWeb) {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          window.localStorage.removeItem(key);
+        }
+        return;
+      }
+      await SecureStore.deleteItemAsync(key);
+    } catch {}
+  },
+};
+
 export class StaffApiError extends Error {
   statusCode?: number;
   constructor(message: string, statusCode?: number) {
@@ -26,53 +74,48 @@ export class StaffApiError extends Error {
 
 export const staffApi = {
   async getStoredAuthToken(): Promise<string | null> {
-    try {
-      return await SecureStore.getItemAsync(AUTH_TOKEN_KEY);
-    } catch {
-      return null;
-    }
+    if (memoryAuthToken) return memoryAuthToken;
+    const stored = await storage.getItem(AUTH_TOKEN_KEY);
+    if (stored) memoryAuthToken = stored;
+    return stored;
   },
 
   async setStoredAuthToken(token: string): Promise<void> {
-    try {
-      await SecureStore.setItemAsync(AUTH_TOKEN_KEY, token);
-    } catch {}
+    memoryAuthToken = token;
+    await storage.setItem(AUTH_TOKEN_KEY, token);
   },
 
   async getStoredRefreshToken(): Promise<string | null> {
-    try {
-      return await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
-    } catch {
-      return null;
-    }
+    if (memoryRefreshToken) return memoryRefreshToken;
+    const stored = await storage.getItem(REFRESH_TOKEN_KEY);
+    if (stored) memoryRefreshToken = stored;
+    return stored;
   },
 
   async setStoredRefreshToken(token: string): Promise<void> {
-    try {
-      await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, token);
-    } catch {}
+    memoryRefreshToken = token;
+    await storage.setItem(REFRESH_TOKEN_KEY, token);
   },
 
   async getStoredStaffEmail(): Promise<string | null> {
-    try {
-      return await SecureStore.getItemAsync(STAFF_EMAIL_KEY);
-    } catch {
-      return null;
-    }
+    if (memoryStaffEmail) return memoryStaffEmail;
+    const stored = await storage.getItem(STAFF_EMAIL_KEY);
+    if (stored) memoryStaffEmail = stored;
+    return stored;
   },
 
   async setStoredStaffEmail(email: string): Promise<void> {
-    try {
-      await SecureStore.setItemAsync(STAFF_EMAIL_KEY, email);
-    } catch {}
+    memoryStaffEmail = email;
+    await storage.setItem(STAFF_EMAIL_KEY, email);
   },
 
   async clearStoredSession(): Promise<void> {
-    try {
-      await SecureStore.deleteItemAsync(AUTH_TOKEN_KEY);
-      await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
-      await SecureStore.deleteItemAsync(STAFF_EMAIL_KEY);
-    } catch {}
+    memoryAuthToken = null;
+    memoryRefreshToken = null;
+    memoryStaffEmail = null;
+    await storage.deleteItem(AUTH_TOKEN_KEY);
+    await storage.deleteItem(REFRESH_TOKEN_KEY);
+    await storage.deleteItem(STAFF_EMAIL_KEY);
   },
 
   async login(email: string, password: string): Promise<StaffLoginResponse> {
@@ -107,8 +150,12 @@ export const staffApi = {
     }
   },
 
-  async getOrders(status?: OrderStatus, limit?: number): Promise<StaffOrder[]> {
-    const token = await this.getStoredAuthToken();
+  async getOrders(status?: OrderStatus, limit?: number, explicitToken?: string): Promise<StaffOrder[]> {
+    const token = explicitToken || (await this.getStoredAuthToken());
+    if (!token) {
+      throw new StaffApiError('Missing staff authorization token. Please sign in.', 401);
+    }
+
     const queryParams = new URLSearchParams();
     if (status) queryParams.append('status', status);
     if (limit) queryParams.append('limit', limit.toString());
@@ -120,13 +167,16 @@ export const staffApi = {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          Authorization: `Bearer ${token}`,
         },
       });
 
       const data = await res.json().catch(() => null);
 
       if (!res.ok) {
+        if (res.status === 401) {
+          await this.clearStoredSession();
+        }
         const errorMsg = data?.message || data?.error || `Failed to fetch orders (${res.status})`;
         throw new StaffApiError(errorMsg, res.status);
       }
@@ -164,20 +214,27 @@ export const staffApi = {
     }
   },
 
-  async getOrder(orderId: string): Promise<StaffOrder> {
-    const token = await this.getStoredAuthToken();
+  async getOrder(orderId: string, explicitToken?: string): Promise<StaffOrder> {
+    const token = explicitToken || (await this.getStoredAuthToken());
+    if (!token) {
+      throw new StaffApiError('Missing staff authorization token. Please sign in.', 401);
+    }
+
     try {
       const res = await fetch(`${ENV.API_BASE_URL}/api/staff/orders/${encodeURIComponent(orderId)}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          Authorization: `Bearer ${token}`,
         },
       });
 
       const data = await res.json().catch(() => null);
 
       if (!res.ok) {
+        if (res.status === 401) {
+          await this.clearStoredSession();
+        }
         const errorMsg = data?.message || data?.error || `Failed to fetch order ${orderId}`;
         throw new StaffApiError(errorMsg, res.status);
       }
@@ -206,14 +263,18 @@ export const staffApi = {
     }
   },
 
-  async activateOrder(orderId: string, amountReceived: number): Promise<StaffActivateOrderResponse> {
-    const token = await this.getStoredAuthToken();
+  async activateOrder(orderId: string, amountReceived: number, explicitToken?: string): Promise<StaffActivateOrderResponse> {
+    const token = explicitToken || (await this.getStoredAuthToken());
+    if (!token) {
+      throw new StaffApiError('Missing staff authorization token. Please sign in.', 401);
+    }
+
     try {
       const res = await fetch(`${ENV.API_BASE_URL}/api/staff/orders/${encodeURIComponent(orderId)}/activate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ amountReceived }),
       });
@@ -221,6 +282,9 @@ export const staffApi = {
       const data = await res.json().catch(() => null);
 
       if (!res.ok) {
+        if (res.status === 401) {
+          await this.clearStoredSession();
+        }
         const errorMsg = data?.message || data?.error || data?.statusMessage || `Activation failed (${res.status})`;
         throw new StaffApiError(errorMsg, res.status);
       }
@@ -232,14 +296,18 @@ export const staffApi = {
     }
   },
 
-  async payCourier(orderId: string): Promise<StaffPayCourierResponse> {
-    const token = await this.getStoredAuthToken();
+  async payCourier(orderId: string, explicitToken?: string): Promise<StaffPayCourierResponse> {
+    const token = explicitToken || (await this.getStoredAuthToken());
+    if (!token) {
+      throw new StaffApiError('Missing staff authorization token. Please sign in.', 401);
+    }
+
     try {
       const res = await fetch(`${ENV.API_BASE_URL}/api/staff/orders/${encodeURIComponent(orderId)}/make-claimable/pay`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({}),
       });
@@ -247,6 +315,9 @@ export const staffApi = {
       const data = await res.json().catch(() => null);
 
       if (!res.ok) {
+        if (res.status === 401) {
+          await this.clearStoredSession();
+        }
         const errorMsg = data?.message || data?.error || data?.statusMessage || `Courier payment failed (${res.status})`;
         throw new StaffApiError(errorMsg, res.status);
       }
@@ -258,14 +329,18 @@ export const staffApi = {
     }
   },
 
-  async attachPhoto(orderId: string, imageUrl: string): Promise<StaffAttachPhotoResponse> {
-    const token = await this.getStoredAuthToken();
+  async attachPhoto(orderId: string, imageUrl: string, explicitToken?: string): Promise<StaffAttachPhotoResponse> {
+    const token = explicitToken || (await this.getStoredAuthToken());
+    if (!token) {
+      throw new StaffApiError('Missing staff authorization token. Please sign in.', 401);
+    }
+
     try {
       const res = await fetch(`${ENV.API_BASE_URL}/api/staff/orders/${encodeURIComponent(orderId)}/make-claimable/attach-photo`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ imageUrl }),
       });
@@ -273,6 +348,9 @@ export const staffApi = {
       const data = await res.json().catch(() => null);
 
       if (!res.ok) {
+        if (res.status === 401) {
+          await this.clearStoredSession();
+        }
         const errorMsg = data?.message || data?.error || data?.statusMessage || `Photo attach failed (${res.status})`;
         throw new StaffApiError(errorMsg, res.status);
       }
@@ -284,14 +362,18 @@ export const staffApi = {
     }
   },
 
-  async claimOrder(orderId: string): Promise<StaffClaimOrderResponse> {
-    const token = await this.getStoredAuthToken();
+  async claimOrder(orderId: string, explicitToken?: string): Promise<StaffClaimOrderResponse> {
+    const token = explicitToken || (await this.getStoredAuthToken());
+    if (!token) {
+      throw new StaffApiError('Missing staff authorization token. Please sign in.', 401);
+    }
+
     try {
       const res = await fetch(`${ENV.API_BASE_URL}/api/staff/orders/${encodeURIComponent(orderId)}/claim`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({}),
       });
@@ -299,6 +381,9 @@ export const staffApi = {
       const data = await res.json().catch(() => null);
 
       if (!res.ok) {
+        if (res.status === 401) {
+          await this.clearStoredSession();
+        }
         const errorMsg = data?.message || data?.error || data?.statusMessage || `Claim failed (${res.status})`;
         throw new StaffApiError(errorMsg, res.status);
       }

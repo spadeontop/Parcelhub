@@ -59,6 +59,8 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [toast, setToast] = useState<ToastState>({ show: false, message: '' });
 
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const userRef = useRef<StaffUser | null>(null);
+  userRef.current = staffUser;
 
   const showToast = useCallback((message: string, type: 'info' | 'success' | 'error' = 'info') => {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
@@ -76,12 +78,13 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const token = await staffApi.getStoredAuthToken();
         const email = await staffApi.getStoredStaffEmail();
         if (token && email && isMounted) {
-          setStaffUser({
+          const user: StaffUser = {
             id: 'STF-001',
             email,
             role: 'STAFF',
             token,
-          });
+          };
+          setStaffUser(user);
         }
       } finally {
         if (isMounted) setIsInitialLoading(false);
@@ -93,10 +96,13 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   // Fetch orders from live backend
-  const fetchOrders = useCallback(async (quiet = false) => {
+  const fetchOrders = useCallback(async (quiet = false, explicitToken?: string) => {
+    const token = explicitToken || userRef.current?.token;
+    if (!token) return;
+
     if (!quiet) setIsRefreshing(true);
     try {
-      const data = await staffApi.getOrders();
+      const data = await staffApi.getOrders(undefined, undefined, token);
       setOrders((prev) => {
         // Merge notes from local memory if existing
         const notesMap = new Map<string, string>();
@@ -118,6 +124,11 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return fresh ? { ...fresh, notes: prevSelected.notes } : prevSelected;
       });
     } catch (err: any) {
+      if (err instanceof StaffApiError && err.statusCode === 401) {
+        setStaffUser(null);
+        showToast('Session expired or unauthorized. Please sign in again.', 'error');
+        return;
+      }
       setIsOnline(false);
       if (!quiet) {
         showToast(err?.message || 'Failed to sync with backend', 'error');
@@ -130,10 +141,10 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Polling every 4 seconds when authenticated
   useEffect(() => {
     if (!staffUser) return;
-    fetchOrders(false);
+    fetchOrders(false, staffUser.token);
 
     const interval = setInterval(() => {
-      fetchOrders(true);
+      fetchOrders(true, staffUser.token);
     }, ENV.POLLING_INTERVAL_MS);
 
     return () => clearInterval(interval);
@@ -180,13 +191,15 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Authentication actions
   const login = async (email: string, password: string) => {
     const res = await staffApi.login(email, password);
-    setStaffUser({
+    const user: StaffUser = {
       id: 'STF-001',
       email,
       role: 'STAFF',
       token: res.authToken,
-    });
+    };
+    setStaffUser(user);
     showToast(`Signed in as ${email}`, 'success');
+    await fetchOrders(false, res.authToken);
   };
 
   const logout = async () => {
@@ -210,27 +223,27 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Staff counter actions
   const activateOrder = async (orderId: string, amountReceived: number) => {
-    const res = await staffApi.activateOrder(orderId, amountReceived);
+    const res = await staffApi.activateOrder(orderId, amountReceived, staffUser?.token);
     showToast(`Order ${orderId} activated! Change: ₱${res.change.toLocaleString()}`, 'success');
-    await fetchOrders(true);
+    await fetchOrders(true, staffUser?.token);
   };
 
   const payCourier = async (orderId: string) => {
-    await staffApi.payCourier(orderId);
+    await staffApi.payCourier(orderId, staffUser?.token);
     showToast(`Courier payout recorded for ${orderId}`, 'success');
-    await fetchOrders(true);
+    await fetchOrders(true, staffUser?.token);
   };
 
   const attachPhoto = async (orderId: string, imageUrl: string) => {
-    await staffApi.attachPhoto(orderId, imageUrl);
+    await staffApi.attachPhoto(orderId, imageUrl, staffUser?.token);
     showToast(`Proof attached. ${orderId} is now Ready to Claim!`, 'success');
-    await fetchOrders(true);
+    await fetchOrders(true, staffUser?.token);
   };
 
   const claimOrder = async (orderId: string) => {
-    await staffApi.claimOrder(orderId);
+    await staffApi.claimOrder(orderId, staffUser?.token);
     showToast(`Order ${orderId} handed over and marked Claimed!`, 'success');
-    await fetchOrders(true);
+    await fetchOrders(true, staffUser?.token);
   };
 
   const updateOrderNotes = (orderId: string, notes: string) => {
@@ -270,7 +283,7 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         showToast,
         login,
         logout,
-        refreshOrders: () => fetchOrders(false),
+        refreshOrders: () => fetchOrders(false, staffUser?.token),
         activateOrder,
         payCourier,
         attachPhoto,
