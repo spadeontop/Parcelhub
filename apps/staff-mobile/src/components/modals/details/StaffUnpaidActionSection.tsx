@@ -14,12 +14,12 @@ export const StaffUnpaidActionSection: React.FC<StaffUnpaidActionSectionProps> =
   isSubmitting,
   onActivate,
 }) => {
-  const fee = order.amountToPay || 0;
+  const fee = typeof order.amountToPay === 'number' ? order.amountToPay : 0;
   const [cashText, setCashText] = useState<string>('');
 
   const cashNum = parseFloat(cashText) || 0;
   const change = Math.max(0, cashNum - fee);
-  const isSufficient = cashNum >= fee && fee > 0;
+  const isSufficient = fee > 0 ? cashNum >= fee : (cashText.trim().length > 0 && cashNum >= 0);
 
   const handleQuickAdd = (add: number) => {
     const current = parseFloat(cashText) || 0;
@@ -97,7 +97,7 @@ export const StaffUnpaidActionSection: React.FC<StaffUnpaidActionSectionProps> =
         <View className="bg-slate-900/80 rounded-xl p-3 border border-slate-800 flex-row justify-between items-center">
           <Text className="text-xs text-slate-400">Calculated Change</Text>
           <Text className={`text-sm font-mono font-black ${isSufficient ? 'text-emerald-400' : 'text-rose-400'}`}>
-            {isSufficient ? `₱${change.toLocaleString()}` : 'Insufficient Cash'}
+            {isSufficient ? `₱${change.toLocaleString()}` : `Insufficient Cash (Need ₱${(fee - cashNum).toLocaleString()} more)`}
           </Text>
         </View>
       )}

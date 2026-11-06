@@ -211,9 +211,25 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   // Order Details Modal helpers
-  const openOrderDetails = (order: StaffOrder) => {
+  const openOrderDetails = async (order: StaffOrder) => {
     setSelectedOrder(order);
     setIsDetailsOpen(true);
+    try {
+      const token = userRef.current?.token;
+      if (token) {
+        const detail = await staffApi.getOrder(order.id, token);
+        setSelectedOrder((prev) =>
+          prev && prev.id === order.id
+            ? {
+                ...prev,
+                ...detail,
+                productName: prev.productName || detail.productName,
+                notes: prev.notes,
+              }
+            : prev
+        );
+      }
+    } catch {}
   };
 
   const closeOrderDetails = () => {
