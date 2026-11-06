@@ -21,6 +21,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     return jsonError("Order not found", 404, "Not Found");
   }
 
+  if (order.status !== "AWAITING_PARCEL") {
+    return jsonError(`Cannot attach parcel photo for order in ${order.status} status`, 400);
+  }
+
+  if (!order.courierPaid) {
+    return jsonError("Cannot attach photo or release order before courier payment is completed", 400, "CourierPaymentRequired");
+  }
+
   try {
     const body = (await request.json()) as StaffAttachPhotoReq;
     if (!body.imageUrl) {

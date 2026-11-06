@@ -4,6 +4,7 @@ interface OrderItem {
   id: string;
   trackingId: string;
   customer: string;
+  amountToPay?: number;
   amountReceived: number;
   change: number;
   timestamp: string;
@@ -359,7 +360,12 @@ export const StaffStandaloneApp: React.FC = () => {
                     </div>
 
                     <div className="flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-slate-800/80">
-                      <div>Deposit Received: ₱{ord.amountReceived} (Change: ₱{ord.change})</div>
+                      <div>
+                        {typeof ord.amountToPay === 'number' && (
+                          <span className="text-white font-medium mr-2">Amount to Pay: ₱{ord.amountToPay}</span>
+                        )}
+                        <span>Deposit Received: ₱{ord.amountReceived} (Change: ₱{ord.change})</span>
+                      </div>
                       <div className="font-mono text-[11px] text-slate-500">{new Date(ord.timestamp).toLocaleTimeString()}</div>
                     </div>
                   </div>
