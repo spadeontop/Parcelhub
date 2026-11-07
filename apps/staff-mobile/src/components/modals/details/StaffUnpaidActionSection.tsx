@@ -1,127 +1,130 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { StaffOrder } from '../../../types';
-import { DollarSign, CheckCircle } from '../../common/Icons';
+import { Check } from '../../common/Icons';
 
 interface StaffUnpaidActionSectionProps {
   order: StaffOrder;
   isSubmitting: boolean;
   onActivate: (orderId: string, amount: number) => Promise<void>;
+  onReturnHome: () => void;
 }
 
 export const StaffUnpaidActionSection: React.FC<StaffUnpaidActionSectionProps> = ({
   order,
   isSubmitting,
   onActivate,
+  onReturnHome,
 }) => {
-  const fee = typeof order.amountToPay === 'number' ? order.amountToPay : 0;
-  const [cashText, setCashText] = useState<string>('');
+  const fee = typeof order.amountToPay === 'number' ? order.amountToPay : 300;
+  // Initialize with a realistic sample if needed or fee
+  const defaultSampleReceived = Math.max(fee, 1000);
+  const [cashText, setCashText] = useState<string>(String(defaultSampleReceived));
+  const [isConfirmed, setIsConfirmed] = useState<boolean>(true);
 
   const cashNum = parseFloat(cashText) || 0;
   const change = Math.max(0, cashNum - fee);
-  const isSufficient = fee > 0 ? cashNum >= fee : (cashText.trim().length > 0 && cashNum >= 0);
-
-  const handleQuickAdd = (add: number) => {
-    const current = parseFloat(cashText) || 0;
-    setCashText(String(current + add));
-  };
-
-  const handleExact = () => {
-    setCashText(String(fee));
-  };
+  const isSufficient = cashNum >= fee;
+  const canActivate = isConfirmed && isSufficient && !isSubmitting;
 
   const handleSubmit = async () => {
-    if (!isSufficient || isSubmitting) return;
+    if (!canActivate) return;
     await onActivate(order.id, cashNum);
   };
 
   return (
-    <View className="bg-rose-950/20 border border-rose-900/40 rounded-2xl p-4 mb-3 space-y-3">
-      <View className="flex-row items-center gap-2">
-        <DollarSign size={16} color="#f43f5e" />
-        <Text className="text-xs font-bold text-rose-400 uppercase tracking-wider">
-          Counter Payment Collection
+    <View className="space-y-4">
+      {/* Card 2: AMOUNT RECEIVED matching unpaid.png */}
+      <View className="bg-white border border-[#E2E8F0] rounded-2xl p-5 mb-4 shadow-xs">
+        <Text className="text-[11px] font-bold text-[#94A3B8] tracking-wider uppercase mb-3">
+          AMOUNT RECEIVED
         </Text>
-      </View>
 
-      <Text className="text-xs text-slate-300">
-        Customer is required to deposit the COD / processing fee before parcel intake is activated.
-      </Text>
-
-      {/* Cash Input */}
-      <View className="bg-slate-900 border border-slate-700/80 rounded-xl p-3">
-        <Text className="text-[11px] text-slate-400 mb-1">Enter Cash Received from Customer</Text>
-        <View className="flex-row items-center">
-          <Text className="text-lg font-mono font-bold text-slate-300 mr-2">₱</Text>
+        {/* Currency Input Field */}
+        <View className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl px-4 py-3 flex-row items-center justify-between mb-4">
+          <Text className="text-sm font-bold text-[#0F172A] font-mono">₱</Text>
           <TextInput
             value={cashText}
             onChangeText={setCashText}
             keyboardType="numeric"
             placeholder={String(fee)}
-            placeholderTextColor="#64748b"
-            className="flex-1 text-lg font-mono font-bold text-white py-1"
+            placeholderTextColor="#94A3B8"
+            className="flex-1 text-right text-base font-bold text-[#0F172A] font-mono p-0"
           />
         </View>
-      </View>
 
-      {/* Quick Denomination Shortcuts */}
-      <View className="flex-row gap-2">
-        <TouchableOpacity
-          onPress={handleExact}
-          className="flex-1 bg-slate-800 border border-slate-700 py-1.5 rounded-lg items-center active:bg-slate-700"
-        >
-          <Text className="text-xs font-mono font-semibold text-slate-300">Exact</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => handleQuickAdd(100)}
-          className="flex-1 bg-slate-800 border border-slate-700 py-1.5 rounded-lg items-center active:bg-slate-700"
-        >
-          <Text className="text-xs font-mono font-semibold text-slate-300">+₱100</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => handleQuickAdd(500)}
-          className="flex-1 bg-slate-800 border border-slate-700 py-1.5 rounded-lg items-center active:bg-slate-700"
-        >
-          <Text className="text-xs font-mono font-semibold text-slate-300">+₱500</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => handleQuickAdd(1000)}
-          className="flex-1 bg-slate-800 border border-slate-700 py-1.5 rounded-lg items-center active:bg-slate-700"
-        >
-          <Text className="text-xs font-mono font-semibold text-slate-300">+₱1,000</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Change Calculation Box */}
-      {cashNum > 0 && (
-        <View className="bg-slate-900/80 rounded-xl p-3 border border-slate-800 flex-row justify-between items-center">
-          <Text className="text-xs text-slate-400">Calculated Change</Text>
-          <Text className={`text-sm font-mono font-black ${isSufficient ? 'text-emerald-400' : 'text-rose-400'}`}>
-            {isSufficient ? `₱${change.toLocaleString()}` : `Insufficient Cash (Need ₱${(fee - cashNum).toLocaleString()} more)`}
+        {/* Amount to Pay */}
+        <View className="flex-row items-center justify-between py-1.5 border-b border-[#F8FAFC]">
+          <Text className="text-xs text-[#64748B] font-medium">Amount to Pay</Text>
+          <Text className="text-xs font-bold text-[#0F172A]">
+            ₱{fee.toLocaleString()}
           </Text>
         </View>
-      )}
 
-      {/* Action Button */}
+        {/* Change */}
+        <View className="flex-row items-center justify-between py-1.5 mb-2">
+          <Text className="text-xs text-[#64748B] font-medium">Change</Text>
+          <Text className="text-xs font-bold text-[#2563EB]">
+            ₱{change.toLocaleString()}
+          </Text>
+        </View>
+
+        {/* Footer Note */}
+        <Text className="text-[11px] text-[#64748B] leading-relaxed">
+          Change is only given alongside the order parcel’s receiving.
+        </Text>
+      </View>
+
+      {/* Confirmation Checkbox matching unpaid.png */}
       <TouchableOpacity
+        activeOpacity={0.8}
+        onPress={() => setIsConfirmed((prev) => !prev)}
+        className="flex-row items-start gap-3 px-1 mb-5"
+      >
+        <View
+          className={`w-5 h-5 rounded-md items-center justify-center mt-0.5 ${
+            isConfirmed ? 'bg-[#215CD4]' : 'bg-white border-2 border-[#CBD5E1]'
+          }`}
+        >
+          {isConfirmed && <Check size={14} color="#FFFFFF" strokeWidth={3} />}
+        </View>
+        <View className="flex-1">
+          <Text className="text-xs font-bold text-[#0F172A]">
+            I confirm that I received exactly ₱{cashNum.toLocaleString()}
+          </Text>
+          <Text className="text-[11px] text-[#64748B] mt-0.5 leading-relaxed">
+            Only activate the order if you received the exact or more compared to the specified amount.
+          </Text>
+        </View>
+      </TouchableOpacity>
+
+      {/* Primary Action Button */}
+      <TouchableOpacity
+        activeOpacity={0.85}
         onPress={handleSubmit}
-        disabled={!isSufficient || isSubmitting}
-        className={`py-3.5 rounded-xl flex-row items-center justify-center gap-2 ${
-          isSufficient && !isSubmitting
-            ? 'bg-rose-600 active:bg-rose-700'
-            : 'bg-slate-800 opacity-50'
+        disabled={!canActivate}
+        className={`w-full py-4 rounded-xl items-center justify-center shadow-md mb-2 ${
+          canActivate ? 'bg-[#215CD4] active:bg-[#1d4ed8]' : 'bg-[#94A3B8]'
         }`}
       >
         {isSubmitting ? (
-          <ActivityIndicator size="small" color="#ffffff" />
+          <ActivityIndicator size="small" color="#FFFFFF" />
         ) : (
-          <>
-            <CheckCircle size={16} color="#ffffff" />
-            <Text className="text-white font-bold text-xs uppercase tracking-wider">
-              Collect Payment & Activate Order
-            </Text>
-          </>
+          <Text className="text-white font-bold text-sm">
+            Activate Order
+          </Text>
         )}
+      </TouchableOpacity>
+
+      {/* Return to Home Secondary Button */}
+      <TouchableOpacity
+        activeOpacity={0.7}
+        onPress={onReturnHome}
+        className="w-full py-3 items-center justify-center"
+      >
+        <Text className="text-xs font-semibold text-[#475569]">
+          Return to Home
+        </Text>
       </TouchableOpacity>
     </View>
   );

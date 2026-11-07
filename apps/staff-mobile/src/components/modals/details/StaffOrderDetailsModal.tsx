@@ -1,16 +1,21 @@
 import React, { useState } from 'react';
-import { Modal, View, Text, TouchableOpacity, ScrollView, SafeAreaView } from 'react-native';
+import {
+  Modal,
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  SafeAreaView,
+  Platform,
+} from 'react-native';
 import { StaffOrder } from '../../../types';
 import { useStaff } from '../../../context/StaffContext';
-import { X } from '../../common/Icons';
-import { StaffOrderHeroBanner } from './StaffOrderHeroBanner';
-import { StaffParcelInfoSection } from './StaffParcelInfoSection';
-import { StaffFinancialLedgerSection } from './StaffFinancialLedgerSection';
+import { ArrowLeft } from '../../common/Icons';
+import { StaffOrderOverviewCard } from './StaffOrderOverviewCard';
+import { StaffReadyActionSection } from './StaffReadyActionSection';
 import { StaffUnpaidActionSection } from './StaffUnpaidActionSection';
 import { StaffActiveActionSection } from './StaffActiveActionSection';
-import { StaffReadyActionSection } from './StaffReadyActionSection';
 import { StaffClaimedSummarySection } from './StaffClaimedSummarySection';
-import { StaffNotesSection } from './StaffNotesSection';
 
 interface StaffOrderDetailsModalProps {
   order: StaffOrder | null;
@@ -28,7 +33,6 @@ export const StaffOrderDetailsModal: React.FC<StaffOrderDetailsModalProps> = ({
     payCourier,
     attachPhoto,
     claimOrder,
-    updateOrderNotes,
   } = useStaff();
 
   const [isActivating, setIsActivating] = useState<boolean>(false);
@@ -42,6 +46,7 @@ export const StaffOrderDetailsModal: React.FC<StaffOrderDetailsModalProps> = ({
     setIsActivating(true);
     try {
       await activateOrder(orderId, amount);
+      onClose();
     } finally {
       setIsActivating(false);
     }
@@ -56,7 +61,7 @@ export const StaffOrderDetailsModal: React.FC<StaffOrderDetailsModalProps> = ({
     }
   };
 
-  const handleAttachPhoto = async (orderId: string, imageUrl: string) => {
+  const handleAttachPhoto = async (orderId: string, imageUrl?: string) => {
     setIsAttachingPhoto(true);
     try {
       await attachPhoto(orderId, imageUrl);
@@ -75,8 +80,20 @@ export const StaffOrderDetailsModal: React.FC<StaffOrderDetailsModalProps> = ({
     }
   };
 
-  const handleSaveNotes = (notes: string) => {
-    updateOrderNotes(order.id, notes);
+  // Determine Subtitle from Status matching Figma
+  const getSubtitle = () => {
+    switch (order.status) {
+      case 'READY_TO_CLAIM':
+        return 'Ready To Claim';
+      case 'PAYMENT_REQUIRED':
+        return 'Unpaid Order';
+      case 'AWAITING_PARCEL':
+        return 'Awaiting Parcel';
+      case 'CLAIMED':
+        return 'Claimed Order';
+      default:
+        return 'Order Details';
+    }
   };
 
   return (
@@ -86,37 +103,69 @@ export const StaffOrderDetailsModal: React.FC<StaffOrderDetailsModalProps> = ({
       transparent={false}
       onRequestClose={onClose}
     >
-      <SafeAreaView className="flex-1 bg-slate-950">
-        {/* Modal Top Bar */}
-        <View className="flex-row items-center justify-between px-4 py-3 bg-slate-900 border-b border-slate-800">
-          <View>
-            <Text className="text-white font-bold text-base">Order Management</Text>
-            <Text className="text-[11px] text-slate-400 font-mono">Counter Action Drill-down</Text>
+      <View className="flex-1 bg-[#F8FAFC]">
+        {/* Top Header matching Figma curved blue bar */}
+        <View
+          className="bg-[#215CD4] pt-12 pb-7 px-5 rounded-b-[32px] shadow-sm relative z-10"
+          style={{
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.08,
+            shadowRadius: 4,
+            elevation: 4,
+          }}
+        >
+          <View className="flex-row items-center justify-between">
+            {/* Go Back circular button */}
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={onClose}
+              className="w-10 h-10 rounded-full bg-white/15 items-center justify-center active:bg-white/25"
+              accessibilityLabel="Return to Home"
+            >
+              <ArrowLeft size={20} color="#FFFFFF" strokeWidth={2.5} />
+            </TouchableOpacity>
+
+            {/* Title Header */}
+            <View className="items-center flex-1 pr-10">
+              <Text className="text-lg font-bold text-white tracking-tight">
+                Complete Details
+              </Text>
+              <Text className="text-xs text-white/80 font-medium mt-0.5">
+                {getSubtitle()}
+              </Text>
+            </View>
           </View>
-          <TouchableOpacity
-            onPress={onClose}
-            className="w-8 h-8 rounded-full bg-slate-800 items-center justify-center active:bg-slate-700"
-            accessibilityLabel="Close Order Management modal"
-          >
-            <X size={16} color="#94a3b8" />
-          </TouchableOpacity>
         </View>
 
-        {/* Modal Scroll Content */}
+        {/* Scrollable Content */}
         <ScrollView
-          className="flex-1 px-4 pt-3"
-          contentContainerStyle={{ paddingBottom: 40 }}
+          className="flex-1 px-5 pt-5"
+          contentContainerStyle={{ paddingBottom: 60 }}
           showsVerticalScrollIndicator={false}
         >
-          {/* Hero Banner */}
-          <StaffOrderHeroBanner order={order} />
+          {/* Order Overview Card */}
+          <StaffOrderOverviewCard
+            order={order}
+            showFinancials={order.status !== 'PAYMENT_REQUIRED'}
+          />
 
-          {/* Contextual Action Section based on Order State */}
+          {/* Status-specific Action Section */}
+          {order.status === 'READY_TO_CLAIM' && (
+            <StaffReadyActionSection
+              order={order}
+              isReleasing={isReleasing}
+              onRelease={handleRelease}
+              onReturnHome={onClose}
+            />
+          )}
+
           {order.status === 'PAYMENT_REQUIRED' && (
             <StaffUnpaidActionSection
               order={order}
               isSubmitting={isActivating}
               onActivate={handleActivate}
+              onReturnHome={onClose}
             />
           )}
 
@@ -127,34 +176,18 @@ export const StaffOrderDetailsModal: React.FC<StaffOrderDetailsModalProps> = ({
               isAttachingPhoto={isAttachingPhoto}
               onPayCourier={handlePayCourier}
               onAttachPhoto={handleAttachPhoto}
-            />
-          )}
-
-          {order.status === 'READY_TO_CLAIM' && (
-            <StaffReadyActionSection
-              order={order}
-              isReleasing={isReleasing}
-              onRelease={handleRelease}
+              onReturnHome={onClose}
             />
           )}
 
           {order.status === 'CLAIMED' && (
-            <StaffClaimedSummarySection order={order} />
+            <StaffClaimedSummarySection
+              order={order}
+              onReturnHome={onClose}
+            />
           )}
-
-          {/* Parcel & Recipient Specs */}
-          <StaffParcelInfoSection order={order} />
-
-          {/* Ledger */}
-          <StaffFinancialLedgerSection order={order} />
-
-          {/* Notes */}
-          <StaffNotesSection
-            initialNotes={order.notes}
-            onSaveNotes={handleSaveNotes}
-          />
         </ScrollView>
-      </SafeAreaView>
+      </View>
     </Modal>
   );
 };

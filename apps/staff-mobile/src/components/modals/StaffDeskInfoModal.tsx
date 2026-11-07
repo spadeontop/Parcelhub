@@ -24,50 +24,61 @@ export const StaffDeskInfoModal: React.FC<StaffDeskInfoModalProps> = ({ isOpen, 
       transparent
       onRequestClose={onClose}
     >
-      <View className="flex-1 bg-black/75 justify-center px-4">
-        <View className="bg-slate-900 border border-slate-700 rounded-3xl p-5 shadow-2xl space-y-4">
-          <View className="flex-row items-center justify-between">
+      <View className="flex-1 bg-black/50 justify-center px-5">
+        <View className="bg-white rounded-3xl p-6 shadow-xl border border-[#E2E8F0] space-y-4">
+          <View className="flex-row items-center justify-between mb-2">
             <View className="flex-row items-center gap-2">
-              <Info size={18} color="#60a5fa" />
-              <Text className="text-white font-bold text-sm">Station & Session Info</Text>
+              <View className="w-8 h-8 rounded-full bg-[#DBEAFE] items-center justify-center">
+                <Info size={18} color="#215CD4" />
+              </View>
+              <Text className="text-sm font-bold text-[#0F172A]">
+                Staff Account & Terminal Info
+              </Text>
             </View>
-            <TouchableOpacity onPress={onClose} className="p-1">
-              <X size={16} color="#94a3b8" />
+            <TouchableOpacity
+              onPress={onClose}
+              className="w-7 h-7 rounded-full bg-[#F1F5F9] items-center justify-center"
+            >
+              <X size={14} color="#64748B" />
             </TouchableOpacity>
           </View>
 
-          <View className="bg-slate-950 rounded-xl p-3 border border-slate-800 space-y-2">
-            <View className="flex-row justify-between items-center">
-              <Text className="text-xs text-slate-400">Station Terminal</Text>
-              <Text className="text-xs font-mono font-bold text-white">Counter Desk #01</Text>
+          {/* Details list */}
+          <View className="bg-[#F8FAFC] rounded-2xl p-4 border border-[#E2E8F0] space-y-2.5">
+            <View className="flex-row justify-between items-center py-1 border-b border-slate-200/60">
+              <Text className="text-xs text-[#64748B] font-medium">Terminal Station</Text>
+              <Text className="text-xs font-mono font-bold text-[#0F172A]">Counter Desk #01</Text>
             </View>
-            <View className="flex-row justify-between items-center">
-              <Text className="text-xs text-slate-400">Hub Branch</Text>
-              <Text className="text-xs font-medium text-slate-200">Lily's Catering Hub</Text>
+
+            <View className="flex-row justify-between items-center py-1 border-b border-slate-200/60">
+              <Text className="text-xs text-[#64748B] font-medium">Hub Branch</Text>
+              <Text className="text-xs font-semibold text-[#0F172A]">Lily's Catering Hub</Text>
             </View>
-            <View className="flex-row justify-between items-center">
-              <Text className="text-xs text-slate-400">Active Staff</Text>
-              <Text className="text-xs font-medium text-blue-400">{staffUser?.email || 'staff@parcelhub.com'}</Text>
+
+            <View className="flex-row justify-between items-center py-1 border-b border-slate-200/60">
+              <Text className="text-xs text-[#64748B] font-medium">Active Staff</Text>
+              <Text className="text-xs font-bold text-[#215CD4]">
+                {staffUser?.email || 'staff@parcelhub.com'}
+              </Text>
             </View>
-            <View className="flex-row justify-between items-center">
-              <Text className="text-xs text-slate-400">Backend Endpoint</Text>
-              <Text className="text-[10px] font-mono text-slate-400">{ENV.API_BASE_URL}</Text>
-            </View>
-            <View className="flex-row justify-between items-center">
-              <Text className="text-xs text-slate-400">Backend Status</Text>
-              <Text className={`text-xs font-bold ${isOnline ? 'text-emerald-400' : 'text-rose-400'}`}>
-                {isOnline ? 'Connected & Synced' : 'Offline / Unreachable'}
+
+            <View className="flex-row justify-between items-center py-1">
+              <Text className="text-xs text-[#64748B] font-medium">Sync Status</Text>
+              <Text className={`text-xs font-bold ${isOnline ? 'text-[#059669]' : 'text-rose-600'}`}>
+                {isOnline ? 'Live Backend Connected' : 'Offline Mode'}
               </Text>
             </View>
           </View>
 
+          {/* Sign Out Button */}
           <TouchableOpacity
+            activeOpacity={0.85}
             onPress={handleSignOut}
-            className="bg-rose-950/40 border border-rose-800/60 py-3 rounded-xl flex-row items-center justify-center gap-2 active:bg-rose-900/50"
+            className="w-full bg-rose-50 border border-rose-200 py-3.5 rounded-xl flex-row items-center justify-center gap-2 active:bg-rose-100"
           >
-            <LogOut size={16} color="#f43f5e" />
-            <Text className="text-rose-400 font-bold text-xs uppercase tracking-wider">
-              Sign Out of Counter Terminal
+            <LogOut size={16} color="#e11d48" />
+            <Text className="text-xs font-bold text-rose-700">
+              Sign Out of Terminal
             </Text>
           </TouchableOpacity>
         </View>

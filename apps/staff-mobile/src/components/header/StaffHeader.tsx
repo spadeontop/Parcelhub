@@ -8,52 +8,49 @@ interface StaffHeaderProps {
 }
 
 export const StaffHeader: React.FC<StaffHeaderProps> = ({ children }) => {
-  const { staffUser, isOnline, isRefreshing, refreshOrders } = useStaff();
+  const { isOnline, isRefreshing, refreshOrders } = useStaff();
 
   return (
-    <View className="bg-slate-900 border-b border-slate-800 px-4 pt-3 pb-3">
-      {/* Top Station Bar */}
-      <View className="flex-row items-center justify-between mb-3">
-        <View className="flex-row items-center gap-2">
-          <View className="w-8 h-8 rounded-xl bg-blue-600/20 border border-blue-500/30 items-center justify-center">
-            <Text className="text-blue-400 font-black text-sm">PH</Text>
-          </View>
-          <View>
-            <View className="flex-row items-center gap-2">
-              <Text className="text-white font-bold text-sm tracking-tight">Staff Terminal</Text>
-              <View className="bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded">
-                <Text className="text-[10px] font-mono text-slate-300">Desk #01</Text>
-              </View>
-            </View>
-            <Text className="text-[10px] text-slate-400 font-medium">Lily's Catering Hub • Yati, Liloan</Text>
-          </View>
+    <View className="bg-transparent px-5 pt-3 pb-2">
+      {/* Top Header matching home.png */}
+      <View className="flex-row items-start justify-between">
+        <View>
+          <Text className="text-[11px] font-bold text-[#215CD4] uppercase tracking-wider">
+            INVENTORY & ASSETS
+          </Text>
+          <Text className="text-2xl font-bold text-[#1E1E1E] tracking-tight mt-0.5">
+            Items & Claims
+          </Text>
         </View>
 
-        {/* Status indicator & Manual Refresh */}
-        <View className="flex-row items-center gap-2">
+        {/* Live sync & refresh */}
+        <View className="flex-row items-center gap-2 pt-1">
           <View
-            className={`flex-row items-center gap-1.5 px-2 py-1 rounded-full border ${
-              isOnline ? 'bg-emerald-950/60 border-emerald-800/60' : 'bg-rose-950/60 border-rose-800/60'
+            className={`flex-row items-center gap-1.5 px-2 py-0.5 rounded-full border ${
+              isOnline ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200'
             }`}
           >
-            <View className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-400' : 'bg-rose-400'}`} />
-            <Text className={`text-[10px] font-semibold ${isOnline ? 'text-emerald-300' : 'text-rose-300'}`}>
-              {isOnline ? 'Live Backend' : 'Offline'}
+            <View className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+            <Text className={`text-[10px] font-semibold ${isOnline ? 'text-emerald-700' : 'text-rose-700'}`}>
+              {isOnline ? 'Live' : 'Offline'}
             </Text>
           </View>
 
           <TouchableOpacity
             onPress={refreshOrders}
             disabled={isRefreshing}
-            className="w-8 h-8 rounded-xl bg-slate-800 border border-slate-700 items-center justify-center active:bg-slate-700"
+            className="w-7 h-7 rounded-full bg-white border border-[#E2E8F0] items-center justify-center active:bg-slate-100 shadow-xs"
             accessibilityLabel="Refresh orders"
           >
-            <RefreshCw size={14} color={isRefreshing ? '#3b82f6' : '#94a3b8'} className={isRefreshing ? 'animate-spin' : ''} />
+            <RefreshCw
+              size={12}
+              color={isRefreshing ? '#215CD4' : '#64748B'}
+            />
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Children (e.g. Search Bar) */}
+      {/* Embedded Search Bar */}
       {children}
     </View>
   );
