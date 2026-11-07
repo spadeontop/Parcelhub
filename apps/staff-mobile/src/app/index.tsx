@@ -9,9 +9,9 @@ export default function IndexPage() {
 
   if (isInitialLoading) {
     return (
-      <View className="flex-1 bg-slate-950 items-center justify-center">
-        <ActivityIndicator size="large" color="#3b82f6" />
-        <Text className="text-slate-400 text-xs font-semibold mt-3 tracking-wider uppercase">
+      <View className="flex-1 bg-[#F8FAFC] items-center justify-center">
+        <ActivityIndicator size="large" color="#215CD4" />
+        <Text className="text-[#64748B] text-xs font-semibold mt-3 tracking-wider uppercase">
           Initializing Staff Terminal...
         </Text>
       </View>

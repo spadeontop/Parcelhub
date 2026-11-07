@@ -21,37 +21,44 @@ export const StaffFilterTabs: React.FC<StaffFilterTabsProps> = ({
   ];
 
   return (
-    <View className="bg-slate-900 border-b border-slate-800/80 px-2 py-2">
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: 6 }}>
+    <View className="px-5 my-2">
+      <View className="bg-[#F1F5F9] rounded-xl p-1 flex-row items-center">
         {tabs.map((tab) => {
           const isSelected = activeTab === tab.key;
           return (
             <TouchableOpacity
               key={tab.key}
+              activeOpacity={0.8}
               onPress={() => onSelectTab(tab.key)}
-              className={`flex-row items-center gap-2 px-3.5 py-1.5 rounded-xl border ${
-                isSelected
-                  ? 'bg-blue-600/20 border-blue-500/60'
-                  : 'bg-slate-800/60 border-slate-700/60'
+              className={`flex-1 flex-row items-center justify-center py-2 px-1 rounded-lg ${
+                isSelected ? 'bg-white shadow-xs' : 'bg-transparent'
               }`}
             >
               <Text
-                className={`text-xs font-bold ${
-                  isSelected ? 'text-blue-400' : 'text-slate-400'
+                className={`text-xs font-semibold ${
+                  isSelected ? 'text-[#0F172A] font-bold' : 'text-[#64748B]'
                 }`}
               >
                 {tab.label}
               </Text>
+
+              {/* Badge Counter matching home.png */}
               <View
-                className={`px-1.5 py-0.5 rounded-md ${
+                className={`ml-1.5 px-1.5 py-0.2 rounded-full min-w-[18px] items-center justify-center ${
                   isSelected
-                    ? 'bg-blue-500/30'
-                    : 'bg-slate-700/60'
+                    ? 'bg-[#DBEAFE]'
+                    : tab.key === 'active'
+                    ? 'bg-[#1E1E1E]'
+                    : 'bg-[#E2E8F0]'
                 }`}
               >
                 <Text
-                  className={`text-[10px] font-mono font-bold ${
-                    isSelected ? 'text-blue-300' : 'text-slate-400'
+                  className={`text-[10px] font-bold ${
+                    isSelected
+                      ? 'text-[#215CD4]'
+                      : tab.key === 'active'
+                      ? 'text-white'
+                      : 'text-[#64748B]'
                   }`}
                 >
                   {tab.count}
@@ -60,7 +67,7 @@ export const StaffFilterTabs: React.FC<StaffFilterTabsProps> = ({
             </TouchableOpacity>
           );
         })}
-      </ScrollView>
+      </View>
     </View>
   );
 };

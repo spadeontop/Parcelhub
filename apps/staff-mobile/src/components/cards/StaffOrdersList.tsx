@@ -1,8 +1,14 @@
-import React from 'react';
-import { View, Text, FlatList, RefreshControl, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  FlatList,
+  RefreshControl,
+  TouchableOpacity,
+} from 'react-native';
 import { StaffOrder, StaffTab } from '../../types';
 import { StaffOrderCard } from './StaffOrderCard';
-import { Package, Search } from '../common/Icons';
+import { ChevronDown, Inbox } from '../common/Icons';
 
 interface StaffOrdersListProps {
   orders: StaffOrder[];
@@ -23,87 +29,81 @@ export const StaffOrdersList: React.FC<StaffOrdersListProps> = ({
   isRefreshing,
   onRefresh,
   onSelectOrder,
-  onSelectTab,
 }) => {
-  // Check for cross-tab matches when search query returns no results in active tab
-  const crossTabMatches = React.useMemo(() => {
-    if (!searchQuery.trim() || orders.length > 0) return [];
-    const q = searchQuery.trim().toLowerCase();
-    return allOrders.filter((o) => {
-      const id = o.id.toLowerCase();
-      const track = o.trackingId.toLowerCase();
-      const cust = o.customer.toLowerCase();
-      const prod = (o.productName || '').toLowerCase();
-      return id.includes(q) || track.includes(q) || cust.includes(q) || prod.includes(q);
-    });
-  }, [allOrders, orders.length, searchQuery]);
+  const [sortAscending, setSortAscending] = useState<boolean>(false);
 
-  const renderEmptyState = () => {
-    if (searchQuery.trim() && crossTabMatches.length > 0) {
-      return (
-        <View className="py-10 px-4 items-center">
-          <View className="w-12 h-12 rounded-2xl bg-blue-500/10 items-center justify-center mb-3">
-            <Search size={22} color="#60a5fa" />
-          </View>
-          <Text className="text-white font-bold text-sm text-center mb-1">
-            Found in Other Queues
-          </Text>
-          <Text className="text-slate-400 text-xs text-center mb-4">
-            No match in current tab, but found {crossTabMatches.length} matching order(s):
-          </Text>
-          <View className="w-full gap-2">
-            {crossTabMatches.map((matched) => (
-              <TouchableOpacity
-                key={matched.id}
-                onPress={() => onSelectOrder(matched)}
-                className="bg-slate-800/80 border border-slate-700/80 rounded-xl p-3 flex-row items-center justify-between"
-              >
-                <View>
-                  <Text className="text-white font-bold text-xs">{matched.id} • {matched.trackingId}</Text>
-                  <Text className="text-slate-400 text-[10px]">{matched.customer} • Status: {matched.status}</Text>
-                </View>
-                <Text className="text-blue-400 font-semibold text-xs">View -{'>'}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-      );
-    }
+  // Sorting
+  const sortedOrders = [...orders].sort((a, b) => {
+    const timeA = new Date(a.timestamp).getTime();
+    const timeB = new Date(b.timestamp).getTime();
+    return sortAscending ? timeA - timeB : timeB - timeA;
+  });
 
-    return (
-      <View className="py-16 px-4 items-center justify-center">
-        <View className="w-14 h-14 rounded-2xl bg-slate-800/60 border border-slate-700/60 items-center justify-center mb-3">
-          <Package size={26} color="#64748b" />
-        </View>
-        <Text className="text-slate-200 font-bold text-sm text-center mb-1">
-          {searchQuery ? 'No Orders Found' : 'No Orders In This Queue'}
-        </Text>
-        <Text className="text-slate-400 text-xs text-center max-w-[240px]">
-          {searchQuery
-            ? `No records match "${searchQuery}". Check tracking number or search another queue.`
-            : 'Incoming orders and customer claims will appear here live.'}
-        </Text>
-      </View>
-    );
+  const toggleSort = () => {
+    setSortAscending((prev) => !prev);
   };
 
   return (
-    <FlatList
-      data={orders}
-      keyExtractor={(item) => item.id}
-      renderItem={({ item }) => (
-        <StaffOrderCard order={item} onPress={onSelectOrder} />
-      )}
-      contentContainerStyle={{ padding: 12, paddingBottom: 90, flexGrow: 1 }}
-      refreshControl={
-        <RefreshControl
-          refreshing={isRefreshing}
-          onRefresh={onRefresh}
-          tintColor="#3b82f6"
-          colors={['#3b82f6']}
-        />
-      }
-      ListEmptyComponent={renderEmptyState}
-    />
+    <View className="flex-1 px-5">
+      {/* Subheader: Record Count & Sort by Date matching home.png */}
+      <View className="flex-row items-center justify-between py-2 px-1">
+        <Text className="text-xs text-[#64748B] font-medium">
+          Displaying {orders.length} of {allOrders.length} records
+        </Text>
+
+        <TouchableOpacity
+          onPress={toggleSort}
+          className="flex-row items-center gap-1 active:opacity-70"
+        >
+          <Text className="text-xs font-semibold text-[#215CD4]">
+            Sort by Date
+          </Text>
+          <ChevronDown
+            size={13}
+            color="#215CD4"
+            style={{ transform: [{ rotate: sortAscending ? '180deg' : '0deg' }] }}
+          />
+        </TouchableOpacity>
+      </View>
+
+      {/* Orders List */}
+      <FlatList
+        data={sortedOrders}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <StaffOrderCard order={item} onPress={onSelectOrder} />
+        )}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingBottom: 90, // safe space for bottom nav
+          flexGrow: 1,
+        }}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
+            tintColor="#215CD4"
+            colors={['#215CD4']}
+          />
+        }
+        ListEmptyComponent={
+          <View className="flex-1 items-center justify-center py-16">
+            <View className="w-14 h-14 rounded-2xl bg-[#F1F5F9] items-center justify-center mb-3">
+              <Inbox size={26} color="#94A3B8" />
+            </View>
+            <Text className="text-sm font-bold text-[#0F172A]">
+              No {activeTab} records
+            </Text>
+            <Text className="text-xs text-[#64748B] text-center mt-1 max-w-[240px]">
+              {searchQuery
+                ? `No orders matching "${searchQuery}"`
+                : activeTab === 'unpaid'
+                ? 'No recent unpaid orders placed within the last 5 minutes.'
+                : `There are currently no items under the ${activeTab} queue.`}
+            </Text>
+          </View>
+        }
+      />
+    </View>
   );
 };

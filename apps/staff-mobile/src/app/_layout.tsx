@@ -19,12 +19,12 @@ function RootAppContent() {
 
   return (
     <SafeAreaView
-      style={{ flex: 1, backgroundColor: '#020617' }}
-      className="flex-1 bg-slate-950"
+      style={{ flex: 1, backgroundColor: '#F8FAFC' }}
+      className="flex-1 bg-slate-50"
       edges={['top', 'left', 'right', 'bottom']}
     >
-      <StatusBar style="light" />
-      <View style={{ flex: 1, backgroundColor: '#020617' }} className="flex-1 bg-slate-950">
+      <StatusBar style="dark" />
+      <View style={{ flex: 1, backgroundColor: '#F8FAFC' }} className="flex-1 bg-slate-50">
         <Slot />
       </View>
 

@@ -1,68 +1,112 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
-import { Package, CheckCircle, Info, LogOut } from '../common/Icons';
-import { StaffTab } from '../../types';
+import { View, Text, TouchableOpacity, Platform } from 'react-native';
+import { LayoutGrid, Package, QrCode, Settings } from '../common/Icons';
+
+export type BottomNavTab = 'home' | 'orders' | 'scan' | 'account';
 
 interface StaffBottomNavProps {
-  activeTab: StaffTab;
-  onSelectTab: (tab: StaffTab) => void;
-  onOpenDeskInfo: () => void;
-  onSignOut: () => void;
+  currentTab: BottomNavTab;
+  onSelectTab: (tab: BottomNavTab) => void;
+  onOpenScan: () => void;
+  onOpenAccount: () => void;
 }
 
 export const StaffBottomNav: React.FC<StaffBottomNavProps> = ({
-  activeTab,
+  currentTab,
   onSelectTab,
-  onOpenDeskInfo,
-  onSignOut,
+  onOpenScan,
+  onOpenAccount,
 }) => {
   return (
-    <View className="absolute bottom-0 left-0 right-0 bg-slate-900/95 border-t border-slate-800/80 px-4 py-2 flex-row justify-around items-center">
+    <View
+      className="absolute bottom-0 left-0 right-0 bg-[#F8FAFC]/95 border-t border-[#E2E8F0] px-4 pt-2 pb-5 flex-row items-center justify-around"
+      style={{
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -2 },
+        shadowOpacity: 0.04,
+        shadowRadius: 12,
+        elevation: 8,
+      }}
+    >
+      {/* Home Tab */}
       <TouchableOpacity
-        onPress={() => onSelectTab('active')}
-        className="items-center py-1 px-3"
+        activeOpacity={0.7}
+        onPress={() => onSelectTab('home')}
+        className="items-center justify-center py-1 flex-1"
       >
-        <Package size={20} color={activeTab === 'active' || activeTab === 'ready' || activeTab === 'unpaid' ? '#3b82f6' : '#64748b'} />
+        <LayoutGrid
+          size={20}
+          color={currentTab === 'home' ? '#215CD4' : '#64748B'}
+        />
         <Text
-          className={`text-[10px] mt-1 font-semibold ${
-            activeTab === 'active' || activeTab === 'ready' || activeTab === 'unpaid' ? 'text-blue-400' : 'text-slate-400'
+          className={`text-[10px] font-semibold mt-1 ${
+            currentTab === 'home' ? 'text-[#215CD4] font-bold' : 'text-[#64748B]'
           }`}
         >
-          Queue
+          Home
         </Text>
       </TouchableOpacity>
 
+      {/* Orders Tab */}
       <TouchableOpacity
-        onPress={() => onSelectTab('claimed')}
-        className="items-center py-1 px-3"
+        activeOpacity={0.7}
+        onPress={() => onSelectTab('orders')}
+        className="items-center justify-center py-1 flex-1"
       >
-        <CheckCircle size={20} color={activeTab === 'claimed' ? '#3b82f6' : '#64748b'} />
+        <Package
+          size={20}
+          color={currentTab === 'orders' ? '#215CD4' : '#64748B'}
+        />
         <Text
-          className={`text-[10px] mt-1 font-semibold ${
-            activeTab === 'claimed' ? 'text-blue-400' : 'text-slate-400'
+          className={`text-[10px] font-semibold mt-1 ${
+            currentTab === 'orders' ? 'text-[#215CD4] font-bold' : 'text-[#64748B]'
           }`}
         >
-          Activity Log
+          Orders
         </Text>
       </TouchableOpacity>
 
-      <TouchableOpacity
-        onPress={onOpenDeskInfo}
-        className="items-center py-1 px-3"
-      >
-        <Info size={20} color="#64748b" />
-        <Text className="text-[10px] mt-1 font-semibold text-slate-400">
-          Desk #01
+      {/* Center Scan Action Button matching home.png */}
+      <View className="items-center justify-center flex-1 -mt-4">
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={onOpenScan}
+          className="w-13 h-13 rounded-full bg-[#215CD4] items-center justify-center shadow-lg active:bg-[#1d4ed8]"
+          style={{
+            width: 50,
+            height: 50,
+            borderRadius: 25,
+            shadowColor: '#215CD4',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.35,
+            shadowRadius: 10,
+            elevation: 8,
+          }}
+          accessibilityLabel="Scan QR / Lookup Order"
+        >
+          <QrCode size={22} color="#FFFFFF" />
+        </TouchableOpacity>
+        <Text className="text-[10px] font-semibold text-[#215CD4] mt-1">
+          Scan
         </Text>
-      </TouchableOpacity>
+      </View>
 
+      {/* Account Tab */}
       <TouchableOpacity
-        onPress={onSignOut}
-        className="items-center py-1 px-3"
+        activeOpacity={0.7}
+        onPress={onOpenAccount}
+        className="items-center justify-center py-1 flex-1"
       >
-        <LogOut size={20} color="#f43f5e" />
-        <Text className="text-[10px] mt-1 font-semibold text-rose-400">
-          Sign Out
+        <Settings
+          size={20}
+          color={currentTab === 'account' ? '#215CD4' : '#64748B'}
+        />
+        <Text
+          className={`text-[10px] font-semibold mt-1 ${
+            currentTab === 'account' ? 'text-[#215CD4] font-bold' : 'text-[#64748B]'
+          }`}
+        >
+          Account
         </Text>
       </TouchableOpacity>
     </View>

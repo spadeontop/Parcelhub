@@ -1,6 +1,13 @@
 import React, { useState } from 'react';
-import { Modal, View, Text, TextInput, TouchableOpacity, SafeAreaView } from 'react-native';
-import { X, Barcode, Search } from '../common/Icons';
+import {
+  Modal,
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+} from 'react-native';
+import { X, QrCode, Search, Check } from '../common/Icons';
 import { StaffOrder } from '../../types';
 
 interface StaffManualLookupModalProps {
@@ -56,78 +63,86 @@ export const StaffManualLookupModal: React.FC<StaffManualLookupModalProps> = ({
       transparent
       onRequestClose={onClose}
     >
-      <View className="flex-1 bg-black/75 justify-center px-4">
-        <View className="bg-slate-900 border border-slate-700 rounded-3xl p-5 shadow-2xl">
+      <View className="flex-1 bg-black/50 justify-center px-5">
+        <View className="bg-white rounded-3xl p-6 shadow-xl border border-[#E2E8F0]">
+          {/* Header */}
           <View className="flex-row items-center justify-between mb-4">
             <View className="flex-row items-center gap-2">
-              <Barcode size={18} color="#60a5fa" />
-              <Text className="text-white font-bold text-sm">Manual Barcode / ID Lookup</Text>
+              <View className="w-8 h-8 rounded-full bg-[#DBEAFE] items-center justify-center">
+                <QrCode size={18} color="#215CD4" />
+              </View>
+              <Text className="text-sm font-bold text-[#0F172A]">
+                Scan & Manual Lookup
+              </Text>
             </View>
-            <TouchableOpacity onPress={onClose} className="p-1">
-              <X size={16} color="#94a3b8" />
+            <TouchableOpacity
+              onPress={onClose}
+              className="w-7 h-7 rounded-full bg-[#F1F5F9] items-center justify-center"
+            >
+              <X size={14} color="#64748B" />
             </TouchableOpacity>
           </View>
 
-          <Text className="text-xs text-slate-400 mb-3">
-            Enter tracking number or Order ID to directly jump to parcel management.
+          <Text className="text-xs text-[#64748B] mb-3">
+            Enter tracking barcode or order ID to instantly open details:
           </Text>
 
-          <View className="bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 flex-row items-center mb-4">
-            <Search size={16} color="#64748b" />
+          {/* Input field */}
+          <View className="flex-row items-center bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl px-3.5 py-2.5 mb-3">
+            <Search size={16} color="#94A3B8" />
             <TextInput
               value={lookupText}
               onChangeText={setLookupText}
-              placeholder="e.g. PH2696153366792H or ORD-402"
-              placeholderTextColor="#64748b"
-              className="flex-1 ml-2 text-white font-mono text-xs py-1"
+              placeholder="e.g. PH2696153366792H or ORD-392"
+              placeholderTextColor="#94A3B8"
               autoCapitalize="characters"
               autoCorrect={false}
-              returnKeyType="go"
-              onSubmitEditing={handleLookup}
+              className="flex-1 ml-2 text-xs font-mono font-bold text-[#0F172A] p-0"
             />
+            {lookupText.length > 0 && (
+              <TouchableOpacity onPress={() => setLookupText('')}>
+                <X size={14} color="#64748B" />
+              </TouchableOpacity>
+            )}
           </View>
 
-          {/* Quick presets */}
-          <View className="mb-4">
-            <Text className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider mb-2">
-              Sample Quick Lookup Codes
+          {/* Submit */}
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={handleLookup}
+            disabled={!lookupText.trim()}
+            className={`py-3.5 rounded-xl items-center justify-center shadow-xs mb-3 ${
+              lookupText.trim()
+                ? 'bg-[#215CD4] active:bg-[#1d4ed8]'
+                : 'bg-[#94A3B8]'
+            }`}
+          >
+            <Text className="text-white font-bold text-xs">
+              Lookup & Open Details
             </Text>
-            <View className="flex-row flex-wrap gap-2">
-              <TouchableOpacity
-                onPress={() => handleQuickLookup('PH2696153366792H')}
-                className="bg-slate-800 border border-slate-700 px-2.5 py-1.5 rounded-lg active:bg-slate-700"
-              >
-                <Text className="text-[10px] font-mono text-blue-400">PH2696153366792H</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => handleQuickLookup('PH90823411293K')}
-                className="bg-slate-800 border border-slate-700 px-2.5 py-1.5 rounded-lg active:bg-slate-700"
-              >
-                <Text className="text-[10px] font-mono text-blue-400">PH90823411293K</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => handleQuickLookup('PH883904421101N')}
-                className="bg-slate-800 border border-slate-700 px-2.5 py-1.5 rounded-lg active:bg-slate-700"
-              >
-                <Text className="text-[10px] font-mono text-blue-400">PH883904421101N</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+          </TouchableOpacity>
 
-          <View className="flex-row gap-2">
-            <TouchableOpacity
-              onPress={onClose}
-              className="flex-1 bg-slate-800 py-2.5 rounded-xl items-center"
-            >
-              <Text className="text-slate-300 font-semibold text-xs">Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleLookup}
-              className="flex-1 bg-blue-600 active:bg-blue-700 py-2.5 rounded-xl items-center"
-            >
-              <Text className="text-white font-bold text-xs">Find Order</Text>
-            </TouchableOpacity>
-          </View>
+          {/* Quick Click Suggestions */}
+          {orders.length > 0 && (
+            <View className="mt-2 border-t border-[#F1F5F9] pt-3">
+              <Text className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider mb-2">
+                Recent Queue Parcels
+              </Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row gap-2">
+                {orders.slice(0, 4).map((o) => (
+                  <TouchableOpacity
+                    key={o.id}
+                    onPress={() => handleQuickLookup(o.id)}
+                    className="bg-[#F1F5F9] px-2.5 py-1.5 rounded-lg border border-[#E2E8F0] active:bg-slate-200"
+                  >
+                    <Text className="text-[11px] font-mono font-semibold text-[#0F172A]">
+                      {o.id}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
         </View>
       </View>
     </Modal>

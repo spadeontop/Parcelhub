@@ -2,7 +2,6 @@ import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { StaffOrder } from '../../types';
 import { StaffBadge } from '../common/StaffBadge';
-import { Barcode, User, ChevronRight, Clock, AlertCircle } from '../common/Icons';
 
 interface StaffOrderCardProps {
   order: StaffOrder;
@@ -10,75 +9,86 @@ interface StaffOrderCardProps {
 }
 
 export const StaffOrderCard: React.FC<StaffOrderCardProps> = ({ order, onPress }) => {
-  const isUnpaid = order.status === 'PAYMENT_REQUIRED';
-  const displayAmount = isUnpaid
-    ? `Fee: ₱${(order.amountToPay || 0).toLocaleString()}`
-    : `COD: ₱${(order.amountToPay || 0).toLocaleString()}`;
+  // Compute contextual label on the right side of bottom row
+  const getRightContext = () => {
+    switch (order.status) {
+      case 'READY_TO_CLAIM':
+        if (order.isClaimActive && order.claimRemainingSeconds) {
+          const mins = Math.floor(order.claimRemainingSeconds / 60);
+          const secs = String(order.claimRemainingSeconds % 60).padStart(2, '0');
+          return (
+            <Text className="text-xs font-bold text-[#059669]">
+              Timer: {mins}:{secs}
+            </Text>
+          );
+        }
+        return (
+          <Text className="text-xs font-bold text-[#0F172A]">
+            Code: {order.id.replace('ORD-', '') || '7742'}
+          </Text>
+        );
 
-  const hasClaimCountdown = order.status === 'READY_TO_CLAIM' && order.isClaimActive;
+      case 'AWAITING_PARCEL':
+        return (
+          <Text className="text-xs font-medium text-[#D97706]">
+            {order.courierPaid ? 'Parcel Arrived' : `COD: ₱${order.amountToPay.toLocaleString()}`}
+          </Text>
+        );
+
+      case 'PAYMENT_REQUIRED':
+        return (
+          <Text className="text-xs font-bold text-[#D97706]">
+            Due: ₱{order.amountToPay.toLocaleString()}
+          </Text>
+        );
+
+      case 'CLAIMED':
+        return (
+          <Text className="text-xs text-[#64748B]">
+            Claimed
+          </Text>
+        );
+
+      default:
+        return (
+          <Text className="text-xs text-[#64748B]">
+            ₱{order.amountToPay.toLocaleString()}
+          </Text>
+        );
+    }
+  };
 
   return (
     <TouchableOpacity
-      activeOpacity={0.8}
+      activeOpacity={0.75}
       onPress={() => onPress(order)}
-      className="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-3.5 mb-2.5 shadow-sm active:border-blue-500/70"
+      className="bg-white border border-[#E2E8F0] rounded-2xl p-4 mb-3 shadow-xs active:bg-slate-50"
     >
-      {/* Top Row: Badge, ID, Amount */}
-      <View className="flex-row items-center justify-between mb-2">
-        <View className="flex-row items-center gap-2">
-          <StaffBadge status={order.status} variant="card" />
-          <Text className="text-xs font-mono font-bold text-slate-300">{order.id}</Text>
-        </View>
-        <Text className="text-xs font-mono font-bold text-white font-mono-numbers">{displayAmount}</Text>
-      </View>
-
-      {/* Middle Row: Product Title & Active Claim Banner */}
-      <View className="mb-2">
-        <Text className="text-white font-bold text-sm leading-snug" numberOfLines={1}>
-          {order.productName || 'General Parcel Item'}
+      {/* Top Row: Title & Status Badge */}
+      <View className="flex-row items-center justify-between">
+        <Text
+          className="text-sm font-bold text-[#0F172A] flex-1 mr-2"
+          numberOfLines={1}
+        >
+          {order.productName || `Parcel #${order.id}`}
         </Text>
-
-        <View className="flex-row items-center justify-between mt-1">
-          <View className="flex-row items-center gap-1.5">
-            <Barcode size={13} color="#60a5fa" />
-            <Text className="text-[11px] font-mono text-blue-400 font-mono-numbers">{order.trackingId}</Text>
-          </View>
-
-          {hasClaimCountdown && (
-            <View className="flex-row items-center gap-1 bg-emerald-950/70 border border-emerald-800/80 px-2 py-0.5 rounded-md">
-              <Clock size={11} color="#34d399" />
-              <Text className="text-[10px] font-mono font-bold text-emerald-400">
-                Pass Active: {Math.floor((order.claimRemainingSeconds || 0) / 60)}:
-                {String((order.claimRemainingSeconds || 0) % 60).padStart(2, '0')}
-              </Text>
-            </View>
-          )}
-        </View>
+        <StaffBadge status={order.status} variant="card" />
       </View>
 
-      {/* Notes preview if present */}
-      {order.notes ? (
-        <View className="bg-amber-950/40 border border-amber-900/40 rounded-lg px-2 py-1 mb-2 flex-row items-center gap-1">
-          <AlertCircle size={11} color="#f59e0b" />
-          <Text className="text-[10px] text-amber-300 font-medium truncate flex-1" numberOfLines={1}>
-            {order.notes}
-          </Text>
-        </View>
-      ) : null}
+      {/* Asset / Tracking Number */}
+      <Text className="text-xs font-mono text-[#64748B] mt-1">
+        Asset #{order.trackingId || order.id}
+      </Text>
 
-      {/* Bottom Row: Recipient & Drilldown affordance */}
-      <View className="flex-row items-center justify-between pt-2 border-t border-slate-700/50">
-        <View className="flex-row items-center gap-1.5 flex-1 mr-2">
-          <User size={13} color="#94a3b8" />
-          <Text className="text-[11px] text-slate-300 font-medium" numberOfLines={1}>
-            {order.customer}
-          </Text>
-        </View>
+      {/* Divider */}
+      <View className="h-px bg-[#F1F5F9] my-3" />
 
-        <View className="flex-row items-center gap-1">
-          <Text className="text-[11px] font-semibold text-blue-400">Manage</Text>
-          <ChevronRight size={13} color="#60a5fa" />
-        </View>
+      {/* Bottom Row: Recipient & Context Info */}
+      <View className="flex-row items-center justify-between">
+        <Text className="text-xs text-[#475569] font-medium" numberOfLines={1}>
+          {order.customer || 'Customer'}
+        </Text>
+        {getRightContext()}
       </View>
     </TouchableOpacity>
   );

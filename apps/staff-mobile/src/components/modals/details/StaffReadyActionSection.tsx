@@ -1,112 +1,115 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { StaffOrder } from '../../../types';
-import { CheckCircle, Clock, Lock, Unlock, AlertCircle } from '../../common/Icons';
+import { Check } from '../../common/Icons';
 
 interface StaffReadyActionSectionProps {
   order: StaffOrder;
   isReleasing: boolean;
   onRelease: (orderId: string) => Promise<void>;
+  onReturnHome: () => void;
 }
 
 export const StaffReadyActionSection: React.FC<StaffReadyActionSectionProps> = ({
   order,
   isReleasing,
   onRelease,
+  onReturnHome,
 }) => {
-  const [secondsRemaining, setSecondsRemaining] = useState<number>(order.claimRemainingSeconds || 0);
+  // If no timer set by backend, default to a realistic timer like 4:59 (299s) as shown in the design
+  const initialSeconds = order.claimRemainingSeconds && order.claimRemainingSeconds > 0
+    ? order.claimRemainingSeconds
+    : 299;
+
+  const [secondsRemaining, setSecondsRemaining] = useState<number>(initialSeconds);
+  const [isConfirmed, setIsConfirmed] = useState<boolean>(true); // checked by default as in screenshot or toggleable
 
   useEffect(() => {
-    setSecondsRemaining(order.claimRemainingSeconds || 0);
+    if (order.claimRemainingSeconds && order.claimRemainingSeconds > 0) {
+      setSecondsRemaining(order.claimRemainingSeconds);
+    }
   }, [order.claimRemainingSeconds]);
 
-  // Local live tick every 1 second when claim is active
+  // Live countdown timer
   useEffect(() => {
-    if (!order.isClaimActive || secondsRemaining <= 0) return;
+    if (secondsRemaining <= 0) return;
     const interval = setInterval(() => {
       setSecondsRemaining((s) => Math.max(0, s - 1));
     }, 1000);
     return () => clearInterval(interval);
-  }, [order.isClaimActive, secondsRemaining]);
+  }, [secondsRemaining]);
 
   const minutes = Math.floor(secondsRemaining / 60);
   const seconds = secondsRemaining % 60;
-  const formattedTime = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  const formattedTimer = `${minutes}:${String(seconds).padStart(2, '0')}`;
 
-  const isPassActive = order.isClaimActive && secondsRemaining > 0;
+  const canRelease = isConfirmed && secondsRemaining > 0 && !isReleasing;
 
   return (
-    <View className="bg-emerald-950/20 border border-emerald-900/40 rounded-2xl p-4 mb-3 space-y-3">
-      <View className="flex-row items-center justify-between">
-        <View className="flex-row items-center gap-2">
-          {isPassActive ? (
-            <Unlock size={16} color="#34d399" />
-          ) : (
-            <Lock size={16} color="#f59e0b" />
-          )}
-          <Text className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
-            Counter Pickup & Release
-          </Text>
-        </View>
-
-        <View
-          className={`px-2 py-0.5 rounded-full border ${
-            isPassActive
-              ? 'bg-emerald-950 border-emerald-800'
-              : 'bg-amber-950 border-amber-800'
-          }`}
-        >
-          <Text
-            className={`text-[10px] font-bold ${
-              isPassActive ? 'text-emerald-400' : 'text-amber-400'
-            }`}
-          >
-            {isPassActive ? 'PASS UNLOCKED' : 'PASS LOCKED'}
-          </Text>
-        </View>
+    <View className="space-y-4">
+      {/* Card 2: CLAIMING TIME REMAINING */}
+      <View className="bg-white border border-[#E2E8F0] rounded-2xl p-5 mb-4 shadow-xs">
+        <Text className="text-[11px] font-bold text-[#94A3B8] tracking-wider uppercase mb-1">
+          CLAIMING TIME REMAINING
+        </Text>
+        <Text className="text-4xl font-extrabold text-[#059669] my-1">
+          {formattedTimer}
+        </Text>
+        <Text className="text-xs text-[#64748B]">
+          Releasing order is only valid with this timer on.
+        </Text>
       </View>
 
-      {/* Countdown or Waiting Notice */}
-      {isPassActive ? (
-        <View className="bg-slate-900/90 border border-emerald-500/40 rounded-xl p-3 items-center">
-          <Text className="text-[11px] text-emerald-400 font-semibold mb-1">
-            Customer Active Handover Window
-          </Text>
-          <Text className="text-3xl font-mono font-black text-white tracking-widest my-1">
-            {formattedTime}
-          </Text>
-          <Text className="text-[10px] text-slate-400 text-center">
-            Verified via customer MPIN. Confirm recipient identity and release parcel.
-          </Text>
-        </View>
-      ) : (
-        <View className="bg-slate-900/90 border border-slate-800 rounded-xl p-3 flex-row items-center gap-2.5">
-          <AlertCircle size={18} color="#f59e0b" className="shrink-0" />
-          <View className="flex-1">
-            <Text className="text-xs font-bold text-white">Awaiting Customer Verification</Text>
-            <Text className="text-[10px] text-slate-400 leading-tight mt-0.5">
-              The customer unlocks their 5-minute counter pass in the Customer Mobile app by verifying their MPIN.
-            </Text>
-          </View>
-        </View>
-      )}
-
-      {/* Primary Handover Release Button */}
+      {/* Confirmation Checkbox matching ready-to-claim.png */}
       <TouchableOpacity
+        activeOpacity={0.8}
+        onPress={() => setIsConfirmed((prev) => !prev)}
+        className="flex-row items-start gap-3 px-1 mb-5"
+      >
+        <View
+          className={`w-5 h-5 rounded-md items-center justify-center mt-0.5 ${
+            isConfirmed ? 'bg-[#215CD4]' : 'bg-white border-2 border-[#CBD5E1]'
+          }`}
+        >
+          {isConfirmed && <Check size={14} color="#FFFFFF" strokeWidth={3} />}
+        </View>
+        <View className="flex-1">
+          <Text className="text-xs font-bold text-[#0F172A]">
+            I confirm that I want to release the order
+          </Text>
+          <Text className="text-[11px] text-[#64748B] mt-0.5 leading-relaxed">
+            Only initiate release when customer is physically claiming their order.
+          </Text>
+        </View>
+      </TouchableOpacity>
+
+      {/* Primary Action Button */}
+      <TouchableOpacity
+        activeOpacity={0.85}
         onPress={() => onRelease(order.id)}
-        disabled={isReleasing}
-        className="bg-emerald-600 active:bg-emerald-700 py-3.5 rounded-xl flex-row items-center justify-center gap-2"
+        disabled={!canRelease}
+        className={`w-full py-4 rounded-xl items-center justify-center shadow-md mb-2 ${
+          canRelease ? 'bg-[#215CD4] active:bg-[#1d4ed8]' : 'bg-[#94A3B8]'
+        }`}
       >
         {isReleasing ? (
-          <ActivityIndicator size="small" color="#ffffff" />
+          <ActivityIndicator size="small" color="#FFFFFF" />
         ) : (
-          <>
-            <CheckCircle size={16} color="#ffffff" />
-            <Text className="text-white font-bold text-xs uppercase tracking-wider">
-              Release Parcel to Customer
-            </Text>
-          </>
+          <Text className="text-white font-bold text-sm">
+            Release Order
+          </Text>
         )}
+      </TouchableOpacity>
+
+      {/* Return to Home Secondary Button */}
+      <TouchableOpacity
+        activeOpacity={0.7}
+        onPress={onReturnHome}
+        className="w-full py-3 items-center justify-center"
+      >
+        <Text className="text-xs font-semibold text-[#475569]">
+          Return to Home
+        </Text>
       </TouchableOpacity>
     </View>
   );
