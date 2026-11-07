@@ -228,7 +228,11 @@ export const orderApi = {
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.message || data.error || `Initialization failed (HTTP ${res.status})`);
+        const error: any = new Error(data.message || data.error || `Initialization failed (HTTP ${res.status})`);
+        error.status = res.status;
+        error.errorType = data.error;
+        error.data = data;
+        throw error;
       }
 
       return data as CustomerInitOrderRes;
@@ -269,7 +273,11 @@ export const orderApi = {
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.message || data.error || `Update failed (HTTP ${res.status})`);
+        const error: any = new Error(data.message || data.error || `Update failed (HTTP ${res.status})`);
+        error.status = res.status;
+        error.errorType = data.error;
+        error.data = data;
+        throw error;
       }
 
       return data as CustomerUpdateOrderRes;

@@ -13,15 +13,26 @@ export const ConfirmOrderScreen: React.FC = () => {
   } = useApp();
   const [isConfirmed, setIsConfirmed] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [trackingError, setTrackingError] = useState<string | null>(null);
 
   const handleSubmit = async () => {
     if (!isConfirmed) {
       showToast('Please check the confirmation box to proceed.');
       return;
     }
+    setTrackingError(null);
     setIsSubmitting(true);
     try {
       await submitDraftOrder();
+    } catch (err: any) {
+      if (
+        err?.status === 409 ||
+        err?.errorType === 'DuplicateTrackingId' ||
+        err?.message?.toLowerCase().includes('tracking id') ||
+        err?.message?.toLowerCase().includes('duplicate')
+      ) {
+        setTrackingError('This tracking ID is already in use.');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -87,16 +98,32 @@ export const ConfirmOrderScreen: React.FC = () => {
           </View>
 
           {/* Tracking ID Field */}
-          <View className="p-3.5 rounded-2xl border border-gray-200 bg-white mb-2">
-            <Text className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+          <View
+            className={`p-3.5 rounded-2xl border bg-white mb-2 ${
+              trackingError ? 'border-red-500 bg-red-50/20' : 'border-gray-200'
+            }`}
+          >
+            <Text
+              className={`text-[11px] font-bold uppercase tracking-wider ${
+                trackingError ? 'text-red-500' : 'text-gray-500'
+              }`}
+            >
               Tracking ID
             </Text>
             <TextInput
               value={draftOrder.trackingId}
-              onChangeText={(text) => updateDraftOrder({ trackingId: text })}
+              onChangeText={(text) => {
+                if (trackingError) setTrackingError(null);
+                updateDraftOrder({ trackingId: text });
+              }}
               className="w-full text-base font-mono font-semibold text-gray-900 mt-0.5 py-1"
               placeholder="PH2696153366792H"
             />
+            {trackingError ? (
+              <Text className="text-xs font-semibold text-red-500 mt-1">
+                {trackingError}
+              </Text>
+            ) : null}
           </View>
         </View>
 
