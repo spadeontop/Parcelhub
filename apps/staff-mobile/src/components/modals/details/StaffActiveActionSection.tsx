@@ -31,13 +31,13 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
   const isCourierPaid = Boolean(order.courierPaid);
 
   // Step 1 checkbox state (Awaiting Parcel 1: "I confirm that I received the order")
-  const [isReceivedConfirmed, setIsReceivedConfirmed] = useState<boolean>(true);
+  const [isReceivedConfirmed, setIsReceivedConfirmed] = useState<boolean>(false);
   const [isPayingStep1, setIsPayingStep1] = useState<boolean>(false);
 
   // Step 2: Photo Upload state (Awaiting Parcel 2)
   const [hasPhoto, setHasPhoto] = useState<boolean>(Boolean(order.proofImageUrl));
   const [photoValidationState, setPhotoValidationState] = useState<'VALID' | 'INVALID'>('VALID');
-  const [isPhotoConfirmed, setIsPhotoConfirmed] = useState<boolean>(true);
+  const [isPhotoConfirmed, setIsPhotoConfirmed] = useState<boolean>(false);
   const [isFinalSubmitting, setIsFinalSubmitting] = useState<boolean>(false);
 
   const sampleWaybill = require('../../../../assets/parcelhub/sample_parcel_waybill.png');
@@ -59,7 +59,6 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
   const handleTakePhoto = () => {
     setHasPhoto(true);
     setPhotoValidationState('VALID');
-    setIsPhotoConfirmed(true);
   };
 
   const handleRetake = () => {

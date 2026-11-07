@@ -22,7 +22,7 @@ export const StaffReadyActionSection: React.FC<StaffReadyActionSectionProps> = (
     : 299;
 
   const [secondsRemaining, setSecondsRemaining] = useState<number>(initialSeconds);
-  const [isConfirmed, setIsConfirmed] = useState<boolean>(true); // checked by default as in screenshot or toggleable
+  const [isConfirmed, setIsConfirmed] = useState<boolean>(false);
 
   useEffect(() => {
     if (order.claimRemainingSeconds && order.claimRemainingSeconds > 0) {
