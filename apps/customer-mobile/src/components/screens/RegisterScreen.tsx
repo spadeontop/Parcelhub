@@ -13,9 +13,9 @@ export const RegisterScreen: React.FC = () => {
   const [middleInitial, setMiddleInitial] = useState('');
   const [email, setEmail] = useState('johnvincekeyedu@gmail.com');
   const [phone, setPhone] = useState('0917 123 4567');
-  const [password, setPassword] = useState('••••••••••');
+  const [password, setPassword] = useState('Password123');
   const [showPassword, setShowPassword] = useState(false);
-  const [confirmPassword, setConfirmPassword] = useState('••••••••••');
+  const [confirmPassword, setConfirmPassword] = useState('Password123');
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -224,15 +224,24 @@ export const RegisterScreen: React.FC = () => {
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
-              className="w-full h-11 border border-gray-300 rounded-lg pl-3.5 pr-10 text-[13.5px] font-medium text-gray-900 bg-white"
+              placeholder="Enter password"
+              placeholderTextColor="#9ca3af"
+              className="w-full h-11 border border-gray-300 rounded-lg pl-3.5 pr-11 text-[13.5px] font-medium text-gray-900 bg-white"
             />
             <TouchableOpacity
               activeOpacity={0.7}
-              onPress={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-2.5 p-1"
+              onPress={() => setShowPassword((prev) => !prev)}
+              className="absolute right-2 top-2 p-1.5 z-20"
+              style={{ zIndex: 20 }}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              accessibilityRole="button"
               accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
             >
-              {showPassword ? <EyeOffIcon size={18} /> : <EyeIcon size={18} />}
+              {showPassword ? (
+                <EyeOffIcon size={18} color="#6b7280" />
+              ) : (
+                <EyeIcon size={18} color="#6b7280" />
+              )}
             </TouchableOpacity>
           </View>
 
@@ -247,15 +256,24 @@ export const RegisterScreen: React.FC = () => {
               value={confirmPassword}
               onChangeText={setConfirmPassword}
               secureTextEntry={!showConfirmPassword}
-              className="w-full h-11 border border-gray-300 rounded-lg pl-3.5 pr-10 text-[13.5px] font-medium text-gray-900 bg-white"
+              placeholder="Confirm password"
+              placeholderTextColor="#9ca3af"
+              className="w-full h-11 border border-gray-300 rounded-lg pl-3.5 pr-11 text-[13.5px] font-medium text-gray-900 bg-white"
             />
             <TouchableOpacity
               activeOpacity={0.7}
-              onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-              className="absolute right-3 top-2.5 p-1"
+              onPress={() => setShowConfirmPassword((prev) => !prev)}
+              className="absolute right-2 top-2 p-1.5 z-20"
+              style={{ zIndex: 20 }}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              accessibilityRole="button"
               accessibilityLabel={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
             >
-              {showConfirmPassword ? <EyeOffIcon size={18} /> : <EyeIcon size={18} />}
+              {showConfirmPassword ? (
+                <EyeOffIcon size={18} color="#6b7280" />
+              ) : (
+                <EyeIcon size={18} color="#6b7280" />
+              )}
             </TouchableOpacity>
           </View>
 
