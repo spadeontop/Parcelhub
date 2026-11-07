@@ -26,58 +26,136 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
   onAttachPhoto,
   onReturnHome,
 }) => {
-  // Attached photo state: whether photo is present
-  const [hasPhoto, setHasPhoto] = useState<boolean>(
-    Boolean(order.proofImageUrl || order.courierPaid)
-  );
+  // Step 1: Courier Payment state. If order.courierPaid is already true, staff can proceed to Step 2 (Photo Upload).
+  // Otherwise, staff must complete Step 1 (Awaiting Parcel 1: Confirm payment to courier).
+  const isCourierPaid = Boolean(order.courierPaid);
 
-  // User instructed: "just make both valid and invalid UI for every attached photo, just assume it is always valid. In functionality in the api call, just send a mock string as url"
+  // Step 1 checkbox state (Awaiting Parcel 1: "I confirm that I received the order")
+  const [isReceivedConfirmed, setIsReceivedConfirmed] = useState<boolean>(true);
+  const [isPayingStep1, setIsPayingStep1] = useState<boolean>(false);
+
+  // Step 2: Photo Upload state (Awaiting Parcel 2)
+  const [hasPhoto, setHasPhoto] = useState<boolean>(Boolean(order.proofImageUrl));
   const [photoValidationState, setPhotoValidationState] = useState<'VALID' | 'INVALID'>('VALID');
+  const [isPhotoConfirmed, setIsPhotoConfirmed] = useState<boolean>(true);
+  const [isFinalSubmitting, setIsFinalSubmitting] = useState<boolean>(false);
 
-  const [isConfirmed, setIsConfirmed] = useState<boolean>(true);
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-
-  // Fallback / bundled sample parcel waybill image
   const sampleWaybill = require('../../../../assets/parcelhub/sample_parcel_waybill.png');
 
+  // Handle Step 1: Pay Courier & Confirm Received (POST /api/staff/orders/{id}/make-claimable/pay)
+  const handlePayCourierStep = async () => {
+    if (!isReceivedConfirmed || isPayingStep1 || isPayingCourier) return;
+    setIsPayingStep1(true);
+    try {
+      await onPayCourier(order.id);
+    } catch {
+      // Error handled in context toast
+    } finally {
+      setIsPayingStep1(false);
+    }
+  };
+
+  // Step 2 handlers
   const handleTakePhoto = () => {
     setHasPhoto(true);
-    setPhotoValidationState('VALID'); // assume valid by default
-    setIsConfirmed(true);
+    setPhotoValidationState('VALID');
+    setIsPhotoConfirmed(true);
   };
 
   const handleRetake = () => {
     setHasPhoto(false);
-    setIsConfirmed(false);
+    setIsPhotoConfirmed(false);
   };
 
   const toggleValidationState = () => {
     setPhotoValidationState((prev) => (prev === 'VALID' ? 'INVALID' : 'VALID'));
   };
 
-  const isFormValid = hasPhoto && photoValidationState === 'VALID' && isConfirmed;
+  const isStep2Valid = hasPhoto && photoValidationState === 'VALID' && isPhotoConfirmed;
 
-  const handleClaimAndPaid = async () => {
-    if (!isFormValid || isSubmitting) return;
-    setIsSubmitting(true);
+  // Handle Step 2: Attach Photo & Complete (POST /api/staff/orders/{id}/make-claimable/attach-photo)
+  const handleFinalClaimAndPaid = async () => {
+    if (!isStep2Valid || isFinalSubmitting || isAttachingPhoto) return;
+    setIsFinalSubmitting(true);
     try {
-      // 1. Mark courier paid if not already paid
-      if (!order.courierPaid) {
-        await onPayCourier(order.id);
-      }
-      // 2. Attach mock proof URL as instructed by user
       await onAttachPhoto(order.id, 'mock://ai-verified-parcel-proof.jpg');
       onReturnHome();
     } catch {
-      // Handled in context toast
+      // Error handled in context toast
     } finally {
-      setIsSubmitting(false);
+      setIsFinalSubmitting(false);
     }
   };
 
+  // -------------------------------------------------------------
+  // STEP 1 UI: Awaiting Parcel 1 (Courier Payment Required First)
+  // -------------------------------------------------------------
+  if (!isCourierPaid) {
+    const canPay = isReceivedConfirmed && !isPayingStep1 && !isPayingCourier;
+
+    return (
+      <View className="space-y-4">
+        {/* Confirmation Checkbox matching awaiting parcel 1/image.png */}
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => setIsReceivedConfirmed((prev) => !prev)}
+          className="flex-row items-start gap-3 px-1 mb-5"
+        >
+          <View
+            className={`w-5 h-5 rounded-md items-center justify-center mt-0.5 ${
+              isReceivedConfirmed ? 'bg-[#215CD4]' : 'bg-white border-2 border-[#CBD5E1]'
+            }`}
+          >
+            {isReceivedConfirmed && <Check size={14} color="#FFFFFF" strokeWidth={3} />}
+          </View>
+          <View className="flex-1">
+            <Text className="text-xs font-bold text-[#0F172A]">
+              I confirm that I received the order
+            </Text>
+            <Text className="text-[11px] text-[#64748B] mt-0.5 leading-relaxed">
+              Only initiate claim & paid when you already paid the courier exact amount and received the parcel.
+            </Text>
+          </View>
+        </TouchableOpacity>
+
+        {/* Primary Claim Button (Triggers POST /make-claimable/pay) */}
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={handlePayCourierStep}
+          disabled={!canPay}
+          className={`w-full py-4 rounded-xl items-center justify-center shadow-md mb-2 ${
+            canPay ? 'bg-[#215CD4] active:bg-[#1d4ed8]' : 'bg-[#94A3B8]'
+          }`}
+        >
+          {isPayingStep1 || isPayingCourier ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <Text className="text-white font-bold text-sm">
+              Order Claimed & Paid
+            </Text>
+          )}
+        </TouchableOpacity>
+
+        {/* Return to Home Secondary Button */}
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={onReturnHome}
+          className="w-full py-3 items-center justify-center"
+        >
+          <Text className="text-xs font-semibold text-[#475569]">
+            Return to Home
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // STEP 2 UI: Awaiting Parcel 2 (Courier Paid -> Upload Proof of Delivery)
+  // -------------------------------------------------------------------------
   return (
     <View className="space-y-4">
-      {/* Card 2: PROOF OF DELIVERY */}
+      {/* Card: PROOF OF DELIVERY matching awaiting parcel 2 */}
       <View className="bg-white border border-[#E2E8F0] rounded-2xl p-5 mb-4 shadow-xs">
         <View className="flex-row items-center justify-between mb-3">
           <Text className="text-[11px] font-bold text-[#94A3B8] tracking-wider uppercase">
@@ -96,7 +174,7 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
         </View>
 
         {!hasPhoto ? (
-          /* Empty / Take Photo State (matching image2.png) */
+          /* Empty / Take Photo State (matching awaiting parcel 2/image2.png) */
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={handleTakePhoto}
@@ -140,7 +218,7 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
               )}
             </View>
 
-            {/* Verification State Switcher (allows demoing both Valid & Invalid states per user prompt) */}
+            {/* Verification State Switcher for test/demo */}
             <TouchableOpacity
               onPress={toggleValidationState}
               className="absolute bottom-2 right-2 bg-slate-900/80 px-2.5 py-1 rounded-lg border border-slate-700/60"
@@ -153,18 +231,18 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
         )}
       </View>
 
-      {/* Confirmation Checkbox */}
+      {/* Confirmation Checkbox matching awaiting parcel 2 */}
       <TouchableOpacity
         activeOpacity={0.8}
-        onPress={() => setIsConfirmed((prev) => !prev)}
+        onPress={() => setIsPhotoConfirmed((prev) => !prev)}
         className="flex-row items-start gap-3 px-1 mb-5"
       >
         <View
           className={`w-5 h-5 rounded-md items-center justify-center mt-0.5 ${
-            isConfirmed ? 'bg-[#215CD4]' : 'bg-white border-2 border-[#CBD5E1]'
+            isPhotoConfirmed ? 'bg-[#215CD4]' : 'bg-white border-2 border-[#CBD5E1]'
           }`}
         >
-          {isConfirmed && <Check size={14} color="#FFFFFF" strokeWidth={3} />}
+          {isPhotoConfirmed && <Check size={14} color="#FFFFFF" strokeWidth={3} />}
         </View>
         <View className="flex-1">
           <Text className="text-xs font-bold text-[#0F172A]">
@@ -176,16 +254,16 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
         </View>
       </TouchableOpacity>
 
-      {/* Primary Action Button */}
+      {/* Primary Action Button (Triggers POST /make-claimable/attach-photo) */}
       <TouchableOpacity
         activeOpacity={0.85}
-        onPress={handleClaimAndPaid}
-        disabled={!isFormValid || isSubmitting}
+        onPress={handleFinalClaimAndPaid}
+        disabled={!isStep2Valid || isFinalSubmitting || isAttachingPhoto}
         className={`w-full py-4 rounded-xl items-center justify-center shadow-md mb-2 ${
-          isFormValid && !isSubmitting ? 'bg-[#215CD4] active:bg-[#1d4ed8]' : 'bg-[#94A3B8]'
+          isStep2Valid && !isFinalSubmitting && !isAttachingPhoto ? 'bg-[#215CD4] active:bg-[#1d4ed8]' : 'bg-[#94A3B8]'
         }`}
       >
-        {isSubmitting || isPayingCourier || isAttachingPhoto ? (
+        {isFinalSubmitting || isAttachingPhoto ? (
           <ActivityIndicator size="small" color="#FFFFFF" />
         ) : (
           <Text className="text-white font-bold text-sm">
