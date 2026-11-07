@@ -133,6 +133,26 @@ async function runTests() {
   assert.ok(Array.isArray(listOrdersJson.orders));
   console.log(`✔ GET /api/customer/orders (200 OK, retrieved ${listOrdersJson.orders.length} orders)`);
 
+  // 1.5b Customer Orders Pagination & Clamp Tests
+  const paginatedCustomerReq = makeReq("http://localhost:3000/api/customer/orders?limit=2&offset=1", {
+    token: customerAuthToken,
+  });
+  const paginatedCustomerRes = await listCustomerOrders(paginatedCustomerReq);
+  const paginatedCustomerJson = await paginatedCustomerRes.json();
+  assert.strictEqual(paginatedCustomerRes.status, 200);
+  assert.strictEqual(paginatedCustomerJson.orders.length, 2);
+  assert.strictEqual(paginatedCustomerJson.orders[0].id, listOrdersJson.orders[1].id);
+  console.log("✔ GET /api/customer/orders pagination limit & offset verified");
+
+  const clampedCustomerReq = makeReq("http://localhost:3000/api/customer/orders?limit=999", {
+    token: customerAuthToken,
+  });
+  const clampedCustomerRes = await listCustomerOrders(clampedCustomerReq);
+  const clampedCustomerJson = await clampedCustomerRes.json();
+  assert.strictEqual(clampedCustomerRes.status, 200);
+  assert.ok(clampedCustomerJson.orders.length <= 100);
+  console.log("✔ GET /api/customer/orders pagination max clamp verified");
+
   // 1.6 Initialize Order
   const initOrderReq = makeReq("http://localhost:3000/api/customer/orders/initialize", {
     method: "POST",
@@ -248,6 +268,26 @@ async function runTests() {
     "All orders in staff list must have amountToPay as number"
   );
   console.log(`✔ GET /api/staff/orders (200 OK, retrieved ${staffListJson.orders.length} orders, verified amountToPay)`);
+
+  // 2.2b Staff Orders Pagination & Clamp Tests
+  const paginatedStaffReq = makeReq("http://localhost:3000/api/staff/orders?limit=3&offset=2", {
+    token: staffAuthToken,
+  });
+  const paginatedStaffRes = await listStaffOrders(paginatedStaffReq);
+  const paginatedStaffJson = await paginatedStaffRes.json();
+  assert.strictEqual(paginatedStaffRes.status, 200);
+  assert.strictEqual(paginatedStaffJson.orders.length, 3);
+  assert.strictEqual(paginatedStaffJson.orders[0].id, staffListJson.orders[2].id);
+  console.log("✔ GET /api/staff/orders pagination limit & offset verified");
+
+  const clampedStaffReq = makeReq("http://localhost:3000/api/staff/orders?limit=250", {
+    token: staffAuthToken,
+  });
+  const clampedStaffRes = await listStaffOrders(clampedStaffReq);
+  const clampedStaffJson = await clampedStaffRes.json();
+  assert.strictEqual(clampedStaffRes.status, 200);
+  assert.ok(clampedStaffJson.orders.length <= 100);
+  console.log("✔ GET /api/staff/orders pagination max clamp verified");
 
   // 2.3 Staff Get Order
   const staffGetReq = makeReq("http://localhost:3000/api/staff/orders/ORD-402", {

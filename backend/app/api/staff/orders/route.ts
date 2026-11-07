@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { authenticateRequest } from "@/app/lib/auth";
+import { parsePagination } from "@/app/lib/pagination";
 import { jsonError, jsonSuccess } from "@/app/lib/response";
 import { db } from "@/app/lib/store";
 import {
@@ -17,8 +18,7 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const statusFilter = searchParams.get("status") as OrderStatus | null;
-  const limitParam = searchParams.get("limit");
-  const limit = limitParam ? parseInt(limitParam, 10) : undefined;
+  const { limit, offset } = parsePagination(searchParams, 20, 100);
 
   let allOrders = db.listOrders();
 
@@ -26,9 +26,7 @@ export async function GET(request: NextRequest) {
     allOrders = allOrders.filter((o) => o.status === statusFilter);
   }
 
-  if (limit && !isNaN(limit)) {
-    allOrders = allOrders.slice(0, limit);
-  }
+  allOrders = allOrders.slice(offset, offset + limit);
 
   const orders: StaffOrderSummary[] = allOrders.map((o) => {
     const paidByStaff = o.courierPaidBy ? db.getStaffById(o.courierPaidBy) : null;

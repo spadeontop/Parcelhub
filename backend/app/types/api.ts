@@ -105,6 +105,7 @@ export type CustomerOrderSummary = {
 export type CustomerListOrdersQueryParams = {
   readonly type?: OrderStatus;
   readonly limit?: number;
+  readonly offset?: number;
 };
 
 export type CustomerListOrdersRes = StandardSuccessResponse & {
@@ -205,6 +206,7 @@ export type StaffOrderSummary = {
 export type StaffListOrdersQueryParams = {
   readonly status?: OrderStatus;
   readonly limit?: number;
+  readonly offset?: number;
 };
 
 export type StaffListOrdersRes = {
@@ -305,6 +307,12 @@ export type AdminDeleteStaffReq = {
 export type AdminDeleteStaffRes = StandardSuccessResponse;
 
 // GET /api/admin/orders
+export type AdminListOrdersQueryParams = {
+  readonly type?: OrderStatus;
+  readonly limit?: number;
+  readonly offset?: number;
+};
+
 export type AdminAuditOrderSummary = {
   readonly id: OrderId;
   readonly productName: string;
