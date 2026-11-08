@@ -4,9 +4,9 @@ import { useApp } from '../../context/AppContext';
 import { ParcelHubLogoSvg } from '../common/Icons';
 
 export const LoginScreen: React.FC = () => {
-  const { navigateTo, loginCustomer, showToast, isLiveMode } = useApp();
-  const [email, setEmail] = useState('user@example.com');
-  const [password, setPassword] = useState('password');
+  const { navigateTo, loginCustomer, showToast } = useApp();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -55,16 +55,6 @@ export const LoginScreen: React.FC = () => {
           </Text>
         </View>
         <Text className="text-xs text-gray-400 mt-1">Customer Mobile Portal</Text>
-        <View className="flex-row items-center gap-1.5 mt-2 bg-gray-50 border border-gray-200 px-2.5 py-1 rounded-full">
-          <View
-            className={`w-2 h-2 rounded-full ${
-              isLiveMode ? 'bg-[#10b780]' : 'bg-[#f59e0b]'
-            }`}
-          />
-          <Text className="text-[10px] font-semibold text-gray-500 uppercase">
-            {isLiveMode ? 'Live API Mode' : 'Mock Mode'}
-          </Text>
-        </View>
       </View>
 
       {/* Form with Inputs */}
@@ -102,19 +92,6 @@ export const LoginScreen: React.FC = () => {
           </View>
         </View>
 
-        {/* Quick Test Credential Chips */}
-        <View className="flex-row items-center gap-2 pt-1">
-          <Text className="text-[11px] text-gray-400">Quick fill:</Text>
-          <TouchableOpacity
-            onPress={() => fillTestCredentials('user@example.com', 'password')}
-            className="px-2 py-0.5 rounded-md bg-blue-50 border border-blue-200"
-          >
-            <Text className="text-[10.5px] font-semibold text-blue-700">
-              user@example.com
-            </Text>
-          </TouchableOpacity>
-        </View>
-
         {/* Submit Button */}
         <TouchableOpacity
           activeOpacity={0.8}
@@ -137,15 +114,6 @@ export const LoginScreen: React.FC = () => {
             <Text className="text-xs font-bold text-[#215cd4]">Sign Up</Text>
           </TouchableOpacity>
         </View>
-
-        <TouchableOpacity
-          onPress={() => navigateTo('home')}
-          className="items-center mt-3 py-2"
-        >
-          <Text className="text-xs font-semibold text-gray-400">
-            Skip to Demo Dashboard →
-          </Text>
-        </TouchableOpacity>
       </View>
     </ScrollView>
   );

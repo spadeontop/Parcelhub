@@ -8,14 +8,14 @@ export const RegisterScreen: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<1 | 2>(1);
 
   // Form states matching CustomerRegisterRequest
-  const [firstName, setFirstName] = useState('John Vince');
-  const [lastName, setLastName] = useState('Dumaguit');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [middleInitial, setMiddleInitial] = useState('');
-  const [email, setEmail] = useState('johnvincekeyedu@gmail.com');
-  const [phone, setPhone] = useState('0917 123 4567');
-  const [password, setPassword] = useState('••••••••••');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [confirmPassword, setConfirmPassword] = useState('••••••••••');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -126,6 +126,8 @@ export const RegisterScreen: React.FC = () => {
             <TextInput
               value={firstName}
               onChangeText={setFirstName}
+              placeholder="e.g. Juan"
+              placeholderTextColor="#9ca3af"
               className="w-full h-11 border border-gray-300 rounded-lg px-3.5 text-[13.5px] font-medium text-gray-900 bg-white"
             />
           </View>
@@ -140,6 +142,8 @@ export const RegisterScreen: React.FC = () => {
             <TextInput
               value={lastName}
               onChangeText={setLastName}
+              placeholder="e.g. Dela Cruz"
+              placeholderTextColor="#9ca3af"
               className="w-full h-11 border border-gray-300 rounded-lg px-3.5 text-[13.5px] font-medium text-gray-900 bg-white"
             />
           </View>
@@ -194,6 +198,8 @@ export const RegisterScreen: React.FC = () => {
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
+              placeholder="e.g. juan@example.com"
+              placeholderTextColor="#9ca3af"
               className="w-full h-11 border border-gray-300 rounded-lg px-3.5 text-[13.5px] font-medium text-gray-900 bg-white"
             />
           </View>
@@ -209,6 +215,8 @@ export const RegisterScreen: React.FC = () => {
               value={phone}
               onChangeText={setPhone}
               keyboardType="phone-pad"
+              placeholder="e.g. 09171234567"
+              placeholderTextColor="#9ca3af"
               className="w-full h-11 border border-gray-300 rounded-lg px-3.5 text-[13.5px] font-medium text-gray-900 bg-white"
             />
           </View>
@@ -224,6 +232,8 @@ export const RegisterScreen: React.FC = () => {
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
+              placeholder="Create password"
+              placeholderTextColor="#9ca3af"
               className="w-full h-11 border border-gray-300 rounded-lg pl-3.5 pr-10 text-[13.5px] font-medium text-gray-900 bg-white"
             />
             <TouchableOpacity
@@ -247,6 +257,8 @@ export const RegisterScreen: React.FC = () => {
               value={confirmPassword}
               onChangeText={setConfirmPassword}
               secureTextEntry={!showConfirmPassword}
+              placeholder="Confirm password"
+              placeholderTextColor="#9ca3af"
               className="w-full h-11 border border-gray-300 rounded-lg pl-3.5 pr-10 text-[13.5px] font-medium text-gray-900 bg-white"
             />
             <TouchableOpacity
