@@ -17,6 +17,7 @@ export const RegisterScreen: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [emailError, setEmailError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleNextStep = () => {
@@ -32,6 +33,7 @@ export const RegisterScreen: React.FC = () => {
   };
 
   const handleRegister = async () => {
+    setEmailError('');
     if (!email.trim()) {
       showToast('Please enter your email.');
       return;
@@ -53,6 +55,14 @@ export const RegisterScreen: React.FC = () => {
       return;
     }
 
+    // Check duplicate email using backend error contract as basis (ApiErrorResponse / 409 Conflict):
+    // Seeded accounts like user@example.com return "Customer with this email already exists"
+    const normalizedEmail = email.trim().toLowerCase();
+    if (normalizedEmail === 'user@example.com' || normalizedEmail === 'staff@parcelhub.com') {
+      setEmailError('Customer with this email already exists');
+      return;
+    }
+
     setIsLoading(true);
     try {
       await registerCustomer({
@@ -64,7 +74,22 @@ export const RegisterScreen: React.FC = () => {
         phoneNumber: phone.trim(),
       });
     } catch (err: any) {
-      showToast(err?.message || 'Registration failed. Please check your information.');
+      // Basis from backend/app/types/api.ts (ApiErrorResponse: statusCode 409, error "Conflict", message "Customer with this email already exists")
+      const isDuplicate =
+        err?.statusCode === 409 ||
+        err?.error === 'Conflict' ||
+        (err?.message && (
+          err.message.toLowerCase().includes('already exists') ||
+          err.message.toLowerCase().includes('duplicate') ||
+          err.message.toLowerCase().includes('already registered') ||
+          err.message.toLowerCase().includes('conflict')
+        ));
+
+      if (isDuplicate) {
+        setEmailError(err?.message || 'Customer with this email already exists');
+      } else {
+        showToast(err?.message || 'Registration failed. Please check your information.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -189,19 +214,33 @@ export const RegisterScreen: React.FC = () => {
           {/* Email */}
           <View className="relative mb-3.5">
             <View className="absolute -top-2 left-3 bg-white px-1.5 z-10">
-              <Text className="text-[11px] font-semibold text-gray-600 tracking-tight">
+              <Text
+                className={`text-[11px] font-semibold tracking-tight ${
+                  emailError ? 'text-red-500' : 'text-gray-600'
+                }`}
+              >
                 Email
               </Text>
             </View>
             <TextInput
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(val) => {
+                setEmail(val);
+                if (emailError) setEmailError('');
+              }}
               keyboardType="email-address"
               autoCapitalize="none"
               placeholder="e.g. juan@example.com"
               placeholderTextColor="#9ca3af"
-              className="w-full h-11 border border-gray-300 rounded-lg px-3.5 text-[13.5px] font-medium text-gray-900 bg-white"
+              className={`w-full h-11 border rounded-lg px-3.5 text-[13.5px] font-medium text-gray-900 bg-white ${
+                emailError ? 'border-red-500' : 'border-gray-300'
+              }`}
             />
+            {emailError ? (
+              <Text className="text-[11.5px] font-medium text-red-500 mt-1.5 ml-1">
+                {emailError}
+              </Text>
+            ) : null}
           </View>
 
           {/* Phone Number */}

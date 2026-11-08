@@ -172,7 +172,10 @@ export const customerApi = {
     }
 
     const errorMsg = data?.message || data?.error || data?.statusMessage || `Registration failed (HTTP ${res.status})`;
-    throw new Error(errorMsg);
+    const error: any = new Error(errorMsg);
+    error.statusCode = data?.statusCode || res.status;
+    error.error = data?.error;
+    throw error;
   },
 
   /**
