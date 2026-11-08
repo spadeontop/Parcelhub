@@ -139,11 +139,23 @@ const AccordionCard: React.FC<AccordionCardProps> = ({
       onPress={onToggle}
       accessibilityRole="button"
       accessibilityState={{ expanded: isOpen }}
-      className={`p-3.5 rounded-2xl border ${
+      className="p-3.5 rounded-2xl border"
+      style={
         isOpen
-          ? 'border-[#dbe5f9] bg-white shadow-sm'
-          : 'bg-[#f8f8f8] border-gray-200/70'
-      }`}
+          ? {
+              borderColor: '#dbe5f9',
+              backgroundColor: '#ffffff',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: 0.05,
+              shadowRadius: 2,
+              elevation: 1,
+            }
+          : {
+              backgroundColor: '#f8f8f8',
+              borderColor: '#e5e7eb',
+            }
+      }
     >
       <View className="flex-row items-center justify-between gap-3">
         <Text className="flex-1 text-[13.5px] font-bold text-gray-900 leading-snug">
@@ -160,7 +172,7 @@ const AccordionCard: React.FC<AccordionCardProps> = ({
         </Animated.View>
       </View>
       {isOpen && (
-        <View className="mt-2.5 pt-2.5 border-t border-gray-200/60">
+        <View className="mt-2.5 pt-2.5 border-t border-gray-200">
           <Text className="text-[12.5px] text-gray-600 leading-relaxed">
             {answer}
           </Text>
@@ -290,9 +302,8 @@ export const FaqScreen: React.FC<FaqScreenProps> = ({ onBack, initialTab = 'faq'
             onPress={() => setActiveTab('faq')}
             accessibilityRole="button"
             accessibilityLabel="Frequently Asked"
-            className={`flex-1 py-2 items-center justify-center rounded-xl ${
-              activeTab === 'faq' ? 'bg-white shadow-sm' : ''
-            }`}
+            className="flex-1 py-2 items-center justify-center rounded-xl"
+            style={activeTab === 'faq' ? { backgroundColor: '#ffffff', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 1 } : undefined}
           >
             <Text
               className={`text-xs ${
@@ -307,9 +318,8 @@ export const FaqScreen: React.FC<FaqScreenProps> = ({ onBack, initialTab = 'faq'
             onPress={() => setActiveTab('policies')}
             accessibilityRole="button"
             accessibilityLabel="Counter Policies"
-            className={`flex-1 py-2 items-center justify-center rounded-xl ${
-              activeTab === 'policies' ? 'bg-white shadow-sm' : ''
-            }`}
+            className="flex-1 py-2 items-center justify-center rounded-xl"
+            style={activeTab === 'policies' ? { backgroundColor: '#ffffff', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 1 } : undefined}
           >
             <Text
               className={`text-xs ${

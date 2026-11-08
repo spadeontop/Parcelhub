@@ -440,7 +440,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         change: 'To Be Determined',
         trackingNumber: draftOrder.trackingId || `PH${Date.now()}`,
         refCode: `0001-${numId.padStart(4, '0')}-1122`,
-        alphanumericKey: `PH-${numId}-${numId.padStart(4, '0')}`,
+        alphanumericKey: newOrderId,
         envelopeNumber: `ENV-${numId}`,
         status: 'PAYMENT_REQUIRED',
         orderPlacedTime: 'Just now',
