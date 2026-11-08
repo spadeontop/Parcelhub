@@ -12,9 +12,13 @@ export async function POST(request: NextRequest) {
       return jsonError("Email and password are required", 400);
     }
 
-    const customer = db.getCustomerByEmail(body.email);
-    if (!customer || customer.passwordHash !== body.password) {
-      return jsonError("Invalid email or password", 401, "Unauthorized");
+    const customer = db.getCustomerByEmail(body.email.trim());
+    if (!customer) {
+      return jsonError("Email is not registered", 404, "Not Found");
+    }
+
+    if (customer.passwordHash !== body.password) {
+      return jsonError("Incorrect password", 401, "Unauthorized");
     }
 
     if (customer.blacklisted) {
