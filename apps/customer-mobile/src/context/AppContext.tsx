@@ -28,6 +28,7 @@ import {
   parseCurrency,
 } from '../services/orderApi';
 import { ENV, getDetectedApiUrl } from '../config/env';
+import { clearRetainedRegistrationData } from '../services/registrationState';
 
 const INITIAL_ORDERS: Order[] = [];
 
@@ -75,6 +76,8 @@ export interface AppContextType {
   refreshToken: string | null;
   authToken: string | null;
   authCustomer: AuthCustomer;
+  pendingRegistration: CustomerRegisterReq | null;
+  clearPendingRegistration: () => void;
   loginCustomer: (payload: CustomerLoginReq) => Promise<CustomerLoginRes>;
   registerCustomer: (payload: CustomerRegisterReq) => Promise<CustomerRegisterRes>;
   createCustomerMpin: (mpin: string) => Promise<CustomerCreateMpinRes>;
@@ -130,12 +133,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [preAuthToken, setPreAuthToken] = useState<string | null>(null);
   const [refreshToken, setRefreshToken] = useState<string | null>(null);
   const [authToken, setAuthToken] = useState<string | null>(null);
+  const [pendingRegistration, setPendingRegistration] = useState<CustomerRegisterReq | null>(null);
   const [authCustomer, setAuthCustomer] = useState<AuthCustomer>({
     email: '',
     firstname: '',
     lastname: '',
     phonenumber: '',
   });
+
+  const clearPendingRegistration = useCallback(() => {
+    setPendingRegistration(null);
+    setPreAuthToken(null);
+    setAuthCustomer({
+      email: '',
+      firstname: '',
+      lastname: '',
+      phonenumber: '',
+    });
+  }, []);
 
   // Strict Auth Gate: Start at 'login' by default until token verification
   const [activeScreen, setActiveScreen] = useState<ScreenId>('login');
@@ -584,40 +599,61 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     [apiUrl, showToast]
   );
 
-  // Auth: Register
+  // Auth: Register (prepares registration data without saving to backend until MPIN is confirmed)
   const registerCustomer = useCallback(
     async (payload: CustomerRegisterReq): Promise<CustomerRegisterRes> => {
-      const res = await customerApi.register(payload, apiUrl);
-      setPreAuthToken(res.preAuthToken);
-      setAuthCustomer({
+      setPendingRegistration(payload);
+      setAuthCustomer((prev) => ({
+        ...prev,
         email: payload.email,
-        firstName: payload.firstName,
-        lastName: payload.lastName,
-        middleInitial: payload.middleInitial,
-        phoneNumber: payload.phoneNumber,
-      } as any);
-      showToast(res.statusMessage || 'Registration successful. Create your MPIN.');
+        firstname: payload.firstName,
+        lastname: payload.lastName,
+        phonenumber: payload.phoneNumber,
+        middleinitial: payload.middleInitial,
+      }));
       setActiveScreen('mpin_create');
-      return res;
+      return {
+        statusMessage: 'Please create your 4-digit MPIN.',
+        preAuthToken: '',
+      };
     },
-    [apiUrl, showToast]
+    []
   );
 
   // Auth: Create MPIN
   const createCustomerMpin = useCallback(
     async (mpin: string): Promise<CustomerCreateMpinRes> => {
-      if (!preAuthToken) {
+      let activePreAuthToken = preAuthToken;
+
+      // Only save registration to the backend when MPIN is being created/confirmed
+      if (pendingRegistration) {
+        const regRes = await customerApi.register(pendingRegistration, apiUrl);
+        activePreAuthToken = regRes.preAuthToken;
+        setPreAuthToken(regRes.preAuthToken);
+        setPendingRegistration(null);
+      }
+
+      if (!activePreAuthToken) {
         throw new Error('Pre-auth token missing. Please register or log in first.');
       }
-      const res = await customerApi.createMpin({ preAuthToken, mpin }, apiUrl);
+
+      const res = await customerApi.createMpin(
+        { preAuthToken: activePreAuthToken, mpin: mpin as any },
+        apiUrl
+      );
       setAuthToken(res.authToken);
       if (res.refreshToken) setRefreshToken(res.refreshToken);
+
+      // Successfully saved and MPIN verified: clear pending and retained form data
+      setPendingRegistration(null);
+      clearRetainedRegistrationData();
+
       showToast(res.statusMessage || 'MPIN created successfully!');
       setActiveScreen('home');
       refetchOrders();
       return res;
     },
-    [preAuthToken, apiUrl, showToast, refetchOrders]
+    [preAuthToken, pendingRegistration, apiUrl, showToast, refetchOrders]
   );
 
   // Auth: Verify MPIN
@@ -650,6 +686,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAuthToken(null);
     setRefreshToken(null);
     setPreAuthToken(null);
+    setPendingRegistration(null);
+    setAuthCustomer({
+      email: '',
+      firstname: '',
+      lastname: '',
+      phonenumber: '',
+    });
+    clearRetainedRegistrationData();
     showToast('Signed out successfully.');
     setActiveScreen('login');
   }, [showToast]);
@@ -751,6 +795,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         refreshToken,
         authToken,
         authCustomer,
+        pendingRegistration,
+        clearPendingRegistration,
         loginCustomer,
         registerCustomer,
         createCustomerMpin,

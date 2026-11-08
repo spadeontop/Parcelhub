@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { useApp } from '../../context/AppContext';
 import { ParcelHubLogoSvg, ArrowLeftIcon } from '../common/Icons';
 import { NumericKeypad } from '../common/NumericKeypad';
+import { setRetainedRegistrationData } from '../../services/registrationState';
 
 export const MpinCreateScreen: React.FC = () => {
   const { authCustomer, createCustomerMpin, navigateTo, showToast } = useApp();
@@ -97,11 +98,24 @@ export const MpinCreateScreen: React.FC = () => {
     try {
       await createCustomerMpin(pin1);
     } catch (err: any) {
-      showToast(err?.message || 'Failed to create MPIN. Please try again.');
+      const msg = err?.message || 'Failed to create MPIN. Please try again.';
+      showToast(msg);
+
+      const isDuplicate =
+        err?.statusCode === 409 ||
+        err?.error === 'Conflict' ||
+        msg.toLowerCase().includes('already exists') ||
+        msg.toLowerCase().includes('duplicate') ||
+        msg.toLowerCase().includes('already registered');
+
+      if (isDuplicate) {
+        setRetainedRegistrationData({ emailError: msg });
+        navigateTo('register');
+      }
     } finally {
       setIsSubmitting(false);
     }
-  }, [pin1, pin2, createCustomerMpin, showToast]);
+  }, [pin1, pin2, createCustomerMpin, showToast, navigateTo]);
 
   const handleButtonClick = () => {
     if (activeStep === 1) {
@@ -126,7 +140,7 @@ export const MpinCreateScreen: React.FC = () => {
   }, [activeStep, navigateTo]);
 
   const displayName = authCustomer.firstname
-    ? `${authCustomer.firstname} ${authCustomer.lastname}`
+    ? `${authCustomer.firstname}${authCustomer.middleinitial ? ` ${authCustomer.middleinitial}` : ''} ${authCustomer.lastname}`
     : 'John Vince Dumaguit';
 
   const buttonLabel = isSubmitting
