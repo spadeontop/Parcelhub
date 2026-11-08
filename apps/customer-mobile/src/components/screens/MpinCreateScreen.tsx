@@ -1,11 +1,11 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { useApp } from '../../context/AppContext';
-import { ParcelHubLogoSvg } from '../common/Icons';
+import { ParcelHubLogoSvg, ArrowLeftIcon } from '../common/Icons';
 import { NumericKeypad } from '../common/NumericKeypad';
 
 export const MpinCreateScreen: React.FC = () => {
-  const { authCustomer, createCustomerMpin, showToast } = useApp();
+  const { authCustomer, createCustomerMpin, navigateTo, showToast } = useApp();
   const [activeStep, setActiveStep] = useState<1 | 2>(1);
   const [pin1, setPin1] = useState<string>('');
   const [pin2, setPin2] = useState<string>('');
@@ -115,6 +115,15 @@ export const MpinCreateScreen: React.FC = () => {
       }
     }
   };
+
+  const handleBack = useCallback(() => {
+    if (activeStep === 2) {
+      setActiveStep(1);
+      setMismatch(false);
+    } else {
+      navigateTo('register');
+    }
+  }, [activeStep, navigateTo]);
 
   const displayName = authCustomer.firstname
     ? `${authCustomer.firstname} ${authCustomer.lastname}`
@@ -315,6 +324,16 @@ export const MpinCreateScreen: React.FC = () => {
             >
               {buttonLabel}
             </Text>
+          </TouchableOpacity>
+
+          {/* Secondary Action: Back text link with arrow on its left */}
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={handleBack}
+            className="flex-row items-center justify-center gap-1.5 py-2.5 mt-1"
+          >
+            <ArrowLeftIcon size={15} color="#4b5563" />
+            <Text className="text-gray-600 font-semibold text-[13.5px]">Back</Text>
           </TouchableOpacity>
         </View>
       </View>
