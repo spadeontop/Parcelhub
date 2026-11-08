@@ -16,34 +16,39 @@ export const StaffReadyActionSection: React.FC<StaffReadyActionSectionProps> = (
   onRelease,
   onReturnHome,
 }) => {
-  // If no timer set by backend, default to a realistic timer like 4:59 (299s) as shown in the design
-  const initialSeconds = order.claimRemainingSeconds && order.claimRemainingSeconds > 0
-    ? order.claimRemainingSeconds
-    : 299;
+  // Check if claim has actually been initiated by the customer
+  const isInitiated = Boolean(
+    order.isClaimActive || (order.claimRemainingSeconds !== undefined && order.claimRemainingSeconds > 0)
+  );
 
-  const [secondsRemaining, setSecondsRemaining] = useState<number>(initialSeconds);
+  const [secondsRemaining, setSecondsRemaining] = useState<number>(
+    isInitiated && order.claimRemainingSeconds ? order.claimRemainingSeconds : 0
+  );
   const [isConfirmed, setIsConfirmed] = useState<boolean>(false);
 
   useEffect(() => {
-    if (order.claimRemainingSeconds && order.claimRemainingSeconds > 0) {
-      setSecondsRemaining(order.claimRemainingSeconds);
+    if (order.isClaimActive || (order.claimRemainingSeconds !== undefined && order.claimRemainingSeconds > 0)) {
+      setSecondsRemaining(order.claimRemainingSeconds ?? 0);
+    } else {
+      setSecondsRemaining(0);
     }
-  }, [order.claimRemainingSeconds]);
+  }, [order.isClaimActive, order.claimRemainingSeconds]);
 
-  // Live countdown timer
+  // Live countdown timer only runs when initiated and time is remaining
   useEffect(() => {
-    if (secondsRemaining <= 0) return;
+    if (!isInitiated || secondsRemaining <= 0) return;
     const interval = setInterval(() => {
       setSecondsRemaining((s) => Math.max(0, s - 1));
     }, 1000);
     return () => clearInterval(interval);
-  }, [secondsRemaining]);
+  }, [isInitiated, secondsRemaining]);
 
   const minutes = Math.floor(secondsRemaining / 60);
   const seconds = secondsRemaining % 60;
   const formattedTimer = `${minutes}:${String(seconds).padStart(2, '0')}`;
 
-  const canRelease = isConfirmed && secondsRemaining > 0 && !isReleasing;
+  const isTimerExpired = isInitiated && secondsRemaining <= 0;
+  const canRelease = isInitiated && isConfirmed && secondsRemaining > 0 && !isReleasing;
 
   return (
     <View className="space-y-4">
@@ -52,19 +57,41 @@ export const StaffReadyActionSection: React.FC<StaffReadyActionSectionProps> = (
         <Text className="text-[11px] font-bold text-[#94A3B8] tracking-wider uppercase mb-1">
           CLAIMING TIME REMAINING
         </Text>
-        <Text className="text-4xl font-extrabold text-[#059669] my-1">
-          {formattedTimer}
-        </Text>
-        <Text className="text-xs text-[#64748B]">
-          Releasing order is only valid with this timer on.
-        </Text>
+        {isInitiated ? (
+          <>
+            <Text className="text-4xl font-extrabold text-[#059669] my-1">
+              {formattedTimer}
+            </Text>
+            <Text className="text-xs text-[#64748B]">
+              {isTimerExpired
+                ? 'Claiming window has expired. Ask customer to re-initiate.'
+                : 'Releasing order is only valid with this timer on.'}
+            </Text>
+          </>
+        ) : (
+          <>
+            <Text className="text-sm font-semibold text-[#64748B] my-2">
+              Claim has not been initiated by the customer
+            </Text>
+            <Text className="text-xs text-[#94A3B8]">
+              The countdown timer will start once the customer initiates the claim on their app.
+            </Text>
+          </>
+        )}
       </View>
 
       {/* Confirmation Checkbox matching ready-to-claim.png */}
       <TouchableOpacity
         activeOpacity={0.8}
-        onPress={() => setIsConfirmed((prev) => !prev)}
-        className="flex-row items-start gap-3 px-1 mb-5"
+        onPress={() => {
+          if (isInitiated && !isTimerExpired) {
+            setIsConfirmed((prev) => !prev);
+          }
+        }}
+        disabled={!isInitiated || isTimerExpired}
+        className={`flex-row items-start gap-3 px-1 mb-5 ${
+          !isInitiated || isTimerExpired ? 'opacity-50' : 'opacity-100'
+        }`}
       >
         <View
           className={`w-5 h-5 rounded-md items-center justify-center mt-0.5 ${
@@ -96,7 +123,11 @@ export const StaffReadyActionSection: React.FC<StaffReadyActionSectionProps> = (
           <ActivityIndicator size="small" color="#FFFFFF" />
         ) : (
           <Text className="text-white font-bold text-sm">
-            Release Order
+            {!isInitiated
+              ? 'Awaiting Customer Initiation'
+              : isTimerExpired
+              ? 'Claim Window Expired'
+              : 'Release Order'}
           </Text>
         )}
       </TouchableOpacity>
