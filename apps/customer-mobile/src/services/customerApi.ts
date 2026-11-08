@@ -145,58 +145,34 @@ export const customerApi = {
    */
   async register(
     payload: CustomerRegisterReq,
-    baseUrl: string = ENV.API_BASE_URL,
-    isLiveMode: boolean = true
+    baseUrl: string = ENV.API_BASE_URL
   ): Promise<CustomerRegisterRes> {
-    const fallback: CustomerRegisterRes = {
-      statusMessage: `Welcome ${payload.firstName}! Registration successful. Next, create your security MPIN.`,
-      preAuthToken: `preauth_mock_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
-    };
+    const res = await fetch(`${baseUrl}/api/customer/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: payload.email,
+        password: payload.password,
+        firstName: payload.firstName,
+        lastName: payload.lastName,
+        middleInitial: payload.middleInitial,
+        phoneNumber: payload.phoneNumber,
+      }),
+    });
 
-    if (!isLiveMode) {
-      await this.setStoredPreAuthToken(fallback.preAuthToken);
-      return fallback;
+    const data = await res.json().catch(() => null);
+
+    if (res.ok && data?.preAuthToken) {
+      const responseData: CustomerRegisterRes = {
+        statusMessage: data.statusMessage || 'Registration successful',
+        preAuthToken: data.preAuthToken,
+      };
+      await this.setStoredPreAuthToken(responseData.preAuthToken);
+      return responseData;
     }
 
-    try {
-      const res = await fetch(`${baseUrl}/api/customer/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: payload.email,
-          password: payload.password,
-          firstName: payload.firstName,
-          lastName: payload.lastName,
-          middleInitial: payload.middleInitial,
-          phoneNumber: payload.phoneNumber,
-        }),
-      });
-
-      const data = await res.json().catch(() => null);
-
-      if (res.ok && data?.preAuthToken) {
-        const responseData: CustomerRegisterRes = {
-          statusMessage: data.statusMessage || 'Registration successful',
-          preAuthToken: data.preAuthToken,
-        };
-        await this.setStoredPreAuthToken(responseData.preAuthToken);
-        return responseData;
-      }
-
-      if (isBusinessClientError(res.status) && data && (data.message || data.error || data.statusMessage)) {
-        const err = new Error(data.message || data.error || data.statusMessage);
-        (err as any).isBackendError = true;
-        throw err;
-      }
-
-      // If backend failed unexpectedly, use fallback
-      await this.setStoredPreAuthToken(fallback.preAuthToken);
-      return fallback;
-    } catch (err: any) {
-      if (err?.isBackendError) throw err;
-      await this.setStoredPreAuthToken(fallback.preAuthToken);
-      return fallback;
-    }
+    const errorMsg = data?.message || data?.error || data?.statusMessage || `Registration failed (HTTP ${res.status})`;
+    throw new Error(errorMsg);
   },
 
   /**
@@ -205,50 +181,27 @@ export const customerApi = {
    */
   async login(
     payload: CustomerLoginReq,
-    baseUrl: string = ENV.API_BASE_URL,
-    isLiveMode: boolean = true
+    baseUrl: string = ENV.API_BASE_URL
   ): Promise<CustomerLoginRes> {
-    const fallback: CustomerLoginRes = {
-      statusMessage: 'Credentials verified! Please enter your 4-digit MPIN.',
-      preAuthToken: `preauth_mock_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
-    };
+    const res = await fetch(`${baseUrl}/api/customer/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
 
-    if (!isLiveMode) {
-      await this.setStoredPreAuthToken(fallback.preAuthToken);
-      return fallback;
+    const data = await res.json().catch(() => null);
+
+    if (res.ok && data?.preAuthToken) {
+      const responseData: CustomerLoginRes = {
+        statusMessage: data.statusMessage || 'Credentials verified',
+        preAuthToken: data.preAuthToken,
+      };
+      await this.setStoredPreAuthToken(responseData.preAuthToken);
+      return responseData;
     }
 
-    try {
-      const res = await fetch(`${baseUrl}/api/customer/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await res.json().catch(() => null);
-
-      if (res.ok && data?.preAuthToken) {
-        const responseData: CustomerLoginRes = {
-          statusMessage: data.statusMessage || 'Credentials verified',
-          preAuthToken: data.preAuthToken,
-        };
-        await this.setStoredPreAuthToken(responseData.preAuthToken);
-        return responseData;
-      }
-
-      if (isBusinessClientError(res.status) && data && (data.message || data.error || data.statusMessage)) {
-        const err = new Error(data.message || data.error || data.statusMessage);
-        (err as any).isBackendError = true;
-        throw err;
-      }
-
-      await this.setStoredPreAuthToken(fallback.preAuthToken);
-      return fallback;
-    } catch (err: any) {
-      if (err?.isBackendError) throw err;
-      await this.setStoredPreAuthToken(fallback.preAuthToken);
-      return fallback;
-    }
+    const errorMsg = data?.message || data?.error || data?.statusMessage || `Login failed (HTTP ${res.status})`;
+    throw new Error(errorMsg);
   },
 
   /**
@@ -257,56 +210,31 @@ export const customerApi = {
    */
   async createMpin(
     payload: CustomerCreateMpinReq,
-    baseUrl: string = ENV.API_BASE_URL,
-    isLiveMode: boolean = true
+    baseUrl: string = ENV.API_BASE_URL
   ): Promise<CustomerCreateMpinRes> {
-    const fallback: CustomerCreateMpinRes = {
-      statusMessage: 'MPIN created successfully! Welcome to ParcelHub.',
-      authToken: `at_mock_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
-      refreshToken: `rt_mock_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
-    };
+    const res = await fetch(`${baseUrl}/api/customer/create-mpin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
 
-    if (!isLiveMode) {
-      await this.setStoredAuthToken(fallback.authToken);
-      await this.setStoredRefreshToken(fallback.refreshToken);
-      return fallback;
-    }
+    const data = await res.json().catch(() => null);
 
-    try {
-      const res = await fetch(`${baseUrl}/api/customer/create-mpin`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await res.json().catch(() => null);
-
-      if (res.ok && data?.authToken) {
-        const responseData: CustomerCreateMpinRes = {
-          statusMessage: data.statusMessage || fallback.statusMessage,
-          authToken: data.authToken,
-          refreshToken: data.refreshToken || fallback.refreshToken,
-        };
-        await this.setStoredAuthToken(responseData.authToken);
+    if (res.ok && data?.authToken) {
+      const responseData: CustomerCreateMpinRes = {
+        statusMessage: data.statusMessage || 'MPIN created successfully',
+        authToken: data.authToken,
+        refreshToken: data.refreshToken,
+      };
+      await this.setStoredAuthToken(responseData.authToken);
+      if (responseData.refreshToken) {
         await this.setStoredRefreshToken(responseData.refreshToken);
-        return responseData;
       }
-
-      if (isBusinessClientError(res.status) && data && (data.message || data.error || data.statusMessage)) {
-        const err = new Error(data.message || data.error || data.statusMessage);
-        (err as any).isBackendError = true;
-        throw err;
-      }
-
-      await this.setStoredAuthToken(fallback.authToken);
-      await this.setStoredRefreshToken(fallback.refreshToken);
-      return fallback;
-    } catch (err: any) {
-      if (err?.isBackendError) throw err;
-      await this.setStoredAuthToken(fallback.authToken);
-      await this.setStoredRefreshToken(fallback.refreshToken);
-      return fallback;
+      return responseData;
     }
+
+    const errorMsg = data?.message || data?.error || data?.statusMessage || `Failed to create MPIN (HTTP ${res.status})`;
+    throw new Error(errorMsg);
   },
 
   /**
@@ -315,55 +243,30 @@ export const customerApi = {
    */
   async verifyMpin(
     payload: CustomerVerifyMpinReq,
-    baseUrl: string = ENV.API_BASE_URL,
-    isLiveMode: boolean = true
+    baseUrl: string = ENV.API_BASE_URL
   ): Promise<CustomerVerifyMpinRes> {
-    const fallback: CustomerVerifyMpinRes = {
-      statusMessage: 'Access granted!',
-      authToken: `at_mock_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
-      refreshToken: `rt_mock_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
-    };
+    const res = await fetch(`${baseUrl}/api/customer/mpin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
 
-    if (!isLiveMode) {
-      await this.setStoredAuthToken(fallback.authToken);
-      await this.setStoredRefreshToken(fallback.refreshToken);
-      return fallback;
-    }
+    const data = await res.json().catch(() => null);
 
-    try {
-      const res = await fetch(`${baseUrl}/api/customer/mpin`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await res.json().catch(() => null);
-
-      if (res.ok && data?.authToken) {
-        const responseData: CustomerVerifyMpinRes = {
-          statusMessage: data.statusMessage || fallback.statusMessage,
-          authToken: data.authToken,
-          refreshToken: data.refreshToken || fallback.refreshToken,
-        };
-        await this.setStoredAuthToken(responseData.authToken);
+    if (res.ok && data?.authToken) {
+      const responseData: CustomerVerifyMpinRes = {
+        statusMessage: data.statusMessage || 'Access granted',
+        authToken: data.authToken,
+        refreshToken: data.refreshToken,
+      };
+      await this.setStoredAuthToken(responseData.authToken);
+      if (responseData.refreshToken) {
         await this.setStoredRefreshToken(responseData.refreshToken);
-        return responseData;
       }
-
-      if (isBusinessClientError(res.status) && data && (data.message || data.error || data.statusMessage)) {
-        const err = new Error(data.message || data.error || data.statusMessage);
-        (err as any).isBackendError = true;
-        throw err;
-      }
-
-      await this.setStoredAuthToken(fallback.authToken);
-      await this.setStoredRefreshToken(fallback.refreshToken);
-      return fallback;
-    } catch (err: any) {
-      if (err?.isBackendError) throw err;
-      await this.setStoredAuthToken(fallback.authToken);
-      await this.setStoredRefreshToken(fallback.refreshToken);
-      return fallback;
+      return responseData;
     }
+
+    const errorMsg = data?.message || data?.error || data?.statusMessage || `MPIN verification failed (HTTP ${res.status})`;
+    throw new Error(errorMsg);
   },
 };

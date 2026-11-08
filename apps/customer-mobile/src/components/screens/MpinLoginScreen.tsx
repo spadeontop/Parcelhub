@@ -126,6 +126,15 @@ export const MpinLoginScreen: React.FC = () => {
           onPressClear={handleClear}
           disabled={isVerifying}
         />
+
+        {/* Back to login button */}
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => navigateTo('login')}
+          className="w-full h-10 bg-[#e8eefb] active:bg-[#dbe5f9] rounded-lg items-center justify-center mt-2"
+        >
+          <Text className="text-[#1e3a8a] font-semibold text-[13px]">Back to login</Text>
+        </TouchableOpacity>
       </View>
     </ScrollView>
   );

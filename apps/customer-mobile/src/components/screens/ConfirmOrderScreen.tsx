@@ -93,7 +93,7 @@ export const ConfirmOrderScreen: React.FC = () => {
               value={draftOrder.totalAmount}
               onChangeText={(text) => updateDraftOrder({ totalAmount: text })}
               className="w-full text-base font-bold text-gray-900 font-mono mt-0.5 py-1"
-              placeholder="₱480"
+              placeholder="e.g. ₱500"
             />
           </View>
 
@@ -117,7 +117,7 @@ export const ConfirmOrderScreen: React.FC = () => {
                 updateDraftOrder({ trackingId: text });
               }}
               className="w-full text-base font-mono font-semibold text-gray-900 mt-0.5 py-1"
-              placeholder="PH2696153366792H"
+              placeholder="e.g. SPX123456789"
             />
             {trackingError ? (
               <Text className="text-xs font-semibold text-red-500 mt-1">

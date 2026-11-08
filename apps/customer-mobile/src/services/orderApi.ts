@@ -206,39 +206,31 @@ export const orderApi = {
   async initializeOrder(
     token: string | null,
     imageUrl: string,
-    baseUrl: string = ENV.API_BASE_URL,
-    isLiveMode: boolean = true
+    baseUrl: string = ENV.API_BASE_URL
   ): Promise<CustomerInitOrderRes> {
-    if (!isLiveMode || !token) {
-      return {
-        orderId: `ORD-${Math.floor(100 + Math.random() * 900)}`,
-        statusMessage: 'Order initialized (mock mode)',
-      };
+    if (!token) {
+      throw new Error('Authentication token is required to create an order.');
     }
 
-    try {
-      const res = await fetch(`${baseUrl}/api/customer/orders/initialize`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ imageUrl }),
-      });
+    const res = await fetch(`${baseUrl}/api/customer/orders/initialize`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ imageUrl }),
+    });
 
-      const data = await res.json();
-      if (!res.ok) {
-        const error: any = new Error(data.message || data.error || `Initialization failed (HTTP ${res.status})`);
-        error.status = res.status;
-        error.errorType = data.error;
-        error.data = data;
-        throw error;
-      }
-
-      return data as CustomerInitOrderRes;
-    } catch (err) {
-      throw err;
+    const data = await res.json();
+    if (!res.ok) {
+      const error: any = new Error(data.message || data.error || `Initialization failed (HTTP ${res.status})`);
+      error.status = res.status;
+      error.errorType = data.error;
+      error.data = data;
+      throw error;
     }
+
+    return data as CustomerInitOrderRes;
   },
 
   /**
@@ -254,36 +246,31 @@ export const orderApi = {
       recipientName?: string;
       price?: number;
     },
-    baseUrl: string = ENV.API_BASE_URL,
-    isLiveMode: boolean = true
+    baseUrl: string = ENV.API_BASE_URL
   ): Promise<CustomerUpdateOrderRes> {
-    if (!isLiveMode || !token) {
-      return { statusMessage: 'Order updated successfully (mock mode)' };
+    if (!token) {
+      throw new Error('Authentication token is required to update order.');
     }
 
-    try {
-      const res = await fetch(`${baseUrl}/api/customer/orders/${orderId}`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ order: orderData }),
-      });
+    const res = await fetch(`${baseUrl}/api/customer/orders/${orderId}`, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ order: orderData }),
+    });
 
-      const data = await res.json();
-      if (!res.ok) {
-        const error: any = new Error(data.message || data.error || `Update failed (HTTP ${res.status})`);
-        error.status = res.status;
-        error.errorType = data.error;
-        error.data = data;
-        throw error;
-      }
-
-      return data as CustomerUpdateOrderRes;
-    } catch (err) {
-      throw err;
+    const data = await res.json();
+    if (!res.ok) {
+      const error: any = new Error(data.message || data.error || `Update failed (HTTP ${res.status})`);
+      error.status = res.status;
+      error.errorType = data.error;
+      error.data = data;
+      throw error;
     }
+
+    return data as CustomerUpdateOrderRes;
   },
 
   /**
@@ -293,40 +280,27 @@ export const orderApi = {
   async claimOrder(
     token: string | null,
     orderId: string,
-    baseUrl: string = ENV.API_BASE_URL,
-    isLiveMode: boolean = true
+    baseUrl: string = ENV.API_BASE_URL
   ): Promise<CustomerClaimOrderRes> {
-    const fallbackExpiry = new Date(Date.now() + 5 * 60 * 1000).toISOString();
-    const fallbackInitiated = new Date().toISOString();
-
-    if (!isLiveMode || !token) {
-      return {
-        statusMessage: 'Order claim initiated (mock mode)',
-        claimInitiatedAt: fallbackInitiated,
-        claimExpiresAt: fallbackExpiry,
-        durationMinutes: 5,
-      };
+    if (!token) {
+      throw new Error('Authentication token is required to claim order.');
     }
 
-    try {
-      const res = await fetch(`${baseUrl}/api/customer/orders/${orderId}/claim`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({}),
-      });
+    const res = await fetch(`${baseUrl}/api/customer/orders/${orderId}/claim`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({}),
+    });
 
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.message || data.error || `Claim failed (HTTP ${res.status})`);
-      }
-
-      return data as CustomerClaimOrderRes;
-    } catch (err) {
-      throw err;
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.message || data.error || `Claim failed (HTTP ${res.status})`);
     }
+
+    return data as CustomerClaimOrderRes;
   },
 
   /**
@@ -336,30 +310,25 @@ export const orderApi = {
   async cancelOrder(
     token: string | null,
     orderId: string,
-    baseUrl: string = ENV.API_BASE_URL,
-    isLiveMode: boolean = true
+    baseUrl: string = ENV.API_BASE_URL
   ): Promise<{ statusMessage: string }> {
-    if (!isLiveMode || !token) {
-      return { statusMessage: 'Order cancelled successfully (mock mode)' };
+    if (!token) {
+      throw new Error('Authentication token is required to cancel order.');
     }
 
-    try {
-      const res = await fetch(`${baseUrl}/api/customer/orders/${orderId}`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+    const res = await fetch(`${baseUrl}/api/customer/orders/${orderId}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
 
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.message || data.error || `Cancellation failed (HTTP ${res.status})`);
-      }
-
-      return data;
-    } catch (err) {
-      throw err;
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.message || data.error || `Cancellation failed (HTTP ${res.status})`);
     }
+
+    return data;
   },
 };

@@ -26,10 +26,10 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
 }) => {
   const { showToast } = useApp();
 
-  const [currentPassword, setCurrentPassword] = useState<string>('SamplePass');
-  const [newPassword, setNewPassword] = useState<string>('Password123');
-  const [confirmPassword, setConfirmPassword] = useState<string>('Password123');
-  const [verificationCode, setVerificationCode] = useState<string>('8080');
+  const [currentPassword, setCurrentPassword] = useState<string>('');
+  const [newPassword, setNewPassword] = useState<string>('');
+  const [confirmPassword, setConfirmPassword] = useState<string>('');
+  const [verificationCode, setVerificationCode] = useState<string>('');
 
   // Password visibility states (in Figma: Current Password shows Eye (open), Change/Confirm show Eye-Off)
   const [showCurrentPassword, setShowCurrentPassword] = useState<boolean>(true);
@@ -43,10 +43,10 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
 
   useEffect(() => {
     if (visible) {
-      setCurrentPassword('SamplePass');
-      setNewPassword('Password123');
-      setConfirmPassword('Password123');
-      setVerificationCode('8080');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setVerificationCode('');
       setShowCurrentPassword(true);
       setShowNewPassword(false);
       setShowConfirmPassword(false);
