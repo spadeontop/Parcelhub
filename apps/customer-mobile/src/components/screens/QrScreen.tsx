@@ -24,7 +24,7 @@ export const QrScreen: React.FC = () => {
           <View className="p-6 rounded-3xl bg-white border border-gray-200 shadow-sm items-center w-full max-w-xs">
             <View className="bg-white p-4 rounded-2xl items-center justify-center border border-gray-100">
               <QRCode
-                value={order.alphanumericKey || order.refCode || 'PARCELHUB-DEMO'}
+                value={order.id || 'PARCELHUB-DEMO'}
                 size={190}
                 color="#0f172a"
                 backgroundColor="#ffffff"
@@ -38,11 +38,11 @@ export const QrScreen: React.FC = () => {
                   TICKET
                 </Text>
                 <Text className="text-base font-black font-mono text-[#163b86]">
-                  {order.alphanumericKey}
+                  {order.id}
                 </Text>
               </View>
               <TouchableOpacity
-                onPress={() => copyToClipboard(order.alphanumericKey, 'Ticket')}
+                onPress={() => copyToClipboard(order.id, 'Ticket')}
                 className="p-1.5 rounded-lg bg-white border border-blue-100"
               >
                 <CopyIcon size={16} color="#163b86" />
