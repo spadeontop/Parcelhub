@@ -35,6 +35,13 @@ export type OrderStatusHistoryTuple = readonly StatusTimelineEntry[];
 // Backend API Request & Response Contracts
 // ==========================================
 
+export type ApiErrorResponse = {
+  readonly success: false;
+  readonly error: string;
+  readonly message: string;
+  readonly statusCode: number;
+};
+
 export type CustomerRegisterReq = {
   readonly email: string;
   readonly password: string;
