@@ -8,7 +8,6 @@ import { AppProvider, useApp } from '../context/AppContext';
 import { MpinModal } from '../components/modals/MpinModal';
 import { ProofOfDeliveryModal } from '../components/modals/ProofOfDeliveryModal';
 import { NotificationsModal } from '../components/modals/NotificationsModal';
-import { FloatingDebugChathead } from '../components/common/FloatingDebugChathead';
 import { Toast } from '../components/common/Toast';
 import '../global.css';
 
@@ -33,9 +32,6 @@ function RootAppContent() {
       <View style={{ flex: 1, backgroundColor: '#ffffff' }} className="flex-1 bg-white">
         <Slot />
       </View>
-
-      {/* Floating Messenger-Style Debug & API Chathead */}
-      <FloatingDebugChathead />
 
       {/* Global Interactive Modals */}
       <MpinModal />

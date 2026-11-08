@@ -29,122 +29,16 @@ import {
 } from '../services/orderApi';
 import { ENV, getDetectedApiUrl } from '../config/env';
 
-const INITIAL_ORDERS: Order[] = [
-  {
-    id: 'ORD-402',
-    product: 'VXE R1 Nearlink',
-    recipient: 'John Vince Dumaguit',
-    paidAmount: '₱500',
-    codAmount: '₱480',
-    change: '₱20',
-    trackingNumber: 'PH2696153366792H',
-    refCode: '0001-5544-5555',
-    alphanumericKey: 'PH-402-5544',
-    envelopeNumber: 'ENV-402',
-    status: 'READY_TO_CLAIM',
-    orderPlacedTime: '17 Oct 16:32',
-    awaitingParcelTime: '17 Oct 18:32',
-    readyToClaimTime: '17 Oct 22:32',
-    claimedTime: null,
-    dateLabel: 'October 10, 2026 10:30',
-    carrier: 'ShopeeXpress (SPX)',
-    hubLocation: "Lily's Catering Hub • Yati, Liloan, Cebu",
-    courierPaid: true,
-    parcelImageUrl: null,
-    claimInitiatedAt: null,
-    notes: 'Customer notified via SMS. Ready for counter pickup.',
-    statedFee: 500,
-  },
-  {
-    id: 'ORD-408',
-    product: 'Poco X6 Pro',
-    recipient: 'John Vince Dumaguit',
-    paidAmount: '₱12,500',
-    codAmount: '₱12,450',
-    change: '₱50',
-    trackingNumber: 'PH90823411293K',
-    refCode: '0001-8899-2211',
-    alphanumericKey: 'PH-408-8899',
-    envelopeNumber: 'ENV-408',
-    status: 'AWAITING_PARCEL',
-    orderPlacedTime: '7 Oct 07:41',
-    awaitingParcelTime: '7 Oct 12:15',
-    readyToClaimTime: null,
-    claimedTime: null,
-    dateLabel: 'October 7, 2026 7:41',
-    carrier: 'J&T Express',
-    hubLocation: "Lily's Catering Hub • Yati, Liloan, Cebu",
-    courierPaid: false,
-    parcelImageUrl: null,
-    claimInitiatedAt: null,
-    notes: 'Fragile electronics. Priority intake requested.',
-    statedFee: 12500,
-  },
-  {
-    id: 'ORD-883',
-    product: 'VXE R1 Nearlink Wireless Mouse',
-    recipient: 'John Vince Dumaguit',
-    paidAmount: '',
-    codAmount: '₱480',
-    change: 'To Be Determined',
-    trackingNumber: 'PH883904421101N',
-    refCode: '0001-9044-2110',
-    alphanumericKey: 'PH-883-9044',
-    envelopeNumber: 'ENV-883',
-    status: 'PAYMENT_REQUIRED',
-    orderPlacedTime: '18 Oct 08:30',
-    awaitingParcelTime: null,
-    readyToClaimTime: null,
-    claimedTime: null,
-    dateLabel: 'October 18, 2026 08:30',
-    carrier: 'ShopeeXpress (SPX)',
-    hubLocation: "Lily's Catering Hub • Yati, Liloan, Cebu",
-    courierPaid: false,
-    parcelImageUrl: null,
-    claimInitiatedAt: null,
-    notes: 'Counter deposit pending.',
-    statedFee: 500,
-  },
-  {
-    id: 'ORD-388',
-    product: 'Keychron K2 Pro Mechanical Keyboard',
-    recipient: 'John Vince Dumaguit',
-    paidAmount: '₱4,200',
-    codAmount: '₱4,200',
-    change: '₱0',
-    trackingNumber: 'PH44219902341L',
-    refCode: '0001-1122-3344',
-    alphanumericKey: 'PH-388-1122',
-    envelopeNumber: 'ENV-388',
-    status: 'CLAIMED',
-    orderPlacedTime: '1 Oct 10:00',
-    awaitingParcelTime: '2 Oct 14:00',
-    readyToClaimTime: '3 Oct 11:30',
-    claimedTime: '4 Oct 09:15',
-    dateLabel: 'October 1, 2026 10:00',
-    carrier: 'Flash Express',
-    hubLocation: "Lily's Catering Hub • Yati, Liloan, Cebu",
-    courierPaid: true,
-    parcelImageUrl: null,
-    claimInitiatedAt: null,
-    notes: 'Handover complete. Validated with government ID.',
-    statedFee: 4200,
-  },
-];
+const INITIAL_ORDERS: Order[] = [];
 
-const INITIAL_NOTIFICATIONS: NotificationItem[] = [
-  { id: 1, title: 'Parcel Ready for Claim', body: 'VXE R1 Nearlink has arrived at Lily’s Catering Hub.', time: '10m ago', unread: true },
-  { id: 2, title: 'Deposit Verified', body: '₱500 deposit received for your order.', time: '2h ago', unread: true },
-  { id: 3, title: 'Courier Payment Logged', body: 'Staff paid ₱480 to SPX Express courier.', time: '4h ago', unread: true },
-  { id: 4, title: 'Welcome to ParcelHub', body: 'Lily’s Catering Hub station is active.', time: '1d ago', unread: true },
-];
+const INITIAL_NOTIFICATIONS: NotificationItem[] = [];
 
 const INITIAL_DRAFT: DraftOrder = {
-  product: 'VXE R1 Nearlink Wireless Mouse',
-  recipient: 'John Vince Dumaguit',
-  totalAmount: '₱480',
-  trackingId: 'PH2696153366792H',
-  receiptUri: 'sample_receipt_image',
+  product: '',
+  recipient: '',
+  totalAmount: '',
+  trackingId: '',
+  receiptUri: '',
 };
 
 export interface AppContextType {
@@ -237,18 +131,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [refreshToken, setRefreshToken] = useState<string | null>(null);
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [authCustomer, setAuthCustomer] = useState<AuthCustomer>({
-    email: 'user@example.com',
-    firstname: 'John',
-    lastname: 'Doe',
-    phonenumber: '+639123456789',
+    email: '',
+    firstname: '',
+    lastname: '',
+    phonenumber: '',
   });
 
   // Strict Auth Gate: Start at 'login' by default until token verification
   const [activeScreen, setActiveScreen] = useState<ScreenId>('login');
-  const [hasOrders, setHasOrdersState] = useState<boolean>(true);
+  const [hasOrders, setHasOrdersState] = useState<boolean>(false);
   const [hubOpen, setHubOpenState] = useState<boolean>(true);
   const [notificationActive, setNotificationActive] = useState<boolean>(true);
-  const [selectedOrderId, setSelectedOrderId] = useState<string>('ORD-402');
+  const [selectedOrderId, setSelectedOrderId] = useState<string>('');
   const [transactionFilter, setTransactionFilter] = useState<TransactionFilter>('ALL');
   const [claimConfirmed, setClaimConfirmed] = useState<boolean>(false);
   const [draftOrder, setDraftOrder] = useState<DraftOrder>(INITIAL_DRAFT);
@@ -405,7 +299,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [isPollingEnabled, isLiveMode, authToken, activeScreen, selectedOrderId, apiUrl, pollingInterval]);
 
   const getCurrentOrder = useCallback((): Order => {
-    return orders.find((o) => o.id === selectedOrderId) || orders[0] || INITIAL_ORDERS[0];
+    return (
+      orders.find((o) => o.id === selectedOrderId) ||
+      orders[0] || {
+        id: '',
+        product: '',
+        recipient: '',
+        paidAmount: '',
+        codAmount: '',
+        change: '',
+        trackingNumber: '',
+        refCode: '',
+        alphanumericKey: '',
+        envelopeNumber: '',
+        status: 'PAYMENT_REQUIRED',
+        orderPlacedTime: '',
+        awaitingParcelTime: null,
+        readyToClaimTime: null,
+        claimedTime: null,
+        dateLabel: '',
+        carrier: '',
+        hubLocation: "Lily's Catering Hub • Yati, Liloan, Cebu",
+        courierPaid: false,
+        parcelImageUrl: null,
+        claimInitiatedAt: null,
+        notes: '',
+        statedFee: 0,
+      }
+    );
   }, [orders, selectedOrderId]);
 
   const markAllNotificationsAsRead = useCallback(() => {
@@ -478,8 +399,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const initRes = await orderApi.initializeOrder(
         authToken,
         draftOrder.receiptUri || 'sample_receipt_image',
-        apiUrl,
-        isLiveMode
+        apiUrl
       );
       const newOrderId = initRes.orderId;
 
@@ -493,8 +413,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           recipientName: draftOrder.recipient || `${authCustomer.firstname} ${authCustomer.lastname}`,
           price,
         },
-        apiUrl,
-        isLiveMode
+        apiUrl
       );
 
       // Create local order entry
@@ -551,7 +470,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     async (orderId: string) => {
       try {
         showToast('Unlocking counter pickup pass...');
-        const res = await orderApi.claimOrder(authToken, orderId, apiUrl, isLiveMode);
+        const res = await orderApi.claimOrder(authToken, orderId, apiUrl);
 
         setOrders((prev) =>
           prev.map((o) =>
@@ -572,13 +491,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         showToast(err?.message || 'Failed to unlock pickup pass.');
       }
     },
-    [authToken, apiUrl, isLiveMode, showToast]
+    [authToken, apiUrl, showToast]
   );
 
   const completeMpinClaim = useCallback(() => {
     closeMpinModal();
     const current = getCurrentOrder();
-    customerInitiateClaim(current.id);
+    if (current?.id) {
+      customerInitiateClaim(current.id);
+    }
   }, [closeMpinModal, getCurrentOrder, customerInitiateClaim]);
 
   const simulatePaymentReceived = useCallback(
@@ -647,7 +568,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Auth: Login
   const loginCustomer = useCallback(
     async (payload: CustomerLoginReq): Promise<CustomerLoginRes> => {
-      const res = await customerApi.login(payload, apiUrl, isLiveMode);
+      const res = await customerApi.login(payload, apiUrl);
       setPreAuthToken(res.preAuthToken);
       setAuthCustomer((prev) => ({
         ...prev,
@@ -657,58 +578,60 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setActiveScreen('mpin_login');
       return res;
     },
-    [apiUrl, isLiveMode, showToast]
+    [apiUrl, showToast]
   );
 
   // Auth: Register
   const registerCustomer = useCallback(
     async (payload: CustomerRegisterReq): Promise<CustomerRegisterRes> => {
-      const res = await customerApi.register(payload, apiUrl, isLiveMode);
+      const res = await customerApi.register(payload, apiUrl);
       setPreAuthToken(res.preAuthToken);
       setAuthCustomer({
         email: payload.email,
-        firstname: payload.firstName,
-        lastname: payload.lastName,
-        middleinitial: payload.middleInitial,
-        phonenumber: payload.phoneNumber,
-      });
+        firstName: payload.firstName,
+        lastName: payload.lastName,
+        middleInitial: payload.middleInitial,
+        phoneNumber: payload.phoneNumber,
+      } as any);
       showToast(res.statusMessage || 'Registration successful. Create your MPIN.');
       setActiveScreen('mpin_create');
       return res;
     },
-    [apiUrl, isLiveMode, showToast]
+    [apiUrl, showToast]
   );
 
   // Auth: Create MPIN
   const createCustomerMpin = useCallback(
     async (mpin: string): Promise<CustomerCreateMpinRes> => {
-      const token = preAuthToken || 'preauth_mock_token';
-      const res = await customerApi.createMpin({ preAuthToken: token, mpin }, apiUrl, isLiveMode);
+      if (!preAuthToken) {
+        throw new Error('Pre-auth token missing. Please register or log in first.');
+      }
+      const res = await customerApi.createMpin({ preAuthToken, mpin }, apiUrl);
       setAuthToken(res.authToken);
-      setRefreshToken(res.refreshToken);
+      if (res.refreshToken) setRefreshToken(res.refreshToken);
       showToast(res.statusMessage || 'MPIN created successfully!');
       setActiveScreen('home');
-      // Fetch initial orders
       refetchOrders();
       return res;
     },
-    [preAuthToken, apiUrl, isLiveMode, showToast, refetchOrders]
+    [preAuthToken, apiUrl, showToast, refetchOrders]
   );
 
   // Auth: Verify MPIN
   const verifyCustomerMpin = useCallback(
     async (mpin: string): Promise<CustomerVerifyMpinRes> => {
-      const token = preAuthToken || 'preauth_mock_token';
-      const res = await customerApi.verifyMpin({ preAuthToken: token, mpin }, apiUrl, isLiveMode);
+      if (!preAuthToken) {
+        throw new Error('Pre-auth token missing. Please log in first.');
+      }
+      const res = await customerApi.verifyMpin({ preAuthToken, mpin }, apiUrl);
       setAuthToken(res.authToken);
-      setRefreshToken(res.refreshToken);
+      if (res.refreshToken) setRefreshToken(res.refreshToken);
       showToast(res.statusMessage || 'Access granted!');
       setActiveScreen('home');
-      // Fetch initial orders
       refetchOrders();
       return res;
     },
-    [preAuthToken, apiUrl, isLiveMode, showToast, refetchOrders]
+    [preAuthToken, apiUrl, showToast, refetchOrders]
   );
 
   const updateAuthCustomer = useCallback(

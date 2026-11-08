@@ -4,7 +4,7 @@ import { useApp } from '../../context/AppContext';
 import { QrCodeIcon } from '../common/Icons';
 
 export const PaymentVerificationScreen: React.FC = () => {
-  const { navigateTo, selectedOrderId, simulatePaymentReceived } = useApp();
+  const { navigateTo } = useApp();
 
   return (
     <View style={{ flex: 1, backgroundColor: '#ffffff' }} className="flex-1 bg-white px-5 pt-3 pb-2 justify-between">
@@ -44,17 +44,6 @@ export const PaymentVerificationScreen: React.FC = () => {
                 Generate QR Pass
               </Text>
               <QrCodeIcon size={20} color="#ffffff" />
-            </TouchableOpacity>
-
-            {/* Demo Simulation Button */}
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={() => simulatePaymentReceived(selectedOrderId)}
-              className="w-full mt-3 py-2.5 px-4 rounded-xl bg-emerald-50 border border-emerald-200 items-center justify-center"
-            >
-              <Text className="text-[#10b780] font-bold text-xs">
-                ⚡ Demo: Simulate Counter Deposit
-              </Text>
             </TouchableOpacity>
           </View>
 

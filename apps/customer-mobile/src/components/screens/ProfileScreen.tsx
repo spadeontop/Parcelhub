@@ -8,9 +8,9 @@ import { ChangePasswordModal } from '../modals/ChangePasswordModal';
 import { DeleteAccountModal } from '../modals/DeleteAccountModal';
 import { SignOutModal } from '../modals/SignOutModal';
 
-// Masking helpers to match Figma values (e.g. j****u@gmail.com, *********67)
+// Masking helpers
 function getMaskedEmail(email?: string): string {
-  if (!email) return 'j****u@gmail.com';
+  if (!email) return '—';
   const parts = email.split('@');
   if (parts.length !== 2) return email;
   const [user, domain] = parts;
@@ -21,9 +21,9 @@ function getMaskedEmail(email?: string): string {
 }
 
 function getMaskedPhone(phone?: string): string {
-  if (!phone) return '*********67';
+  if (!phone) return '—';
   const digits = phone.replace(/\D/g, '');
-  if (digits.length < 2) return '*********67';
+  if (digits.length < 2) return '—';
   const last2 = digits.slice(-2);
   return `*********${last2}`;
 }
@@ -40,9 +40,9 @@ export const ProfileScreen: React.FC = () => {
   const maskedEmail = getMaskedEmail(authCustomer?.email);
   const maskedPhone = getMaskedPhone(authCustomer?.phonenumber);
 
-  const firstName = authCustomer?.firstname || 'John Vince';
+  const firstName = authCustomer?.firstname || '—';
   const middleInitial = authCustomer?.middleinitial || '—';
-  const lastName = authCustomer?.lastname || 'Dumaguit';
+  const lastName = authCustomer?.lastname || '—';
 
   return (
     <View

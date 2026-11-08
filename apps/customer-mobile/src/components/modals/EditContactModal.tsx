@@ -27,24 +27,24 @@ export const EditContactModal: React.FC<EditContactModalProps> = ({
 }) => {
   const { authCustomer, updateAuthCustomer, showToast } = useApp();
 
-  const [email, setEmail] = useState<string>(maskedEmail);
-  const [phoneNumber, setPhoneNumber] = useState<string>(maskedPhone);
-  const [verificationCode, setVerificationCode] = useState<string>('8080');
+  const [email, setEmail] = useState<string>(authCustomer?.email || '');
+  const [phoneNumber, setPhoneNumber] = useState<string>(authCustomer?.phonenumber || '');
+  const [verificationCode, setVerificationCode] = useState<string>('');
   const [timerSeconds, setTimerSeconds] = useState<number>(299); // 04:59
   const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false);
   const [codeSent, setCodeSent] = useState<boolean>(false);
 
-  // Sync inputs whenever modal becomes visible (defaults to Send Code state per Figma)
+  // Sync inputs whenever modal becomes visible
   useEffect(() => {
     if (visible) {
-      setEmail(maskedEmail);
-      setPhoneNumber(maskedPhone);
-      setVerificationCode('8080');
+      setEmail(authCustomer?.email || '');
+      setPhoneNumber(authCustomer?.phonenumber || '');
+      setVerificationCode('');
       setTimerSeconds(299);
       setIsTimerRunning(false);
       setCodeSent(false);
     }
-  }, [visible, maskedEmail, maskedPhone]);
+  }, [visible, authCustomer?.email, authCustomer?.phonenumber]);
 
   // Countdown timer for 04:59
   useEffect(() => {
