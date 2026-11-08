@@ -176,7 +176,6 @@ export interface Order {
   readyToClaimTime: string | null;
   claimedTime: string | null;
   dateLabel: string;
-  carrier: string;
   hubLocation: string;
   courierPaid?: boolean;
   parcelImageUrl?: string | null;

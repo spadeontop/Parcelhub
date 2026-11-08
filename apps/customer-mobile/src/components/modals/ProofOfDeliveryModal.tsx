@@ -51,10 +51,6 @@ export const ProofOfDeliveryModal: React.FC = () => {
 
           <View className="mt-4 p-3 bg-gray-50 rounded-2xl border border-gray-100 space-y-1">
             <View className="flex-row justify-between">
-              <Text className="text-xs text-gray-500">Carrier:</Text>
-              <Text className="text-xs font-bold text-gray-800">{order.carrier}</Text>
-            </View>
-            <View className="flex-row justify-between">
               <Text className="text-xs text-gray-500">Hub Location:</Text>
               <Text className="text-xs font-bold text-gray-800">Lily's Catering Hub</Text>
             </View>

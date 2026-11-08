@@ -83,7 +83,6 @@ export function mapOrderDetailToOrder(detail: CustomerOrderDetail): Order {
           year: 'numeric',
         })
       : 'Recent Order',
-    carrier: 'ShopeeXpress (SPX)',
     hubLocation: "Lily's Catering Hub • Yati, Liloan, Cebu",
     courierPaid: detail.status === 'READY_TO_CLAIM' || detail.status === 'CLAIMED',
     parcelImageUrl: null,
@@ -115,7 +114,6 @@ export function mapSummaryToOrder(summary: CustomerOrderSummary): Order {
     readyToClaimTime: null,
     claimedTime: null,
     dateLabel: summary.timestamp ? new Date(summary.timestamp).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Recent Order',
-    carrier: 'ShopeeXpress (SPX)',
     hubLocation: "Lily's Catering Hub • Yati, Liloan, Cebu",
     courierPaid: summary.status === 'READY_TO_CLAIM' || summary.status === 'CLAIMED',
     parcelImageUrl: null,
