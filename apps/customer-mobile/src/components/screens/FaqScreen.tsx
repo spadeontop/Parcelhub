@@ -290,9 +290,8 @@ export const FaqScreen: React.FC<FaqScreenProps> = ({ onBack, initialTab = 'faq'
             onPress={() => setActiveTab('faq')}
             accessibilityRole="button"
             accessibilityLabel="Frequently Asked"
-            className={`flex-1 py-2 items-center justify-center rounded-xl ${
-              activeTab === 'faq' ? 'bg-white shadow-sm' : ''
-            }`}
+            className="flex-1 py-2 items-center justify-center rounded-xl"
+            style={activeTab === 'faq' ? { backgroundColor: '#ffffff', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 1 } : undefined}
           >
             <Text
               className={`text-xs ${
@@ -307,9 +306,8 @@ export const FaqScreen: React.FC<FaqScreenProps> = ({ onBack, initialTab = 'faq'
             onPress={() => setActiveTab('policies')}
             accessibilityRole="button"
             accessibilityLabel="Counter Policies"
-            className={`flex-1 py-2 items-center justify-center rounded-xl ${
-              activeTab === 'policies' ? 'bg-white shadow-sm' : ''
-            }`}
+            className="flex-1 py-2 items-center justify-center rounded-xl"
+            style={activeTab === 'policies' ? { backgroundColor: '#ffffff', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 1 } : undefined}
           >
             <Text
               className={`text-xs ${
