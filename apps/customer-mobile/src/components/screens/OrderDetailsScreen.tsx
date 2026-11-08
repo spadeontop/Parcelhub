@@ -203,7 +203,7 @@ export const OrderDetailsScreen: React.FC = () => {
                 TICKET
               </Text>
               <Text className="text-base font-bold font-mono text-[#1e1e1e] mt-0.5">
-                {order.alphanumericKey}
+                {order.id}
               </Text>
             </View>
 
@@ -215,7 +215,7 @@ export const OrderDetailsScreen: React.FC = () => {
                 }}
               >
                 <QRCode
-                  value={order.alphanumericKey || order.refCode || 'PARCELHUB-RELEASE'}
+                  value={order.id || 'PARCELHUB-RELEASE'}
                   size={210}
                   color="#0f172a"
                   backgroundColor="#ffffff"

@@ -62,7 +62,7 @@ export function mapOrderDetailToOrder(detail: CustomerOrderDetail): Order {
     change: changeFormatted,
     trackingNumber: detail.trackingId || 'PH00000000000X',
     refCode: `0001-${numId.padStart(4, '0')}-5555`,
-    alphanumericKey: `PH-${numId}-${numId.padStart(4, '0')}`,
+    alphanumericKey: detail.id,
     envelopeNumber: `ENV-${numId}`,
     status: detail.status,
     orderPlacedTime: detail.statusTimeline?.[0]?.timestamp
@@ -106,7 +106,7 @@ export function mapSummaryToOrder(summary: CustomerOrderSummary): Order {
     change: '₱0',
     trackingNumber: summary.trackingId || 'PH00000000000X',
     refCode: `0001-${numId.padStart(4, '0')}-1122`,
-    alphanumericKey: `PH-${numId}-${numId.padStart(4, '0')}`,
+    alphanumericKey: summary.id,
     envelopeNumber: `ENV-${numId}`,
     status: summary.status,
     orderPlacedTime: summary.timestamp ? new Date(summary.timestamp).toLocaleTimeString() : 'Recent',
