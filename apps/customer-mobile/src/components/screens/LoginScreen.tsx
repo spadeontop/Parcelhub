@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { useApp } from '../../context/AppContext';
 import { ParcelHubLogoSvg } from '../common/Icons';
+import { clearRetainedRegistrationData } from '../../services/registrationState';
 
 export const LoginScreen: React.FC = () => {
-  const { navigateTo, loginCustomer, showToast } = useApp();
+  const { navigateTo, loginCustomer, clearPendingRegistration, showToast } = useApp();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -191,7 +192,13 @@ export const LoginScreen: React.FC = () => {
 
         <View className="flex-row items-center justify-center mt-4">
           <Text className="text-xs text-gray-500">Don’t have an account? </Text>
-          <TouchableOpacity onPress={() => navigateTo('register')}>
+          <TouchableOpacity
+            onPress={() => {
+              clearRetainedRegistrationData();
+              clearPendingRegistration();
+              navigateTo('register');
+            }}
+          >
             <Text className="text-xs font-bold text-[#215cd4]">Sign Up</Text>
           </TouchableOpacity>
         </View>

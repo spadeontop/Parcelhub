@@ -1,24 +1,45 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { useApp } from '../../context/AppContext';
 import { ParcelHubLogoSvg, EyeIcon, EyeOffIcon } from '../common/Icons';
+import {
+  getRetainedRegistrationData,
+  setRetainedRegistrationData,
+  clearRetainedRegistrationData,
+} from '../../services/registrationState';
 
 export const RegisterScreen: React.FC = () => {
-  const { navigateTo, registerCustomer, showToast } = useApp();
-  const [currentStep, setCurrentStep] = useState<1 | 2>(1);
+  const { navigateTo, registerCustomer, clearPendingRegistration, showToast } = useApp();
+  const retained = getRetainedRegistrationData();
+  const [currentStep, setCurrentStep] = useState<1 | 2>(retained.currentStep);
 
-  // Form states matching CustomerRegisterRequest
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [middleInitial, setMiddleInitial] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [password, setPassword] = useState('');
+  // Form states matching CustomerRegisterRequest - initialized from retained data
+  const [firstName, setFirstName] = useState(retained.firstName);
+  const [lastName, setLastName] = useState(retained.lastName);
+  const [middleInitial, setMiddleInitial] = useState(retained.middleInitial);
+  const [email, setEmail] = useState(retained.email);
+  const [phone, setPhone] = useState(retained.phone);
+  const [password, setPassword] = useState(retained.password);
   const [showPassword, setShowPassword] = useState(false);
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState(retained.confirmPassword);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [emailError, setEmailError] = useState('');
+  const [emailError, setEmailError] = useState(retained.emailError || '');
   const [isLoading, setIsLoading] = useState(false);
+
+  // Retain inputted data and current step
+  useEffect(() => {
+    setRetainedRegistrationData({
+      currentStep,
+      firstName,
+      lastName,
+      middleInitial,
+      email,
+      phone,
+      password,
+      confirmPassword,
+      emailError,
+    });
+  }, [currentStep, firstName, lastName, middleInitial, email, phone, password, confirmPassword, emailError]);
 
   const handleNextStep = () => {
     if (!firstName.trim()) {
@@ -30,6 +51,23 @@ export const RegisterScreen: React.FC = () => {
       return;
     }
     setCurrentStep(2);
+  };
+
+  const handleBackToLogin = () => {
+    clearRetainedRegistrationData();
+    clearPendingRegistration();
+    setCurrentStep(1);
+    setFirstName('');
+    setLastName('');
+    setMiddleInitial('');
+    setEmail('');
+    setPhone('');
+    setPassword('');
+    setConfirmPassword('');
+    setEmailError('');
+    setShowPassword(false);
+    setShowConfirmPassword(false);
+    navigateTo('login');
   };
 
   const handleRegister = async () => {
@@ -209,7 +247,7 @@ export const RegisterScreen: React.FC = () => {
           {/* Secondary Action: Back to login */}
           <TouchableOpacity
             activeOpacity={0.8}
-            onPress={() => navigateTo('login')}
+            onPress={handleBackToLogin}
             className="w-full h-10 bg-[#e8eefb] rounded-lg items-center justify-center mt-2.5"
           >
             <Text className="text-[#1e3a8a] font-semibold text-[13px]">Back to login</Text>
