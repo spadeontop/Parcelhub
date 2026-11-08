@@ -197,3 +197,53 @@ export const BellIcon: React.FC<{ size?: number; color?: string }> = ({ size = 2
     />
   </Svg>
 );
+
+export const CheckIcon: React.FC<{ size?: number; color?: string; strokeWidth?: number }> = ({
+  size = 24,
+  color = '#059669',
+  strokeWidth = 2.5,
+}) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M20 6L9 17L4 12"
+      stroke={color}
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </Svg>
+);
+
+export const ClockIcon: React.FC<{ size?: number; color?: string; strokeWidth?: number }> = ({
+  size = 24,
+  color = '#ef4444',
+  strokeWidth = 2,
+}) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Circle cx="12" cy="12" r="10" stroke={color} strokeWidth={strokeWidth} />
+    <Path d="M12 6V12L16 14" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
+export const RefreshIcon: React.FC<{ size?: number; color?: string; strokeWidth?: number }> = ({
+  size = 18,
+  color = '#ffffff',
+  strokeWidth = 2.2,
+}) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M23 4V10H17M1 20V14H7"
+      stroke={color}
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <Path
+      d="M3.51 9A9 9 0 0 1 18.36 5.64L23 10M1 14L5.64 18.36A9 9 0 0 0 20.49 15"
+      stroke={color}
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </Svg>
+);

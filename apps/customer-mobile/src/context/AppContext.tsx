@@ -210,6 +210,8 @@ export interface AppContextType {
   openNotificationsModal: () => void;
   closeNotificationsModal: () => void;
   markAllNotificationsAsRead: () => void;
+  seenClaimedPassOrders: Record<string, boolean>;
+  markClaimedPassSeen: (orderId: string) => void;
   customerInitiateClaim: (orderId: string) => Promise<void>;
   isOrderClaimUnlocked: (order: Order) => boolean;
   getOrderClaimRemainingSeconds: (order: Order) => number;
@@ -546,6 +548,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const openNotificationsModal = useCallback(() => setIsNotificationsModalOpen(true), []);
   const closeNotificationsModal = useCallback(() => setIsNotificationsModalOpen(false), []);
 
+  const [seenClaimedPassOrders, setSeenClaimedPassOrders] = useState<Record<string, boolean>>({});
+
+  const markClaimedPassSeen = useCallback((orderId: string) => {
+    setSeenClaimedPassOrders((prev) => ({ ...prev, [orderId]: true }));
+  }, []);
+
   // Direct One-Tap Claim Unlock
   const customerInitiateClaim = useCallback(
     async (orderId: string) => {
@@ -852,6 +860,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         openNotificationsModal,
         closeNotificationsModal,
         markAllNotificationsAsRead,
+        seenClaimedPassOrders,
+        markClaimedPassSeen,
         customerInitiateClaim,
         isOrderClaimUnlocked,
         getOrderClaimRemainingSeconds,
