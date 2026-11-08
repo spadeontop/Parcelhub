@@ -285,7 +285,7 @@ export const OrderDetailsScreen: React.FC = () => {
                   activeOpacity={0.8}
                   onPress={handleRefreshRelease}
                   disabled={isRefreshingRelease}
-                  className="w-full max-w-[320px] py-3.5 px-6 rounded-2xl bg-[#1b65e8] active:bg-[#1652be] shadow-md flex-row items-center justify-center gap-2 mb-4"
+                  className="w-full max-w-[320px] py-3.5 px-6 rounded-2xl bg-[#1b65e8] shadow-md flex-row items-center justify-center gap-2 mb-4"
                 >
                   {isRefreshingRelease ? (
                     <ActivityIndicator size="small" color="#ffffff" />
@@ -334,7 +334,7 @@ export const OrderDetailsScreen: React.FC = () => {
             )}
 
             {/* Order Summary Card */}
-            <View className="w-full max-w-[320px] rounded-2xl bg-[#f9fafb] border border-[#f0f1f3] p-4 space-y-3">
+            <View className="w-full max-w-[320px] rounded-2xl bg-[#f9fafb] border border-[#f0f1f3] p-4 gap-3">
               <View className="flex-row items-center justify-between">
                 <Text className="text-xs text-gray-500 font-normal">Item</Text>
                 <Text className="text-sm font-bold text-[#0f172a]">{order.product}</Text>
@@ -352,7 +352,7 @@ export const OrderDetailsScreen: React.FC = () => {
             <TouchableOpacity
               activeOpacity={0.7}
               onPress={handleExitFocusedPass}
-              className="w-full max-w-[320px] py-3.5 mt-4 items-center justify-center rounded-xl active:bg-gray-100"
+              className="w-full max-w-[320px] py-3.5 mt-4 items-center justify-center rounded-xl"
             >
               <Text className="text-sm font-normal text-gray-600">
                 Return to Home
@@ -699,12 +699,12 @@ export const OrderDetailsScreen: React.FC = () => {
             </View>
 
             {/* Dynamic Action Area by Status */}
-            <View className="pt-1 space-y-3">
+            <View className="pt-1 gap-3">
               {status === 'PAYMENT_REQUIRED' && (
                 <TouchableOpacity
                   activeOpacity={0.8}
                   onPress={() => navigateTo('qr_screen')}
-                  className="w-full py-3.5 px-6 rounded-2xl bg-[#1b65e8] active:bg-[#1652be] shadow-md flex-row items-center justify-center gap-2"
+                  className="w-full py-3.5 px-6 rounded-2xl bg-[#1b65e8] shadow-md flex-row items-center justify-center gap-2"
                 >
                   <Text className="text-white font-bold text-sm tracking-wide">
                     Generate QR
@@ -754,7 +754,7 @@ export const OrderDetailsScreen: React.FC = () => {
                         onPress={handleInitiateClaim}
                         disabled={!claimConfirmed}
                         className={`w-full py-3.5 px-6 rounded-2xl shadow-md items-center justify-center ${
-                          claimConfirmed ? 'bg-[#1b65e8] active:bg-[#1652be]' : 'bg-gray-300 opacity-80'
+                          claimConfirmed ? 'bg-[#1b65e8]' : 'bg-gray-300 opacity-80'
                         }`}
                       >
                         <Text className="text-white font-bold text-sm tracking-wide text-center">
@@ -764,7 +764,7 @@ export const OrderDetailsScreen: React.FC = () => {
                     </View>
                   </View>
                 ) : (
-                  <View className="space-y-2">
+                  <View className="gap-2">
                     <Text className="text-xs text-gray-500 text-center">
                       Only initiate claim when you’re physically claiming at the hub
                     </Text>

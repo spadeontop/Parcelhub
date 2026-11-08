@@ -140,7 +140,7 @@ export const RegisterScreen: React.FC = () => {
 
       {currentStep === 1 ? (
         /* STEP 1: Personal */
-        <View className="space-y-3.5">
+        <View className="gap-3.5">
           {/* First Name */}
           <View className="relative mb-3.5">
             <View className="absolute -top-2 left-3 bg-white px-1.5 z-10">
@@ -194,7 +194,14 @@ export const RegisterScreen: React.FC = () => {
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={handleNextStep}
-            className="w-full h-11 bg-[#215cd4] active:bg-[#194cb5] rounded-lg items-center justify-center mt-4 shadow-sm"
+            className="w-full h-11 bg-[#215cd4] rounded-lg items-center justify-center mt-4"
+            style={{
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: 0.05,
+              shadowRadius: 2,
+              elevation: 1,
+            }}
           >
             <Text className="text-white font-semibold text-[14.5px]">Next</Text>
           </TouchableOpacity>
@@ -203,14 +210,14 @@ export const RegisterScreen: React.FC = () => {
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={() => navigateTo('login')}
-            className="w-full h-10 bg-[#e8eefb] active:bg-[#dbe5f9] rounded-lg items-center justify-center mt-2.5"
+            className="w-full h-10 bg-[#e8eefb] rounded-lg items-center justify-center mt-2.5"
           >
             <Text className="text-[#1e3a8a] font-semibold text-[13px]">Back to login</Text>
           </TouchableOpacity>
         </View>
       ) : (
         /* STEP 2: Account */
-        <View className="space-y-3.5">
+        <View className="gap-3.5">
           {/* Email */}
           <View className="relative mb-3.5">
             <View className="absolute -top-2 left-3 bg-white px-1.5 z-10">
@@ -329,9 +336,16 @@ export const RegisterScreen: React.FC = () => {
             activeOpacity={0.8}
             onPress={handleRegister}
             disabled={isLoading}
-            className={`w-full h-11 bg-[#215cd4] active:bg-[#194cb5] rounded-lg items-center justify-center mt-4 shadow-sm ${
+            className={`w-full h-11 bg-[#215cd4] rounded-lg items-center justify-center mt-4 ${
               isLoading ? 'opacity-60' : ''
             }`}
+            style={{
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: 0.05,
+              shadowRadius: 2,
+              elevation: 1,
+            }}
           >
             {isLoading ? (
               <ActivityIndicator color="#ffffff" size="small" />
@@ -344,7 +358,7 @@ export const RegisterScreen: React.FC = () => {
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={() => setCurrentStep(1)}
-            className="w-full h-10 bg-[#e8eefb] active:bg-[#dbe5f9] rounded-lg items-center justify-center mt-2.5"
+            className="w-full h-10 bg-[#e8eefb] rounded-lg items-center justify-center mt-2.5"
           >
             <Text className="text-[#1e3a8a] font-semibold text-[13px]">Back</Text>
           </TouchableOpacity>
