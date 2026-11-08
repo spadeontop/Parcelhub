@@ -22,11 +22,7 @@ export const StaffOrderCard: React.FC<StaffOrderCardProps> = ({ order, onPress }
             </Text>
           );
         }
-        return (
-          <Text className="text-xs font-bold text-[#0F172A]">
-            Code: {order.id.replace('ORD-', '') || '7742'}
-          </Text>
-        );
+        return null;
 
       case 'AWAITING_PARCEL':
         return (
@@ -67,18 +63,13 @@ export const StaffOrderCard: React.FC<StaffOrderCardProps> = ({ order, onPress }
       {/* Top Row: Title & Status Badge */}
       <View className="flex-row items-center justify-between">
         <Text
-          className="text-sm font-bold text-[#0F172A] flex-1 mr-2"
+          className="text-sm font-bold text-[#0F172A] flex-1 mr-2 font-mono"
           numberOfLines={1}
         >
-          {order.productName || `Parcel #${order.id}`}
+          {order.id}
         </Text>
         <StaffBadge status={order.status} variant="card" />
       </View>
-
-      {/* Asset / Tracking Number */}
-      <Text className="text-xs font-mono text-[#64748B] mt-1">
-        Asset #{order.trackingId || order.id}
-      </Text>
 
       {/* Divider */}
       <View className="h-px bg-[#F1F5F9] my-3" />

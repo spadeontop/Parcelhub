@@ -17,10 +17,8 @@ export const StaffUnpaidActionSection: React.FC<StaffUnpaidActionSectionProps> =
   onReturnHome,
 }) => {
   const fee = typeof order.amountToPay === 'number' ? order.amountToPay : 300;
-  // Initialize with a realistic sample if needed or fee
-  const defaultSampleReceived = Math.max(fee, 1000);
-  const [cashText, setCashText] = useState<string>(String(defaultSampleReceived));
-  const [isConfirmed, setIsConfirmed] = useState<boolean>(true);
+  const [cashText, setCashText] = useState<string>('');
+  const [isConfirmed, setIsConfirmed] = useState<boolean>(false);
 
   const cashNum = parseFloat(cashText) || 0;
   const change = Math.max(0, cashNum - fee);
@@ -47,9 +45,10 @@ export const StaffUnpaidActionSection: React.FC<StaffUnpaidActionSectionProps> =
             value={cashText}
             onChangeText={setCashText}
             keyboardType="numeric"
-            placeholder={String(fee)}
+            placeholder="0"
             placeholderTextColor="#94A3B8"
-            className="flex-1 text-right text-base font-bold text-[#0F172A] font-mono p-0"
+            style={{ outlineStyle: 'none' } as any}
+            className="flex-1 text-right text-base font-bold text-[#0F172A] font-mono p-0 outline-none focus:outline-none"
           />
         </View>
 

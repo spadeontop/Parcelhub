@@ -452,6 +452,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setActiveScreen('payment_verification');
     } catch (err: any) {
       showToast(err?.message || 'Order creation failed. Please try again.');
+      throw err;
     }
   }, [authToken, draftOrder, authCustomer, apiUrl, isLiveMode, showToast]);
 

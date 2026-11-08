@@ -1,7 +1,8 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { useApp } from '../../context/AppContext';
-import { ParcelHubLogoSvg, BackspaceIcon } from '../common/Icons';
+import { ParcelHubLogoSvg } from '../common/Icons';
+import { NumericKeypad } from '../common/NumericKeypad';
 
 export const MpinCreateScreen: React.FC = () => {
   const { authCustomer, createCustomerMpin, showToast } = useApp();
@@ -58,6 +59,15 @@ export const MpinCreateScreen: React.FC = () => {
       }
     }
   }, [activeStep, pin1.length, pin2.length]);
+
+  const handleClear = useCallback(() => {
+    if (activeStep === 2) {
+      setPin2('');
+      setMismatch(false);
+    } else {
+      setPin1('');
+    }
+  }, [activeStep]);
 
   const isMatched = pin1.length === 4 && pin2.length === 4 && pin1 === pin2;
   const isStep1Valid = pin1.length === 4;
@@ -123,9 +133,10 @@ export const MpinCreateScreen: React.FC = () => {
       className="flex-1 bg-white px-6 py-6"
       showsVerticalScrollIndicator={false}
     >
+      {/* Top Header, Identity & Dual MPIN Inputs */}
       <View>
-        {/* Compact Horizontal Logo */}
-        <View className="flex-row items-center justify-center gap-2 mb-4 mt-1">
+        {/* Compact Horizontal Logo (moved down) */}
+        <View className="flex-row items-center justify-center gap-2 mb-4 mt-7">
           <ParcelHubLogoSvg size={32} />
           <View className="flex-row items-center">
             <Text className="text-[19px] font-extrabold tracking-tight leading-none text-[#215cd4]">
@@ -273,102 +284,39 @@ export const MpinCreateScreen: React.FC = () => {
             )}
           </TouchableOpacity>
         </View>
-
-        {/* Circular Keypad Grid (7 8 9 / 4 5 6 / 1 2 3 / Clear 0 Backspace) */}
-        <View className="w-full max-w-[260px] self-center mb-4">
-          <View className="flex-row justify-between mb-3">
-            {['7', '8', '9'].map((digit) => (
-              <TouchableOpacity
-                key={digit}
-                activeOpacity={0.7}
-                onPress={() => handleKeyPress(digit)}
-                className="w-[58px] h-[58px] rounded-full border border-gray-200 bg-white items-center justify-center shadow-xs active:bg-gray-50"
-              >
-                <Text className="text-gray-900 text-lg font-semibold">{digit}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          <View className="flex-row justify-between mb-3">
-            {['4', '5', '6'].map((digit) => (
-              <TouchableOpacity
-                key={digit}
-                activeOpacity={0.7}
-                onPress={() => handleKeyPress(digit)}
-                className="w-[58px] h-[58px] rounded-full border border-gray-200 bg-white items-center justify-center shadow-xs active:bg-gray-50"
-              >
-                <Text className="text-gray-900 text-lg font-semibold">{digit}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          <View className="flex-row justify-between mb-3">
-            {['1', '2', '3'].map((digit) => (
-              <TouchableOpacity
-                key={digit}
-                activeOpacity={0.7}
-                onPress={() => handleKeyPress(digit)}
-                className="w-[58px] h-[58px] rounded-full border border-gray-200 bg-white items-center justify-center shadow-xs active:bg-gray-50"
-              >
-                <Text className="text-gray-900 text-lg font-semibold">{digit}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          <View className="flex-row justify-between mb-1">
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() => {
-                if (activeStep === 2) {
-                  setPin2('');
-                  setMismatch(false);
-                } else {
-                  setPin1('');
-                }
-              }}
-              className="w-[58px] h-[58px] rounded-full border border-gray-200 bg-white items-center justify-center shadow-xs active:bg-gray-50"
-              accessibilityLabel="Clear"
-            >
-              <Text className="text-gray-500 text-xs font-semibold">Clear</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() => handleKeyPress('0')}
-              className="w-[58px] h-[58px] rounded-full border border-gray-200 bg-white items-center justify-center shadow-xs active:bg-gray-50"
-            >
-              <Text className="text-gray-900 text-lg font-semibold">0</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={handleBackspace}
-              className="w-[58px] h-[58px] rounded-full border border-gray-200 bg-white items-center justify-center shadow-xs active:bg-gray-50"
-              accessibilityLabel="Backspace"
-            >
-              <BackspaceIcon size={20} color="#374151" />
-            </TouchableOpacity>
-          </View>
-        </View>
       </View>
 
-      <View className="mt-2 mb-2">
-        {/* Primary Action Button */}
-        <TouchableOpacity
-          activeOpacity={0.8}
-          disabled={isButtonDisabled}
-          onPress={handleButtonClick}
-          className={`w-full h-11 rounded-lg items-center justify-center ${
-            isButtonDisabled
-              ? 'bg-gray-200'
-              : 'bg-[#215cd4] active:bg-[#194cb5] shadow-xs'
-          }`}
-        >
-          <Text
-            className={`font-semibold text-[14.5px] ${
-              isButtonDisabled ? 'text-gray-400' : 'text-white'
+      {/* Bottom Section: Keypad + Primary Action Button */}
+      <View className="w-full pb-2">
+        {/* Keypad */}
+        <NumericKeypad
+          onPressDigit={handleKeyPress}
+          onPressBackspace={handleBackspace}
+          onPressClear={handleClear}
+          disabled={isSubmitting}
+        />
+
+        <View className="mt-1 mb-2">
+          {/* Primary Action Button */}
+          <TouchableOpacity
+            activeOpacity={0.8}
+            disabled={isButtonDisabled}
+            onPress={handleButtonClick}
+            className={`w-full h-11 rounded-lg items-center justify-center ${
+              isButtonDisabled
+                ? 'bg-gray-200'
+                : 'bg-[#215cd4] active:bg-[#194cb5] shadow-xs'
             }`}
           >
-            {buttonLabel}
-          </Text>
-        </TouchableOpacity>
+            <Text
+              className={`font-semibold text-[14.5px] ${
+                isButtonDisabled ? 'text-gray-400' : 'text-white'
+              }`}
+            >
+              {buttonLabel}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </ScrollView>
   );
