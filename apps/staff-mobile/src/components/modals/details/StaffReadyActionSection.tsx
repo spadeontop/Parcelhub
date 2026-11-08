@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { StaffOrder } from '../../../types';
-import { Check, Clock, AlertCircle } from '../../common/Icons';
+import { Check } from '../../common/Icons';
 
 interface StaffReadyActionSectionProps {
   order: StaffOrder;
@@ -52,66 +52,35 @@ export const StaffReadyActionSection: React.FC<StaffReadyActionSectionProps> = (
 
   return (
     <View className="space-y-4">
-      {/* Card 2: CLAIM STATUS / TIMER */}
+      {/* Card 2: CLAIMING TIME REMAINING */}
       <View className="bg-white border border-[#E2E8F0] rounded-2xl p-5 mb-4 shadow-xs">
-        <View className="flex-row items-center justify-between mb-3">
-          <Text className="text-[11px] font-bold text-[#94A3B8] tracking-wider uppercase">
-            CLAIM STATUS
-          </Text>
-          {isInitiated && !isTimerExpired && (
-            <View className="flex-row items-center bg-[#ECFDF5] px-2.5 py-0.5 rounded-full border border-[#A7F3D0]">
-              <Clock size={11} color="#059669" />
-              <Text className="text-[10px] font-bold text-[#059669] ml-1">Live Window</Text>
-            </View>
-          )}
-        </View>
-
+        <Text className="text-[11px] font-bold text-[#94A3B8] tracking-wider uppercase mb-1">
+          CLAIMING TIME REMAINING
+        </Text>
         {isInitiated ? (
-          /* Live Claiming Timer matching the exact typography and card hierarchy */
           <>
-            <View className="py-1">
-              <Text
-                className={`text-4xl font-extrabold tracking-tight ${
-                  secondsRemaining <= 60 ? 'text-[#DC2626]' : 'text-[#059669]'
-                }`}
-              >
-                {formattedTimer}
-              </Text>
-            </View>
-            <Text className="text-xs text-[#64748B] mt-1.5 leading-relaxed">
+            <Text className="text-4xl font-extrabold text-[#059669] my-1">
+              {formattedTimer}
+            </Text>
+            <Text className="text-xs text-[#64748B]">
               {isTimerExpired
                 ? 'Claiming window has expired. Ask customer to re-initiate.'
                 : 'Releasing order is only valid with this timer on.'}
             </Text>
           </>
         ) : (
-          /* Clean, minimalist placeholder following Staff modals & row tokens */
           <>
-            <View className="flex-row items-center justify-between py-1.5 border-b border-[#F8FAFC]">
-              <Text className="text-xs text-[#64748B] font-medium">Customer Action</Text>
-              <View className="flex-row items-center gap-1.5 bg-[#F1F5F9] px-2 py-0.5 rounded-md">
-                <Clock size={12} color="#64748B" />
-                <Text className="text-[11px] font-semibold text-[#475569]">
-                  Not Initiated
-                </Text>
-              </View>
-            </View>
-
-            <View className="flex-row items-center justify-between py-1.5 border-b border-[#F8FAFC]">
-              <Text className="text-xs text-[#64748B] font-medium">Timer Status</Text>
-              <Text className="text-xs font-mono font-bold text-[#94A3B8]">
-                --:--
-              </Text>
-            </View>
-
-            <Text className="text-[11px] text-[#64748B] mt-3 leading-relaxed">
-              This order has not been initiated by the customer yet. The countdown timer will automatically activate once the customer initiates the claim from their app.
+            <Text className="text-sm font-semibold text-[#64748B] my-2">
+              Claim has not been initiated by the customer
+            </Text>
+            <Text className="text-xs text-[#94A3B8]">
+              The countdown timer will start once the customer initiates the claim on their app.
             </Text>
           </>
         )}
       </View>
 
-      {/* Confirmation Checkbox matching unpaid.png & awaiting parcel */}
+      {/* Confirmation Checkbox matching ready-to-claim.png */}
       <TouchableOpacity
         activeOpacity={0.8}
         onPress={() => {
@@ -121,7 +90,7 @@ export const StaffReadyActionSection: React.FC<StaffReadyActionSectionProps> = (
         }}
         disabled={!isInitiated || isTimerExpired}
         className={`flex-row items-start gap-3 px-1 mb-5 ${
-          !isInitiated || isTimerExpired ? 'opacity-40' : 'opacity-100'
+          !isInitiated || isTimerExpired ? 'opacity-50' : 'opacity-100'
         }`}
       >
         <View
@@ -136,7 +105,7 @@ export const StaffReadyActionSection: React.FC<StaffReadyActionSectionProps> = (
             I confirm that I want to release the order
           </Text>
           <Text className="text-[11px] text-[#64748B] mt-0.5 leading-relaxed">
-            Only initiate release when customer is physically claiming their order at the counter.
+            Only initiate release when customer is physically claiming their order.
           </Text>
         </View>
       </TouchableOpacity>
@@ -163,7 +132,7 @@ export const StaffReadyActionSection: React.FC<StaffReadyActionSectionProps> = (
         )}
       </TouchableOpacity>
 
-      {/* Return to Home Secondary Button matching other Complete Details frames */}
+      {/* Return to Home Secondary Button */}
       <TouchableOpacity
         activeOpacity={0.7}
         onPress={onReturnHome}
