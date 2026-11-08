@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { useApp } from '../../context/AppContext';
@@ -15,8 +15,6 @@ export const OrderDetailsScreen: React.FC = () => {
   const {
     getCurrentOrder,
     hubOpen,
-    claimConfirmed,
-    setClaimConfirmed,
     navigateTo,
     copyToClipboard,
     openProofOfDeliveryModal,
@@ -31,7 +29,13 @@ export const OrderDetailsScreen: React.FC = () => {
   const order = getCurrentOrder();
   const status = order.status;
 
+  const [claimConfirmed, setClaimConfirmed] = useState<boolean>(false);
   const [isRefreshingRelease, setIsRefreshingRelease] = useState<boolean>(false);
+
+  // Reset confirmation checkbox whenever the viewed order changes
+  useEffect(() => {
+    setClaimConfirmed(false);
+  }, [order.id]);
 
   const isClaimActive = isOrderClaimUnlocked(order);
   const remainingSecs = getOrderClaimRemainingSeconds(order);
@@ -73,6 +77,7 @@ export const OrderDetailsScreen: React.FC = () => {
       showToast('Please check the confirmation box before initiating claim.');
       return;
     }
+    setClaimConfirmed(false);
     customerInitiateClaim(order.id);
   };
 
@@ -89,6 +94,7 @@ export const OrderDetailsScreen: React.FC = () => {
   };
 
   const handleExitFocusedPass = () => {
+    setClaimConfirmed(false);
     if (isClaimed) {
       markClaimedPassSeen(order.id);
     }
