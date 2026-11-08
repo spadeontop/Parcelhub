@@ -52,7 +52,6 @@ export interface AppContextType {
   orders: Order[];
   notifications: NotificationItem[];
   toast: ToastState;
-  claimConfirmed: boolean;
   isLoadingOrders: boolean;
 
   // Live / Dev Network Settings
@@ -87,7 +86,6 @@ export interface AppContextType {
   navigateTo: (screenId: ScreenId, params?: { orderId?: string; status?: OrderStatus; filter?: TransactionFilter }) => void;
   setHasOrders: (val: boolean) => void;
   setHubOpen: (val: boolean) => void;
-  setClaimConfirmed: (val: boolean) => void;
   setTransactionFilter: (filter: TransactionFilter) => void;
   setSelectedOrderId: (id: string) => void;
   updateDraftOrder: (partial: Partial<DraftOrder>) => void;
@@ -146,7 +144,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [notificationActive, setNotificationActive] = useState<boolean>(true);
   const [selectedOrderId, setSelectedOrderId] = useState<string>('');
   const [transactionFilter, setTransactionFilter] = useState<TransactionFilter>('ALL');
-  const [claimConfirmed, setClaimConfirmed] = useState<boolean>(false);
   const [draftOrder, setDraftOrder] = useState<DraftOrder>(INITIAL_DRAFT);
   const [orders, setOrders] = useState<Order[]>(INITIAL_ORDERS);
   const [notifications, setNotifications] = useState<NotificationItem[]>(INITIAL_NOTIFICATIONS);
@@ -737,7 +734,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         orders,
         notifications,
         toast,
-        claimConfirmed,
         isLoadingOrders,
         isLiveMode,
         setIsLiveMode,
@@ -764,7 +760,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         navigateTo,
         setHasOrders,
         setHubOpen,
-        setClaimConfirmed,
         setTransactionFilter,
         setSelectedOrderId,
         updateDraftOrder,
