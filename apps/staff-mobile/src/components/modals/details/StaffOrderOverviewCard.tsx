@@ -33,7 +33,7 @@ export const StaffOrderOverviewCard: React.FC<StaffOrderOverviewCardProps> = ({
       </Text>
 
       {/* Order ID */}
-      <View className="flex-row items-center justify-between py-1.5 border-b border-[#F8FAFC]">
+      <View className="flex-row items-center justify-between py-1.5">
         <Text className="text-xs text-[#64748B] font-medium">Order ID</Text>
         <Text className="text-xs font-bold text-[#0F172A] font-mono">
           {order.id}
@@ -41,7 +41,7 @@ export const StaffOrderOverviewCard: React.FC<StaffOrderOverviewCardProps> = ({
       </View>
 
       {/* Recipient */}
-      <View className="flex-row items-center justify-between py-1.5 border-b border-[#F8FAFC]">
+      <View className="flex-row items-center justify-between py-1.5">
         <Text className="text-xs text-[#64748B] font-medium">Recipient</Text>
         <Text className="text-xs font-semibold text-[#0F172A]">
           {order.customer}
@@ -49,7 +49,7 @@ export const StaffOrderOverviewCard: React.FC<StaffOrderOverviewCardProps> = ({
       </View>
 
       {/* Tracking Number with Copy Action */}
-      <View className="flex-row items-center justify-between py-1.5 border-b border-[#F8FAFC]">
+      <View className="flex-row items-center justify-between py-1.5">
         <Text className="text-xs text-[#64748B] font-medium">Tracking Number</Text>
         <TouchableOpacity
           activeOpacity={0.7}
@@ -70,7 +70,7 @@ export const StaffOrderOverviewCard: React.FC<StaffOrderOverviewCardProps> = ({
       {/* Paid Amount / Price / Change */}
       {showFinancials && (
         <>
-          <View className="flex-row items-center justify-between py-1.5 border-b border-[#F8FAFC]">
+          <View className="flex-row items-center justify-between py-1.5">
             <Text className="text-xs text-[#64748B] font-medium">Paid Amount</Text>
             <Text className="text-xs font-bold text-[#0F172A]">
               ₱{(paidAmount || 0).toLocaleString()}
