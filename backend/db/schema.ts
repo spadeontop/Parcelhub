@@ -6,10 +6,13 @@ import {
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
-import type { AdminOcrConfigTarget, OrderStatus, StatusTimelineEntry } from "@/app/types/api";
+import { uuidv7 } from "uuidv7";
+import type { OrderStatus, StatusTimelineEntry } from "@/app/types/api";
 
 export const customers = pgTable("customers", {
-  id: text("id").primaryKey(), // e.g. "CST-001"
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => uuidv7()),
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
   firstName: text("first_name").notNull(),
@@ -24,7 +27,9 @@ export const customers = pgTable("customers", {
 });
 
 export const staff = pgTable("staff", {
-  id: text("id").primaryKey(), // e.g. "STF-001"
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => uuidv7()),
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
   firstName: text("first_name").notNull(),
@@ -36,7 +41,10 @@ export const staff = pgTable("staff", {
 });
 
 export const orders = pgTable("orders", {
-  id: text("id").primaryKey(), // e.g. "ORD-001"
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => uuidv7()),
+  ticketCode: text("ticket_code"), // Human-facing code e.g. "492-817"
   trackingId: text("tracking_id").notNull().unique(),
   productName: text("product_name").notNull(),
   recipientName: text("recipient_name").notNull(),

@@ -18,7 +18,8 @@
     "next": "16.4.5",
     "postgres": "^4.1.0",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "uuidv7": "^1.2.1"
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",

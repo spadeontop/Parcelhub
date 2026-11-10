@@ -13,7 +13,7 @@ Stores registered customer accounts and authentication/security states.
 
 | Column | SQL Type | Constraints / Attributes | Description |
 | :--- | :--- | :--- | :--- |
-| `id` | `TEXT` | `PRIMARY KEY` | Unique customer ID (e.g. `CST-001`). |
+| `id` | `TEXT` | `PRIMARY KEY` | Unique customer UUIDv7 (`$defaultFn: uuidv7()`). Time-ordered, collision-safe. |
 | `email` | `TEXT` | `NOT NULL`, `UNIQUE` | User login email (case-insensitive in queries). |
 | `password_hash` | `TEXT` | `NOT NULL` | Hashed password. |
 | `first_name` | `TEXT` | `NOT NULL` | Customer first name. |
@@ -33,7 +33,7 @@ Stores staff member credentials and contact info for order fulfillment.
 
 | Column | SQL Type | Constraints / Attributes | Description |
 | :--- | :--- | :--- | :--- |
-| `id` | `TEXT` | `PRIMARY KEY` | Unique staff ID (e.g. `STF-001`). |
+| `id` | `TEXT` | `PRIMARY KEY` | Unique staff UUIDv7 (`$defaultFn: uuidv7()`). |
 | `email` | `TEXT` | `NOT NULL`, `UNIQUE` | Staff work email. |
 | `password_hash` | `TEXT` | `NOT NULL` | Hashed password. |
 | `first_name` | `TEXT` | `NOT NULL` | Staff first name. |
@@ -50,7 +50,8 @@ Tracks parcel lifecycle, pricing, claims, and timeline progression.
 
 | Column | SQL Type | Constraints / Attributes | Description |
 | :--- | :--- | :--- | :--- |
-| `id` | `TEXT` | `PRIMARY KEY` | Unique order/ticket ID (e.g. `ORD-101` or `xxx-xxx`). |
+| `id` | `TEXT` | `PRIMARY KEY` | Unique internal order UUIDv7 (`$defaultFn: uuidv7()`). |
+| `ticket_code` | `TEXT` | `NULLABLE` | Short human-facing code for counter handoff (e.g. `492-817`). |
 | `tracking_id` | `TEXT` | `NOT NULL`, `UNIQUE` | Waybill / courier tracking number. |
 | `productName` | `TEXT` | `NOT NULL` | Item description or parcel name. |
 | `recipient_name` | `TEXT` | `NOT NULL` | Name of person receiving the item. |
