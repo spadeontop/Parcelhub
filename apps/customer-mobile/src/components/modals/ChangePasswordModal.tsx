@@ -11,7 +11,7 @@ import {
   Keyboard,
 } from 'react-native';
 import { useApp } from '../../context/AppContext';
-import { EyeIcon, EyeOffIcon } from '../common/Icons';
+import { PasswordEyeToggle } from '../common/PasswordEyeToggle';
 
 interface ChangePasswordModalProps {
   visible: boolean;
@@ -31,8 +31,8 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
   const [confirmPassword, setConfirmPassword] = useState<string>('');
   const [verificationCode, setVerificationCode] = useState<string>('');
 
-  // Password visibility states (in Figma: Current Password shows Eye (open), Change/Confirm show Eye-Off)
-  const [showCurrentPassword, setShowCurrentPassword] = useState<boolean>(true);
+  // Password visibility states
+  const [showCurrentPassword, setShowCurrentPassword] = useState<boolean>(false);
   const [showNewPassword, setShowNewPassword] = useState<boolean>(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
 
@@ -47,7 +47,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
       setNewPassword('');
       setConfirmPassword('');
       setVerificationCode('');
-      setShowCurrentPassword(true);
+      setShowCurrentPassword(false);
       setShowNewPassword(false);
       setShowConfirmPassword(false);
       setTimerSeconds(299);
@@ -140,7 +140,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                 <Text className="text-[11px] font-medium text-gray-400 mb-0.5">
                   Current Password
                 </Text>
-                <View className="flex-row items-center justify-between">
+                <View className="flex-row items-center justify-between gap-2">
                   <TextInput
                     value={currentPassword}
                     onChangeText={setCurrentPassword}
@@ -149,17 +149,14 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                     style={{ outlineStyle: 'none' } as any}
                     placeholderTextColor="#9ca3af"
                   />
-                  <TouchableOpacity
-                    activeOpacity={0.7}
-                    onPress={() => setShowCurrentPassword(!showCurrentPassword)}
-                    className="p-2 -mr-1.5 rounded-full active:bg-gray-100"
-                  >
-                    {showCurrentPassword ? (
-                      <EyeIcon size={18} color="#374151" />
-                    ) : (
-                      <EyeOffIcon size={18} color="#374151" />
-                    )}
-                  </TouchableOpacity>
+                  <PasswordEyeToggle
+                    isVisible={showCurrentPassword}
+                    onToggle={() => setShowCurrentPassword((prev) => !prev)}
+                    accessibilityLabel={
+                      showCurrentPassword ? 'Hide current password' : 'Show current password'
+                    }
+                    className="-mr-1.5"
+                  />
                 </View>
               </View>
 
@@ -168,7 +165,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                 <Text className="text-[11px] font-medium text-gray-400 mb-0.5">
                   Change Password
                 </Text>
-                <View className="flex-row items-center justify-between">
+                <View className="flex-row items-center justify-between gap-2">
                   <TextInput
                     value={newPassword}
                     onChangeText={setNewPassword}
@@ -177,17 +174,14 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                     style={{ outlineStyle: 'none' } as any}
                     placeholderTextColor="#9ca3af"
                   />
-                  <TouchableOpacity
-                    activeOpacity={0.7}
-                    onPress={() => setShowNewPassword(!showNewPassword)}
-                    className="p-2 -mr-1.5 rounded-full active:bg-gray-100"
-                  >
-                    {showNewPassword ? (
-                      <EyeIcon size={18} color="#374151" />
-                    ) : (
-                      <EyeOffIcon size={18} color="#374151" />
-                    )}
-                  </TouchableOpacity>
+                  <PasswordEyeToggle
+                    isVisible={showNewPassword}
+                    onToggle={() => setShowNewPassword((prev) => !prev)}
+                    accessibilityLabel={
+                      showNewPassword ? 'Hide new password' : 'Show new password'
+                    }
+                    className="-mr-1.5"
+                  />
                 </View>
               </View>
 
@@ -196,7 +190,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                 <Text className="text-[11px] font-medium text-gray-400 mb-0.5">
                   Confirm Password
                 </Text>
-                <View className="flex-row items-center justify-between">
+                <View className="flex-row items-center justify-between gap-2">
                   <TextInput
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
@@ -205,17 +199,14 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                     style={{ outlineStyle: 'none' } as any}
                     placeholderTextColor="#9ca3af"
                   />
-                  <TouchableOpacity
-                    activeOpacity={0.7}
-                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="p-2 -mr-1.5 rounded-full active:bg-gray-100"
-                  >
-                    {showConfirmPassword ? (
-                      <EyeIcon size={18} color="#374151" />
-                    ) : (
-                      <EyeOffIcon size={18} color="#374151" />
-                    )}
-                  </TouchableOpacity>
+                  <PasswordEyeToggle
+                    isVisible={showConfirmPassword}
+                    onToggle={() => setShowConfirmPassword((prev) => !prev)}
+                    accessibilityLabel={
+                      showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'
+                    }
+                    className="-mr-1.5"
+                  />
                 </View>
               </View>
 
