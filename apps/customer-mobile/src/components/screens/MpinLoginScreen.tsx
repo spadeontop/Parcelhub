@@ -61,9 +61,7 @@ export const MpinLoginScreen: React.FC = () => {
     setPin('');
   }, []);
 
-  const displayName = authCustomer.firstname
-    ? `${authCustomer.firstname} ${authCustomer.lastname}`
-    : 'John Vince Dumaguit';
+  const displayEmail = authCustomer.email || '—';
 
   return (
     <ScrollView
@@ -85,7 +83,7 @@ export const MpinLoginScreen: React.FC = () => {
 
         {/* User Identity Box */}
         <View className="border border-gray-200 rounded-xl p-3 px-4 flex-row items-center justify-between mb-5 bg-white shadow-sm">
-          <Text className="text-sm font-semibold text-gray-900">{displayName}</Text>
+          <Text className="text-sm font-semibold text-gray-900">{displayEmail}</Text>
           <TouchableOpacity onPress={() => navigateTo('login')}>
             <Text className="text-xs font-bold text-[#215cd4]">Switch</Text>
           </TouchableOpacity>

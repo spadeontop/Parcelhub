@@ -139,9 +139,7 @@ export const MpinCreateScreen: React.FC = () => {
     }
   }, [activeStep, navigateTo]);
 
-  const displayName = authCustomer.firstname
-    ? `${authCustomer.firstname}${authCustomer.middleinitial ? ` ${authCustomer.middleinitial}` : ''} ${authCustomer.lastname}`
-    : 'John Vince Dumaguit';
+  const displayEmail = authCustomer.email || '—';
 
   const buttonLabel = isSubmitting
     ? 'Activating MPIN...'
@@ -173,7 +171,7 @@ export const MpinCreateScreen: React.FC = () => {
 
         {/* User Identity Box */}
         <View className="border border-gray-200 rounded-lg p-2.5 px-3.5 flex-row items-center justify-between mb-4 bg-white shadow-xs">
-          <Text className="text-[13.5px] font-medium text-gray-900">{displayName}</Text>
+          <Text className="text-[13.5px] font-medium text-gray-900">{displayEmail}</Text>
         </View>
 
         {/* Dual MPIN Creation & Confirmation Container */}
