@@ -7,12 +7,16 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:routes": "tsx scripts/test-api-routes.ts"
+    "test:routes": "tsx scripts/test-api-routes.ts",
+    "db:push": "drizzle-kit push",
+    "db:seed": "tsx db/seed.ts",
+    "db:reset": "tsx db/reset.ts"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.16",
     "drizzle-orm": "^0.45.4",
     "next": "16.4.5",
+    "postgres": "^4.1.0",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },

@@ -22,13 +22,16 @@ function createDatabaseClient() {
 
   // Local development: Embedded PGlite in ./pgdata
   const dbPath = path.resolve(process.cwd(), "pgdata");
-  const pglite = new PGlite(dbPath);
-  return drizzlePglite(pglite, { schema });
+  const client = new PGlite(dbPath);
+  return { db: drizzlePglite(client, { schema }), pglite: client };
 }
 
-export const db = global.__drizzleDb ?? createDatabaseClient();
+const instance = global.__drizzleDb ?? createDatabaseClient();
 
 if (process.env.NODE_ENV !== "production") {
-  global.__drizzleDb = db;
+  global.__drizzleDb = instance;
 }
+
+export const db = instance.db;
+export const pglite = instance.pglite;
 
