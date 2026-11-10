@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { useApp } from '../../context/AppContext';
-import { ParcelHubLogoSvg, EyeIcon, EyeOffIcon } from '../common/Icons';
+import { ParcelHubLogoSvg } from '../common/Icons';
+import { PasswordEyeToggle } from '../common/PasswordEyeToggle';
 import {
   getRetainedRegistrationData,
   setRetainedRegistrationData,
@@ -312,29 +313,22 @@ export const RegisterScreen: React.FC = () => {
                 Password
               </Text>
             </View>
-            <TextInput
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-              placeholder="Create password"
-              placeholderTextColor="#9ca3af"
-              className="w-full h-11 border border-gray-300 rounded-lg pl-3.5 pr-10 text-[13.5px] font-medium text-gray-900 bg-white"
-            />
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() => setShowPassword((prev) => !prev)}
-              className="absolute right-2 top-2 p-1.5 z-20"
-              style={{ zIndex: 20 }}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              accessibilityRole="button"
-              accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
-            >
-              {showPassword ? (
-                <EyeOffIcon size={18} color="#6b7280" />
-              ) : (
-                <EyeIcon size={18} color="#6b7280" />
-              )}
-            </TouchableOpacity>
+            <View className="relative justify-center">
+              <TextInput
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                placeholder="Create password"
+                placeholderTextColor="#9ca3af"
+                className="w-full h-11 border border-gray-300 rounded-lg pl-3.5 pr-11 text-[13.5px] font-medium text-gray-900 bg-white"
+              />
+              <PasswordEyeToggle
+                isVisible={showPassword}
+                onToggle={() => setShowPassword((prev) => !prev)}
+                accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+                className="absolute right-2 top-0 bottom-0 justify-center z-20"
+              />
+            </View>
           </View>
 
           {/* Confirm Password */}
@@ -344,29 +338,24 @@ export const RegisterScreen: React.FC = () => {
                 Confirm password
               </Text>
             </View>
-            <TextInput
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              secureTextEntry={!showConfirmPassword}
-              placeholder="Confirm password"
-              placeholderTextColor="#9ca3af"
-              className="w-full h-11 border border-gray-300 rounded-lg pl-3.5 pr-10 text-[13.5px] font-medium text-gray-900 bg-white"
-            />
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() => setShowConfirmPassword((prev) => !prev)}
-              className="absolute right-2 top-2 p-1.5 z-20"
-              style={{ zIndex: 20 }}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              accessibilityRole="button"
-              accessibilityLabel={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
-            >
-              {showConfirmPassword ? (
-                <EyeOffIcon size={18} color="#6b7280" />
-              ) : (
-                <EyeIcon size={18} color="#6b7280" />
-              )}
-            </TouchableOpacity>
+            <View className="relative justify-center">
+              <TextInput
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry={!showConfirmPassword}
+                placeholder="Confirm password"
+                placeholderTextColor="#9ca3af"
+                className="w-full h-11 border border-gray-300 rounded-lg pl-3.5 pr-11 text-[13.5px] font-medium text-gray-900 bg-white"
+              />
+              <PasswordEyeToggle
+                isVisible={showConfirmPassword}
+                onToggle={() => setShowConfirmPassword((prev) => !prev)}
+                accessibilityLabel={
+                  showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'
+                }
+                className="absolute right-2 top-0 bottom-0 justify-center z-20"
+              />
+            </View>
           </View>
 
           {/* Primary Action Button: Register */}

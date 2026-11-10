@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { useApp } from '../../context/AppContext';
 import { ParcelHubLogoSvg } from '../common/Icons';
+import { PasswordEyeToggle } from '../common/PasswordEyeToggle';
 import { clearRetainedRegistrationData } from '../../services/registrationState';
 
 export const LoginScreen: React.FC = () => {
@@ -154,14 +155,12 @@ export const LoginScreen: React.FC = () => {
                 passwordError ? 'border-red-500' : 'border-gray-300'
               }`}
             />
-            <TouchableOpacity
-              onPress={() => setShowPassword(!showPassword)}
-              className="absolute right-3 p-1.5"
-            >
-              <Text className="text-xs font-bold text-gray-500">
-                {showPassword ? 'Hide' : 'Show'}
-              </Text>
-            </TouchableOpacity>
+            <PasswordEyeToggle
+              isVisible={showPassword}
+              onToggle={() => setShowPassword((prev) => !prev)}
+              accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+              className="absolute right-2.5 top-0 bottom-0 justify-center z-20"
+            />
           </View>
           {passwordError ? (
             <Text
