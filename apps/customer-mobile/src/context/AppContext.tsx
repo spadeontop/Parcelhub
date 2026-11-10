@@ -117,7 +117,7 @@ export interface AppContextType {
   applyScenario: (scenario: ScenarioId) => void;
   simulatePaymentReceived: (orderId: string) => void;
   advanceOrderStatus: (orderId: string, status: OrderStatus) => void;
-  refetchOrders: (filter?: TransactionFilter) => Promise<void>;
+  refetchOrders: (filter?: TransactionFilter, quiet?: boolean) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -205,9 +205,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Fetch orders from backend
   const refetchOrders = useCallback(
-    async (filter?: TransactionFilter) => {
+    async (filter?: TransactionFilter, quiet?: boolean) => {
       if (!isLiveMode || !authToken) return;
-      setIsLoadingOrders(true);
+      if (!quiet) setIsLoadingOrders(true);
       try {
         const orderType = filter && filter !== 'ALL' ? filter : undefined;
         const summaries = await orderApi.getOrders(authToken, apiUrl, isLiveMode, orderType);
@@ -234,7 +234,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       } catch (err: any) {
         // Fallback to current mock orders if network error
       } finally {
-        setIsLoadingOrders(false);
+        if (!quiet) setIsLoadingOrders(false);
       }
     },
     [authToken, apiUrl, isLiveMode]
@@ -284,6 +284,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     initApp();
   }, []);
+
+  // Active Orders Polling when viewing Customer Dashboard ('home')
+  useEffect(() => {
+    if (!isPollingEnabled || !isLiveMode || !authToken || (activeScreen !== 'home' && activeScreen !== 'transactions')) {
+      return;
+    }
+
+    let isFetching = false;
+    const intervalId = setInterval(async () => {
+      if (isFetching) return;
+      isFetching = true;
+      try {
+        await refetchOrders(undefined, true);
+      } finally {
+        isFetching = false;
+      }
+    }, (pollingInterval || 5) * 1000);
+
+    return () => clearInterval(intervalId);
+  }, [isPollingEnabled, isLiveMode, authToken, activeScreen, refetchOrders, pollingInterval]);
 
   // Active Order Polling when viewing OrderDetailsScreen
   useEffect(() => {
