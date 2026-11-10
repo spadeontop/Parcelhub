@@ -244,20 +244,48 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     const initApp = async () => {
       try {
-        const [storedAuth, storedRefresh, storedLive, storedUrl] = await Promise.all([
+        const [storedAuth, storedRefresh, storedLive, storedUrl, storedProfile] = await Promise.all([
           customerApi.getStoredAuthToken(),
           customerApi.getStoredRefreshToken(),
           customerApi.getStoredIsLiveMode(),
           customerApi.getStoredApiUrl(),
+          customerApi.getStoredProfile(),
         ]);
 
         if (storedLive !== null) setIsLiveModeState(storedLive);
         if (storedUrl) setApiUrlState(storedUrl);
 
+        if (storedProfile) {
+          setAuthCustomer({
+            email: storedProfile.email || '',
+            firstname: storedProfile.firstName || storedProfile.firstname || '',
+            lastname: storedProfile.lastName || storedProfile.lastname || '',
+            middleinitial: storedProfile.middleInitial || storedProfile.middleinitial || '',
+            phonenumber: storedProfile.phoneNumber || storedProfile.phonenumber || '',
+          });
+        }
+
         if (storedAuth) {
           setAuthToken(storedAuth);
           setRefreshToken(storedRefresh);
           setActiveScreen('home');
+
+          // Fetch fresh customer profile
+          customerApi
+            .getProfile(storedAuth, storedUrl || apiUrl)
+            .then((res) => {
+              if (res?.customer) {
+                setAuthCustomer({
+                  email: res.customer.email,
+                  firstname: res.customer.firstName,
+                  lastname: res.customer.lastName,
+                  middleinitial: res.customer.middleInitial || '',
+                  phonenumber: res.customer.phoneNumber,
+                });
+              }
+            })
+            .catch(() => {});
+
           // Fetch fresh orders
           try {
             const summaries = await orderApi.getOrders(storedAuth, storedUrl || apiUrl, true);
@@ -663,6 +691,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       );
       setAuthToken(res.authToken);
       if (res.refreshToken) setRefreshToken(res.refreshToken);
+      if (res.customer) {
+        setAuthCustomer({
+          email: res.customer.email,
+          firstname: res.customer.firstName,
+          lastname: res.customer.lastName,
+          middleinitial: res.customer.middleInitial || '',
+          phonenumber: res.customer.phoneNumber,
+        });
+      }
 
       // Successfully saved and MPIN verified: clear pending and retained form data
       setPendingRegistration(null);
@@ -685,6 +722,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const res = await customerApi.verifyMpin({ preAuthToken, mpin }, apiUrl);
       setAuthToken(res.authToken);
       if (res.refreshToken) setRefreshToken(res.refreshToken);
+      if (res.customer) {
+        setAuthCustomer({
+          email: res.customer.email,
+          firstname: res.customer.firstName,
+          lastname: res.customer.lastName,
+          middleinitial: res.customer.middleInitial || '',
+          phonenumber: res.customer.phoneNumber,
+        });
+      }
       showToast(res.statusMessage || 'Access granted!');
       setActiveScreen('home');
       refetchOrders();

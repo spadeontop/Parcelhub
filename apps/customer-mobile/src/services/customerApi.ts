@@ -8,12 +8,14 @@ import {
   CustomerCreateMpinRes,
   CustomerVerifyMpinReq,
   CustomerVerifyMpinRes,
+  CustomerProfileRes,
 } from '../types';
 import { ENV } from '../config/env';
 
 const REFRESH_TOKEN_KEY = 'parcelhub_customer_refresh_token';
 const AUTH_TOKEN_KEY = 'parcelhub_customer_auth_token';
 const PRE_AUTH_TOKEN_KEY = 'parcelhub_customer_pre_auth_token';
+const PROFILE_KEY = 'parcelhub_customer_profile';
 const API_URL_KEY = 'parcelhub_api_base_url';
 const LIVE_MODE_KEY = 'parcelhub_is_live_mode';
 
@@ -97,6 +99,22 @@ export const customerApi = {
       await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
       await SecureStore.deleteItemAsync(AUTH_TOKEN_KEY);
       await SecureStore.deleteItemAsync(PRE_AUTH_TOKEN_KEY);
+      await SecureStore.deleteItemAsync(PROFILE_KEY);
+    } catch {}
+  },
+
+  async getStoredProfile(): Promise<any | null> {
+    try {
+      const raw = await SecureStore.getItemAsync(PROFILE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  },
+
+  async setStoredProfile(profile: any): Promise<void> {
+    try {
+      await SecureStore.setItemAsync(PROFILE_KEY, JSON.stringify(profile));
     } catch {}
   },
 
@@ -231,10 +249,14 @@ export const customerApi = {
         statusMessage: data.statusMessage || 'MPIN created successfully',
         authToken: data.authToken,
         refreshToken: data.refreshToken,
+        customer: data.customer,
       };
       await this.setStoredAuthToken(responseData.authToken);
       if (responseData.refreshToken) {
         await this.setStoredRefreshToken(responseData.refreshToken);
+      }
+      if (responseData.customer) {
+        await this.setStoredProfile(responseData.customer);
       }
       return responseData;
     }
@@ -264,15 +286,50 @@ export const customerApi = {
         statusMessage: data.statusMessage || 'Access granted',
         authToken: data.authToken,
         refreshToken: data.refreshToken,
+        customer: data.customer,
       };
       await this.setStoredAuthToken(responseData.authToken);
       if (responseData.refreshToken) {
         await this.setStoredRefreshToken(responseData.refreshToken);
       }
+      if (responseData.customer) {
+        await this.setStoredProfile(responseData.customer);
+      }
       return responseData;
     }
 
     const errorMsg = data?.message || data?.error || data?.statusMessage || `MPIN verification failed (HTTP ${res.status})`;
+    throw new Error(errorMsg);
+  },
+
+  /**
+   * GET /api/customer/profile
+   * Retrieves profile of currently authenticated customer
+   */
+  async getProfile(
+    authToken: string,
+    baseUrl: string = ENV.API_BASE_URL
+  ): Promise<CustomerProfileRes> {
+    const res = await fetch(`${baseUrl}/api/customer/profile`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authToken}`,
+      },
+    });
+
+    const data = await res.json().catch(() => null);
+
+    if (res.ok && data?.customer) {
+      const responseData: CustomerProfileRes = {
+        statusMessage: data.statusMessage || 'Profile retrieved successfully',
+        customer: data.customer,
+      };
+      await this.setStoredProfile(responseData.customer);
+      return responseData;
+    }
+
+    const errorMsg = data?.message || data?.error || data?.statusMessage || `Failed to fetch profile (HTTP ${res.status})`;
     throw new Error(errorMsg);
   },
 };
