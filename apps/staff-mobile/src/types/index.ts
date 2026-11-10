@@ -41,6 +41,7 @@ export interface StaffOrder {
   courierPaidBy?: string;
   courierPaidByName?: string;
   courierPaidAt?: string;
+  claimedAt?: string;
   proofImageUrl?: string;
   notes?: string;
 }
