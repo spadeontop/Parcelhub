@@ -6,6 +6,7 @@ import { POST as registerCustomer } from "../app/api/customer/register/route";
 import { POST as loginCustomer } from "../app/api/customer/login/route";
 import { POST as createMpin } from "../app/api/customer/create-mpin/route";
 import { POST as verifyMpin } from "../app/api/customer/mpin/route";
+import { GET as getCustomerProfile } from "../app/api/customer/profile/route";
 import { GET as listCustomerOrders } from "../app/api/customer/orders/route";
 import { POST as initCustomerOrder } from "../app/api/customer/orders/initialize/route";
 import {
@@ -121,7 +122,21 @@ async function runTests() {
   assert.strictEqual(verifyMpinRes.status, 200);
   const customerAuthToken = verifyMpinJson.authToken;
   assert.ok(customerAuthToken);
-  console.log("✔ POST /api/customer/mpin (200 OK)");
+  assert.strictEqual(verifyMpinJson.customer?.email, "user@example.com");
+  assert.strictEqual(verifyMpinJson.customer?.firstName, "John");
+  console.log("✔ POST /api/customer/mpin (200 OK, customer profile returned)");
+
+  // 1.4b Get Customer Profile
+  const profileReq = makeReq("http://localhost:3000/api/customer/profile", {
+    token: customerAuthToken,
+  });
+  const profileRes = await getCustomerProfile(profileReq);
+  const profileJson = await profileRes.json();
+  assert.strictEqual(profileRes.status, 200);
+  assert.strictEqual(profileJson.customer?.email, "user@example.com");
+  assert.strictEqual(profileJson.customer?.firstName, "John");
+  assert.strictEqual(profileJson.customer?.lastName, "Doe");
+  console.log("✔ GET /api/customer/profile (200 OK)");
 
   // 1.5 List Customer Orders
   const listOrdersReq = makeReq("http://localhost:3000/api/customer/orders", {

@@ -79,6 +79,7 @@ export type CustomerCreateMpinReq = {
 export type CustomerCreateMpinRes = StandardSuccessResponse & {
   readonly authToken: JWTToken;
   readonly refreshToken: JWTToken;
+  readonly customer?: CustomerProfile;
 };
 
 // POST /api/customer/mpin
@@ -90,6 +91,21 @@ export type CustomerVerifyMpinReq = {
 export type CustomerVerifyMpinRes = StandardSuccessResponse & {
   readonly authToken: JWTToken;
   readonly refreshToken: JWTToken;
+  readonly customer?: CustomerProfile;
+};
+
+// GET /api/customer/profile
+export type CustomerProfile = {
+  readonly id: CustomerId;
+  readonly email: string;
+  readonly firstName: string;
+  readonly lastName: string;
+  readonly middleInitial?: string;
+  readonly phoneNumber: string;
+};
+
+export type CustomerProfileRes = StandardSuccessResponse & {
+  readonly customer: CustomerProfile;
 };
 
 // GET /api/customer/orders
@@ -386,6 +402,7 @@ export type ApiRoutes =
   | readonly ["POST", "/api/customer/login"]
   | readonly ["POST", "/api/customer/create-mpin"]
   | readonly ["POST", "/api/customer/mpin"]
+  | readonly ["GET", "/api/customer/profile"]
   | readonly ["GET", "/api/customer/orders"]
   | readonly ["GET", `/api/customer/orders/${string}`]
   | readonly ["POST", "/api/customer/orders/initialize"]

@@ -66,6 +66,20 @@ export type CustomerLoginRes = {
   readonly preAuthToken: JWTToken;
 };
 
+export type CustomerProfile = {
+  readonly id: CustomerId;
+  readonly email: string;
+  readonly firstName: string;
+  readonly lastName: string;
+  readonly middleInitial?: string;
+  readonly phoneNumber: string;
+};
+
+export type CustomerProfileRes = {
+  readonly statusMessage: string;
+  readonly customer: CustomerProfile;
+};
+
 export type CustomerCreateMpinReq = {
   readonly preAuthToken: JWTToken;
   readonly mpin: MPIN;
@@ -75,6 +89,7 @@ export type CustomerCreateMpinRes = {
   readonly statusMessage: string;
   readonly authToken: JWTToken;
   readonly refreshToken: JWTToken;
+  readonly customer?: CustomerProfile;
 };
 
 export type CustomerVerifyMpinReq = {
@@ -86,6 +101,7 @@ export type CustomerVerifyMpinRes = {
   readonly statusMessage: string;
   readonly authToken: JWTToken;
   readonly refreshToken: JWTToken;
+  readonly customer?: CustomerProfile;
 };
 
 export type CustomerOrderSummary = {
