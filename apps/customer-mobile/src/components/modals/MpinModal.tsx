@@ -89,6 +89,7 @@ export const MpinModal: React.FC = () => {
                 {row.map((btn) => (
                   <TouchableOpacity
                     key={btn}
+                    activeOpacity={0.7}
                     onPress={() => {
                       if (btn === 'CLEAR') setMpin('');
                       else if (btn === '⌫') handleDelete();
@@ -97,7 +98,7 @@ export const MpinModal: React.FC = () => {
                     className={`flex-1 mx-1.5 h-12 rounded-2xl items-center justify-center ${
                       btn === 'CLEAR' || btn === '⌫'
                         ? 'bg-gray-100'
-                        : 'bg-gray-50 border border-gray-200/80 active:bg-blue-50'
+                        : 'bg-gray-50 border border-gray-200/80'
                     }`}
                   >
                     <Text
