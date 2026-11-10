@@ -21,12 +21,12 @@ export async function POST(request: NextRequest) {
       return jsonError("Invalid or expired preAuthToken", 401, "Unauthorized");
     }
 
-    const success = db.setCustomerMpin(session.userId as CustomerId, body.mpin as MPIN);
+    const success = await db.setCustomerMpin(session.userId as CustomerId, body.mpin as MPIN);
     if (!success) {
       return jsonError("Customer not found", 404, "Not Found");
     }
 
-    const customer = db.getCustomerById(session.userId as CustomerId);
+    const customer = await db.getCustomerById(session.userId as CustomerId);
 
     const authToken = generateMockToken({
       userId: session.userId,

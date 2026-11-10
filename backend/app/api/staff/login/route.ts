@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
       return jsonError("Email and password are required", 400);
     }
 
-    const staffMember = db.getStaffByEmail(body.email);
+    const staffMember = await db.getStaffByEmail(body.email);
     if (!staffMember || staffMember.passwordHash !== body.password) {
       return jsonError("Invalid staff credentials", 401, "Unauthorized");
     }

@@ -15,7 +15,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   }
 
   const { id } = await params;
-  const order = db.getOrder(id as OrderId);
+  const order = await db.getOrder(id as OrderId);
 
   if (!order) {
     return jsonError("Order not found", 404, "Not Found");
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return jsonError(`amountReceived must be at least the order price of ${order.price}`, 400);
     }
 
-    const activated = db.activateOrder(
+    const activated = await db.activateOrder(
       id as OrderId,
       body.amountReceived,
       auth.session.userId as StaffId

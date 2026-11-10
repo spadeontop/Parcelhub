@@ -15,7 +15,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   }
 
   const { id } = await params;
-  const order = db.getOrder(id as OrderId);
+  const order = await db.getOrder(id as OrderId);
 
   if (!order) {
     return jsonError("Order not found", 404, "Not Found");
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   }
 
   if (order.courierPaid) {
-    const paidByStaff = order.courierPaidBy ? db.getStaffById(order.courierPaidBy) : null;
+    const paidByStaff = order.courierPaidBy ? await db.getStaffById(order.courierPaidBy) : null;
     const staffName = paidByStaff ? `${paidByStaff.firstName} ${paidByStaff.lastName}` : (order.courierPaidBy || "staff");
     return jsonError(
       `Courier payment is already recorded for this order (Paid by ${staffName})`,
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     );
   }
 
-  db.recordCourierPayment(id as OrderId, auth.session.userId as StaffId);
+  await db.recordCourierPayment(id as OrderId, auth.session.userId as StaffId);
 
   const response: StaffPayCourierRes = {
     statusMessage: "Courier payment recorded",

@@ -15,7 +15,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   }
 
   const { id } = await params;
-  const order = db.getOrder(id as OrderId);
+  const order = await db.getOrder(id as OrderId);
 
   if (!order) {
     return jsonError("Order not found", 404, "Not Found");
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return jsonError("imageUrl is required", 400);
     }
 
-    const updated = db.attachProofPhoto(id as OrderId, body.imageUrl, auth.session.userId as StaffId);
+    const updated = await db.attachProofPhoto(id as OrderId, body.imageUrl, auth.session.userId as StaffId);
     if (!updated) {
       return jsonError("Failed to update order with photo", 500);
     }

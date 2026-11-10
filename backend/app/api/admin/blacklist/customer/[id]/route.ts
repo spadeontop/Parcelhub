@@ -15,7 +15,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   }
 
   const { id } = await params;
-  const customer = db.getCustomerById(id as CustomerId);
+  const customer = await db.getCustomerById(id as CustomerId);
   if (!customer) {
     return jsonError("Customer not found", 404, "Not Found");
   }
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return jsonError("Reason for blacklisting is required", 400);
     }
 
-    db.blacklistCustomer(id as CustomerId, body.reason);
+    await db.blacklistCustomer(id as CustomerId, body.reason);
 
     const response: AdminBlacklistCustomerRes = {
       statusMessage: "Customer successfully blacklisted",

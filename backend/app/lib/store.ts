@@ -1,3 +1,7 @@
+import { eq, sql } from "drizzle-orm";
+import { db as drizzleDb, pglite } from "@/db/index";
+import { seedDatabase } from "@/db/seed";
+import { appConfig, customers, fcmTokens, orders, staff } from "@/db/schema";
 import {
   AdminOcrConfigAction,
   AdminOcrConfigTarget,
@@ -13,6 +17,7 @@ import {
 
 export interface StoredOrder {
   id: OrderId;
+  ticketCode?: string | null;
   trackingId: string;
   productName: string;
   recipientName: string;
@@ -64,532 +69,274 @@ export function getClientRetrieveTimerMinutes(): number {
   return isNaN(parsed) || parsed <= 0 ? 5 : parsed;
 }
 
-class InMemoryStore {
-  public orders: Map<OrderId, StoredOrder> = new Map();
-  public customers: Map<CustomerId, StoredCustomer> = new Map();
-  public customersByEmail: Map<string, CustomerId> = new Map();
-  public staff: Map<StaffId, StoredStaff> = new Map();
-  public staffByEmail: Map<string, StaffId> = new Map();
-  public fcmTokens: Set<string> = new Set();
-  public ocrConfig: Record<AdminOcrConfigTarget, boolean> = {
-    staff: true,
-    customer: true,
-  };
+let initPromise: Promise<void> | null = null;
 
-  private orderSeq = 500;
-  private staffSeq = 2;
-  private customerSeq = 2;
+async function ensureDatabaseInitialized(): Promise<void> {
+  if (initPromise) return initPromise;
 
-  constructor() {
-    this.seed();
+  initPromise = (async () => {
+    try {
+      await seedDatabase();
+    } catch (err) {
+      console.error("Database initialization check error:", err);
+    }
+  })();
+
+  return initPromise;
+}
+
+export class DatabaseStore {
+  // Helper to map DB row to StoredCustomer
+  private toStoredCustomer(row: any): StoredCustomer {
+    return {
+      id: row.id as CustomerId,
+      email: row.email,
+      passwordHash: row.passwordHash,
+      firstName: row.firstName,
+      lastName: row.lastName,
+      middleInitial: row.middleInitial ?? undefined,
+      phoneNumber: row.phoneNumber,
+      mpin: (row.mpin as MPIN) ?? undefined,
+      blacklisted: row.blacklisted,
+      blacklistReason: row.blacklistReason ?? undefined,
+    };
   }
 
-  private seed() {
-    // Seed default customer
-    const customerId: CustomerId = "CST-001";
-    const customer: StoredCustomer = {
-      id: customerId,
-      email: "user@example.com",
-      passwordHash: "password",
-      firstName: "John",
-      lastName: "Doe",
-      middleInitial: "D",
-      phoneNumber: "+639123456789",
-      mpin: "1234",
-      blacklisted: false,
+  // Helper to map DB row to StoredStaff
+  private toStoredStaff(row: any): StoredStaff {
+    return {
+      id: row.id as StaffId,
+      email: row.email,
+      passwordHash: row.passwordHash,
+      firstName: row.firstName,
+      lastName: row.lastName,
+      middleInitial: row.middleInitial ?? undefined,
+      phoneNumber: row.phoneNumber,
     };
-    this.customers.set(customerId, customer);
-    this.customersByEmail.set(customer.email.toLowerCase(), customerId);
+  }
 
-    // Seed default staff
-    const staffId: StaffId = "STF-001";
-    const staffMember: StoredStaff = {
-      id: staffId,
-      email: "staff@parcelhub.com",
-      passwordHash: "string",
-      firstName: "Jane",
-      lastName: "Smith",
-      middleInitial: "A",
-      phoneNumber: "+639987654321",
+  // Helper to map DB row to StoredOrder
+  private toStoredOrder(row: any): StoredOrder {
+    return {
+      id: row.id as OrderId,
+      ticketCode: row.ticketCode,
+      trackingId: row.trackingId,
+      productName: row.productName,
+      recipientName: row.recipientName,
+      price: Number(row.price),
+      change: Number(row.change),
+      amountReceived: row.amountReceived !== null ? Number(row.amountReceived) : undefined,
+      status: row.status as OrderStatus,
+      statusTimeline: (row.statusTimeline as StatusTimelineEntry[]) || [],
+      qrImageUrl: row.qrImageUrl,
+      imageUrl: row.imageUrl ?? undefined,
+      proofImageUrl: row.proofImageUrl ?? undefined,
+      customerId: row.customerId as CustomerId,
+      modifiedBy: row.modifiedBy as StaffId | CustomerId | "SYSTEM",
+      timestamp: row.timestamp instanceof Date ? row.timestamp.toISOString() : String(row.timestamp),
+      claimRequested: row.claimRequested,
+      claimInitiatedAt: row.claimInitiatedAt ? (row.claimInitiatedAt instanceof Date ? row.claimInitiatedAt.toISOString() : String(row.claimInitiatedAt)) : undefined,
+      claimExpiresAt: row.claimExpiresAt ? (row.claimExpiresAt instanceof Date ? row.claimExpiresAt.toISOString() : String(row.claimExpiresAt)) : undefined,
+      courierPaid: row.courierPaid,
+      courierPaidBy: (row.courierPaidBy as StaffId) ?? undefined,
+      courierPaidAt: row.courierPaidAt ? (row.courierPaidAt instanceof Date ? row.courierPaidAt.toISOString() : String(row.courierPaidAt)) : undefined,
     };
-    this.staff.set(staffId, staffMember);
-    this.staffByEmail.set(staffMember.email.toLowerCase(), staffId);
-
-    // Seed 2x orders for each state of order
-    const seedOrders: StoredOrder[] = [
-      // 1. PENDING_INITIALIZATION
-      {
-        id: "ORD-101",
-        trackingId: "PH-PEND-001",
-        productName: "Logitech MX Master 3S",
-        recipientName: "John Doe",
-        price: 0,
-        change: 0,
-        status: "PENDING_INITIALIZATION",
-        statusTimeline: [
-          {
-            status: "PENDING_INITIALIZATION",
-            timestamp: "2026-10-18T08:00:00Z",
-          },
-        ],
-        qrImageUrl: "https://storage.parcelhub.com/qr/ORD-101.png",
-        imageUrl: "https://storage.parcelhub.com/init/ORD-101.jpg",
-        customerId,
-        modifiedBy: customerId,
-        timestamp: "2026-10-18T08:00:00Z",
-      },
-      {
-        id: "ORD-102",
-        trackingId: "PH-PEND-002",
-        productName: "Anker 65W GaN Charger",
-        recipientName: "John Doe",
-        price: 0,
-        change: 0,
-        status: "PENDING_INITIALIZATION",
-        statusTimeline: [
-          {
-            status: "PENDING_INITIALIZATION",
-            timestamp: "2026-10-18T08:30:00Z",
-          },
-        ],
-        qrImageUrl: "https://storage.parcelhub.com/qr/ORD-102.png",
-        imageUrl: "https://storage.parcelhub.com/init/ORD-102.jpg",
-        customerId,
-        modifiedBy: customerId,
-        timestamp: "2026-10-18T08:30:00Z",
-      },
-
-      // 2. PAYMENT_REQUIRED
-      {
-        id: "ORD-201",
-        trackingId: "PH883904421101N",
-        productName: "VXE R1 Wireless Mouse",
-        recipientName: "John Doe",
-        price: 480,
-        change: 20,
-        amountReceived: 0,
-        status: "PAYMENT_REQUIRED",
-        statusTimeline: [
-          {
-            status: "PENDING_INITIALIZATION",
-            timestamp: "2026-10-18T08:30:00Z",
-          },
-          {
-            status: "PAYMENT_REQUIRED",
-            timestamp: "2026-10-18T09:00:00Z",
-          },
-        ],
-        qrImageUrl: "https://storage.parcelhub.com/qr/ORD-201.png",
-        customerId,
-        modifiedBy: staffId,
-        timestamp: "2026-10-18T09:00:00Z",
-        courierPaid: false,
-      },
-      {
-        id: "ORD-202",
-        trackingId: "PH883904421102N",
-        productName: "Baseus Magnetic Power Bank 10000mAh",
-        recipientName: "John Doe",
-        price: 1250,
-        change: 50,
-        amountReceived: 0,
-        status: "PAYMENT_REQUIRED",
-        statusTimeline: [
-          {
-            status: "PENDING_INITIALIZATION",
-            timestamp: "2026-10-18T09:15:00Z",
-          },
-          {
-            status: "PAYMENT_REQUIRED",
-            timestamp: "2026-10-18T09:45:00Z",
-          },
-        ],
-        qrImageUrl: "https://storage.parcelhub.com/qr/ORD-202.png",
-        customerId,
-        modifiedBy: staffId,
-        timestamp: "2026-10-18T09:45:00Z",
-        courierPaid: false,
-      },
-
-      // 3. AWAITING_PARCEL
-      {
-        id: "ORD-301",
-        trackingId: "PH90823411293K",
-        productName: "Poco X6 Pro",
-        recipientName: "John Doe",
-        price: 12450,
-        change: 50,
-        amountReceived: 12500,
-        status: "AWAITING_PARCEL",
-        statusTimeline: [
-          {
-            status: "PAYMENT_REQUIRED",
-            timestamp: "2026-10-17T07:41:00Z",
-          },
-          {
-            status: "AWAITING_PARCEL",
-            timestamp: "2026-10-17T12:15:00Z",
-          },
-        ],
-        qrImageUrl: "https://storage.parcelhub.com/qr/ORD-301.png",
-        customerId,
-        modifiedBy: staffId,
-        timestamp: "2026-10-17T12:15:00Z",
-        courierPaid: false,
-      },
-      {
-        id: "ORD-302",
-        trackingId: "PH719445588312S",
-        productName: "Sony WH-1000XM5 Headphones",
-        recipientName: "Maria Santos",
-        price: 15800,
-        change: 200,
-        amountReceived: 16000,
-        status: "AWAITING_PARCEL",
-        statusTimeline: [
-          {
-            status: "PAYMENT_REQUIRED",
-            timestamp: "2026-10-17T08:00:00Z",
-          },
-          {
-            status: "AWAITING_PARCEL",
-            timestamp: "2026-10-17T14:00:00Z",
-          },
-        ],
-        qrImageUrl: "https://storage.parcelhub.com/qr/ORD-302.png",
-        customerId,
-        modifiedBy: staffId,
-        timestamp: "2026-10-17T14:00:00Z",
-        courierPaid: true,
-        courierPaidBy: staffId,
-        courierPaidAt: "2026-10-17T14:00:00Z",
-      },
-
-      // 4. READY_TO_CLAIM
-      {
-        id: "ORD-401",
-        trackingId: "PH2696153366791H",
-        productName: "Ugreen Revodok USB-C Hub",
-        recipientName: "John Doe",
-        price: 850,
-        change: 50,
-        amountReceived: 900,
-        status: "READY_TO_CLAIM",
-        statusTimeline: [
-          {
-            status: "PAYMENT_REQUIRED",
-            timestamp: "2026-10-17T14:00:00Z",
-          },
-          {
-            status: "AWAITING_PARCEL",
-            timestamp: "2026-10-17T16:00:00Z",
-          },
-          {
-            status: "READY_TO_CLAIM",
-            timestamp: "2026-10-17T20:00:00Z",
-          },
-        ],
-        qrImageUrl: "https://storage.parcelhub.com/qr/ORD-401.png",
-        proofImageUrl: "https://storage.parcelhub.com/proof/ORD-401.jpg",
-        customerId,
-        modifiedBy: staffId,
-        timestamp: "2026-10-17T20:00:00Z",
-        courierPaid: true,
-      },
-      {
-        id: "ORD-402",
-        trackingId: "PH2696153366792H",
-        productName: "VXE R1 Nearlink",
-        recipientName: "John Doe",
-        price: 480,
-        change: 20,
-        amountReceived: 500,
-        status: "READY_TO_CLAIM",
-        statusTimeline: [
-          {
-            status: "PAYMENT_REQUIRED",
-            timestamp: "2026-10-17T16:32:00Z",
-          },
-          {
-            status: "AWAITING_PARCEL",
-            timestamp: "2026-10-17T18:32:00Z",
-          },
-          {
-            status: "READY_TO_CLAIM",
-            timestamp: "2026-10-17T22:32:00Z",
-          },
-        ],
-        qrImageUrl: "https://storage.parcelhub.com/qr/ORD-402.png",
-        proofImageUrl: "https://storage.parcelhub.com/proof/ORD-402.jpg",
-        customerId,
-        modifiedBy: staffId,
-        timestamp: "2026-10-17T22:32:00Z",
-        courierPaid: true,
-      },
-
-      // 5. CLAIMED
-      {
-        id: "ORD-501",
-        trackingId: "PH44219902341L",
-        productName: "Keychron K2 Pro Keyboard",
-        recipientName: "John Doe",
-        price: 4200,
-        change: 0,
-        amountReceived: 4200,
-        status: "CLAIMED",
-        statusTimeline: [
-          {
-            status: "PAYMENT_REQUIRED",
-            timestamp: "2026-10-16T10:00:00Z",
-          },
-          {
-            status: "AWAITING_PARCEL",
-            timestamp: "2026-10-16T14:00:00Z",
-          },
-          {
-            status: "READY_TO_CLAIM",
-            timestamp: "2026-10-16T18:00:00Z",
-          },
-          {
-            status: "CLAIMED",
-            timestamp: "2026-10-17T09:15:00Z",
-          },
-        ],
-        qrImageUrl: "https://storage.parcelhub.com/qr/ORD-501.png",
-        proofImageUrl: "https://storage.parcelhub.com/proof/ORD-501.jpg",
-        customerId,
-        modifiedBy: staffId,
-        timestamp: "2026-10-17T09:15:00Z",
-        courierPaid: true,
-      },
-      {
-        id: "ORD-502",
-        trackingId: "PH388112299000K",
-        productName: "SanDisk 1TB Extreme Portable SSD",
-        recipientName: "John Doe",
-        price: 5400,
-        change: 100,
-        amountReceived: 5500,
-        status: "CLAIMED",
-        statusTimeline: [
-          {
-            status: "PAYMENT_REQUIRED",
-            timestamp: "2026-10-16T11:00:00Z",
-          },
-          {
-            status: "AWAITING_PARCEL",
-            timestamp: "2026-10-16T15:00:00Z",
-          },
-          {
-            status: "READY_TO_CLAIM",
-            timestamp: "2026-10-16T19:00:00Z",
-          },
-          {
-            status: "CLAIMED",
-            timestamp: "2026-10-17T11:30:00Z",
-          },
-        ],
-        qrImageUrl: "https://storage.parcelhub.com/qr/ORD-502.png",
-        proofImageUrl: "https://storage.parcelhub.com/proof/ORD-502.jpg",
-        customerId,
-        modifiedBy: staffId,
-        timestamp: "2026-10-17T11:30:00Z",
-        courierPaid: true,
-      },
-
-      // 6. CANCELLED
-      {
-        id: "ORD-601",
-        trackingId: "PH-CANC-001",
-        productName: "Logitech G304 Lightspeed",
-        recipientName: "John Doe",
-        price: 1500,
-        change: 0,
-        amountReceived: 0,
-        status: "CANCELLED",
-        statusTimeline: [
-          {
-            status: "PAYMENT_REQUIRED",
-            timestamp: "2026-10-15T09:00:00Z",
-          },
-          {
-            status: "CANCELLED",
-            timestamp: "2026-10-15T15:00:00Z",
-          },
-        ],
-        qrImageUrl: "https://storage.parcelhub.com/qr/ORD-601.png",
-        customerId,
-        modifiedBy: customerId,
-        timestamp: "2026-10-15T15:00:00Z",
-      },
-      {
-        id: "ORD-602",
-        trackingId: "PH-CANC-002",
-        productName: "Samsung T7 Shield 1TB",
-        recipientName: "John Doe",
-        price: 6200,
-        change: 0,
-        amountReceived: 0,
-        status: "CANCELLED",
-        statusTimeline: [
-          {
-            status: "PAYMENT_REQUIRED",
-            timestamp: "2026-10-15T10:00:00Z",
-          },
-          {
-            status: "CANCELLED",
-            timestamp: "2026-10-15T17:30:00Z",
-          },
-        ],
-        qrImageUrl: "https://storage.parcelhub.com/qr/ORD-602.png",
-        customerId,
-        modifiedBy: staffId,
-        timestamp: "2026-10-15T17:30:00Z",
-      },
-    ];
-
-    for (const order of seedOrders) {
-      this.orders.set(order.id, order);
-    }
   }
 
   // --- Customers ---
-  public getCustomerByEmail(email: string): StoredCustomer | undefined {
-    const id = this.customersByEmail.get(email.toLowerCase());
-    return id ? this.customers.get(id) : undefined;
+  public async getCustomerByEmail(email: string): Promise<StoredCustomer | undefined> {
+    await ensureDatabaseInitialized();
+    const rows = await drizzleDb
+      .select()
+      .from(customers)
+      .where(sql`LOWER(${customers.email}) = LOWER(${email.trim()})`)
+      .limit(1);
+    return rows[0] ? this.toStoredCustomer(rows[0]) : undefined;
   }
 
-  public getCustomerById(id: CustomerId): StoredCustomer | undefined {
-    return this.customers.get(id);
+  public async getCustomerById(id: CustomerId): Promise<StoredCustomer | undefined> {
+    await ensureDatabaseInitialized();
+    const rows = await drizzleDb.select().from(customers).where(eq(customers.id, id)).limit(1);
+    return rows[0] ? this.toStoredCustomer(rows[0]) : undefined;
   }
 
-  public registerCustomer(data: Omit<StoredCustomer, "id" | "blacklisted">): StoredCustomer {
-    const id: CustomerId = `CST-${String(this.customerSeq++).padStart(3, "0")}`;
-    const newCustomer: StoredCustomer = {
-      ...data,
-      id,
-      blacklisted: false,
-    };
-    this.customers.set(id, newCustomer);
-    this.customersByEmail.set(data.email.toLowerCase(), id);
-    return newCustomer;
+  public async registerCustomer(data: Omit<StoredCustomer, "id" | "blacklisted">): Promise<StoredCustomer> {
+    await ensureDatabaseInitialized();
+    // Count existing to preserve CST-xxx convention if desired
+    const countRes = await drizzleDb.select({ count: sql<number>`count(*)` }).from(customers);
+    const seq = (countRes[0]?.count ?? 0) + 1;
+    const id: CustomerId = `CST-${String(seq).padStart(3, "0")}`;
+
+    const inserted = await drizzleDb
+      .insert(customers)
+      .values({
+        id,
+        email: data.email.trim(),
+        passwordHash: data.passwordHash,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        middleInitial: data.middleInitial,
+        phoneNumber: data.phoneNumber,
+        mpin: data.mpin,
+        blacklisted: false,
+      })
+      .returning();
+
+    return this.toStoredCustomer(inserted[0]);
   }
 
-  public setCustomerMpin(id: CustomerId, mpin: MPIN): boolean {
-    const customer = this.customers.get(id);
-    if (!customer) return false;
-    customer.mpin = mpin;
-    return true;
+  public async setCustomerMpin(id: CustomerId, mpin: MPIN): Promise<boolean> {
+    await ensureDatabaseInitialized();
+    const result = await drizzleDb
+      .update(customers)
+      .set({ mpin, updatedAt: new Date() })
+      .where(eq(customers.id, id))
+      .returning();
+    return result.length > 0;
   }
 
-  public blacklistCustomer(id: CustomerId, reason: string): boolean {
-    const customer = this.customers.get(id);
-    if (!customer) return false;
-    customer.blacklisted = true;
-    customer.blacklistReason = reason;
-    return true;
+  public async blacklistCustomer(id: CustomerId, reason: string): Promise<boolean> {
+    await ensureDatabaseInitialized();
+    const result = await drizzleDb
+      .update(customers)
+      .set({ blacklisted: true, blacklistReason: reason, updatedAt: new Date() })
+      .where(eq(customers.id, id))
+      .returning();
+    return result.length > 0;
   }
 
   // --- Staff ---
-  public getStaffByEmail(email: string): StoredStaff | undefined {
-    const id = this.staffByEmail.get(email.toLowerCase());
-    return id ? this.staff.get(id) : undefined;
+  public async getStaffByEmail(email: string): Promise<StoredStaff | undefined> {
+    await ensureDatabaseInitialized();
+    const rows = await drizzleDb
+      .select()
+      .from(staff)
+      .where(sql`LOWER(${staff.email}) = LOWER(${email.trim()})`)
+      .limit(1);
+    return rows[0] ? this.toStoredStaff(rows[0]) : undefined;
   }
 
-  public getStaffById(id: StaffId): StoredStaff | undefined {
-    return this.staff.get(id);
+  public async getStaffById(id: StaffId): Promise<StoredStaff | undefined> {
+    await ensureDatabaseInitialized();
+    const rows = await drizzleDb.select().from(staff).where(eq(staff.id, id)).limit(1);
+    return rows[0] ? this.toStoredStaff(rows[0]) : undefined;
   }
 
-  public createStaff(data: Omit<StoredStaff, "id">): StoredStaff {
-    const id: StaffId = `STF-${String(this.staffSeq++).padStart(3, "0")}`;
-    const newStaff: StoredStaff = {
-      ...data,
-      id,
-    };
-    this.staff.set(id, newStaff);
-    this.staffByEmail.set(data.email.toLowerCase(), id);
-    return newStaff;
+  public async createStaff(data: Omit<StoredStaff, "id">): Promise<StoredStaff> {
+    await ensureDatabaseInitialized();
+    const countRes = await drizzleDb.select({ count: sql<number>`count(*)` }).from(staff);
+    const seq = (countRes[0]?.count ?? 0) + 1;
+    const id: StaffId = `STF-${String(seq).padStart(3, "0")}`;
+
+    const inserted = await drizzleDb
+      .insert(staff)
+      .values({
+        id,
+        email: data.email.trim(),
+        passwordHash: data.passwordHash,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        middleInitial: data.middleInitial,
+        phoneNumber: data.phoneNumber,
+      })
+      .returning();
+
+    return this.toStoredStaff(inserted[0]);
   }
 
-  public listStaff(): StaffProfile[] {
-    return Array.from(this.staff.values()).map((s) => ({
-      id: s.id,
+  public async listStaff(): Promise<StaffProfile[]> {
+    await ensureDatabaseInitialized();
+    const rows = await drizzleDb.select().from(staff);
+    return rows.map((s: any) => ({
+      id: s.id as StaffId,
       firstName: s.firstName,
       lastName: s.lastName,
-      middleInitial: s.middleInitial,
+      middleInitial: s.middleInitial ?? undefined,
       phoneNumber: s.phoneNumber,
       email: s.email,
     }));
   }
 
-  public updateStaff(id: StaffId, updates: Partial<Omit<StoredStaff, "id">>): boolean {
-    const s = this.staff.get(id);
-    if (!s) return false;
-    if (updates.email && updates.email !== s.email) {
-      this.staffByEmail.delete(s.email.toLowerCase());
-      this.staffByEmail.set(updates.email.toLowerCase(), id);
-      s.email = updates.email;
-    }
-    if (updates.firstName) s.firstName = updates.firstName;
-    if (updates.lastName) s.lastName = updates.lastName;
-    if (updates.middleInitial !== undefined) s.middleInitial = updates.middleInitial;
-    if (updates.phoneNumber) s.phoneNumber = updates.phoneNumber;
-    if (updates.passwordHash) s.passwordHash = updates.passwordHash;
-    return true;
+  public async updateStaff(id: StaffId, updates: Partial<Omit<StoredStaff, "id">>): Promise<boolean> {
+    await ensureDatabaseInitialized();
+    const updatePayload: Record<string, any> = { updatedAt: new Date() };
+    if (updates.email) updatePayload.email = updates.email.trim();
+    if (updates.firstName) updatePayload.firstName = updates.firstName;
+    if (updates.lastName) updatePayload.lastName = updates.lastName;
+    if (updates.middleInitial !== undefined) updatePayload.middleInitial = updates.middleInitial;
+    if (updates.phoneNumber) updatePayload.phoneNumber = updates.phoneNumber;
+    if (updates.passwordHash) updatePayload.passwordHash = updates.passwordHash;
+
+    const result = await drizzleDb.update(staff).set(updatePayload).where(eq(staff.id, id)).returning();
+    return result.length > 0;
   }
 
-  public deleteStaff(id: StaffId): boolean {
-    const s = this.staff.get(id);
-    if (!s) return false;
-    this.staffByEmail.delete(s.email.toLowerCase());
-    return this.staff.delete(id);
+  public async deleteStaff(id: StaffId): Promise<boolean> {
+    await ensureDatabaseInitialized();
+    const result = await drizzleDb.delete(staff).where(eq(staff.id, id)).returning();
+    return result.length > 0;
   }
 
   // --- Orders ---
-  public listOrders(): StoredOrder[] {
-    return Array.from(this.orders.values());
+  public async listOrders(): Promise<StoredOrder[]> {
+    await ensureDatabaseInitialized();
+    const rows = await drizzleDb.select().from(orders);
+    return rows.map((r: any) => this.toStoredOrder(r));
   }
 
-  public getOrder(id: OrderId): StoredOrder | undefined {
-    return this.orders.get(id);
+  public async getOrder(id: OrderId): Promise<StoredOrder | undefined> {
+    await ensureDatabaseInitialized();
+    const rows = await drizzleDb.select().from(orders).where(eq(orders.id, id)).limit(1);
+    return rows[0] ? this.toStoredOrder(rows[0]) : undefined;
   }
 
-  public getActiveOrderByTrackingId(trackingId: string, excludeOrderId?: OrderId): StoredOrder | undefined {
+  public async getActiveOrderByTrackingId(trackingId: string, excludeOrderId?: OrderId): Promise<StoredOrder | undefined> {
+    await ensureDatabaseInitialized();
     const normalized = trackingId.trim().toUpperCase();
     if (!normalized) return undefined;
 
-    return Array.from(this.orders.values()).find((order) => {
+    const all = await drizzleDb.select().from(orders);
+    const found = all.find((order: any) => {
       if (excludeOrderId && order.id === excludeOrderId) return false;
       const isSameTracking = order.trackingId.trim().toUpperCase() === normalized;
       const isActive = order.status !== "CLAIMED" && order.status !== "CANCELLED";
       return isSameTracking && isActive;
     });
+
+    return found ? this.toStoredOrder(found) : undefined;
   }
 
-  public initializeOrder(customerId: CustomerId, imageUrl: string, trackingId?: string): StoredOrder {
-    const id: OrderId = `ORD-${this.orderSeq++}`;
-    const now: ISO8601Timestamp = new Date().toISOString();
+  public async initializeOrder(customerId: CustomerId, imageUrl: string, trackingId?: string): Promise<StoredOrder> {
+    await ensureDatabaseInitialized();
+    const countRes = await drizzleDb.select({ count: sql<number>`count(*)` }).from(orders);
+    const seq = 500 + (countRes[0]?.count ?? 0);
+    const id: OrderId = `ORD-${seq}`;
+    const now = new Date();
     const assignedTrackingId = trackingId?.trim() || `PH${Math.floor(1000000000000 + Math.random() * 9000000000000)}H`;
-    const newOrder: StoredOrder = {
-      id,
-      trackingId: assignedTrackingId,
-      productName: "Initialized Order",
-      recipientName: "Customer",
-      price: 0,
-      change: 0,
-      status: "PENDING_INITIALIZATION",
-      statusTimeline: [{ status: "PENDING_INITIALIZATION", timestamp: now }],
-      qrImageUrl: `https://storage.parcelhub.com/qr/${id}.png`,
-      imageUrl,
-      customerId,
-      modifiedBy: customerId,
-      timestamp: now,
-    };
-    this.orders.set(id, newOrder);
-    return newOrder;
+
+    const inserted = await drizzleDb
+      .insert(orders)
+      .values({
+        id,
+        trackingId: assignedTrackingId,
+        productName: "Initialized Order",
+        recipientName: "Customer",
+        price: 0,
+        change: 0,
+        status: "PENDING_INITIALIZATION",
+        statusTimeline: [{ status: "PENDING_INITIALIZATION", timestamp: now.toISOString() }],
+        qrImageUrl: `https://storage.parcelhub.com/qr/${id}.png`,
+        imageUrl,
+        customerId,
+        modifiedBy: customerId,
+        timestamp: now,
+      })
+      .returning();
+
+    return this.toStoredOrder(inserted[0]);
   }
 
-  public updateOrder(
+  public async updateOrder(
     id: OrderId,
     updates: {
       trackingId?: string;
@@ -598,58 +345,87 @@ class InMemoryStore {
       price?: number;
     },
     modifiedBy: StaffId | CustomerId
-  ): StoredOrder | null {
-    const order = this.orders.get(id);
-    if (!order) return null;
+  ): Promise<StoredOrder | null> {
+    await ensureDatabaseInitialized();
+    const existing = await this.getOrder(id);
+    if (!existing) return null;
 
-    // Customer / store edit is only permitted while unpaid/inactive
-    if (order.status !== "PENDING_INITIALIZATION" && order.status !== "PAYMENT_REQUIRED") {
+    if (existing.status !== "PENDING_INITIALIZATION" && existing.status !== "PAYMENT_REQUIRED") {
       return null;
     }
 
-    if (updates.trackingId) order.trackingId = updates.trackingId;
-    if (updates.productName) order.productName = updates.productName;
-    if (updates.recipientName) order.recipientName = updates.recipientName;
-    if (updates.price !== undefined) {
-      order.price = updates.price;
-      if (order.status === "PENDING_INITIALIZATION") {
-        order.status = "PAYMENT_REQUIRED";
-        order.statusTimeline.push({
-          status: "PAYMENT_REQUIRED",
-          timestamp: new Date().toISOString(),
-        });
-      }
+    const newTimeline = [...existing.statusTimeline];
+    let newStatus = existing.status;
+
+    if (updates.price !== undefined && existing.status === "PENDING_INITIALIZATION") {
+      newStatus = "PAYMENT_REQUIRED";
+      newTimeline.push({
+        status: "PAYMENT_REQUIRED",
+        timestamp: new Date().toISOString(),
+      });
     }
-    order.modifiedBy = modifiedBy;
-    order.timestamp = new Date().toISOString();
-    return order;
+
+    const updatePayload: Record<string, any> = {
+      modifiedBy,
+      timestamp: new Date(),
+      status: newStatus,
+      statusTimeline: newTimeline,
+    };
+
+    if (updates.trackingId) updatePayload.trackingId = updates.trackingId.trim();
+    if (updates.productName) updatePayload.productName = updates.productName;
+    if (updates.recipientName) updatePayload.recipientName = updates.recipientName;
+    if (updates.price !== undefined) updatePayload.price = updates.price;
+
+    const result = await drizzleDb.update(orders).set(updatePayload).where(eq(orders.id, id)).returning();
+    return result[0] ? this.toStoredOrder(result[0]) : null;
   }
 
-  public cancelOrder(id: OrderId, modifiedBy: StaffId | CustomerId): StoredOrder | null {
-    const order = this.orders.get(id);
-    if (!order) return null;
-    order.status = "CANCELLED";
-    order.statusTimeline.push({
-      status: "CANCELLED",
-      timestamp: new Date().toISOString(),
-    });
-    order.modifiedBy = modifiedBy;
-    order.timestamp = new Date().toISOString();
-    return order;
+  public async cancelOrder(id: OrderId, modifiedBy: StaffId | CustomerId): Promise<StoredOrder | null> {
+    await ensureDatabaseInitialized();
+    const existing = await this.getOrder(id);
+    if (!existing) return null;
+
+    const timeline = [
+      ...existing.statusTimeline,
+      { status: "CANCELLED" as OrderStatus, timestamp: new Date().toISOString() },
+    ];
+
+    const result = await drizzleDb
+      .update(orders)
+      .set({
+        status: "CANCELLED",
+        statusTimeline: timeline,
+        modifiedBy,
+        timestamp: new Date(),
+      })
+      .where(eq(orders.id, id))
+      .returning();
+
+    return result[0] ? this.toStoredOrder(result[0]) : null;
   }
 
-  public claimByCustomer(id: OrderId): { order: StoredOrder; durationMinutes: number } | null {
-    const order = this.orders.get(id);
-    if (!order) return null;
+  public async claimByCustomer(id: OrderId): Promise<{ order: StoredOrder; durationMinutes: number } | null> {
+    await ensureDatabaseInitialized();
+    const existing = await this.getOrder(id);
+    if (!existing) return null;
+
     const durationMinutes = getClientRetrieveTimerMinutes();
     const initiatedAt = new Date();
     const expiresAt = new Date(initiatedAt.getTime() + durationMinutes * 60 * 1000);
 
-    order.claimRequested = true;
-    order.claimInitiatedAt = initiatedAt.toISOString();
-    order.claimExpiresAt = expiresAt.toISOString();
-    order.timestamp = initiatedAt.toISOString();
-    return { order, durationMinutes };
+    const result = await drizzleDb
+      .update(orders)
+      .set({
+        claimRequested: true,
+        claimInitiatedAt: initiatedAt,
+        claimExpiresAt: expiresAt,
+        timestamp: initiatedAt,
+      })
+      .where(eq(orders.id, id))
+      .returning();
+
+    return result[0] ? { order: this.toStoredOrder(result[0]), durationMinutes } : null;
   }
 
   public isClaimActive(order: StoredOrder): boolean {
@@ -665,76 +441,138 @@ class InMemoryStore {
     return Math.max(0, Math.floor(diffMs / 1000));
   }
 
-  public activateOrder(id: OrderId, amountReceived: number, staffId: StaffId): { order: StoredOrder; change: number } | null {
-    const order = this.orders.get(id);
-    if (!order) return null;
+  public async activateOrder(
+    id: OrderId,
+    amountReceived: number,
+    staffId: StaffId
+  ): Promise<{ order: StoredOrder; change: number } | null> {
+    await ensureDatabaseInitialized();
+    const existing = await this.getOrder(id);
+    if (!existing) return null;
 
-    const change = Math.max(0, amountReceived - order.price);
-    order.amountReceived = amountReceived;
-    order.change = change;
-    order.status = "AWAITING_PARCEL";
-    order.statusTimeline.push({
-      status: "AWAITING_PARCEL",
-      timestamp: new Date().toISOString(),
-    });
-    order.modifiedBy = staffId;
-    order.timestamp = new Date().toISOString();
-    return { order, change };
+    const change = Math.max(0, amountReceived - existing.price);
+    const timeline = [
+      ...existing.statusTimeline,
+      { status: "AWAITING_PARCEL" as OrderStatus, timestamp: new Date().toISOString() },
+    ];
+
+    const result = await drizzleDb
+      .update(orders)
+      .set({
+        amountReceived,
+        change,
+        status: "AWAITING_PARCEL",
+        statusTimeline: timeline,
+        modifiedBy: staffId,
+        timestamp: new Date(),
+      })
+      .where(eq(orders.id, id))
+      .returning();
+
+    return result[0] ? { order: this.toStoredOrder(result[0]), change } : null;
   }
 
-  public recordCourierPayment(id: OrderId, staffId: StaffId): StoredOrder | null {
-    const order = this.orders.get(id);
-    if (!order) return null;
-    const now = new Date().toISOString();
-    order.courierPaid = true;
-    order.courierPaidBy = staffId;
-    order.courierPaidAt = now;
-    order.modifiedBy = staffId;
-    order.timestamp = now;
-    return order;
+  public async recordCourierPayment(id: OrderId, staffId: StaffId): Promise<StoredOrder | null> {
+    await ensureDatabaseInitialized();
+    const result = await drizzleDb
+      .update(orders)
+      .set({
+        courierPaid: true,
+        courierPaidBy: staffId,
+        courierPaidAt: new Date(),
+        modifiedBy: staffId,
+        timestamp: new Date(),
+      })
+      .where(eq(orders.id, id))
+      .returning();
+
+    return result[0] ? this.toStoredOrder(result[0]) : null;
   }
 
-  public attachProofPhoto(id: OrderId, imageUrl: string, staffId: StaffId): StoredOrder | null {
-    const order = this.orders.get(id);
-    if (!order) return null;
-    if (!order.courierPaid) return null;
-    order.proofImageUrl = imageUrl;
-    order.status = "READY_TO_CLAIM";
-    order.statusTimeline.push({
-      status: "READY_TO_CLAIM",
-      timestamp: new Date().toISOString(),
-    });
-    order.modifiedBy = staffId;
-    order.timestamp = new Date().toISOString();
-    return order;
+  public async attachProofPhoto(id: OrderId, imageUrl: string, staffId: StaffId): Promise<StoredOrder | null> {
+    await ensureDatabaseInitialized();
+    const existing = await this.getOrder(id);
+    if (!existing || !existing.courierPaid) return null;
+
+    const timeline = [
+      ...existing.statusTimeline,
+      { status: "READY_TO_CLAIM" as OrderStatus, timestamp: new Date().toISOString() },
+    ];
+
+    const result = await drizzleDb
+      .update(orders)
+      .set({
+        proofImageUrl: imageUrl,
+        status: "READY_TO_CLAIM",
+        statusTimeline: timeline,
+        modifiedBy: staffId,
+        timestamp: new Date(),
+      })
+      .where(eq(orders.id, id))
+      .returning();
+
+    return result[0] ? this.toStoredOrder(result[0]) : null;
   }
 
-  public claimByStaff(id: OrderId, staffId: StaffId): StoredOrder | null {
-    const order = this.orders.get(id);
-    if (!order) return null;
-    order.status = "CLAIMED";
-    order.claimRequested = false;
-    order.statusTimeline.push({
-      status: "CLAIMED",
-      timestamp: new Date().toISOString(),
-    });
-    order.modifiedBy = staffId;
-    order.timestamp = new Date().toISOString();
-    return order;
+  public async claimByStaff(id: OrderId, staffId: StaffId): Promise<StoredOrder | null> {
+    await ensureDatabaseInitialized();
+    const existing = await this.getOrder(id);
+    if (!existing) return null;
+
+    const timeline = [
+      ...existing.statusTimeline,
+      { status: "CLAIMED" as OrderStatus, timestamp: new Date().toISOString() },
+    ];
+
+    const result = await drizzleDb
+      .update(orders)
+      .set({
+        status: "CLAIMED",
+        claimRequested: false,
+        statusTimeline: timeline,
+        modifiedBy: staffId,
+        timestamp: new Date(),
+      })
+      .where(eq(orders.id, id))
+      .returning();
+
+    return result[0] ? this.toStoredOrder(result[0]) : null;
   }
 
   // --- OCR Config ---
-  public setOcrConfig(target: AdminOcrConfigTarget, action: AdminOcrConfigAction): void {
-    this.ocrConfig[target] = action === "enable";
+  public async setOcrConfig(target: AdminOcrConfigTarget, action: AdminOcrConfigAction): Promise<void> {
+    await ensureDatabaseInitialized();
+    const current = await this.getOcrConfig();
+    current[target] = action === "enable";
+    await drizzleDb
+      .insert(appConfig)
+      .values({ key: "ocrConfig", value: current, updatedAt: new Date() })
+      .onConflictDoUpdate({
+        target: appConfig.key,
+        set: { value: current, updatedAt: new Date() },
+      });
+  }
+
+  public async getOcrConfig(): Promise<Record<AdminOcrConfigTarget, boolean>> {
+    await ensureDatabaseInitialized();
+    const rows = await drizzleDb.select().from(appConfig).where(eq(appConfig.key, "ocrConfig")).limit(1);
+    if (rows[0] && rows[0].value) {
+      return rows[0].value as Record<AdminOcrConfigTarget, boolean>;
+    }
+    return { staff: true, customer: true };
   }
 
   // --- FCM Tokens ---
-  public addFcmToken(token: string): void {
-    this.fcmTokens.add(token);
+  public async addFcmToken(token: string): Promise<void> {
+    await ensureDatabaseInitialized();
+    await drizzleDb
+      .insert(fcmTokens)
+      .values({ token, createdAt: new Date() })
+      .onConflictDoNothing();
   }
 }
 
 // Global singleton instance
-const globalForStore = globalThis as unknown as { storeInstance?: InMemoryStore };
-export const db = globalForStore.storeInstance ?? new InMemoryStore();
+const globalForStore = globalThis as unknown as { storeInstance?: DatabaseStore };
+export const db = globalForStore.storeInstance ?? new DatabaseStore();
 if (process.env.NODE_ENV !== "production") globalForStore.storeInstance = db;

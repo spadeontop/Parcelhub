@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
   const typeFilter = searchParams.get("type") as OrderStatus | null;
   const { limit, offset } = parsePagination(searchParams, 20, 100);
 
-  let allOrders = db.listOrders();
+  let allOrders = await db.listOrders();
 
   // Filter by customer if customer role
   if (auth.session.role === "CUSTOMER") {

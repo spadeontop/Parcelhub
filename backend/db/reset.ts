@@ -1,25 +1,96 @@
-import fs from "fs";
-import path from "path";
-import { seedDatabase } from "./seed";
+import { db } from "./index";
+import { appConfig, customers, fcmTokens, orders, staff } from "./schema";
+import { originalSeedOrders } from "./seed-data";
 
-async function resetDatabase() {
-  console.log("🧹 Resetting database...");
+export async function resetDatabase() {
+  console.log("🧹 Resetting database tables...");
 
-  const pgdataPath = path.resolve(process.cwd(), "pgdata");
-  if (fs.existsSync(pgdataPath)) {
-    fs.rmSync(pgdataPath, { recursive: true, force: true });
-    console.log("Deleted ./pgdata directory.");
+  // Truncate tables cleanly without deleting the PGlite data folder (avoids race condition with open handle)
+  await db.execute(`
+    TRUNCATE TABLE "orders", "customers", "staff", "fcm_tokens", "app_config" CASCADE;
+  `);
+
+  console.log("🌱 Re-seeding database...");
+
+  // Seed default customer
+  const customerId = "CST-001";
+  await db
+    .insert(customers)
+    .values({
+      id: customerId,
+      email: "user@example.com",
+      passwordHash: "password",
+      firstName: "John",
+      lastName: "Doe",
+      middleInitial: "D",
+      phoneNumber: "+639123456789",
+      mpin: "1234",
+      blacklisted: false,
+    })
+    .onConflictDoNothing();
+
+  // Seed default staff
+  const staffId = "STF-001";
+  await db
+    .insert(staff)
+    .values({
+      id: staffId,
+      email: "staff@parcelhub.com",
+      passwordHash: "string",
+      firstName: "Jane",
+      lastName: "Smith",
+      middleInitial: "A",
+      phoneNumber: "+639987654321",
+    })
+    .onConflictDoNothing();
+
+  // Seed default OCR app config
+  await db
+    .insert(appConfig)
+    .values({
+      key: "ocrConfig",
+      value: { staff: true, customer: true },
+    })
+    .onConflictDoNothing();
+
+  // Seed all original seed orders
+  for (const o of (originalSeedOrders as any[])) {
+    await db
+      .insert(orders)
+      .values({
+        id: o.id,
+        trackingId: o.trackingId,
+        productName: o.productName,
+        recipientName: o.recipientName,
+        price: o.price,
+        change: o.change,
+        amountReceived: o.amountReceived,
+        status: o.status,
+        statusTimeline: o.statusTimeline,
+        qrImageUrl: o.qrImageUrl,
+        imageUrl: o.imageUrl,
+        proofImageUrl: o.proofImageUrl,
+        customerId: o.customerId,
+        modifiedBy: o.modifiedBy,
+        claimRequested: o.claimRequested ?? false,
+        claimInitiatedAt: o.claimInitiatedAt ? new Date(o.claimInitiatedAt) : undefined,
+        claimExpiresAt: o.claimExpiresAt ? new Date(o.claimExpiresAt) : undefined,
+        courierPaid: o.courierPaid ?? false,
+        courierPaidBy: o.courierPaidBy,
+        courierPaidAt: o.courierPaidAt ? new Date(o.courierPaidAt) : undefined,
+        timestamp: new Date(o.timestamp),
+      })
+      .onConflictDoNothing();
   }
 
-  // Re-seed fresh state
-  await seedDatabase();
   console.log("✨ Database reset & re-seeded successfully!");
 }
 
-resetDatabase()
-  .then(() => process.exit(0))
-  .catch((err) => {
-    console.error("❌ Reset failed:", err);
-    process.exit(1);
-  });
-
+if (require.main === module) {
+  resetDatabase()
+    .then(() => process.exit(0))
+    .catch((err) => {
+      console.error("❌ Reset failed:", err);
+      process.exit(1);
+    });
+}

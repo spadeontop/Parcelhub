@@ -23,7 +23,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 
   const { id } = await params;
-  const order = db.getOrder(id as OrderId);
+  const order = await db.getOrder(id as OrderId);
 
   if (!order) {
     return jsonError("Order not found", 404, "Not Found");
@@ -64,7 +64,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   }
 
   const { id } = await params;
-  const order = db.getOrder(id as OrderId);
+  const order = await db.getOrder(id as OrderId);
   if (!order) {
     return jsonError("Order not found", 404, "Not Found");
   }
@@ -89,7 +89,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     if (body.order.trackingId) {
-      const activeDuplicate = db.getActiveOrderByTrackingId(body.order.trackingId, id as OrderId);
+      const activeDuplicate = await db.getActiveOrderByTrackingId(body.order.trackingId, id as OrderId);
       if (activeDuplicate) {
         return jsonError(
           `Tracking ID "${body.order.trackingId}" is already registered to an active order (${activeDuplicate.id}). Tracking IDs must be unique across active orders.`,
@@ -99,7 +99,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       }
     }
 
-    db.updateOrder(id as OrderId, body.order, auth.session.userId as CustomerId);
+    await db.updateOrder(id as OrderId, body.order, auth.session.userId as CustomerId);
 
     const response: CustomerUpdateOrderRes = {
       statusMessage: "Order updated successfully",
@@ -118,7 +118,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   }
 
   const { id } = await params;
-  const order = db.getOrder(id as OrderId);
+  const order = await db.getOrder(id as OrderId);
   if (!order) {
     return jsonError("Order not found", 404, "Not Found");
   }
@@ -131,7 +131,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     return jsonError("Cannot cancel an already claimed order", 400);
   }
 
-  db.cancelOrder(id as OrderId, auth.session.userId as CustomerId);
+  await db.cancelOrder(id as OrderId, auth.session.userId as CustomerId);
 
   const response: CustomerCancelOrderRes = {
     statusMessage: "Order cancelled successfully",

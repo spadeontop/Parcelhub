@@ -15,7 +15,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 
   const { id } = await params;
-  const order = db.getOrder(id as OrderId);
+  const order = await db.getOrder(id as OrderId);
 
   if (!order) {
     return jsonError("Order not found", 404, "Not Found");

@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     return jsonError(auth.error || "Unauthorized", 401, "Unauthorized");
   }
 
-  const staffs = db.listStaff();
+  const staffs = await db.listStaff();
 
   const response: AdminListStaffsRes = {
     statusMessage: "Staff accounts retrieved",

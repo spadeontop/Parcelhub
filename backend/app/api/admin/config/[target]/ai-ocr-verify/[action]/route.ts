@@ -28,7 +28,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     return jsonError("Action must be either 'enable' or 'disable'", 400);
   }
 
-  db.setOcrConfig(target as AdminOcrConfigTarget, action as AdminOcrConfigAction);
+  await db.setOcrConfig(target as AdminOcrConfigTarget, action as AdminOcrConfigAction);
 
   const response: AdminOcrConfigRes = {
     statusMessage: "OCR verification setting updated successfully",

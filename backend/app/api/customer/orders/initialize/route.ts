@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (body.trackingId) {
-      const activeDuplicate = db.getActiveOrderByTrackingId(body.trackingId);
+      const activeDuplicate = await db.getActiveOrderByTrackingId(body.trackingId);
       if (activeDuplicate) {
         return jsonError(
           `Tracking ID "${body.trackingId}" is already registered to an active order (${activeDuplicate.id}). Tracking IDs must be unique across active orders.`,
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const order = db.initializeOrder(auth.session.userId as CustomerId, body.imageUrl, body.trackingId);
+    const order = await db.initializeOrder(auth.session.userId as CustomerId, body.imageUrl, body.trackingId);
 
     const response: CustomerInitOrderRes = {
       orderId: order.id,

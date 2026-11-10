@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import assert from "node:assert";
+import { resetDatabase } from "../db/reset";
 
 // Customer Handlers
 import { POST as registerCustomer } from "../app/api/customer/register/route";
@@ -57,6 +58,7 @@ function makeReq(url: string, options: { method?: string; body?: unknown; token?
 
 async function runTests() {
   console.log("🚀 Starting ParcelHub API Routes Verification...\n");
+  await resetDatabase();
 
   // ==========================================
   // 1. Customer Flow

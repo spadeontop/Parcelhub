@@ -21,7 +21,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   }
 
   const { id } = await params;
-  const staff = db.getStaffById(id as StaffId);
+  const staff = await db.getStaffById(id as StaffId);
   if (!staff) {
     return jsonError("Staff member not found", 404, "Not Found");
   }
@@ -32,7 +32,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       return jsonError("Staff payload is required", 400);
     }
 
-    db.updateStaff(id as StaffId, {
+    await db.updateStaff(id as StaffId, {
       firstName: body.staff.firstName,
       lastName: body.staff.lastName,
       middleInitial: body.staff.middleInitial,
@@ -58,14 +58,14 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   }
 
   const { id } = await params;
-  const staff = db.getStaffById(id as StaffId);
+  const staff = await db.getStaffById(id as StaffId);
   if (!staff) {
     return jsonError("Staff member not found", 404, "Not Found");
   }
 
   try {
     const body = (await request.json().catch(() => ({}))) as AdminDeleteStaffReq;
-    db.deleteStaff(id as StaffId);
+    await db.deleteStaff(id as StaffId);
 
     const response: AdminDeleteStaffRes = {
       statusMessage: "Staff account deleted successfully",

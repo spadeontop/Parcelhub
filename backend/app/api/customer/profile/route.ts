@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     return jsonError(auth.error || "Unauthorized", 401, "Unauthorized");
   }
 
-  const customer = db.getCustomerById(auth.session.userId as CustomerId);
+  const customer = await db.getCustomerById(auth.session.userId as CustomerId);
   if (!customer) {
     return jsonError("Customer not found", 404, "Not Found");
   }

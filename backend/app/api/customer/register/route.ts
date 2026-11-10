@@ -12,12 +12,12 @@ export async function POST(request: NextRequest) {
       return jsonError("Missing required registration fields", 400);
     }
 
-    const existing = db.getCustomerByEmail(body.email);
+    const existing = await db.getCustomerByEmail(body.email);
     if (existing) {
       return jsonError("Customer with this email already exists", 409, "Conflict");
     }
 
-    const customer = db.registerCustomer({
+    const customer = await db.registerCustomer({
       email: body.email,
       passwordHash: body.password,
       firstName: body.firstName,

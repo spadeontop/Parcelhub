@@ -15,7 +15,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   }
 
   const { id } = await params;
-  const order = db.getOrder(id as OrderId);
+  const order = await db.getOrder(id as OrderId);
 
   if (!order) {
     return jsonError("Order not found", 404, "Not Found");
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     return jsonError(`Order cannot be claimed in its current status (${order.status})`, 400);
   }
 
-  const result = db.claimByCustomer(id as OrderId);
+  const result = await db.claimByCustomer(id as OrderId);
   if (!result) {
     return jsonError("Failed to initiate claim", 500);
   }

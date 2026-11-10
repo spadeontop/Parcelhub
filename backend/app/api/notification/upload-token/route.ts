@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
       return jsonError("fcmToken is required", 400);
     }
 
-    db.addFcmToken(body.fcmToken);
+    await db.addFcmToken(body.fcmToken);
 
     const response: NotificationUploadTokenRes = {
       statusMessage: "FCM token saved successfully",

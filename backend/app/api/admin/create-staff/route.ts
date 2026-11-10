@@ -17,12 +17,12 @@ export async function POST(request: NextRequest) {
       return jsonError("Missing required staff fields", 400);
     }
 
-    const existing = db.getStaffByEmail(body.email);
+    const existing = await db.getStaffByEmail(body.email);
     if (existing) {
       return jsonError("Staff account with this email already exists", 409, "Conflict");
     }
 
-    const newStaff = db.createStaff({
+    const newStaff = await db.createStaff({
       email: body.email,
       passwordHash: body.password,
       firstName: body.firstName,

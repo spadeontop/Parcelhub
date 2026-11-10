@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
       return jsonError("Invalid or expired preAuthToken", 401, "Unauthorized");
     }
 
-    const customer = db.getCustomerById(session.userId as CustomerId);
+    const customer = await db.getCustomerById(session.userId as CustomerId);
     if (!customer) {
       return jsonError("Customer not found", 404, "Not Found");
     }

@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
       return jsonError("Email and password are required", 400);
     }
 
-    const customer = db.getCustomerByEmail(body.email.trim());
+    const customer = await db.getCustomerByEmail(body.email.trim());
     if (!customer) {
       return jsonError("Email is not registered", 404, "Not Found");
     }

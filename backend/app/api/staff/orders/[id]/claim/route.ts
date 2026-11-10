@@ -15,7 +15,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   }
 
   const { id } = await params;
-  const order = db.getOrder(id as OrderId);
+  const order = await db.getOrder(id as OrderId);
 
   if (!order) {
     return jsonError("Order not found", 404, "Not Found");
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     );
   }
 
-  db.claimByStaff(id as OrderId, auth.session.userId as StaffId);
+  await db.claimByStaff(id as OrderId, auth.session.userId as StaffId);
 
   const response: StaffClaimOrderRes = {
     statusMessage: "Order successfully claimed",

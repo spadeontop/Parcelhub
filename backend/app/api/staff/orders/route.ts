@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
   const statusFilter = searchParams.get("status") as OrderStatus | null;
   const { limit, offset } = parsePagination(searchParams, 20, 100);
 
-  let allOrders = db.listOrders();
+  let allOrders = await db.listOrders();
 
   if (statusFilter) {
     allOrders = allOrders.filter((o) => o.status === statusFilter);
@@ -28,8 +28,11 @@ export async function GET(request: NextRequest) {
 
   allOrders = allOrders.slice(offset, offset + limit);
 
+  const staffList = await db.listStaff();
+  const staffMap = new Map(staffList.map((s) => [s.id, s]));
+
   const orders: StaffOrderSummary[] = allOrders.map((o) => {
-    const paidByStaff = o.courierPaidBy ? db.getStaffById(o.courierPaidBy) : null;
+    const paidByStaff = o.courierPaidBy ? staffMap.get(o.courierPaidBy) : null;
     const courierPaidByName = paidByStaff ? `${paidByStaff.firstName} ${paidByStaff.lastName}` : undefined;
 
     return {
