@@ -51,7 +51,11 @@ export const StaffTerminalScreen: React.FC = () => {
 
   return (
     <SafeAreaView className="flex-1 bg-[#F8FAFC]">
-      <View className="flex-1 bg-[#F8FAFC] relative">
+      <View
+        className="flex-1 bg-[#F8FAFC] relative"
+        // Let the child FlatList own vertical overflow instead of growing this page.
+        style={{ minHeight: 0, overflow: 'hidden' }}
+      >
         {/* Terminal Header & Search */}
         <StaffHeader>
           <StaffSearchBar

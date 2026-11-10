@@ -9,6 +9,7 @@ import {
 import { StaffOrder, StaffTab } from '../../types';
 import { StaffOrderCard } from './StaffOrderCard';
 import { ChevronDown, Inbox } from '../common/Icons';
+import { STAFF_BOTTOM_NAV_HEIGHT } from '../navigation/StaffBottomNav';
 
 interface StaffOrdersListProps {
   orders: StaffOrder[];
@@ -44,7 +45,7 @@ export const StaffOrdersList: React.FC<StaffOrdersListProps> = ({
   };
 
   return (
-    <View className="flex-1 px-5">
+    <View className="flex-1 px-5" style={{ minHeight: 0, overflow: 'hidden' }}>
       {/* Subheader: Record Count & Sort by Date matching home.png */}
       <View className="flex-row items-center justify-between py-2 px-1">
         <Text className="text-xs text-[#64748B] font-medium">
@@ -68,6 +69,7 @@ export const StaffOrdersList: React.FC<StaffOrdersListProps> = ({
 
       {/* Orders List */}
       <FlatList
+        style={{ flex: 1, minHeight: 0 }}
         data={sortedOrders}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
@@ -75,7 +77,8 @@ export const StaffOrdersList: React.FC<StaffOrdersListProps> = ({
         )}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
-          paddingBottom: 90, // safe space for bottom nav
+          // Reserve the fixed navigation bar footprint so the last row remains reachable.
+          paddingBottom: STAFF_BOTTOM_NAV_HEIGHT + 16,
           flexGrow: 1,
         }}
         refreshControl={

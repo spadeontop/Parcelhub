@@ -4,6 +4,9 @@ import { LayoutGrid, Package, QrCode, Settings } from '../common/Icons';
 
 export type BottomNavTab = 'home' | 'orders' | 'scan' | 'account';
 
+// Keep this in sync with the list inset so the last item is never obscured.
+export const STAFF_BOTTOM_NAV_HEIGHT = 82;
+
 interface StaffBottomNavProps {
   currentTab: BottomNavTab;
   onSelectTab: (tab: BottomNavTab) => void;
@@ -21,6 +24,13 @@ export const StaffBottomNav: React.FC<StaffBottomNavProps> = ({
     <View
       className="absolute bottom-0 left-0 right-0 bg-[#F8FAFC]/95 border-t border-[#E2E8F0] px-4 pt-2 pb-5 flex-row items-center justify-around"
       style={{
+        // React Native Web supports fixed positioning; native apps retain the
+        // equivalent absolute positioning inside the full-screen root view.
+        ...(Platform.OS === 'web'
+          ? { position: 'fixed' as unknown as 'absolute', bottom: 0, left: 0, right: 0 }
+          : { position: 'absolute', bottom: 0, left: 0, right: 0 }),
+        minHeight: STAFF_BOTTOM_NAV_HEIGHT,
+        zIndex: 10,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: -2 },
         shadowOpacity: 0.04,
