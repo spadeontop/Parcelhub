@@ -37,6 +37,14 @@ export async function POST(request: NextRequest) {
       statusMessage: "MPIN verified",
       authToken,
       refreshToken,
+      customer: {
+        id: customer.id,
+        email: customer.email,
+        firstName: customer.firstName,
+        lastName: customer.lastName,
+        middleInitial: customer.middleInitial,
+        phoneNumber: customer.phoneNumber,
+      },
     };
 
     return jsonSuccess(response);

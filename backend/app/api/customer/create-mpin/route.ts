@@ -26,6 +26,8 @@ export async function POST(request: NextRequest) {
       return jsonError("Customer not found", 404, "Not Found");
     }
 
+    const customer = db.getCustomerById(session.userId as CustomerId);
+
     const authToken = generateMockToken({
       userId: session.userId,
       role: "CUSTOMER",
@@ -37,6 +39,16 @@ export async function POST(request: NextRequest) {
       statusMessage: "MPIN created successfully",
       authToken,
       refreshToken,
+      ...(customer && {
+        customer: {
+          id: customer.id,
+          email: customer.email,
+          firstName: customer.firstName,
+          lastName: customer.lastName,
+          middleInitial: customer.middleInitial,
+          phoneNumber: customer.phoneNumber,
+        },
+      }),
     };
 
     return jsonSuccess(response);

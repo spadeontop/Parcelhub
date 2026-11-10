@@ -51,7 +51,15 @@
 {
   "statusMessage": "MPIN created successfully",
   "authToken": "string",
-  "refreshToken": "string"
+  "refreshToken": "string",
+  "customer": {
+    "id": "CST-001",
+    "email": "user@example.com",
+    "firstName": "John",
+    "lastName": "Doe",
+    "middleInitial": "D",
+    "phoneNumber": "+639123456789"
+  }
 }
 ```
 
@@ -68,7 +76,32 @@
 {
   "statusMessage": "MPIN verified",
   "authToken": "string",
-  "refreshToken": "string"
+  "refreshToken": "string",
+  "customer": {
+    "id": "CST-001",
+    "email": "user@example.com",
+    "firstName": "John",
+    "lastName": "Doe",
+    "middleInitial": "D",
+    "phoneNumber": "+639123456789"
+  }
+}
+```
+
+### `GET /api/customer/profile`
+- **Headers**: `Authorization: Bearer <authToken>`
+- **Response**:
+```json
+{
+  "statusMessage": "Profile retrieved successfully",
+  "customer": {
+    "id": "CST-001",
+    "email": "user@example.com",
+    "firstName": "John",
+    "lastName": "Doe",
+    "middleInitial": "D",
+    "phoneNumber": "+639123456789"
+  }
 }
 ```
 
