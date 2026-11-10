@@ -208,7 +208,16 @@ export const OrderDetailsScreen: React.FC = () => {
             </View>
 
             {/* QR Code Panel with Dynamic State Overlays */}
-            <View className="w-full max-w-[280px] aspect-square rounded-2xl bg-white border border-[#f0f1f3] shadow-sm p-4 items-center justify-center relative overflow-hidden">
+            <View
+              style={{
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: 0.05,
+                shadowRadius: 2,
+                elevation: 1,
+              }}
+              className="w-full max-w-[280px] aspect-square rounded-2xl bg-white border border-[#f0f1f3] p-4 items-center justify-center relative overflow-hidden"
+            >
               <View
                 style={{
                   opacity: isReleaseExpired || isClaimed ? 0.1 : 1,
@@ -285,7 +294,14 @@ export const OrderDetailsScreen: React.FC = () => {
                   activeOpacity={0.8}
                   onPress={handleRefreshRelease}
                   disabled={isRefreshingRelease}
-                  className="w-full max-w-[320px] py-3.5 px-6 rounded-2xl bg-[#1b65e8] shadow-md flex-row items-center justify-center gap-2 mb-4"
+                  style={{
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.1,
+                    shadowRadius: 3,
+                    elevation: 2,
+                  }}
+                  className="w-full max-w-[320px] py-3.5 px-6 rounded-2xl bg-[#1b65e8] flex-row items-center justify-center gap-2 mb-4"
                 >
                   {isRefreshingRelease ? (
                     <ActivityIndicator size="small" color="#ffffff" />
@@ -364,7 +380,16 @@ export const OrderDetailsScreen: React.FC = () => {
         /* Dedicated Complete Details Stepper Page (matching attached image) */
         <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
           {/* Top Colored Status Banner with Circular Back Button */}
-          <View className={`${bannerBg} py-5 px-6 items-center relative shadow-xs`}>
+          <View
+            style={{
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: 0.05,
+              shadowRadius: 1,
+              elevation: 1,
+            }}
+            className={`${bannerBg} py-5 px-6 items-center relative`}
+          >
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={() => navigateTo('home')}
@@ -704,7 +729,14 @@ export const OrderDetailsScreen: React.FC = () => {
                 <TouchableOpacity
                   activeOpacity={0.8}
                   onPress={() => navigateTo('qr_screen')}
-                  className="w-full py-3.5 px-6 rounded-2xl bg-[#1b65e8] shadow-md flex-row items-center justify-center gap-2"
+                  style={{
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.1,
+                    shadowRadius: 3,
+                    elevation: 2,
+                  }}
+                  className="w-full py-3.5 px-6 rounded-2xl bg-[#1b65e8] flex-row items-center justify-center gap-2"
                 >
                   <Text className="text-white font-bold text-sm tracking-wide">
                     Generate QR
@@ -753,7 +785,14 @@ export const OrderDetailsScreen: React.FC = () => {
                         activeOpacity={0.8}
                         onPress={handleInitiateClaim}
                         disabled={!claimConfirmed}
-                        className={`w-full py-3.5 px-6 rounded-2xl shadow-md items-center justify-center ${
+                        style={{
+                          shadowColor: '#000',
+                          shadowOffset: { width: 0, height: 2 },
+                          shadowOpacity: 0.1,
+                          shadowRadius: 3,
+                          elevation: 2,
+                        }}
+                        className={`w-full py-3.5 px-6 rounded-2xl items-center justify-center ${
                           claimConfirmed ? 'bg-[#1b65e8]' : 'bg-gray-300 opacity-80'
                         }`}
                       >
