@@ -31,12 +31,11 @@ export async function seedDatabase() {
     .insert(staff)
     .values({
       id: staffId,
-      email: "staff@parcelhub.com",
+      username: "staff",
       passwordHash: "string",
       firstName: "Jane",
       lastName: "Smith",
       middleInitial: "A",
-      phoneNumber: "+639987654321",
     })
     .onConflictDoNothing();
 
@@ -62,7 +61,6 @@ export async function seedDatabase() {
       statusTimeline: [
         { status: "PENDING_INITIALIZATION" as const, timestamp: "2026-10-18T08:00:00Z" },
       ],
-      qrImageUrl: "https://storage.parcelhub.com/qr/ORD-101.png",
       imageUrl: "https://storage.parcelhub.com/init/ORD-101.jpg",
       customerId,
       modifiedBy: customerId,
@@ -79,7 +77,6 @@ export async function seedDatabase() {
       statusTimeline: [
         { status: "PENDING_INITIALIZATION" as const, timestamp: "2026-10-18T08:30:00Z" },
       ],
-      qrImageUrl: "https://storage.parcelhub.com/qr/ORD-102.png",
       imageUrl: "https://storage.parcelhub.com/init/ORD-102.jpg",
       customerId,
       modifiedBy: customerId,
@@ -98,7 +95,6 @@ export async function seedDatabase() {
         { status: "PENDING_INITIALIZATION" as const, timestamp: "2026-10-18T08:30:00Z" },
         { status: "PAYMENT_REQUIRED" as const, timestamp: "2026-10-18T09:00:00Z" },
       ],
-      qrImageUrl: "https://storage.parcelhub.com/qr/ORD-201.png",
       customerId,
       modifiedBy: staffId,
       timestamp: new Date("2026-10-18T09:00:00Z"),
@@ -117,7 +113,6 @@ export async function seedDatabase() {
         { status: "PENDING_INITIALIZATION" as const, timestamp: "2026-10-18T09:15:00Z" },
         { status: "PAYMENT_REQUIRED" as const, timestamp: "2026-10-18T09:45:00Z" },
       ],
-      qrImageUrl: "https://storage.parcelhub.com/qr/ORD-202.png",
       customerId,
       modifiedBy: staffId,
       timestamp: new Date("2026-10-18T09:45:00Z"),

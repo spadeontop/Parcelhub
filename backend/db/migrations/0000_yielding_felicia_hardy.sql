@@ -28,6 +28,7 @@ CREATE TABLE "fcm_tokens" (
 --> statement-breakpoint
 CREATE TABLE "orders" (
 	"id" text PRIMARY KEY NOT NULL,
+	"ticket_code" text,
 	"tracking_id" text NOT NULL,
 	"product_name" text NOT NULL,
 	"recipient_name" text NOT NULL,
@@ -36,7 +37,6 @@ CREATE TABLE "orders" (
 	"amount_received" double precision,
 	"status" text NOT NULL,
 	"status_timeline" jsonb NOT NULL,
-	"qr_image_url" text NOT NULL,
 	"image_url" text,
 	"proof_image_url" text,
 	"customer_id" text NOT NULL,
@@ -53,15 +53,14 @@ CREATE TABLE "orders" (
 --> statement-breakpoint
 CREATE TABLE "staff" (
 	"id" text PRIMARY KEY NOT NULL,
-	"email" text NOT NULL,
+	"username" text NOT NULL,
 	"password_hash" text NOT NULL,
 	"first_name" text NOT NULL,
 	"last_name" text NOT NULL,
 	"middle_initial" text,
-	"phone_number" text NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "staff_email_unique" UNIQUE("email")
+	CONSTRAINT "staff_username_unique" UNIQUE("username")
 );
 --> statement-breakpoint
 ALTER TABLE "orders" ADD CONSTRAINT "orders_customer_id_customers_id_fk" FOREIGN KEY ("customer_id") REFERENCES "public"."customers"("id") ON DELETE cascade ON UPDATE no action;
