@@ -201,6 +201,9 @@ export const staffApi = {
         courierPaidBy: o.courierPaidBy,
         courierPaidByName: o.courierPaidByName,
         courierPaidAt: o.courierPaidAt,
+        claimedAt: o.claimedAt,
+        createdAt: o.createdAt || (o.statusTimeline && o.statusTimeline[0]?.timestamp) || o.timestamp,
+        statusTimeline: o.statusTimeline,
         proofImageUrl: o.proofImageUrl || o.imageUrl,
         notes: o.notes,
       }));
@@ -255,6 +258,9 @@ export const staffApi = {
         courierPaidBy: o.courierPaidBy,
         courierPaidByName: o.courierPaidByName,
         courierPaidAt: o.courierPaidAt,
+        claimedAt: o.claimedAt,
+        createdAt: o.createdAt || (o.statusTimeline && o.statusTimeline[0]?.timestamp) || o.timestamp,
+        statusTimeline: o.statusTimeline,
         proofImageUrl: o.proofImageUrl,
       };
     } catch (err: any) {
