@@ -23,11 +23,11 @@ export async function POST(request: NextRequest) {
     const body = (await request.json()) as CustomerVerifyMpinReq;
 
     if (!body.preAuthToken || !body.mpin) {
-      return jsonError("preAuthToken and 4-digit mpin are required", 400);
+      return jsonError("Please enter your 4-digit MPIN", 400);
     }
 
     if (!/^\d{4}$/.test(body.mpin)) {
-      return jsonError("MPIN must be exactly 4 digits", 400);
+      return jsonError("MPIN must be 4 numbers", 400);
     }
 
     // ---------------------------------------------------------
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     // ---------------------------------------------------------
     const { payload, error } = await verifyV1Token(body.preAuthToken, "PRE_AUTH");
     if (error || !payload || !payload.userId || payload.role !== "CUSTOMER") {
-      return jsonError(error || "Invalid or expired preAuthToken", 401, "Unauthorized");
+      return jsonError("Please log in again", 401, "Unauthorized");
     }
 
     // ---------------------------------------------------------
@@ -50,24 +50,24 @@ export async function POST(request: NextRequest) {
     });
 
     if (!customer) {
-      return jsonError("Customer not found", 404, "Not Found");
+      return jsonError("Account not found", 404, "Not Found");
     }
 
     if (customer.blacklisted) {
       return jsonError(
-        `Account is blacklisted: ${customer.blacklistReason || "Contact support"}`,
+        `Account suspended: ${customer.blacklistReason || "Please contact support"}`,
         403,
         "Forbidden"
       );
     }
 
     if (!customer.mpin) {
-      return jsonError("MPIN has not been set up. Please call create-mpin first.", 400);
+      return jsonError("Please set up your MPIN first", 400);
     }
 
     const isMpinValid = await bcrypt.compare(body.mpin, customer.mpin);
     if (!isMpinValid) {
-      return jsonError("Invalid MPIN", 401, "Unauthorized");
+      return jsonError("Incorrect MPIN", 401, "Unauthorized");
     }
 
     // ---------------------------------------------------------
