@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { customers } from "@/db/schema";
@@ -12,13 +13,19 @@ import {
 export async function POST(request: NextRequest) {
   try {
     // ---------------------------------------------------------
-    // 2. Request Validation: Parse body & require refreshToken
+    // 2. Request Validation: Parse body & check required fields
     // ---------------------------------------------------------
     const body = (await request.json()) as CustomerRefreshTokenReq;
 
     const refreshToken = body.refreshToken?.trim();
-    if (!refreshToken) {
-      return jsonError("Refresh token is required", 400);
+    const mpin = body.mpin?.trim();
+
+    if (!refreshToken || !mpin) {
+      return jsonError("Please enter your 4-digit MPIN", 400);
+    }
+
+    if (!/^\d{4}$/.test(mpin)) {
+      return jsonError("MPIN must be 4 numbers", 400);
     }
 
     // ---------------------------------------------------------
@@ -26,14 +33,16 @@ export async function POST(request: NextRequest) {
     // ---------------------------------------------------------
     const { payload, error } = await verifyV1Token(refreshToken, "REFRESH");
     if (error || !payload || !payload.userId || payload.role !== "CUSTOMER") {
-      return jsonError("Please log in again", 401, "Unauthorized");
+      return jsonError("Session expired. Please log in again", 401, "Unauthorized");
     }
 
     // ---------------------------------------------------------
     // 3. Logic:
     //    a. Fetch customer from DB
     //    b. Verify existence & check if suspended/blacklisted
-    //    c. Issue fresh 15-minute authToken without rotating refreshToken
+    //    c. Guard against unset MPIN
+    //    d. Verify 4-digit MPIN against bcrypt hash
+    //    e. Issue fresh 15-minute authToken
     // ---------------------------------------------------------
     const customer = await db.query.customers.findFirst({
       where: eq(customers.id, payload.userId),
@@ -51,6 +60,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!customer.mpin) {
+      return jsonError("Please set up your MPIN first", 400);
+    }
+
+    const isMpinValid = await bcrypt.compare(mpin, customer.mpin);
+    if (!isMpinValid) {
+      return jsonError("Incorrect MPIN", 401, "Unauthorized");
+    }
+
     const authToken = await signAuthToken({
       userId: customer.id,
       role: "CUSTOMER",
@@ -62,7 +80,7 @@ export async function POST(request: NextRequest) {
     //    Return fresh 15-minute authToken
     // ---------------------------------------------------------
     const response: CustomerRefreshTokenRes = {
-      statusMessage: "Token refreshed successfully",
+      statusMessage: "Unlocked successfully",
       authToken,
     };
 
@@ -71,4 +89,3 @@ export async function POST(request: NextRequest) {
     return jsonError("Please log in again", 400);
   }
 }
-

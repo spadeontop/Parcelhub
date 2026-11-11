@@ -121,9 +121,10 @@ export type CustomerVerifyMpinRes = StandardSuccessResponse & {
   readonly customer?: CustomerProfile;
 };
 
-// POST /api/v1/customer/refresh
+// POST /api/v1/customer/refresh (MPIN unlock with refreshToken)
 export type CustomerRefreshTokenReq = {
   readonly refreshToken: JWTToken;
+  readonly mpin: MPIN;
 };
 
 export type CustomerRefreshTokenRes = StandardSuccessResponse & {
