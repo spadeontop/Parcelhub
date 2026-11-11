@@ -121,6 +121,16 @@ export type CustomerVerifyMpinRes = StandardSuccessResponse & {
   readonly customer?: CustomerProfile;
 };
 
+// POST /api/v1/customer/refresh (MPIN unlock with refreshToken)
+export type CustomerRefreshTokenReq = {
+  readonly refreshToken: JWTToken;
+  readonly mpin: MPIN;
+};
+
+export type CustomerRefreshTokenRes = StandardSuccessResponse & {
+  readonly authToken: JWTToken;
+};
+
 // GET /api/v1/customer/profile
 export type CustomerProfile = {
   readonly id: CustomerId;
@@ -186,11 +196,12 @@ export type CustomerGetOrderRes = StandardSuccessResponse & {
 // POST /api/v1/customer/orders/initialize
 export type CustomerInitOrderReq = {
   readonly imageUrl: string;
-  readonly trackingId?: string;
+  readonly trackingId: string;
 };
 
 export type CustomerInitOrderRes = StandardSuccessResponse & {
   readonly orderId: OrderId;
+  readonly ticketCode: string;
 };
 
 // PUT /api/v1/customer/orders/{id}
