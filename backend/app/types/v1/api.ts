@@ -186,11 +186,12 @@ export type CustomerGetOrderRes = StandardSuccessResponse & {
 // POST /api/v1/customer/orders/initialize
 export type CustomerInitOrderReq = {
   readonly imageUrl: string;
-  readonly trackingId?: string;
+  readonly trackingId: string;
 };
 
 export type CustomerInitOrderRes = StandardSuccessResponse & {
   readonly orderId: OrderId;
+  readonly ticketCode: string;
 };
 
 // PUT /api/v1/customer/orders/{id}
