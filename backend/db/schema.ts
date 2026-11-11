@@ -62,7 +62,6 @@ export const orders = pgTable("orders", {
   statusTimeline: jsonb("status_timeline")
     .$type<StatusTimelineEntry[]>()
     .notNull(),
-  qrImageUrl: text("qr_image_url").notNull(),
   imageUrl: text("image_url"),
   proofImageUrl: text("proof_image_url"),
   customerId: text("customer_id")
