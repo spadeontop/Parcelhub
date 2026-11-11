@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { useApp } from '../../context/AppContext';
@@ -28,6 +28,16 @@ export const OrderDetailsScreen: React.FC = () => {
 
   const order = getCurrentOrder();
   const status = order.status;
+
+  // Memoize the SVG QR code so it doesn't recalculate every second on timer ticks
+  const memoizedQr = useMemo(() => (
+    <QRCode
+      value={order.id || 'PARCELHUB-RELEASE'}
+      size={210}
+      color="#0f172a"
+      backgroundColor="#ffffff"
+    />
+  ), [order.id]);
 
   const [claimConfirmed, setClaimConfirmed] = useState<boolean>(false);
   const [isRefreshingRelease, setIsRefreshingRelease] = useState<boolean>(false);
@@ -223,12 +233,7 @@ export const OrderDetailsScreen: React.FC = () => {
                   opacity: isReleaseExpired || isClaimed ? 0.1 : 1,
                 }}
               >
-                <QRCode
-                  value={order.id || 'PARCELHUB-RELEASE'}
-                  size={210}
-                  color="#0f172a"
-                  backgroundColor="#ffffff"
-                />
+                {memoizedQr}
               </View>
 
               {/* State 1: Claimed Overlay (Only 1 checkmark on screen, non-circular check design, no text below 'Item handed over') */}

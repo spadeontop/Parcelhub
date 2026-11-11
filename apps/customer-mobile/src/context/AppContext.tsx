@@ -347,8 +347,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setOrders((prev) => {
             const idx = prev.findIndex((o) => o.id === selectedOrderId);
             if (idx >= 0) {
+              const current = prev[idx];
+              
+              // Team Lead Damping Rule (±3 seconds threshold):
+              // When polling hits during an active release window, compare backend seconds with frontend seconds.
+              // If the difference is <= 3 seconds, do NOT overwrite the local claim timer/expiry timestamps.
+              // Only overwrite if difference is > 3 seconds (or if status/other fields changed).
+              let preservedClaimInitiatedAt = updated.claimInitiatedAt;
+              let preservedClaimExpiresAt = updated.claimExpiresAt;
+
+              if (current.claimExpiresAt && updated.claimExpiresAt) {
+                const currentRemaining = Math.max(0, Math.floor((new Date(current.claimExpiresAt).getTime() - Date.now()) / 1000));
+                const remoteRemaining = Math.max(0, Math.floor((new Date(updated.claimExpiresAt).getTime() - Date.now()) / 1000));
+                const diff = Math.abs(currentRemaining - remoteRemaining);
+
+                if (diff <= 3) {
+                  // Within ±3s tolerance: keep frontend timer intact to prevent flicker
+                  preservedClaimInitiatedAt = current.claimInitiatedAt;
+                  preservedClaimExpiresAt = current.claimExpiresAt;
+                }
+              }
+
+              const merged: Order = {
+                ...updated,
+                claimInitiatedAt: preservedClaimInitiatedAt,
+                claimExpiresAt: preservedClaimExpiresAt,
+              };
+
               const copy = [...prev];
-              copy[idx] = updated;
+              copy[idx] = merged;
               return copy;
             }
             return [updated, ...prev];
