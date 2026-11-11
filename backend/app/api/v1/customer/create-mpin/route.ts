@@ -3,7 +3,11 @@ import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { customers } from "@/db/schema";
-import { decodeToken, generateMockToken } from "@/app/lib/auth";
+import {
+  verifyV1Token,
+  signAuthToken,
+  signRefreshToken,
+} from "@/app/lib/v1/jwt";
 import { jsonError, jsonSuccess } from "@/app/lib/response";
 import {
   CustomerCreateMpinReq,
@@ -27,11 +31,11 @@ export async function POST(request: NextRequest) {
     }
 
     // ---------------------------------------------------------
-    // 1. Auth Validation: Verify preAuthToken & ensure isPreAuth is true
+    // 1. Auth Validation: Verify cryptographic signature, 5m TTL, & type
     // ---------------------------------------------------------
-    const session = decodeToken(body.preAuthToken);
-    if (!session || !session.userId || session.isPreAuth !== true || session.role !== "CUSTOMER") {
-      return jsonError("Invalid or expired preAuthToken", 401, "Unauthorized");
+    const { payload, error } = await verifyV1Token(body.preAuthToken, "PRE_AUTH");
+    if (error || !payload || !payload.userId || payload.role !== "CUSTOMER") {
+      return jsonError(error || "Invalid or expired preAuthToken", 401, "Unauthorized");
     }
 
     // ---------------------------------------------------------
@@ -41,7 +45,7 @@ export async function POST(request: NextRequest) {
     //    c. Update customer record with hashed MPIN and updatedAt
     // ---------------------------------------------------------
     const customer = await db.query.customers.findFirst({
-      where: eq(customers.id, session.userId),
+      where: eq(customers.id, payload.userId),
     });
 
     if (!customer) {
@@ -64,19 +68,24 @@ export async function POST(request: NextRequest) {
         mpin: hashedMpin,
         updatedAt: new Date(),
       })
-      .where(eq(customers.id, session.userId))
+      .where(eq(customers.id, payload.userId))
       .returning();
 
     // ---------------------------------------------------------
     // 4. Response:
-    //    Generate full session auth token, refresh token, and customer profile
+    //    Generate real signed authToken (15m TTL), refreshToken (30d TTL), and profile
     // ---------------------------------------------------------
-    const authToken = generateMockToken({
+    const authToken = await signAuthToken({
       userId: updatedCustomer.id,
       role: "CUSTOMER",
       email: updatedCustomer.email,
     });
-    const refreshToken = `refresh_${authToken}`;
+
+    const refreshToken = await signRefreshToken({
+      userId: updatedCustomer.id,
+      role: "CUSTOMER",
+      email: updatedCustomer.email,
+    });
 
     const response: CustomerCreateMpinRes = {
       statusMessage: "MPIN created successfully",
@@ -101,4 +110,3 @@ export async function POST(request: NextRequest) {
     return jsonError("Invalid request body", 400);
   }
 }
-

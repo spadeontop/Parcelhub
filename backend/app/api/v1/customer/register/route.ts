@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { customers } from "@/db/schema";
-import { generateMockToken } from "@/app/lib/auth";
+import { signPreAuthToken } from "@/app/lib/v1/jwt";
 import { jsonError, jsonSuccess } from "@/app/lib/response";
 import { CustomerRegisterReq, CustomerRegisterRes } from "@/app/types/v1/api";
 
@@ -59,13 +59,12 @@ export async function POST(request: NextRequest) {
 
     // ---------------------------------------------------------
     // 4. Response:
-    //    Generate pre-auth token (MPIN pending) & return 201 Created
+    //    Generate real signed pre-auth token (5m TTL) & return 201
     // ---------------------------------------------------------
-    const preAuthToken = generateMockToken({
+    const preAuthToken = await signPreAuthToken({
       userId: newCustomer.id,
       role: "CUSTOMER",
       email: newCustomer.email,
-      isPreAuth: true,
     });
 
     const response: CustomerRegisterRes = {
@@ -78,4 +77,3 @@ export async function POST(request: NextRequest) {
     return jsonError("Invalid request body", 400);
   }
 }
-
