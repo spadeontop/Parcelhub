@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Animated } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { useApp } from '../../context/AppContext';
 import {
@@ -40,11 +40,15 @@ export const OrderDetailsScreen: React.FC = () => {
   ), [order.id]);
 
   const [claimConfirmed, setClaimConfirmed] = useState<boolean>(false);
+  const [isInitiatingClaim, setIsInitiatingClaim] = useState<boolean>(false);
+  const [isClaimLocked, setIsClaimLocked] = useState<boolean>(false);
   const [isRefreshingRelease, setIsRefreshingRelease] = useState<boolean>(false);
 
   // Reset confirmation checkbox whenever the viewed order changes
   useEffect(() => {
     setClaimConfirmed(false);
+    setIsClaimLocked(false);
+    setIsInitiatingClaim(false);
   }, [order.id]);
 
   const isClaimActive = isOrderClaimUnlocked(order);
@@ -82,13 +86,48 @@ export const OrderDetailsScreen: React.FC = () => {
     bannerSubtitle = 'Claimed';
   }
 
-  const handleInitiateClaim = () => {
+  // Transition animation values when entering focused pass view (Ready for Release)
+  const passFadeAnim = useRef(new Animated.Value(isFocusedPassView ? 1 : 0)).current;
+  const passSlideAnim = useRef(new Animated.Value(isFocusedPassView ? 0 : 12)).current;
+
+  useEffect(() => {
+    if (isFocusedPassView) {
+      passFadeAnim.setValue(0);
+      passSlideAnim.setValue(12);
+      Animated.parallel([
+        Animated.timing(passFadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(passSlideAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [isFocusedPassView]);
+
+  const handleInitiateClaim = async () => {
     if (!claimConfirmed) {
       showToast('Please check the confirmation box before initiating claim.');
       return;
     }
-    setClaimConfirmed(false);
-    customerInitiateClaim(order.id);
+    if (isInitiatingClaim) return;
+
+    setIsClaimLocked(true);
+    setIsInitiatingClaim(true);
+    try {
+      await Promise.all([
+        customerInitiateClaim(order.id),
+        new Promise((resolve) => setTimeout(resolve, 450)),
+      ]);
+    } catch {
+      // Handled in context toast
+    } finally {
+      setIsInitiatingClaim(false);
+    }
   };
 
   const handleRefreshRelease = async () => {
@@ -105,6 +144,8 @@ export const OrderDetailsScreen: React.FC = () => {
 
   const handleExitFocusedPass = () => {
     setClaimConfirmed(false);
+    setIsClaimLocked(false);
+    setIsInitiatingClaim(false);
     if (isClaimed) {
       markClaimedPassSeen(order.id);
     }
@@ -182,11 +223,18 @@ export const OrderDetailsScreen: React.FC = () => {
     <View style={{ flex: 1, backgroundColor: '#ffffff' }} className="flex-1 bg-white">
       {isFocusedPassView ? (
         /* Full-screen Focused Claim Pass (Ready, Expiring Soon, Expired, and Claimed states) */
-        <ScrollView
-          className="flex-1"
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ flexGrow: 1, paddingBottom: 28 }}
+        <Animated.View
+          style={{
+            flex: 1,
+            opacity: passFadeAnim,
+            transform: [{ translateY: passSlideAnim }],
+          }}
         >
+          <ScrollView
+            className="flex-1"
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ flexGrow: 1, paddingBottom: 28 }}
+          >
           {/* Header Bar */}
           <View className="py-4 px-5 flex-row items-center justify-between relative border-b border-gray-100/60">
             <TouchableOpacity
@@ -381,6 +429,7 @@ export const OrderDetailsScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
         </ScrollView>
+        </Animated.View>
       ) : (
         /* Dedicated Complete Details Stepper Page (matching attached image) */
         <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
@@ -754,8 +803,13 @@ export const OrderDetailsScreen: React.FC = () => {
                 (hubOpen ? (
                   <View>
                     <TouchableOpacity
-                      activeOpacity={0.8}
-                      onPress={() => setClaimConfirmed(!claimConfirmed)}
+                      activeOpacity={isClaimLocked || isInitiatingClaim ? 1 : 0.8}
+                      disabled={isClaimLocked || isInitiatingClaim}
+                      onPress={() => {
+                        if (!isClaimLocked && !isInitiatingClaim) {
+                          setClaimConfirmed(!claimConfirmed);
+                        }
+                      }}
                       style={{ marginBottom: 14 }}
                       className="flex-row items-start gap-2.5 pt-1"
                     >
@@ -789,7 +843,7 @@ export const OrderDetailsScreen: React.FC = () => {
                       <TouchableOpacity
                         activeOpacity={0.8}
                         onPress={handleInitiateClaim}
-                        disabled={!claimConfirmed}
+                        disabled={!claimConfirmed || isInitiatingClaim}
                         style={{
                           shadowColor: '#000',
                           shadowOffset: { width: 0, height: 2 },
@@ -798,12 +852,20 @@ export const OrderDetailsScreen: React.FC = () => {
                           elevation: 2,
                         }}
                         className={`w-full py-3.5 px-6 rounded-2xl items-center justify-center ${
-                          claimConfirmed ? 'bg-[#1b65e8]' : 'bg-gray-300 opacity-80'
+                          !claimConfirmed
+                            ? 'bg-gray-300 opacity-80'
+                            : isInitiatingClaim
+                            ? 'bg-[#1b65e8] opacity-85'
+                            : 'bg-[#1b65e8]'
                         }`}
                       >
-                        <Text className="text-white font-bold text-sm tracking-wide text-center">
-                          Initiate Claim
-                        </Text>
+                        {isInitiatingClaim ? (
+                          <ActivityIndicator size="small" color="#ffffff" />
+                        ) : (
+                          <Text className="text-white font-bold text-sm tracking-wide text-center">
+                            Initiate Claim
+                          </Text>
+                        )}
                       </TouchableOpacity>
                     </View>
                   </View>
