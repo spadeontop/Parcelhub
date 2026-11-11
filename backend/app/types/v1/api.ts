@@ -121,6 +121,15 @@ export type CustomerVerifyMpinRes = StandardSuccessResponse & {
   readonly customer?: CustomerProfile;
 };
 
+// POST /api/v1/customer/refresh
+export type CustomerRefreshTokenReq = {
+  readonly refreshToken: JWTToken;
+};
+
+export type CustomerRefreshTokenRes = StandardSuccessResponse & {
+  readonly authToken: JWTToken;
+};
+
 // GET /api/v1/customer/profile
 export type CustomerProfile = {
   readonly id: CustomerId;
