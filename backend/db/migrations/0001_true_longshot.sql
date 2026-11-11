@@ -1,1 +1,0 @@
-ALTER TABLE "orders" ADD COLUMN "ticket_code" text;
