@@ -156,3 +156,93 @@ export async function authenticateV1Request(
   return { session: payload, status: 200 };
 }
 
+// ==========================================
+// Staff-Specific Independent Token Helpers
+// ==========================================
+
+export interface V1StaffTokenPayload extends JWTPayload {
+  userId: string;
+  role: "STAFF" | "ADMIN";
+  username: string;
+  type: "AUTH" | "REFRESH";
+}
+
+/**
+ * Mint an independent Staff session auth token (indefinite / non-expiring for uninterrupted POS/terminal monitoring).
+ * Only invalidates when the client logs out.
+ */
+export async function signStaffAuthToken(payload: {
+  userId: string;
+  role: "STAFF" | "ADMIN";
+  username: string;
+}): Promise<string> {
+  return new SignJWT({
+    userId: payload.userId,
+    role: payload.role,
+    username: payload.username,
+    type: "AUTH",
+  })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .sign(getJwtSecret());
+}
+
+/**
+ * Mint an independent Staff refresh token (indefinite / non-expiring).
+ */
+export async function signStaffRefreshToken(payload: {
+  userId: string;
+  role: "STAFF" | "ADMIN";
+  username: string;
+}): Promise<string> {
+  return new SignJWT({
+    userId: payload.userId,
+    role: payload.role,
+    username: payload.username,
+    type: "REFRESH",
+  })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .sign(getJwtSecret());
+}
+
+/**
+ * Verifies any v1 Staff JWT token using HS256
+ */
+export async function verifyStaffToken(
+  token: string,
+  expectedType?: "AUTH" | "REFRESH"
+): Promise<{ payload: V1StaffTokenPayload | null; error?: string }> {
+  if (!token) {
+    return { payload: null, error: "Missing token" };
+  }
+
+  try {
+    const { payload } = await jwtVerify(token, getJwtSecret(), {
+      algorithms: ["HS256"],
+    });
+
+    const staffPayload = payload as unknown as V1StaffTokenPayload;
+
+    if (expectedType && staffPayload.type !== expectedType) {
+      return {
+        payload: null,
+        error: `Invalid token type: expected ${expectedType}, received ${staffPayload.type}`,
+      };
+    }
+
+    if (staffPayload.role !== "STAFF" && staffPayload.role !== "ADMIN") {
+      return {
+        payload: null,
+        error: "Forbidden: Not a staff or admin token",
+      };
+    }
+
+    return { payload: staffPayload };
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : "Token verification failed";
+    return { payload: null, error: errorMsg };
+  }
+}
+
+

@@ -1,3 +1,4 @@
+import bcrypt from "bcryptjs";
 import { db } from "./index";
 import { runMigrations } from "./migrate";
 import { appConfig, customers, orders, staff } from "./schema";
@@ -11,29 +12,34 @@ export async function seedDatabase() {
 
   // Seed default customer
   const customerId = "CST-001";
+  const customerPasswordHash = await bcrypt.hash("password", 10);
+  const customerMpinHash = await bcrypt.hash("1234", 10);
+
   await db
     .insert(customers)
     .values({
       id: customerId,
       email: "user@example.com",
-      passwordHash: await bcrypt.hash("password", 10),
+      passwordHash: customerPasswordHash,
       firstName: "John",
       lastName: "Doe",
       middleInitial: "D",
       phoneNumber: "+639123456789",
-      mpin: await bcrypt.hash("1234", 10),
+      mpin: customerMpinHash,
       blacklisted: false,
     })
     .onConflictDoNothing();
 
   // Seed default staff
   const staffId = "STF-001";
+  const staffPasswordHash = await bcrypt.hash("string", 10);
+
   await db
     .insert(staff)
     .values({
       id: staffId,
       username: "staff",
-      passwordHash: "string",
+      passwordHash: staffPasswordHash,
       firstName: "Jane",
       lastName: "Smith",
       middleInitial: "A",

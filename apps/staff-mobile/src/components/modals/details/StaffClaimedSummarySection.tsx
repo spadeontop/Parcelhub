@@ -1,13 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   Modal,
   Image,
+  Animated,
+  PanResponder,
+  useWindowDimensions,
+  SafeAreaView,
 } from 'react-native';
 import { StaffOrder } from '../../../types';
-import { Check, CheckCircle, X } from '../../common/Icons';
+import { Check, X, Plus, Minus } from '../../common/Icons';
 
 interface StaffClaimedSummarySectionProps {
   order: StaffOrder;
@@ -45,6 +49,157 @@ export const StaffClaimedSummarySection: React.FC<StaffClaimedSummarySectionProp
   onReturnHome,
 }) => {
   const [isPodModalOpen, setIsPodModalOpen] = useState<boolean>(false);
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+
+  // Photo size tailored for mobile view: clearly visible, comfortable margins, not cramped or overflowing
+  const imageWidth = Math.min(windowWidth - 32, 420);
+  const imageHeight = Math.min(windowHeight * 0.65, 520);
+
+  const [displayScale, setDisplayScale] = useState<number>(1);
+  const scale = useRef(new Animated.Value(1)).current;
+  const pan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const currentScale = useRef<number>(1);
+  const currentPan = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const initialDistance = useRef<number | null>(null);
+  const initialScale = useRef<number>(1);
+  const lastTap = useRef<number>(0);
+
+  useEffect(() => {
+    const scaleListener = scale.addListener(({ value }) => {
+      currentScale.current = value;
+    });
+    const panListener = pan.addListener((value) => {
+      currentPan.current = value;
+    });
+    return () => {
+      scale.removeListener(scaleListener);
+      pan.removeListener(panListener);
+    };
+  }, [scale, pan]);
+
+  // Reset zoom whenever modal opens
+  useEffect(() => {
+    if (isPodModalOpen) {
+      scale.setValue(1);
+      pan.setValue({ x: 0, y: 0 });
+      currentScale.current = 1;
+      currentPan.current = { x: 0, y: 0 };
+      setDisplayScale(1);
+    }
+  }, [isPodModalOpen]);
+
+  const animateTo = (targetScale: number) => {
+    const clampedScale = Math.max(1, Math.min(targetScale, 4));
+    setDisplayScale(Number(clampedScale.toFixed(1)));
+    if (clampedScale === 1) {
+      Animated.parallel([
+        Animated.spring(scale, { toValue: 1, useNativeDriver: true }),
+        Animated.spring(pan, { toValue: { x: 0, y: 0 }, useNativeDriver: true }),
+      ]).start();
+    } else {
+      Animated.spring(scale, { toValue: clampedScale, useNativeDriver: true }).start();
+    }
+  };
+
+  const handleClose = () => {
+    scale.setValue(1);
+    pan.setValue({ x: 0, y: 0 });
+    currentScale.current = 1;
+    currentPan.current = { x: 0, y: 0 };
+    setDisplayScale(1);
+    setIsPodModalOpen(false);
+  };
+
+  const calcDistance = (x1: number, y1: number, x2: number, y2: number) => {
+    const dx = x1 - x2;
+    const dy = y1 - y2;
+    return Math.sqrt(dx * dx + dy * dy);
+  };
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        return (
+          evt.nativeEvent.touches.length === 2 ||
+          currentScale.current > 1.05 ||
+          Math.abs(gestureState.dx) > 4 ||
+          Math.abs(gestureState.dy) > 4
+        );
+      },
+      onPanResponderGrant: (evt) => {
+        const touches = evt.nativeEvent.touches;
+        if (touches.length === 2) {
+          initialDistance.current = calcDistance(
+            touches[0].pageX,
+            touches[0].pageY,
+            touches[1].pageX,
+            touches[1].pageY
+          );
+          initialScale.current = currentScale.current;
+        } else if (touches.length === 1) {
+          pan.setOffset({
+            x: currentPan.current.x,
+            y: currentPan.current.y,
+          });
+          pan.setValue({ x: 0, y: 0 });
+
+          const now = Date.now();
+          if (now - lastTap.current < 300) {
+            if (currentScale.current > 1.2) {
+              animateTo(1);
+            } else {
+              animateTo(2.5);
+            }
+          }
+          lastTap.current = now;
+        }
+      },
+      onPanResponderMove: (evt, gestureState) => {
+        const touches = evt.nativeEvent.touches;
+        if (touches.length === 2 && initialDistance.current) {
+          const dist = calcDistance(
+            touches[0].pageX,
+            touches[0].pageY,
+            touches[1].pageX,
+            touches[1].pageY
+          );
+          const ratio = dist / initialDistance.current;
+          const newScale = Math.max(1, Math.min(initialScale.current * ratio, 4));
+          scale.setValue(newScale);
+        } else if (touches.length === 1 && currentScale.current > 1.05) {
+          pan.x.setValue(gestureState.dx);
+          pan.y.setValue(gestureState.dy);
+        }
+      },
+      onPanResponderRelease: () => {
+        initialDistance.current = null;
+        pan.flattenOffset();
+        setDisplayScale(Number(currentScale.current.toFixed(1)));
+
+        if (currentScale.current <= 1.05) {
+          animateTo(1);
+        } else {
+          const maxPanX = Math.max(0, ((currentScale.current - 1) * imageWidth) / 2);
+          const maxPanY = Math.max(0, ((currentScale.current - 1) * imageHeight) / 2);
+          const clampedX = Math.max(-maxPanX, Math.min(maxPanX, currentPan.current.x));
+          const clampedY = Math.max(-maxPanY, Math.min(maxPanY, currentPan.current.y));
+
+          if (clampedX !== currentPan.current.x || clampedY !== currentPan.current.y) {
+            Animated.spring(pan, {
+              toValue: { x: clampedX, y: clampedY },
+              useNativeDriver: true,
+            }).start();
+          }
+        }
+      },
+      onPanResponderTerminate: () => {
+        initialDistance.current = null;
+        pan.flattenOffset();
+        setDisplayScale(Number(currentScale.current.toFixed(1)));
+      },
+    })
+  ).current;
 
   // Chronological timeline milestones sourced from statusTimeline or dedicated timestamps
   const timeline = order.statusTimeline || [];
@@ -207,84 +362,144 @@ export const StaffClaimedSummarySection: React.FC<StaffClaimedSummarySectionProp
         </TouchableOpacity>
       </View>
 
-      {/* Proof of Delivery Modal */}
+      {/* Proof of Delivery Photo Modal */}
       <Modal
         transparent
         animationType="fade"
         visible={isPodModalOpen}
-        onRequestClose={() => setIsPodModalOpen(false)}
+        onRequestClose={handleClose}
+        statusBarTranslucent
       >
-        <View className="flex-1 bg-black/60 justify-center items-center px-5">
-          <View
-            className="w-full max-w-sm bg-white rounded-3xl p-5 border border-[#E2E8F0]"
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(0, 0, 0, 0.9)',
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+        >
+          {/* Backdrop tap to dismiss */}
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={() => {
+              if (currentScale.current <= 1.05) {
+                handleClose();
+              } else {
+                animateTo(1);
+              }
+            }}
+            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+          />
+
+          {/* Floating Close Button Top-Right */}
+          <SafeAreaView
+            pointerEvents="box-none"
+            style={{ position: 'absolute', top: 12, right: 16, zIndex: 30 }}
+          >
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={handleClose}
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderWidth: 1,
+                borderColor: 'rgba(255, 255, 255, 0.3)',
+              }}
+              accessibilityLabel="Close Proof of Delivery"
+            >
+              <X size={20} color="#FFFFFF" strokeWidth={2.5} />
+            </TouchableOpacity>
+          </SafeAreaView>
+
+          {/* Interactable Zoomable Photo */}
+          <Animated.View
+            {...panResponder.panHandlers}
             style={{
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 8 },
-              shadowOpacity: 0.15,
-              shadowRadius: 16,
-              elevation: 8,
+              zIndex: 20,
+              transform: [
+                { translateX: pan.x },
+                { translateY: pan.y },
+                { scale: scale },
+              ],
             }}
           >
-            <View className="flex-row items-center justify-between pb-3 border-b border-[#F1F5F9]">
-              <View>
-                <Text className="text-base font-bold text-[#0F172A]">
-                  Proof of Delivery
-                </Text>
-                <Text className="text-xs text-[#64748B]">
-                  Delivery Verification Photo
-                </Text>
-              </View>
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() => setIsPodModalOpen(false)}
-                className="w-8 h-8 rounded-full bg-[#F1F5F9] items-center justify-center"
-                accessibilityLabel="Close Proof of Delivery"
-              >
-                <X size={16} color="#475569" />
-              </TouchableOpacity>
-            </View>
+            <Image
+              source={hasRemoteProof ? { uri: order.proofImageUrl! } : sampleWaybill}
+              style={{
+                width: imageWidth,
+                height: imageHeight,
+                borderRadius: 16,
+              }}
+              resizeMode="contain"
+            />
+          </Animated.View>
 
-            <View className="relative rounded-2xl overflow-hidden border border-[#E2E8F0] bg-slate-100 mt-4">
-              <Image
-                source={hasRemoteProof ? { uri: order.proofImageUrl! } : sampleWaybill}
-                style={{ width: '100%', height: 210 }}
-                resizeMode="cover"
-              />
-              <View className="absolute top-3 left-3 flex-row items-center gap-1.5 bg-[#059669] px-3 py-1.5 rounded-full">
-                <CheckCircle size={13} color="#FFFFFF" strokeWidth={2.5} />
-                <Text className="text-white text-[11px] font-bold">
-                  AI Verified: Clear &amp; Valid Parcel
-                </Text>
-              </View>
-            </View>
-
-            <View className="mt-4 p-3 bg-[#F8FAFC] rounded-2xl border border-[#F1F5F9] gap-1.5">
-              <View className="flex-row justify-between items-center">
-                <Text className="text-xs text-[#64748B]">Order ID</Text>
-                <Text className="text-xs font-bold text-[#0F172A] font-mono">
-                  {order.id}
-                </Text>
-              </View>
-              <View className="flex-row justify-between items-center">
-                <Text className="text-xs text-[#64748B]">Tracking Number</Text>
-                <Text className="text-xs font-bold text-[#0F172A] font-mono">
-                  {order.trackingId || 'N/A'}
-                </Text>
-              </View>
-              <View className="flex-row justify-between items-center">
-                <Text className="text-xs text-[#64748B]">Recipient</Text>
-                <Text className="text-xs font-semibold text-[#0F172A]">
-                  {order.customer}
-                </Text>
-              </View>
-            </View>
+          {/* Floating Zoom Controls Bar */}
+          <View
+            style={{
+              position: 'absolute',
+              bottom: 36,
+              zIndex: 30,
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: 'rgba(15, 23, 42, 0.85)',
+              paddingHorizontal: 16,
+              paddingVertical: 10,
+              borderRadius: 9999,
+              borderWidth: 1,
+              borderColor: 'rgba(255, 255, 255, 0.15)',
+              gap: 12,
+            }}
+          >
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => animateTo(currentScale.current - 0.5)}
+              disabled={displayScale <= 1}
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 16,
+                backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: displayScale <= 1 ? 0.35 : 1,
+              }}
+              accessibilityLabel="Zoom Out"
+            >
+              <Minus size={16} color="#FFFFFF" strokeWidth={2.5} />
+            </TouchableOpacity>
 
             <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={() => setIsPodModalOpen(false)}
-              className="w-full mt-4 py-3.5 bg-[#215CD4] rounded-xl items-center justify-center"
+              activeOpacity={0.7}
+              onPress={() => animateTo(1)}
+              style={{ paddingHorizontal: 6, alignItems: 'center', justifyContent: 'center' }}
+              accessibilityLabel="Reset Zoom"
             >
-              <Text className="text-white font-bold text-xs">Done</Text>
+              <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>
+                {displayScale}x {displayScale > 1 ? '(Reset)' : ''}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => animateTo(currentScale.current + 0.5)}
+              disabled={displayScale >= 4}
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 16,
+                backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: displayScale >= 4 ? 0.35 : 1,
+              }}
+              accessibilityLabel="Zoom In"
+            >
+              <Plus size={16} color="#FFFFFF" strokeWidth={2.5} />
             </TouchableOpacity>
           </View>
         </View>
