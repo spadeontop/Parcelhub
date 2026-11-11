@@ -33,6 +33,11 @@ import {
   Inbox,
   Calendar,
   AlertTriangle,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
+  Plus,
+  Minus,
 } from 'lucide-react-native';
 
 export {
@@ -69,4 +74,9 @@ export {
   Inbox,
   Calendar,
   AlertTriangle,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
+  Plus,
+  Minus,
 };
