@@ -2,7 +2,6 @@ import bcrypt from "bcryptjs";
 import { db } from "./index";
 import { runMigrations } from "./migrate";
 import { appConfig, customers, orders, staff } from "./schema";
-import bcrypt from "bcryptjs";
 
 export async function seedDatabase() {
   console.log("🌱 Running migrations on database...");
