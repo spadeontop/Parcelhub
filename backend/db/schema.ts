@@ -30,7 +30,7 @@ export const staff = pgTable("staff", {
   id: text("id")
     .primaryKey()
     .$defaultFn(() => uuidv7()),
-  email: text("email").notNull().unique(),
+  username: text("username").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
