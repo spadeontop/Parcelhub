@@ -1,6 +1,7 @@
 import { db } from "./index";
 import { runMigrations } from "./migrate";
 import { appConfig, customers, orders, staff } from "./schema";
+import bcrypt from "bcryptjs";
 
 export async function seedDatabase() {
   console.log("🌱 Running migrations on database...");
@@ -15,12 +16,12 @@ export async function seedDatabase() {
     .values({
       id: customerId,
       email: "user@example.com",
-      passwordHash: "password",
+      passwordHash: await bcrypt.hash("password", 10),
       firstName: "John",
       lastName: "Doe",
       middleInitial: "D",
       phoneNumber: "+639123456789",
-      mpin: "1234",
+      mpin: await bcrypt.hash("1234", 10),
       blacklisted: false,
     })
     .onConflictDoNothing();
@@ -59,7 +60,10 @@ export async function seedDatabase() {
       change: 0,
       status: "PENDING_INITIALIZATION" as const,
       statusTimeline: [
-        { status: "PENDING_INITIALIZATION" as const, timestamp: "2026-10-18T08:00:00Z" },
+        {
+          status: "PENDING_INITIALIZATION" as const,
+          timestamp: "2026-10-18T08:00:00Z",
+        },
       ],
       imageUrl: "https://storage.parcelhub.com/init/ORD-101.jpg",
       customerId,
@@ -75,7 +79,10 @@ export async function seedDatabase() {
       change: 0,
       status: "PENDING_INITIALIZATION" as const,
       statusTimeline: [
-        { status: "PENDING_INITIALIZATION" as const, timestamp: "2026-10-18T08:30:00Z" },
+        {
+          status: "PENDING_INITIALIZATION" as const,
+          timestamp: "2026-10-18T08:30:00Z",
+        },
       ],
       imageUrl: "https://storage.parcelhub.com/init/ORD-102.jpg",
       customerId,
@@ -92,8 +99,14 @@ export async function seedDatabase() {
       amountReceived: 0,
       status: "PAYMENT_REQUIRED" as const,
       statusTimeline: [
-        { status: "PENDING_INITIALIZATION" as const, timestamp: "2026-10-18T08:30:00Z" },
-        { status: "PAYMENT_REQUIRED" as const, timestamp: "2026-10-18T09:00:00Z" },
+        {
+          status: "PENDING_INITIALIZATION" as const,
+          timestamp: "2026-10-18T08:30:00Z",
+        },
+        {
+          status: "PAYMENT_REQUIRED" as const,
+          timestamp: "2026-10-18T09:00:00Z",
+        },
       ],
       customerId,
       modifiedBy: staffId,
@@ -110,8 +123,14 @@ export async function seedDatabase() {
       amountReceived: 0,
       status: "PAYMENT_REQUIRED" as const,
       statusTimeline: [
-        { status: "PENDING_INITIALIZATION" as const, timestamp: "2026-10-18T09:15:00Z" },
-        { status: "PAYMENT_REQUIRED" as const, timestamp: "2026-10-18T09:45:00Z" },
+        {
+          status: "PENDING_INITIALIZATION" as const,
+          timestamp: "2026-10-18T09:15:00Z",
+        },
+        {
+          status: "PAYMENT_REQUIRED" as const,
+          timestamp: "2026-10-18T09:45:00Z",
+        },
       ],
       customerId,
       modifiedBy: staffId,
@@ -135,4 +154,3 @@ if (require.main === module) {
       process.exit(1);
     });
 }
-
