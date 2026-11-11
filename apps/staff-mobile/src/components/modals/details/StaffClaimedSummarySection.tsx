@@ -46,10 +46,23 @@ export const StaffClaimedSummarySection: React.FC<StaffClaimedSummarySectionProp
 }) => {
   const [isPodModalOpen, setIsPodModalOpen] = useState<boolean>(false);
 
-  const claimedTimestamp = order.claimedAt || order.timestamp;
-  const readyTimestamp = order.courierPaidAt || order.claimInitiatedAt || order.timestamp;
-  const awaitingTimestamp = order.courierPaidAt || order.timestamp;
-  const placedTimestamp = order.timestamp;
+  // Chronological timeline milestones sourced from statusTimeline or dedicated timestamps
+  const timeline = order.statusTimeline || [];
+  const placedEntry =
+    timeline.find((s) => s.status === 'PENDING_INITIALIZATION' || s.status === 'PAYMENT_REQUIRED') ||
+    timeline[0];
+  const awaitingEntry = timeline.find((s) => s.status === 'AWAITING_PARCEL');
+  const readyEntry = timeline.find((s) => s.status === 'READY_TO_CLAIM');
+  const claimedEntry = timeline.find((s) => s.status === 'CLAIMED');
+
+  const claimedTimestamp = order.claimedAt || claimedEntry?.timestamp || order.timestamp;
+  const readyTimestamp = readyEntry?.timestamp || order.courierPaidAt || order.claimInitiatedAt;
+  const awaitingTimestamp = awaitingEntry?.timestamp || order.courierPaidAt;
+
+  let placedTimestamp = order.createdAt || placedEntry?.timestamp;
+  if (!placedTimestamp || (claimedTimestamp && placedTimestamp === claimedTimestamp && (awaitingTimestamp || readyTimestamp))) {
+    placedTimestamp = awaitingTimestamp || readyTimestamp || claimedTimestamp;
+  }
 
   const hasRemoteProof = Boolean(
     order.proofImageUrl &&

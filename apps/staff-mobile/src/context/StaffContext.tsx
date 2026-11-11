@@ -107,15 +107,18 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         // Merge notes and local claimedAt from local memory if existing
         const notesMap = new Map<string, string>();
         const claimedAtMap = new Map<string, string>();
+        const createdAtMap = new Map<string, string>();
         prev.forEach((o) => {
           if (o.notes) notesMap.set(o.id, o.notes);
           if (o.claimedAt) claimedAtMap.set(o.id, o.claimedAt);
+          if (o.createdAt) createdAtMap.set(o.id, o.createdAt);
         });
 
         return data.map((o) => ({
           ...o,
           notes: notesMap.get(o.id) || o.notes,
           claimedAt: claimedAtMap.get(o.id) || o.claimedAt,
+          createdAt: o.createdAt || createdAtMap.get(o.id),
         }));
       });
       setIsOnline(true);
@@ -128,7 +131,8 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           ? {
               ...fresh,
               notes: prevSelected.notes,
-              claimedAt: prevSelected.claimedAt,
+              claimedAt: prevSelected.claimedAt || fresh.claimedAt,
+              createdAt: fresh.createdAt || prevSelected.createdAt,
             }
           : prevSelected;
       });
@@ -246,7 +250,9 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 change: detail.change || prev.change,
                 productName: prev.productName || detail.productName,
                 notes: prev.notes,
-                claimedAt: prev.claimedAt,
+                claimedAt: prev.claimedAt || detail.claimedAt,
+                createdAt: detail.createdAt || prev.createdAt,
+                statusTimeline: detail.statusTimeline || prev.statusTimeline,
               }
             : prev
         );
@@ -292,6 +298,7 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               claimRemainingSeconds: 0,
               timestamp: claimedAt,
               claimedAt,
+              createdAt: o.createdAt || o.statusTimeline?.[0]?.timestamp || o.timestamp,
             }
           : o
       )
@@ -305,6 +312,7 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             claimRemainingSeconds: 0,
             timestamp: claimedAt,
             claimedAt,
+            createdAt: prev.createdAt || prev.statusTimeline?.[0]?.timestamp || prev.timestamp,
           }
         : prev
     );

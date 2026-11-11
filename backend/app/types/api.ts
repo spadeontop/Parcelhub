@@ -217,6 +217,8 @@ export type StaffOrderSummary = {
   readonly courierPaidBy?: StaffId;
   readonly courierPaidByName?: string;
   readonly courierPaidAt?: ISO8601Timestamp;
+  readonly createdAt?: ISO8601Timestamp;
+  readonly statusTimeline?: OrderStatusHistoryTuple;
 };
 
 export type StaffListOrdersQueryParams = {
@@ -244,6 +246,8 @@ export type StaffOrderDetail = {
   readonly courierPaidBy?: StaffId;
   readonly courierPaidByName?: string;
   readonly courierPaidAt?: ISO8601Timestamp;
+  readonly createdAt?: ISO8601Timestamp;
+  readonly statusTimeline?: OrderStatusHistoryTuple;
 };
 
 export type StaffGetOrderRes = StaffOrderDetail;

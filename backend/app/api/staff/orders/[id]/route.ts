@@ -45,6 +45,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     courierPaidBy: order.courierPaidBy,
     courierPaidByName,
     courierPaidAt: order.courierPaidAt,
+    createdAt: order.statusTimeline?.[0]?.timestamp || order.timestamp,
+    statusTimeline: order.statusTimeline,
   };
 
   const response: StaffGetOrderRes = orderDetail;
