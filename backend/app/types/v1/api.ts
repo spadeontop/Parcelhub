@@ -285,8 +285,16 @@ export type StaffListOrdersQueryParams = {
   readonly offset?: number;
 };
 
+export type PaginationMeta = {
+  readonly totalCount: number;
+  readonly limit: number;
+  readonly offset: number;
+  readonly hasMore: boolean;
+};
+
 export type StaffListOrdersRes = {
   readonly orders: readonly StaffOrderSummary[];
+  readonly pagination?: PaginationMeta;
 };
 
 // GET /api/v1/staff/orders/{id}
