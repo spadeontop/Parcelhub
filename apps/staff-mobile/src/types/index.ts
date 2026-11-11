@@ -22,6 +22,11 @@ export interface StaffUser {
   token: string;
 }
 
+export interface StatusTimelineEntry {
+  status: OrderStatus;
+  timestamp: string;
+}
+
 export interface StaffOrder {
   id: string;
   trackingId: string;
@@ -41,6 +46,9 @@ export interface StaffOrder {
   courierPaidBy?: string;
   courierPaidByName?: string;
   courierPaidAt?: string;
+  claimedAt?: string;
+  createdAt?: string;
+  statusTimeline?: StatusTimelineEntry[];
   proofImageUrl?: string;
   notes?: string;
 }
@@ -75,6 +83,9 @@ export interface StaffOrderDetailResponse {
   courierPaidBy?: string;
   courierPaidByName?: string;
   courierPaidAt?: string;
+  claimedAt?: string;
+  createdAt?: string;
+  statusTimeline?: StatusTimelineEntry[];
   proofImageUrl?: string;
 }
 

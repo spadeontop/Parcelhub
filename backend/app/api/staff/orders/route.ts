@@ -55,6 +55,8 @@ export async function GET(request: NextRequest) {
       courierPaidBy: o.courierPaidBy,
       courierPaidByName,
       courierPaidAt: o.courierPaidAt,
+      createdAt: o.statusTimeline?.[0]?.timestamp || o.timestamp,
+      statusTimeline: o.statusTimeline,
     };
   });
 

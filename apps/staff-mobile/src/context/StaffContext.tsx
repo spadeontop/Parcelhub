@@ -104,15 +104,21 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       const data = await staffApi.getOrders(undefined, undefined, token);
       setOrders((prev) => {
-        // Merge notes from local memory if existing
+        // Merge notes and local claimedAt from local memory if existing
         const notesMap = new Map<string, string>();
+        const claimedAtMap = new Map<string, string>();
+        const createdAtMap = new Map<string, string>();
         prev.forEach((o) => {
           if (o.notes) notesMap.set(o.id, o.notes);
+          if (o.claimedAt) claimedAtMap.set(o.id, o.claimedAt);
+          if (o.createdAt) createdAtMap.set(o.id, o.createdAt);
         });
 
         return data.map((o) => ({
           ...o,
           notes: notesMap.get(o.id) || o.notes,
+          claimedAt: claimedAtMap.get(o.id) || o.claimedAt,
+          createdAt: o.createdAt || createdAtMap.get(o.id),
         }));
       });
       setIsOnline(true);
@@ -121,7 +127,14 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setSelectedOrder((prevSelected) => {
         if (!prevSelected) return null;
         const fresh = data.find((o) => o.id === prevSelected.id);
-        return fresh ? { ...fresh, notes: prevSelected.notes } : prevSelected;
+        return fresh
+          ? {
+              ...fresh,
+              notes: prevSelected.notes,
+              claimedAt: prevSelected.claimedAt || fresh.claimedAt,
+              createdAt: fresh.createdAt || prevSelected.createdAt,
+            }
+          : prevSelected;
       });
     } catch (err: any) {
       if (err instanceof StaffApiError && err.statusCode === 401) {
@@ -233,8 +246,13 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             ? {
                 ...prev,
                 ...detail,
+                amountReceived: detail.amountReceived ?? prev.amountReceived,
+                change: detail.change || prev.change,
                 productName: prev.productName || detail.productName,
                 notes: prev.notes,
+                claimedAt: prev.claimedAt || detail.claimedAt,
+                createdAt: detail.createdAt || prev.createdAt,
+                statusTimeline: detail.statusTimeline || prev.statusTimeline,
               }
             : prev
         );
@@ -269,6 +287,35 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const claimOrder = async (orderId: string) => {
     await staffApi.claimOrder(orderId, staffUser?.token);
+    const claimedAt = new Date().toISOString();
+    setOrders((prev) =>
+      prev.map((o) =>
+        o.id === orderId
+          ? {
+              ...o,
+              status: 'CLAIMED',
+              isClaimActive: false,
+              claimRemainingSeconds: 0,
+              timestamp: claimedAt,
+              claimedAt,
+              createdAt: o.createdAt || o.statusTimeline?.[0]?.timestamp || o.timestamp,
+            }
+          : o
+      )
+    );
+    setSelectedOrder((prev) =>
+      prev && prev.id === orderId
+        ? {
+            ...prev,
+            status: 'CLAIMED',
+            isClaimActive: false,
+            claimRemainingSeconds: 0,
+            timestamp: claimedAt,
+            claimedAt,
+            createdAt: prev.createdAt || prev.statusTimeline?.[0]?.timestamp || prev.timestamp,
+          }
+        : prev
+    );
     showToast(`Order ${orderId} handed over and marked Claimed!`, 'success');
     await fetchOrders(true, staffUser?.token);
   };
