@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -32,19 +32,29 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
 
   // Step 1 checkbox state (Awaiting Parcel 1: "I confirm that I received the order")
   const [isReceivedConfirmed, setIsReceivedConfirmed] = useState<boolean>(false);
+  const [isStep1Locked, setIsStep1Locked] = useState<boolean>(false);
   const [isPayingStep1, setIsPayingStep1] = useState<boolean>(false);
 
   // Step 2: Photo Upload state (Awaiting Parcel 2)
   const [hasPhoto, setHasPhoto] = useState<boolean>(Boolean(order.proofImageUrl));
   const [photoValidationState, setPhotoValidationState] = useState<'VALID' | 'INVALID'>('VALID');
   const [isPhotoConfirmed, setIsPhotoConfirmed] = useState<boolean>(false);
+  const [isStep2Locked, setIsStep2Locked] = useState<boolean>(false);
   const [isFinalSubmitting, setIsFinalSubmitting] = useState<boolean>(false);
 
   const sampleWaybill = require('../../../../assets/parcelhub/sample_parcel_waybill.png');
 
+  useEffect(() => {
+    setIsReceivedConfirmed(false);
+    setIsStep1Locked(false);
+    setIsPhotoConfirmed(false);
+    setIsStep2Locked(false);
+  }, [order.id]);
+
   // Handle Step 1: Pay Courier & Confirm Received (POST /api/staff/orders/{id}/make-claimable/pay)
   const handlePayCourierStep = async () => {
-    if (!isReceivedConfirmed || isPayingStep1 || isPayingCourier) return;
+    if (!isReceivedConfirmed || isPayingStep1 || isPayingCourier || isStep1Locked) return;
+    setIsStep1Locked(true);
     setIsPayingStep1(true);
     try {
       await onPayCourier(order.id);
@@ -64,6 +74,7 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
   const handleRetake = () => {
     setHasPhoto(false);
     setIsPhotoConfirmed(false);
+    setIsStep2Locked(false);
   };
 
   const toggleValidationState = () => {
@@ -74,7 +85,8 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
 
   // Handle Step 2: Attach Photo & Complete (POST /api/staff/orders/{id}/make-claimable/attach-photo)
   const handleFinalClaimAndPaid = async () => {
-    if (!isStep2Valid || isFinalSubmitting || isAttachingPhoto) return;
+    if (!isStep2Valid || isFinalSubmitting || isAttachingPhoto || isStep2Locked) return;
+    setIsStep2Locked(true);
     setIsFinalSubmitting(true);
     try {
       await onAttachPhoto(order.id, 'mock://ai-verified-parcel-proof.jpg');
@@ -96,14 +108,19 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
       <View className="space-y-4">
         {/* Confirmation Checkbox matching awaiting parcel 1/image.png */}
         <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={() => setIsReceivedConfirmed((prev) => !prev)}
+          activeOpacity={isStep1Locked || isPayingStep1 || isPayingCourier ? 1 : 0.8}
+          disabled={isStep1Locked || isPayingStep1 || isPayingCourier}
+          onPress={() => {
+            if (!isStep1Locked && !isPayingStep1 && !isPayingCourier) {
+              setIsReceivedConfirmed((prev) => !prev);
+            }
+          }}
           className="flex-row items-start gap-3 px-1 mb-5"
         >
           <View
             className={`w-5 h-5 rounded-md items-center justify-center mt-0.5 ${
               isReceivedConfirmed ? 'bg-[#215CD4]' : 'bg-white border-2 border-[#CBD5E1]'
-            }`}
+            } ${isStep1Locked ? 'opacity-90' : ''}`}
           >
             {isReceivedConfirmed && <Check size={14} color="#FFFFFF" strokeWidth={3} />}
           </View>
@@ -121,9 +138,9 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
         <TouchableOpacity
           activeOpacity={0.85}
           onPress={handlePayCourierStep}
-          disabled={!canPay}
+          disabled={!canPay || isStep1Locked}
           className={`w-full py-4 rounded-xl items-center justify-center shadow-md mb-2 ${
-            canPay ? 'bg-[#215CD4] active:bg-[#1d4ed8]' : 'bg-[#94A3B8]'
+            canPay && !isStep1Locked ? 'bg-[#215CD4] active:bg-[#1d4ed8]' : 'bg-[#94A3B8]'
           }`}
         >
           {isPayingStep1 || isPayingCourier ? (
@@ -232,14 +249,19 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
 
       {/* Confirmation Checkbox matching awaiting parcel 2 */}
       <TouchableOpacity
-        activeOpacity={0.8}
-        onPress={() => setIsPhotoConfirmed((prev) => !prev)}
+        activeOpacity={isStep2Locked || isFinalSubmitting || isAttachingPhoto ? 1 : 0.8}
+        disabled={isStep2Locked || isFinalSubmitting || isAttachingPhoto}
+        onPress={() => {
+          if (!isStep2Locked && !isFinalSubmitting && !isAttachingPhoto) {
+            setIsPhotoConfirmed((prev) => !prev);
+          }
+        }}
         className="flex-row items-start gap-3 px-1 mb-5"
       >
         <View
           className={`w-5 h-5 rounded-md items-center justify-center mt-0.5 ${
             isPhotoConfirmed ? 'bg-[#215CD4]' : 'bg-white border-2 border-[#CBD5E1]'
-          }`}
+          } ${isStep2Locked ? 'opacity-90' : ''}`}
         >
           {isPhotoConfirmed && <Check size={14} color="#FFFFFF" strokeWidth={3} />}
         </View>
@@ -257,9 +279,9 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
       <TouchableOpacity
         activeOpacity={0.85}
         onPress={handleFinalClaimAndPaid}
-        disabled={!isStep2Valid || isFinalSubmitting || isAttachingPhoto}
+        disabled={!isStep2Valid || isFinalSubmitting || isAttachingPhoto || isStep2Locked}
         className={`w-full py-4 rounded-xl items-center justify-center shadow-md mb-2 ${
-          isStep2Valid && !isFinalSubmitting && !isAttachingPhoto ? 'bg-[#215CD4] active:bg-[#1d4ed8]' : 'bg-[#94A3B8]'
+          isStep2Valid && !isFinalSubmitting && !isAttachingPhoto && !isStep2Locked ? 'bg-[#215CD4] active:bg-[#1d4ed8]' : 'bg-[#94A3B8]'
         }`}
       >
         {isFinalSubmitting || isAttachingPhoto ? (

@@ -3,13 +3,13 @@ import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Animated }
 import QRCode from 'react-native-qrcode-svg';
 import { useApp } from '../../context/AppContext';
 import {
-  BackArrowIcon,
   CopyIcon,
   QrCodeIcon,
   CheckIcon,
   ClockIcon,
   RefreshIcon,
 } from '../common/Icons';
+import { BackButton } from '../common/BackButton';
 
 export const OrderDetailsScreen: React.FC = () => {
   const {
@@ -237,14 +237,11 @@ export const OrderDetailsScreen: React.FC = () => {
           >
           {/* Header Bar */}
           <View className="py-4 px-5 flex-row items-center justify-between relative border-b border-gray-100/60">
-            <TouchableOpacity
-              activeOpacity={0.7}
+            <BackButton
               onPress={handleExitFocusedPass}
-              className="w-8 h-8 rounded-full bg-gray-100 items-center justify-center"
               accessibilityLabel="Back to Home"
-            >
-              <BackArrowIcon size={14} color="#1f2937" />
-            </TouchableOpacity>
+              className="-ml-1"
+            />
 
             <Text className="text-xl font-bold text-[#1e1e1e] tracking-tight">
               {getFocusedHeaderTitle()}
@@ -433,7 +430,7 @@ export const OrderDetailsScreen: React.FC = () => {
       ) : (
         /* Dedicated Complete Details Stepper Page (matching attached image) */
         <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-          {/* Top Colored Status Banner with Circular Back Button */}
+          {/* Top Colored Status Banner with Back Button */}
           <View
             style={{
               shadowColor: '#000',
@@ -444,18 +441,12 @@ export const OrderDetailsScreen: React.FC = () => {
             }}
             className={`${bannerBg} py-5 px-6 items-center relative`}
           >
-            <TouchableOpacity
-              activeOpacity={0.8}
+            <BackButton
               onPress={() => navigateTo('home')}
-              className={`absolute left-4 top-4 w-8 h-8 rounded-full items-center justify-center ${
-                status === 'CLAIMED'
-                  ? 'bg-gray-100 border border-gray-200'
-                  : 'bg-white/20 border border-white/30'
-              }`}
+              color={status === 'CLAIMED' ? '#1f2937' : '#ffffff'}
               accessibilityLabel="Back to Home"
-            >
-              <BackArrowIcon size={16} color={status === 'CLAIMED' ? '#181b20' : '#ffffff'} />
-            </TouchableOpacity>
+              style={{ position: 'absolute', left: 16, top: 16 }}
+            />
 
             <Text
               className={`text-2xl font-bold tracking-tight ${

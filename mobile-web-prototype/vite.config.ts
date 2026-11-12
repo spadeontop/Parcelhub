@@ -25,6 +25,7 @@ export default defineConfig({
         staff: resolve(__dirname, 'staff.html'),
         staffDebug: resolve(__dirname, 'staff-debug.html'),
         customer: resolve(__dirname, 'customer.html'),
+        customerDebug: resolve(__dirname, 'customer-debug.html'),
       },
     },
   },
