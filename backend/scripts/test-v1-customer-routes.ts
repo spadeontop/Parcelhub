@@ -22,9 +22,9 @@ if (!process.env.JWT_SECRET) {
 
 import { NextRequest } from "next/server";
 import assert from "node:assert";
-import { eq, or } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "../db";
-import { customers, orders } from "../db/schema";
+import { customers, orders, orderScreenshots } from "../db/schema";
 
 // v1 Customer Route Handlers
 import { POST as registerCustomer } from "../app/api/v1/customer/register/route";
@@ -35,7 +35,10 @@ import { POST as refreshAuthToken } from "../app/api/v1/customer/refresh/route";
 import { GET as getCustomerProfile } from "../app/api/v1/customer/profile/route";
 import { GET as listCustomerOrders } from "../app/api/v1/customer/orders/route";
 import { POST as initCustomerOrder } from "../app/api/v1/customer/orders/initialize/route";
-import { GET as getCustomerOrder } from "../app/api/v1/customer/orders/[id]/route";
+import {
+  GET as getCustomerOrder,
+  PUT as updateCustomerOrder,
+} from "../app/api/v1/customer/orders/[id]/route";
 import { POST as claimCustomerOrder } from "../app/api/v1/customer/orders/[id]/claim/route";
 
 function makeReq(
@@ -68,6 +71,8 @@ async function runV1CustomerTests() {
   let refreshToken: string = "";
   let customerId: string = "";
   let createdOrderId: string = "";
+  let secondOrderId: string = "";
+  let thirdOrderId: string = "";
 
   try {
     // ==========================================
@@ -179,7 +184,7 @@ async function runV1CustomerTests() {
     console.log("   ✅ Profile returned customer details matching DB.");
 
     // ==========================================
-    // 7. Order Initialization
+    // 7. Order Initialization (imageUrl only + order_screenshots)
     // ==========================================
     console.log("7. Testing Order Initialization (POST /api/v1/customer/orders/initialize)...");
     const initReq = makeReq("http://localhost:3000/api/v1/customer/orders/initialize", {
@@ -187,7 +192,6 @@ async function runV1CustomerTests() {
       token: authToken,
       body: {
         imageUrl: "https://example.com/receipt.jpg",
-        trackingId: trackingNumber,
       },
     });
     const initRes = await initCustomerOrder(initReq);
@@ -196,7 +200,22 @@ async function runV1CustomerTests() {
     assert.ok(initJson.orderId, "orderId must be returned");
     assert.ok(initJson.ticketCode, "ticketCode must be returned");
     createdOrderId = initJson.orderId;
-    console.log(`   ✅ Order initialized in DB. Order ID: ${createdOrderId}, Ticket: ${initJson.ticketCode}`);
+
+    const initializedOrderRow = await db.query.orders.findFirst({
+      where: eq(orders.id, createdOrderId),
+    });
+    assert.ok(initializedOrderRow, "Order row must exist in DB");
+    assert.strictEqual(initializedOrderRow.trackingId, null, "trackingId must be null on initialization");
+    assert.strictEqual(initializedOrderRow.status, "PENDING_INITIALIZATION");
+    assert.strictEqual(initializedOrderRow.isRefunded, false);
+
+    const screenshotRow = await db.query.orderScreenshots.findFirst({
+      where: eq(orderScreenshots.orderId, createdOrderId),
+    });
+    assert.ok(screenshotRow, "Linked order_screenshots row must be created on initialization");
+    assert.strictEqual(screenshotRow.imageUrl, "https://example.com/receipt.jpg");
+    assert.strictEqual(screenshotRow.isVerified, false);
+    console.log(`   ✅ Order & screenshot initialized in DB. Order ID: ${createdOrderId}, Ticket: ${initJson.ticketCode}`);
 
     // ==========================================
     // 8. List Orders
@@ -228,7 +247,180 @@ async function runV1CustomerTests() {
     const getOrderJson = await getOrderRes.json();
     assert.strictEqual(getOrderRes.status, 200, `Expected 200, got ${getOrderRes.status}`);
     assert.strictEqual(getOrderJson.order.id, createdOrderId);
+    assert.strictEqual(getOrderJson.order.trackingId, null);
     console.log("   ✅ Single order retrieved and ownership verified.");
+
+    // ==========================================
+    // 9b. One-Shot Order Continuation (PUT /api/v1/customer/orders/[id])
+    // ==========================================
+    console.log("9b. Testing Order Continuation (PUT /api/v1/customer/orders/[id])...");
+
+    // Missing required fields must fail with 400
+    const badPutReq = makeReq(`http://localhost:3000/api/v1/customer/orders/${createdOrderId}`, {
+      method: "PUT",
+      token: authToken,
+      body: {
+        order: {
+          trackingId: trackingNumber,
+          productName: "Test Parcel",
+          recipientName: "Test Recipient",
+          price: -5,
+        },
+      },
+    });
+    const badPutRes = await updateCustomerOrder(badPutReq, {
+      params: Promise.resolve({ id: createdOrderId }),
+    });
+    assert.strictEqual(badPutRes.status, 400, "Negative price must be rejected with 400");
+
+    // AI_VERIFICATION=true gate must block unverified screenshot with 403
+    const prevAiVerification = process.env.AI_VERIFICATION;
+    process.env.AI_VERIFICATION = "true";
+    const blockedAiReq = makeReq(`http://localhost:3000/api/v1/customer/orders/${createdOrderId}`, {
+      method: "PUT",
+      token: authToken,
+      body: {
+        order: {
+          trackingId: trackingNumber,
+          productName: "Test Parcel",
+          recipientName: "Test Recipient",
+          price: 350,
+        },
+      },
+    });
+    const blockedAiRes = await updateCustomerOrder(blockedAiReq, {
+      params: Promise.resolve({ id: createdOrderId }),
+    });
+    assert.strictEqual(blockedAiRes.status, 403, "AI_VERIFICATION=true must reject unverified screenshot");
+    process.env.AI_VERIFICATION = prevAiVerification ?? "false";
+
+    // Valid one-shot PUT transitions PENDING_INITIALIZATION -> PAYMENT_REQUIRED
+    const putReq = makeReq(`http://localhost:3000/api/v1/customer/orders/${createdOrderId}`, {
+      method: "PUT",
+      token: authToken,
+      body: {
+        order: {
+          trackingId: trackingNumber,
+          productName: "Test Parcel",
+          recipientName: "Test Recipient",
+          price: 350,
+        },
+      },
+    });
+    const putRes = await updateCustomerOrder(putReq, {
+      params: Promise.resolve({ id: createdOrderId }),
+    });
+    const putJson = await putRes.json();
+    assert.strictEqual(putRes.status, 200, `Expected 200, got ${putRes.status}: ${JSON.stringify(putJson)}`);
+
+    const updatedOrderRow = await db.query.orders.findFirst({
+      where: eq(orders.id, createdOrderId),
+    });
+    assert.strictEqual(updatedOrderRow?.status, "PAYMENT_REQUIRED");
+    assert.strictEqual(updatedOrderRow?.trackingId, trackingNumber);
+    assert.strictEqual(updatedOrderRow?.price, 350);
+
+    // Calling PUT a second time on PAYMENT_REQUIRED must be rejected with 400
+    const secondPutRes = await updateCustomerOrder(
+      makeReq(`http://localhost:3000/api/v1/customer/orders/${createdOrderId}`, {
+        method: "PUT",
+        token: authToken,
+        body: {
+          order: {
+            trackingId: trackingNumber,
+            productName: "Changed Parcel",
+            recipientName: "Test Recipient",
+            price: 400,
+          },
+        },
+      }),
+      { params: Promise.resolve({ id: createdOrderId }) }
+    );
+    assert.strictEqual(secondPutRes.status, 400, "Second PUT on PAYMENT_REQUIRED must be rejected");
+
+    // Paid vs Unpaid trackingId lock checks:
+    // 1) Unpaid PAYMENT_REQUIRED order does NOT lock trackingNumber
+    const init2Res = await initCustomerOrder(
+      makeReq("http://localhost:3000/api/v1/customer/orders/initialize", {
+        method: "POST",
+        token: authToken,
+        body: { imageUrl: "https://example.com/receipt-2.jpg" },
+      })
+    );
+    const init2Json = await init2Res.json();
+    secondOrderId = init2Json.orderId;
+    const unpaidDupPutRes = await updateCustomerOrder(
+      makeReq(`http://localhost:3000/api/v1/customer/orders/${secondOrderId}`, {
+        method: "PUT",
+        token: authToken,
+        body: {
+          order: {
+            trackingId: trackingNumber,
+            productName: "Unpaid Dup",
+            recipientName: "Test Recipient",
+            price: 100,
+          },
+        },
+      }),
+      { params: Promise.resolve({ id: secondOrderId }) }
+    );
+    assert.strictEqual(unpaidDupPutRes.status, 200, "Unpaid PAYMENT_REQUIRED must not lock trackingId");
+
+    // 2) Paid AWAITING_PARCEL order DOES lock trackingNumber (409)
+    await db
+      .update(orders)
+      .set({ status: "AWAITING_PARCEL" })
+      .where(eq(orders.id, secondOrderId));
+
+    const init3Res = await initCustomerOrder(
+      makeReq("http://localhost:3000/api/v1/customer/orders/initialize", {
+        method: "POST",
+        token: authToken,
+        body: { imageUrl: "https://example.com/receipt-3.jpg" },
+      })
+    );
+    const init3Json = await init3Res.json();
+    thirdOrderId = init3Json.orderId;
+    const paidDupPutRes = await updateCustomerOrder(
+      makeReq(`http://localhost:3000/api/v1/customer/orders/${thirdOrderId}`, {
+        method: "PUT",
+        token: authToken,
+        body: {
+          order: {
+            trackingId: trackingNumber,
+            productName: "Paid Dup",
+            recipientName: "Test Recipient",
+            price: 200,
+          },
+        },
+      }),
+      { params: Promise.resolve({ id: thirdOrderId }) }
+    );
+    assert.strictEqual(paidDupPutRes.status, 409, "Paid AWAITING_PARCEL order must lock trackingId with 409");
+
+    // 3) CANCELLED order releases trackingNumber so it can be reused
+    await db
+      .update(orders)
+      .set({ status: "CANCELLED" })
+      .where(eq(orders.id, secondOrderId));
+
+    const cancelledReusePutRes = await updateCustomerOrder(
+      makeReq(`http://localhost:3000/api/v1/customer/orders/${thirdOrderId}`, {
+        method: "PUT",
+        token: authToken,
+        body: {
+          order: {
+            trackingId: trackingNumber,
+            productName: "Reused After Cancel",
+            recipientName: "Test Recipient",
+            price: 200,
+          },
+        },
+      }),
+      { params: Promise.resolve({ id: thirdOrderId }) }
+    );
+    assert.strictEqual(cancelledReusePutRes.status, 200, "CANCELLED order must release trackingId");
+    console.log("   ✅ One-shot PUT, AI_VERIFICATION gate, and paid trackingId lock checks passed.");
 
     // ==========================================
     // 10. Claim Order (Status Check Guard)
@@ -241,7 +433,7 @@ async function runV1CustomerTests() {
     const claimRes = await claimCustomerOrder(claimReq, {
       params: Promise.resolve({ id: createdOrderId }),
     });
-    // Order is currently in PENDING_INITIALIZATION status, so claiming should be rejected with 400
+    // Order is currently in PAYMENT_REQUIRED status, so claiming should be rejected with 400
     assert.strictEqual(claimRes.status, 400, "Should reject claiming an order not in READY_TO_CLAIM status");
     console.log("   ✅ Claim correctly rejected when order is not in READY_TO_CLAIM state.");
 
@@ -276,7 +468,6 @@ async function runV1CustomerTests() {
       token: authToken,
       body: {
         imageUrl: "https://example.com/receipt2.jpg",
-        trackingId: `TRACK-${Date.now()}-BLOCKED`,
       },
     });
     const blockedInitRes = await initCustomerOrder(blockedInitReq);
@@ -300,6 +491,12 @@ async function runV1CustomerTests() {
     // Clean Up Test Data
     // ==========================================
     console.log("\n🧹 Cleaning up test database records...");
+    if (thirdOrderId) {
+      await db.delete(orders).where(eq(orders.id, thirdOrderId));
+    }
+    if (secondOrderId) {
+      await db.delete(orders).where(eq(orders.id, secondOrderId));
+    }
     if (createdOrderId) {
       await db.delete(orders).where(eq(orders.id, createdOrderId));
     }

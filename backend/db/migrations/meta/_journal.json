@@ -8,6 +8,13 @@
       "when": 1794398060133,
       "tag": "0000_yielding_felicia_hardy",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1794486312250,
+      "tag": "0001_new_rocket_racer",
+      "breakpoints": true
     }
   ]
 }
