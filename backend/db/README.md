@@ -27,7 +27,7 @@ Stores registered customer accounts and authentication/security states.
 | `updated_at` | `TIMESTAMPTZ`| `NOT NULL`, `DEFAULT now()` | Last account update timestamp. |
 
 ---
-
+    
 ### 2. `staff` Table
 Stores staff member credentials and contact info for order fulfillment.
 
