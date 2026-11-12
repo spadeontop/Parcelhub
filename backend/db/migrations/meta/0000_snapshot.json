@@ -1,5 +1,5 @@
 {
-  "id": "46071e59-5058-465b-90e3-9d7e3c19ba01",
+  "id": "640c627e-a073-4603-8c44-3a046095b1bc",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -164,6 +164,85 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.order_screenshots": {
+      "name": "order_screenshots",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "order_id": {
+          "name": "order_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "image_url": {
+          "name": "image_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_verified": {
+          "name": "is_verified",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "checks": {
+          "name": "checks",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "model": {
+          "name": "model",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "order_screenshots_order_id_orders_id_fk": {
+          "name": "order_screenshots_order_id_orders_id_fk",
+          "tableFrom": "order_screenshots",
+          "tableTo": "orders",
+          "columnsFrom": [
+            "order_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "order_screenshots_order_id_unique": {
+          "name": "order_screenshots_order_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "order_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.orders": {
       "name": "orders",
       "schema": "",
@@ -184,25 +263,28 @@
           "name": "tracking_id",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "product_name": {
           "name": "product_name",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "default": "''"
         },
         "recipient_name": {
           "name": "recipient_name",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "default": "''"
         },
         "price": {
           "name": "price",
           "type": "double precision",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "default": 0
         },
         "change": {
           "name": "change",
@@ -291,6 +373,13 @@
           "primaryKey": false,
           "notNull": false
         },
+        "is_refunded": {
+          "name": "is_refunded",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
         "timestamp": {
           "name": "timestamp",
           "type": "timestamp with time zone",
@@ -299,7 +388,24 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "orders_paid_tracking_id_unique": {
+          "name": "orders_paid_tracking_id_unique",
+          "columns": [
+            {
+              "expression": "tracking_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"orders\".\"tracking_id\" IS NOT NULL AND \"orders\".\"status\" IN ('AWAITING_PARCEL', 'READY_TO_CLAIM', 'CLAIMED')",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "orders_customer_id_customers_id_fk": {
           "name": "orders_customer_id_customers_id_fk",
@@ -316,15 +422,7 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "orders_tracking_id_unique": {
-          "name": "orders_tracking_id_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "tracking_id"
-          ]
-        }
-      },
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false

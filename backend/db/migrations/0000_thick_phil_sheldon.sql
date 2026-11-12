@@ -26,13 +26,24 @@ CREATE TABLE "fcm_tokens" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "order_screenshots" (
+	"id" text PRIMARY KEY NOT NULL,
+	"order_id" text NOT NULL,
+	"image_url" text NOT NULL,
+	"is_verified" boolean DEFAULT false NOT NULL,
+	"checks" jsonb,
+	"model" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "order_screenshots_order_id_unique" UNIQUE("order_id")
+);
+--> statement-breakpoint
 CREATE TABLE "orders" (
 	"id" text PRIMARY KEY NOT NULL,
 	"ticket_code" text,
-	"tracking_id" text NOT NULL,
-	"product_name" text NOT NULL,
-	"recipient_name" text NOT NULL,
-	"price" double precision NOT NULL,
+	"tracking_id" text,
+	"product_name" text DEFAULT '' NOT NULL,
+	"recipient_name" text DEFAULT '' NOT NULL,
+	"price" double precision DEFAULT 0 NOT NULL,
 	"change" double precision DEFAULT 0 NOT NULL,
 	"amount_received" double precision,
 	"status" text NOT NULL,
@@ -47,8 +58,8 @@ CREATE TABLE "orders" (
 	"courier_paid" boolean DEFAULT false NOT NULL,
 	"courier_paid_by" text,
 	"courier_paid_at" timestamp with time zone,
-	"timestamp" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "orders_tracking_id_unique" UNIQUE("tracking_id")
+	"is_refunded" boolean DEFAULT false NOT NULL,
+	"timestamp" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "staff" (
@@ -63,4 +74,6 @@ CREATE TABLE "staff" (
 	CONSTRAINT "staff_username_unique" UNIQUE("username")
 );
 --> statement-breakpoint
-ALTER TABLE "orders" ADD CONSTRAINT "orders_customer_id_customers_id_fk" FOREIGN KEY ("customer_id") REFERENCES "public"."customers"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "order_screenshots" ADD CONSTRAINT "order_screenshots_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "orders" ADD CONSTRAINT "orders_customer_id_customers_id_fk" FOREIGN KEY ("customer_id") REFERENCES "public"."customers"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+CREATE UNIQUE INDEX "orders_paid_tracking_id_unique" ON "orders" USING btree ("tracking_id") WHERE "orders"."tracking_id" IS NOT NULL AND "orders"."status" IN ('AWAITING_PARCEL', 'READY_TO_CLAIM', 'CLAIMED');
