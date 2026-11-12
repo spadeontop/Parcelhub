@@ -18,9 +18,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     // ---------------------------------------------------------
     // 1. Auth Validation:
-    //    Ensure Bearer token is present, valid HS256 JWT, and role is STAFF or ADMIN
+    //    Ensure Bearer token is present, valid HS256 JWT, and role is strictly STAFF
     // ---------------------------------------------------------
-    const auth = await authenticateStaffRequest(request, ["STAFF", "ADMIN"]);
+    const auth = await authenticateStaffRequest(request, ["STAFF"]);
     if (!auth.session) {
       return jsonError(auth.error || "Unauthorized", auth.status, "Unauthorized");
     }
