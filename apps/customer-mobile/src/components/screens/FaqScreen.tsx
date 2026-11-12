@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, TextInput, ScrollView, Animated } from 'r
 import Svg, { Path } from 'react-native-svg';
 import { useApp } from '../../context/AppContext';
 import { BottomNav } from '../layout/BottomNav';
+import { BackButton } from '../common/BackButton';
 
 export interface FaqItem {
   id: string;
@@ -229,23 +230,11 @@ export const FaqScreen: React.FC<FaqScreenProps> = ({ onBack, initialTab = 'faq'
       <View className="pb-3 border-b border-gray-100">
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center gap-3">
-            <TouchableOpacity
-              activeOpacity={0.7}
+            <BackButton
               onPress={handleBack}
-              accessibilityRole="button"
               accessibilityLabel="Back to Home"
-              className="w-8 h-8 rounded-full bg-gray-100 items-center justify-center"
-            >
-              <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-                <Path
-                  d="M15 19l-7-7 7-7"
-                  stroke="#374151"
-                  strokeWidth="2.2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </Svg>
-            </TouchableOpacity>
+              className="-ml-1"
+            />
             <View>
               <Text className="text-lg font-bold text-gray-900 leading-tight">Help & FAQs</Text>
               <View className="flex-row items-center gap-1.5 mt-0.5">
