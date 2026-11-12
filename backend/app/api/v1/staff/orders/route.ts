@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { desc, eq, count, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { orders, staff, OrderRow } from "@/db/schema";
-import { authenticateStaffRequest } from "@/app/lib/v1/jwt";
+import { authenticateStaffRequest } from "@/app/lib/v1/auth";
 import { parsePagination } from "@/app/lib/pagination";
 import { jsonError, jsonSuccess } from "@/app/lib/response";
 import {
@@ -45,9 +45,9 @@ export async function GET(request: NextRequest) {
   try {
     // ---------------------------------------------------------
     // 1. Auth Validation:
-    //    Ensure Bearer token is present, valid HS256 JWT, and role is STAFF or ADMIN
+    //    Ensure Bearer token is present, valid HS256 JWT, and role is strictly STAFF
     // ---------------------------------------------------------
-    const auth = await authenticateStaffRequest(request, ["STAFF", "ADMIN"]);
+    const auth = await authenticateStaffRequest(request, ["STAFF"]);
     if (!auth.session) {
       return jsonError(auth.error || "Unauthorized", auth.status, "Unauthorized");
     }

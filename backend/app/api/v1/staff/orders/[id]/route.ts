@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { eq, or } from "drizzle-orm";
 import { db } from "@/db";
 import { orders, staff } from "@/db/schema";
-import { authenticateStaffRequest } from "@/app/lib/v1/jwt";
+import { authenticateStaffRequest } from "@/app/lib/v1/auth";
 import { jsonError, jsonSuccess } from "@/app/lib/response";
 import {
   OrderId,
@@ -39,9 +39,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     // ---------------------------------------------------------
     // 1. Auth Validation:
-    //    Ensure Bearer token is present, valid HS256 JWT, and role is STAFF or ADMIN
+    //    Ensure Bearer token is present, valid HS256 JWT, and role is strictly STAFF
     // ---------------------------------------------------------
-    const auth = await authenticateStaffRequest(request, ["STAFF", "ADMIN"]);
+    const auth = await authenticateStaffRequest(request, ["STAFF"]);
     if (!auth.session) {
       return jsonError(auth.error || "Unauthorized", auth.status, "Unauthorized");
     }
