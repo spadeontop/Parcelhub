@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { useApp } from '../../context/AppContext';
 import { BottomNav } from '../layout/BottomNav';
-import { ArrowLeftIcon } from '../common/Icons';
+import { BackButton } from '../common/BackButton';
 import { EditContactModal } from '../modals/EditContactModal';
 import { ChangePasswordModal } from '../modals/ChangePasswordModal';
 import { DeleteAccountModal } from '../modals/DeleteAccountModal';
@@ -51,14 +51,11 @@ export const ProfileScreen: React.FC = () => {
     >
       {/* Back Navigation Bar & Screen Title */}
       <View className="flex-row items-center justify-between py-2 mb-3">
-        <TouchableOpacity
-          activeOpacity={0.7}
+        <BackButton
           onPress={() => navigateTo('home')}
-          className="w-8 h-8 items-center justify-center -ml-1"
           accessibilityLabel="Back to Home"
-        >
-          <ArrowLeftIcon size={22} color="#1f2937" />
-        </TouchableOpacity>
+          className="-ml-1"
+        />
         <Text className="flex-1 text-center text-lg font-bold text-gray-900 tracking-tight">
           User Profile
         </Text>
