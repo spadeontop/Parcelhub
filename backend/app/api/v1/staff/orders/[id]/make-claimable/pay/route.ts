@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { eq, or } from "drizzle-orm";
 import { db } from "@/db";
 import { orders, staff } from "@/db/schema";
-import { authenticateStaffRequest } from "@/app/lib/v1/jwt";
+import { authenticateStaffRequest } from "@/app/lib/v1/auth";
 import { jsonError, jsonSuccess } from "@/app/lib/response";
 import { StaffPayCourierRes } from "@/app/types/v1/api";
 
