@@ -119,6 +119,28 @@ async function runV1CustomerTests() {
     customerId = mpinSetupJson.customer.id;
     console.log(`   ✅ MPIN set successfully for customer ID: ${customerId}`);
 
+    // 2b. Testing MPIN Overwrite Protection (POST /api/v1/customer/create-mpin)
+    console.log("2b. Testing MPIN Overwrite Protection (POST /api/v1/customer/create-mpin)...");
+    const mpinDuplicateReq = makeReq("http://localhost:3000/api/v1/customer/create-mpin", {
+      method: "POST",
+      body: {
+        preAuthToken,
+        mpin: "5678",
+      },
+    });
+    const mpinDuplicateRes = await createMpin(mpinDuplicateReq);
+    const mpinDuplicateJson = await mpinDuplicateRes.json();
+    assert.strictEqual(
+      mpinDuplicateRes.status,
+      409,
+      `Expected 409 Conflict when attempting to overwrite MPIN, got ${mpinDuplicateRes.status}`
+    );
+    assert.strictEqual(
+      mpinDuplicateJson.message,
+      "MPIN is already set. Please log in or use MPIN verification."
+    );
+    console.log("   ✅ MPIN overwrite protection verified (409 Conflict).");
+
     // ==========================================
     // 3. Customer Login + MPIN Verification
     // ==========================================
