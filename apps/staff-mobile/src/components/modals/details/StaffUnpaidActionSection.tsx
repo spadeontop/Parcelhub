@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { StaffOrder } from '../../../types';
 import { Check } from '../../common/Icons';
@@ -19,6 +19,12 @@ export const StaffUnpaidActionSection: React.FC<StaffUnpaidActionSectionProps> =
   const fee = typeof order.amountToPay === 'number' ? order.amountToPay : 300;
   const [cashText, setCashText] = useState<string>('');
   const [isConfirmed, setIsConfirmed] = useState<boolean>(false);
+  const [isLocked, setIsLocked] = useState<boolean>(false);
+
+  useEffect(() => {
+    setIsConfirmed(false);
+    setIsLocked(false);
+  }, [order.id]);
 
   const cashNum = parseFloat(cashText) || 0;
   const change = Math.max(0, cashNum - fee);
@@ -26,7 +32,8 @@ export const StaffUnpaidActionSection: React.FC<StaffUnpaidActionSectionProps> =
   const canActivate = isConfirmed && isSufficient && !isSubmitting;
 
   const handleSubmit = async () => {
-    if (!canActivate) return;
+    if (!canActivate || isLocked) return;
+    setIsLocked(true);
     await onActivate(order.id, cashNum);
   };
 
@@ -76,14 +83,19 @@ export const StaffUnpaidActionSection: React.FC<StaffUnpaidActionSectionProps> =
 
       {/* Confirmation Checkbox matching unpaid.png */}
       <TouchableOpacity
-        activeOpacity={0.8}
-        onPress={() => setIsConfirmed((prev) => !prev)}
+        activeOpacity={isLocked || isSubmitting ? 1 : 0.8}
+        disabled={isLocked || isSubmitting}
+        onPress={() => {
+          if (!isLocked && !isSubmitting) {
+            setIsConfirmed((prev) => !prev);
+          }
+        }}
         className="flex-row items-start gap-3 px-1 mb-5"
       >
         <View
           className={`w-5 h-5 rounded-md items-center justify-center mt-0.5 ${
             isConfirmed ? 'bg-[#215CD4]' : 'bg-white border-2 border-[#CBD5E1]'
-          }`}
+          } ${isLocked ? 'opacity-90' : ''}`}
         >
           {isConfirmed && <Check size={14} color="#FFFFFF" strokeWidth={3} />}
         </View>

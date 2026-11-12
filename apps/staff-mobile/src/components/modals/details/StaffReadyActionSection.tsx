@@ -25,6 +25,12 @@ export const StaffReadyActionSection: React.FC<StaffReadyActionSectionProps> = (
     isInitiated && order.claimRemainingSeconds ? order.claimRemainingSeconds : 0
   );
   const [isConfirmed, setIsConfirmed] = useState<boolean>(false);
+  const [isLocked, setIsLocked] = useState<boolean>(false);
+
+  useEffect(() => {
+    setIsConfirmed(false);
+    setIsLocked(false);
+  }, [order.id]);
 
   useEffect(() => {
     if (order.isClaimActive || (order.claimRemainingSeconds !== undefined && order.claimRemainingSeconds > 0)) {
@@ -49,6 +55,12 @@ export const StaffReadyActionSection: React.FC<StaffReadyActionSectionProps> = (
 
   const isTimerExpired = isInitiated && secondsRemaining <= 0;
   const canRelease = isInitiated && isConfirmed && secondsRemaining > 0 && !isReleasing;
+
+  const handleRelease = async () => {
+    if (!canRelease || isLocked) return;
+    setIsLocked(true);
+    await onRelease(order.id);
+  };
 
   return (
     <View className="space-y-4">
@@ -82,13 +94,13 @@ export const StaffReadyActionSection: React.FC<StaffReadyActionSectionProps> = (
 
       {/* Confirmation Checkbox matching ready-to-claim.png */}
       <TouchableOpacity
-        activeOpacity={0.8}
+        activeOpacity={isLocked || isReleasing ? 1 : 0.8}
         onPress={() => {
-          if (isInitiated && !isTimerExpired) {
+          if (!isLocked && !isReleasing && isInitiated && !isTimerExpired) {
             setIsConfirmed((prev) => !prev);
           }
         }}
-        disabled={!isInitiated || isTimerExpired}
+        disabled={isLocked || isReleasing || !isInitiated || isTimerExpired}
         className={`flex-row items-start gap-3 px-1 mb-5 ${
           !isInitiated || isTimerExpired ? 'opacity-50' : 'opacity-100'
         }`}
@@ -96,7 +108,7 @@ export const StaffReadyActionSection: React.FC<StaffReadyActionSectionProps> = (
         <View
           className={`w-5 h-5 rounded-md items-center justify-center mt-0.5 ${
             isConfirmed ? 'bg-[#215CD4]' : 'bg-white border-2 border-[#CBD5E1]'
-          }`}
+          } ${isLocked ? 'opacity-90' : ''}`}
         >
           {isConfirmed && <Check size={14} color="#FFFFFF" strokeWidth={3} />}
         </View>
@@ -113,10 +125,10 @@ export const StaffReadyActionSection: React.FC<StaffReadyActionSectionProps> = (
       {/* Primary Action Button */}
       <TouchableOpacity
         activeOpacity={0.85}
-        onPress={() => onRelease(order.id)}
-        disabled={!canRelease}
+        onPress={handleRelease}
+        disabled={!canRelease || isReleasing || isLocked}
         className={`w-full py-4 rounded-xl items-center justify-center shadow-md mb-2 ${
-          canRelease ? 'bg-[#215CD4] active:bg-[#1d4ed8]' : 'bg-[#94A3B8]'
+          canRelease && !isReleasing && !isLocked ? 'bg-[#215CD4] active:bg-[#1d4ed8]' : 'bg-[#94A3B8]'
         }`}
       >
         {isReleasing ? (
