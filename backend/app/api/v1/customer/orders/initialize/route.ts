@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { and, eq, notInArray } from "drizzle-orm";
 import { db } from "@/db";
 import { orders } from "@/db/schema";
-import { authenticateV1Request } from "@/app/lib/v1/jwt";
+import { authenticateCustomerRequest, checkCustomerBlacklisted } from "@/app/lib/v1/auth";
 import { jsonError, jsonSuccess } from "@/app/lib/response";
 import {
   CustomerInitOrderReq,
@@ -27,14 +27,27 @@ export async function POST(request: NextRequest) {
   try {
     // ---------------------------------------------------------
     // 1. Auth Validation:
-    //    Require valid 15-minute authToken, strictly CUSTOMER role
+    //    Require valid 15-minute authToken, strictly CUSTOMER role & valid DB user
     // ---------------------------------------------------------
-    const auth = await authenticateV1Request(request, ["CUSTOMER"]);
+    const auth = await authenticateCustomerRequest(request);
     if (!auth.session) {
       if (auth.status === 403) {
         return jsonError("Access denied", 403, "Forbidden");
       }
+      if (auth.status === 404) {
+        return jsonError("Account not found", 404, "Not Found");
+      }
       return jsonError("Please log in again", 401, "Unauthorized");
+    }
+
+    // 1b. Blacklist Check (strictly enforced when initializing new orders)
+    const blacklistCheck = await checkCustomerBlacklisted(auth.session.userId);
+    if (blacklistCheck.isBlacklisted) {
+      return jsonError(
+        `Account suspended: ${blacklistCheck.reason || "Please contact support"}`,
+        403,
+        "Forbidden"
+      );
     }
 
     // ---------------------------------------------------------

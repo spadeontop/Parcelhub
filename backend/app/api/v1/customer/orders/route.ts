@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { OrderRow, orders } from "@/db/schema";
-import { authenticateV1Request } from "@/app/lib/v1/jwt";
+import { authenticateCustomerRequest } from "@/app/lib/v1/auth";
 import { parsePagination } from "@/app/lib/pagination";
 import { jsonError, jsonSuccess } from "@/app/lib/response";
 import {
@@ -25,12 +25,15 @@ export async function GET(request: NextRequest) {
   try {
     // ---------------------------------------------------------
     // 1. Auth Validation:
-    //    Require valid 15-minute authToken, strictly CUSTOMER role
+    //    Require valid 15-minute authToken, strictly CUSTOMER role & valid DB user
     // ---------------------------------------------------------
-    const auth = await authenticateV1Request(request, ["CUSTOMER"]);
+    const auth = await authenticateCustomerRequest(request);
     if (!auth.session) {
       if (auth.status === 403) {
         return jsonError("Access denied", 403, "Forbidden");
+      }
+      if (auth.status === 404) {
+        return jsonError("Account not found", 404, "Not Found");
       }
       return jsonError("Please log in again", 401, "Unauthorized");
     }

@@ -1,8 +1,5 @@
 import { NextRequest } from "next/server";
-import { eq } from "drizzle-orm";
-import { db } from "@/db";
-import { customers } from "@/db/schema";
-import { authenticateV1Request } from "@/app/lib/v1/jwt";
+import { authenticateCustomerRequest } from "@/app/lib/v1/auth";
 import { jsonError, jsonSuccess } from "@/app/lib/response";
 import { CustomerId, CustomerProfileRes } from "@/app/types/v1/api";
 
@@ -11,32 +8,20 @@ export async function GET(request: NextRequest) {
     // ---------------------------------------------------------
     // 1. Auth Validation:
     //    Verify Authorization: Bearer <authToken> (HS256, 15m TTL)
-    //    Ensure strictly 'CUSTOMER' role and no pre-auth token
+    //    Ensure strictly 'CUSTOMER' role and check DB user existence
     // ---------------------------------------------------------
-    const auth = await authenticateV1Request(request, ["CUSTOMER"]);
-    if (!auth.session) {
+    const auth = await authenticateCustomerRequest(request);
+    if (!auth.session || !auth.customer) {
       if (auth.status === 403) {
         return jsonError("Access denied", 403, "Forbidden");
+      }
+      if (auth.status === 404) {
+        return jsonError("Account not found", 404, "Not Found");
       }
       return jsonError("Please log in again", 401, "Unauthorized");
     }
 
-    // ---------------------------------------------------------
-    // 2. Request Validation:
-    //    GET request takes no body or required params
-    // ---------------------------------------------------------
-
-    // ---------------------------------------------------------
-    // 3. Logic:
-    //    Fetch customer from DB by session.userId & verify status
-    // ---------------------------------------------------------
-    const customer = await db.query.customers.findFirst({
-      where: eq(customers.id, auth.session.userId),
-    });
-
-    if (!customer) {
-      return jsonError("Account not found", 404, "Not Found");
-    }
+    const customer = auth.customer;
 
     if (customer.blacklisted) {
       return jsonError(
