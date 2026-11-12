@@ -12,6 +12,7 @@ export {
   customers,
   staff,
   orders,
+  orderScreenshots,
   fcmTokens,
   appConfig,
 } from "@/db/schema";
@@ -23,6 +24,9 @@ export type {
   NewStaffRow,
   OrderRow,
   NewOrderRow,
+  OrderScreenshotRow,
+  NewOrderScreenshotRow,
+  OrderScreenshotChecks,
 } from "@/db/schema";
 
 export type FcmTokenRow = typeof import("@/db/schema").fcmTokens.$inferSelect;
@@ -153,7 +157,7 @@ export type CustomerProfileRes = StandardSuccessResponse & {
 export type CustomerOrderSummary = {
   readonly id: OrderId;
   readonly ticketCode?: string | null;
-  readonly trackingId: string;
+  readonly trackingId: string | null;
   readonly productName: string;
   readonly status: OrderStatus;
   readonly timestamp: ISO8601Timestamp;
@@ -170,11 +174,21 @@ export type CustomerListOrdersRes = StandardSuccessResponse & {
   readonly orders: readonly CustomerOrderSummary[];
 };
 
+export type OrderScreenshotDetail = {
+  readonly id: string;
+  readonly orderId: OrderId;
+  readonly imageUrl: string;
+  readonly isVerified: boolean;
+  readonly checks?: import("@/db/schema").OrderScreenshotChecks | null;
+  readonly model?: string | null;
+  readonly createdAt: ISO8601Timestamp;
+};
+
 // GET /api/v1/customer/orders/{id}
 export type CustomerOrderDetail = {
   readonly id: OrderId;
   readonly ticketCode?: string | null;
-  readonly trackingId: string;
+  readonly trackingId: string | null;
   readonly productName: string;
   readonly recipientName: string;
   readonly price: number;
@@ -196,7 +210,6 @@ export type CustomerGetOrderRes = StandardSuccessResponse & {
 // POST /api/v1/customer/orders/initialize
 export type CustomerInitOrderReq = {
   readonly imageUrl: string;
-  readonly trackingId: string;
 };
 
 export type CustomerInitOrderRes = StandardSuccessResponse & {
@@ -205,14 +218,14 @@ export type CustomerInitOrderRes = StandardSuccessResponse & {
 };
 
 // PUT /api/v1/customer/orders/{id}
-export type CustomerEditableOrderStatus = "PENDING_INITIALIZATION" | "PAYMENT_REQUIRED";
+export type CustomerEditableOrderStatus = "PENDING_INITIALIZATION";
 
 export type CustomerUpdateOrderReq = {
   readonly order: {
-    readonly trackingId?: string;
-    readonly productName?: string;
-    readonly recipientName?: string;
-    readonly price?: number;
+    readonly trackingId: string;
+    readonly productName: string;
+    readonly recipientName: string;
+    readonly price: number;
   };
 };
 
@@ -259,7 +272,7 @@ export type StaffLoginRes = StandardSuccessResponse & {
 export type StaffOrderSummary = {
   readonly id: OrderId;
   readonly ticketCode?: string | null;
-  readonly trackingId: string;
+  readonly trackingId: string | null;
   readonly customer: string;
   readonly amountToPay: number;
   readonly amountReceived: number;
@@ -301,7 +314,7 @@ export type StaffListOrdersRes = {
 export type StaffOrderDetail = {
   readonly orderId: OrderId;
   readonly ticketCode?: string | null;
-  readonly trackingId: string;
+  readonly trackingId: string | null;
   readonly customer: string;
   readonly amountToPay: number;
   readonly amountReceived?: number | null;
@@ -409,7 +422,7 @@ export type AdminListOrdersRes = StandardSuccessResponse & {
 export type AdminOrderDetailAudit = {
   readonly id: OrderId;
   readonly ticketCode?: string | null;
-  readonly trackingId: string;
+  readonly trackingId: string | null;
   readonly productName: string;
   readonly recipientName: string;
   readonly price: number;
