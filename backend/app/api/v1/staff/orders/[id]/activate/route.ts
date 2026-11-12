@@ -101,7 +101,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
       if (activePaidDuplicate) {
         return jsonError(
-          `Tracking ID "${order.trackingId}" is already registered to another active parcel (${activePaidDuplicate.ticketCode || activePaidDuplicate.id}). Cannot activate duplicate parcel.`,
+          `Tracking ID "${order.trackingId}" is already registered to another active parcel. Cannot activate duplicate parcel.`,
           409,
           "Conflict"
         );
