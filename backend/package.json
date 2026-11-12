@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test:routes": "tsx scripts/test-api-routes.ts",
+    "test:v1:customer": "node --import tsx scripts/test-v1-customer-routes.ts",
     "db:push": "drizzle-kit push",
     "db:seed": "tsx db/seed.ts",
     "db:reset": "tsx db/reset.ts"
