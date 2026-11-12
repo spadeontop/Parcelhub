@@ -162,7 +162,7 @@ export async function authenticateV1Request(
 
 export interface V1StaffTokenPayload extends JWTPayload {
   userId: string;
-  role: "STAFF" | "ADMIN";
+  role: "STAFF";
   username: string;
   type: "AUTH" | "REFRESH";
 }
@@ -173,7 +173,7 @@ export interface V1StaffTokenPayload extends JWTPayload {
  */
 export async function signStaffAuthToken(payload: {
   userId: string;
-  role: "STAFF" | "ADMIN";
+  role: "STAFF";
   username: string;
 }): Promise<string> {
   return new SignJWT({
@@ -192,7 +192,7 @@ export async function signStaffAuthToken(payload: {
  */
 export async function signStaffRefreshToken(payload: {
   userId: string;
-  role: "STAFF" | "ADMIN";
+  role: "STAFF";
   username: string;
 }): Promise<string> {
   return new SignJWT({
@@ -231,10 +231,10 @@ export async function verifyStaffToken(
       };
     }
 
-    if (staffPayload.role !== "STAFF" && staffPayload.role !== "ADMIN") {
+    if (staffPayload.role !== "STAFF") {
       return {
         payload: null,
-        error: "Forbidden: Not a staff or admin token",
+        error: "Forbidden: Not a staff token",
       };
     }
 
@@ -243,42 +243,6 @@ export async function verifyStaffToken(
     const errorMsg = err instanceof Error ? err.message : "Token verification failed";
     return { payload: null, error: errorMsg };
   }
-}
-
-/**
- * Extracts and verifies Bearer token from Request Authorization header specifically for Staff.
- * Independent from customer authentication.
- */
-export async function authenticateStaffRequest(
-  request: Request,
-  allowedRoles: ("STAFF" | "ADMIN")[] = ["STAFF", "ADMIN"]
-): Promise<{ session: V1StaffTokenPayload | null; error?: string; status: number }> {
-  const authHeader = request.headers.get("Authorization");
-  if (!authHeader) {
-    return { session: null, error: "Missing Authorization Bearer token", status: 401 };
-  }
-
-  const parts = authHeader.split(" ");
-  if (parts.length !== 2 || parts[0].toLowerCase() !== "bearer") {
-    return { session: null, error: "Invalid Authorization header format", status: 401 };
-  }
-
-  const token = parts[1];
-  const { payload, error } = await verifyStaffToken(token, "AUTH");
-
-  if (error || !payload) {
-    return { session: null, error: error || "Invalid or expired token", status: 401 };
-  }
-
-  if (!allowedRoles.includes(payload.role)) {
-    return {
-      session: null,
-      error: "Forbidden: insufficient permissions for this resource",
-      status: 403,
-    };
-  }
-
-  return { session: payload, status: 200 };
 }
 
 
