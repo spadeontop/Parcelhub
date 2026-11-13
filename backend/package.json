@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
     "test:routes": "tsx scripts/test-api-routes.ts",
     "test:image-limits": "node --import tsx scripts/test-image-limits.ts",
     "test:v1:customer": "node --import tsx scripts/test-v1-customer-routes.ts",

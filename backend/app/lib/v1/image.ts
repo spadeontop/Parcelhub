@@ -32,7 +32,7 @@ export function getImageByteLength(imageStr: string): number {
   }
 
   // Handle data URIs (e.g., data:image/webp;base64,...)
-  const dataUriMatch = trimmed.match(/^data:image\/[a-zA-Z0-9.+-]+;base64,(.*)$/s);
+  const dataUriMatch = trimmed.match(/^data:image\/[a-zA-Z0-9.+-]+;base64,([\s\S]*)$/);
   if (dataUriMatch && dataUriMatch[1]) {
     const base64Data = dataUriMatch[1].replace(/\s+/g, "");
     return Buffer.byteLength(base64Data, "base64");

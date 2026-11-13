@@ -32,6 +32,7 @@ import { signAuthToken } from "../app/lib/v1/jwt";
 import { POST as staffLogin } from "../app/api/v1/staff/login/route";
 import { GET as listStaffOrders } from "../app/api/v1/staff/orders/route";
 import { GET as getStaffOrder } from "../app/api/v1/staff/orders/[id]/route";
+import { GET as getStaffOrderPhoto } from "../app/api/v1/staff/orders/[id]/photo/route";
 import { POST as activateOrder } from "../app/api/v1/staff/orders/[id]/activate/route";
 import { POST as payCourier } from "../app/api/v1/staff/orders/[id]/make-claimable/pay/route";
 import { POST as attachPhoto } from "../app/api/v1/staff/orders/[id]/make-claimable/attach-photo/route";
@@ -322,6 +323,69 @@ async function runV1StaffSuite() {
     );
     assert.strictEqual(photoRes.status, 200, "Attaching proof photo after payment must return 200");
     console.log("   ✅ Photo-before-pay guard (400), courier pay (200), duplicate pay guard (400), and attach-photo -> READY_TO_CLAIM (200) verified.");
+
+    // ---------------------------------------------------------
+    // 6b. Dedicated Order Photo Retrieval (GET /api/v1/staff/orders/[id]/photo)
+    // ---------------------------------------------------------
+    console.log("\n6b. Testing Staff Order Photo Retrieval (GET /api/v1/staff/orders/[id]/photo)...");
+
+    // Missing token -> 401
+    const unauthStaffPhotoRes = await getStaffOrderPhoto(
+      makeReq(`/api/v1/staff/orders/${testOrderId}/photo`),
+      { params: Promise.resolve({ id: testOrderId }) }
+    );
+    assert.strictEqual(unauthStaffPhotoRes.status, 401, "Missing token on staff photo route must return 401");
+
+    // Invalid type -> 400
+    const invalidTypeStaffPhotoRes = await getStaffOrderPhoto(
+      makeReq(`/api/v1/staff/orders/${testOrderId}/photo?type=INVALID`, { token: authToken }),
+      { params: Promise.resolve({ id: testOrderId }) }
+    );
+    assert.strictEqual(invalidTypeStaffPhotoRes.status, 400, "Invalid type on staff photo route must return 400");
+
+    // Non-existent -> 404
+    const notFoundStaffPhotoRes = await getStaffOrderPhoto(
+      makeReq(`/api/v1/staff/orders/ORD-NONEXISTENT/photo`, { token: authToken }),
+      { params: Promise.resolve({ id: "ORD-NONEXISTENT" }) }
+    );
+    assert.strictEqual(notFoundStaffPhotoRes.status, 404, "Non-existent order must return 404");
+
+    // Default (type=all) by ID -> returns both screenshot and proof
+    const defaultStaffPhotoRes = await getStaffOrderPhoto(
+      makeReq(`/api/v1/staff/orders/${testOrderId}/photo`, { token: authToken }),
+      { params: Promise.resolve({ id: testOrderId }) }
+    );
+    assert.strictEqual(defaultStaffPhotoRes.status, 200);
+    const defaultStaffPhotoJson = await defaultStaffPhotoRes.json();
+    assert.strictEqual(defaultStaffPhotoJson.orderId, testOrderId);
+    assert.strictEqual(defaultStaffPhotoJson.proofImageUrl, "https://storage.parcelhub.com/proof/test.jpg");
+
+    // Lookup by ticketCode -> 200
+    const codeStaffPhotoRes = await getStaffOrderPhoto(
+      makeReq(`/api/v1/staff/orders/${testTicketCode}/photo`, { token: authToken }),
+      { params: Promise.resolve({ id: testTicketCode }) }
+    );
+    assert.strictEqual(codeStaffPhotoRes.status, 200);
+
+    // Filter type=proof -> returns proof, imageUrl is null
+    const proofStaffPhotoRes = await getStaffOrderPhoto(
+      makeReq(`/api/v1/staff/orders/${testOrderId}/photo?type=proof`, { token: authToken }),
+      { params: Promise.resolve({ id: testOrderId }) }
+    );
+    assert.strictEqual(proofStaffPhotoRes.status, 200);
+    const proofStaffPhotoJson = await proofStaffPhotoRes.json();
+    assert.strictEqual(proofStaffPhotoJson.imageUrl, null);
+    assert.strictEqual(proofStaffPhotoJson.proofImageUrl, "https://storage.parcelhub.com/proof/test.jpg");
+
+    // Filter type=screenshot -> proofImageUrl is null
+    const screenshotStaffPhotoRes = await getStaffOrderPhoto(
+      makeReq(`/api/v1/staff/orders/${testOrderId}/photo?type=screenshot`, { token: authToken }),
+      { params: Promise.resolve({ id: testOrderId }) }
+    );
+    assert.strictEqual(screenshotStaffPhotoRes.status, 200);
+    const screenshotStaffPhotoJson = await screenshotStaffPhotoRes.json();
+    assert.strictEqual(screenshotStaffPhotoJson.proofImageUrl, null);
+    console.log("   ✅ Staff order photo retrieval (default, by code, screenshot, proof, 400, 401, 404 guards) verified.");
 
     // ---------------------------------------------------------
     // 7. Claim Order Guards & Full Claim Completion

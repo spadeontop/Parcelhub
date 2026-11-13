@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
 
     const now = new Date();
 
-    const orderSummaries: CustomerOrderSummary[] = rows.map((row) => ({
+    const orderSummaries: CustomerOrderSummary[] = rows.map((row: Omit<OrderRow, "imageUrl" | "proofImageUrl">) => ({
       id: row.id as OrderId,
       ticketCode: row.ticketCode,
       trackingId: row.trackingId,

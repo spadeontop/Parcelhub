@@ -123,8 +123,8 @@ export async function GET(request: NextRequest) {
     const staffIdsToFetch: string[] = Array.from(
       new Set(
         dbOrders
-          .map((o) => o.courierPaidBy)
-          .filter((id): id is string => typeof id === "string" && id.length > 0)
+          .map((o: Omit<OrderRow, "imageUrl" | "proofImageUrl">): string | null => o.courierPaidBy)
+          .filter((id: string | null): id is string => typeof id === "string" && id.length > 0)
       )
     );
 
@@ -142,7 +142,7 @@ export async function GET(request: NextRequest) {
 
     const nowMs = Date.now();
 
-    const formattedOrders: StaffOrderSummary[] = dbOrders.map((o) => {
+    const formattedOrders: StaffOrderSummary[] = dbOrders.map((o: Omit<OrderRow, "imageUrl" | "proofImageUrl">) => {
       let isClaimActive = false;
       let claimRemainingSeconds = 0;
 

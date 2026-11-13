@@ -39,6 +39,7 @@ import {
   GET as getCustomerOrder,
   PUT as updateCustomerOrder,
 } from "../app/api/v1/customer/orders/[id]/route";
+import { GET as getCustomerOrderPhoto } from "../app/api/v1/customer/orders/[id]/photo/route";
 import { POST as claimCustomerOrder } from "../app/api/v1/customer/orders/[id]/claim/route";
 
 function makeReq(
@@ -463,6 +464,74 @@ async function runV1CustomerTests() {
     );
     assert.strictEqual(cancelledReusePutRes.status, 200, "CANCELLED order must release trackingId");
     console.log("   ✅ One-shot PUT, AI_VERIFICATION gate, and paid trackingId lock checks passed.");
+
+    // ==========================================
+    // 9c. Dedicated Order Photo Retrieval (GET /api/v1/customer/orders/[id]/photo)
+    // ==========================================
+    console.log("9c. Testing Order Photo Retrieval (GET /api/v1/customer/orders/[id]/photo)...");
+
+    // Unauthorized without token -> 401
+    const unauthPhotoRes = await getCustomerOrderPhoto(
+      makeReq(`http://localhost:3000/api/v1/customer/orders/${createdOrderId}/photo`),
+      { params: Promise.resolve({ id: createdOrderId }) }
+    );
+    assert.strictEqual(unauthPhotoRes.status, 401, "Missing token on photo route must return 401");
+
+    // Invalid type filter -> 400
+    const invalidTypePhotoRes = await getCustomerOrderPhoto(
+      makeReq(`http://localhost:3000/api/v1/customer/orders/${createdOrderId}/photo?type=INVALID`, {
+        token: authToken,
+      }),
+      { params: Promise.resolve({ id: createdOrderId }) }
+    );
+    assert.strictEqual(invalidTypePhotoRes.status, 400, "Invalid type filter on photo route must return 400");
+
+    // Non-existent order -> 404
+    const notFoundPhotoRes = await getCustomerOrderPhoto(
+      makeReq(`http://localhost:3000/api/v1/customer/orders/ORD-NONEXISTENT/photo`, {
+        token: authToken,
+      }),
+      { params: Promise.resolve({ id: "ORD-NONEXISTENT" }) }
+    );
+    assert.strictEqual(notFoundPhotoRes.status, 404, "Non-existent order on photo route must return 404");
+
+    // Default (type=all): returns both screenshot and proof
+    const defaultPhotoRes = await getCustomerOrderPhoto(
+      makeReq(`http://localhost:3000/api/v1/customer/orders/${createdOrderId}/photo`, {
+        token: authToken,
+      }),
+      { params: Promise.resolve({ id: createdOrderId }) }
+    );
+    assert.strictEqual(defaultPhotoRes.status, 200);
+    const defaultPhotoJson = await defaultPhotoRes.json();
+    assert.strictEqual(defaultPhotoJson.orderId, createdOrderId);
+    assert.strictEqual(defaultPhotoJson.imageUrl, "https://example.com/receipt.jpg");
+    assert.strictEqual(defaultPhotoJson.proofImageUrl, null);
+
+    // Filter type=screenshot: returns screenshot, proof is null
+    const screenshotPhotoRes = await getCustomerOrderPhoto(
+      makeReq(`http://localhost:3000/api/v1/customer/orders/${createdOrderId}/photo?type=screenshot`, {
+        token: authToken,
+      }),
+      { params: Promise.resolve({ id: createdOrderId }) }
+    );
+    assert.strictEqual(screenshotPhotoRes.status, 200);
+    const screenshotPhotoJson = await screenshotPhotoRes.json();
+    assert.strictEqual(screenshotPhotoJson.imageUrl, "https://example.com/receipt.jpg");
+    assert.strictEqual(screenshotPhotoJson.proofImageUrl, null);
+
+    // Filter type=proof: screenshot is null, proof is null (not yet uploaded)
+    const proofPhotoRes = await getCustomerOrderPhoto(
+      makeReq(`http://localhost:3000/api/v1/customer/orders/${createdOrderId}/photo?type=proof`, {
+        token: authToken,
+      }),
+      { params: Promise.resolve({ id: createdOrderId }) }
+    );
+    assert.strictEqual(proofPhotoRes.status, 200);
+    const proofPhotoJson = await proofPhotoRes.json();
+    assert.strictEqual(proofPhotoJson.imageUrl, null);
+    assert.strictEqual(proofPhotoJson.proofImageUrl, null);
+    console.log("   ✅ Customer order photo retrieval (default, screenshot, proof, 400, 401, 404 guards) verified.");
 
     // ==========================================
     // 10. Claim Order (Status Check Guard)
