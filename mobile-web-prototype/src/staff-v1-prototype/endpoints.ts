@@ -168,11 +168,18 @@ export function getEndpointSpec(id: StaffEndpointId): StaffEndpointSpec {
 export function buildEndpointUrl(
   spec: StaffEndpointSpec,
   baseUrl: string,
-  form: EndpointFormValues
+  form: EndpointFormValues,
+  apiPrefix: string = '/api/v1'
 ): string {
   const cleanBase = baseUrl.trim().replace(/\/+$/, '');
+  const cleanPrefix = apiPrefix.trim().replace(/\/+$/, '');
+  let routeSuffix = spec.pathTemplate.replace(/^\/?api(\/v\d+)?/, '');
+  if (!routeSuffix.startsWith('/')) {
+    routeSuffix = `/${routeSuffix}`;
+  }
+
   const resolvedId = encodeURIComponent(form.orderId.trim() || '{id}');
-  let path = spec.pathTemplate.replace('{id}', resolvedId);
+  let path = `${cleanPrefix}${routeSuffix.replace('{id}', resolvedId)}`;
 
   if (spec.id === 'list_orders') {
     const params = new URLSearchParams();

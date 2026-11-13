@@ -59,6 +59,7 @@ function getOrderStatusPillClasses(status: string): string {
 export const CustomerPostmanDebugger: React.FC<CustomerPostmanDebuggerProps> = ({ session }) => {
   const {
     baseUrl,
+    apiPrefix,
     preAuthToken,
     authToken,
     refreshToken,
@@ -67,7 +68,7 @@ export const CustomerPostmanDebugger: React.FC<CustomerPostmanDebuggerProps> = (
     orders,
     requestLogs,
     activeLog: _globalActiveLog,
-    selectedLogId,
+    selectedLogId: _selectedLogId,
     setSelectedLogId,
     clearLogs,
     sendRequest,
@@ -233,8 +234,8 @@ export const CustomerPostmanDebugger: React.FC<CustomerPostmanDebuggerProps> = (
   };
 
   const resolvedUrl = useMemo(
-    () => buildCustomerEndpointUrl(activeSpec, baseUrl, form),
-    [activeSpec, baseUrl, form]
+    () => buildCustomerEndpointUrl(activeSpec, baseUrl, form, apiPrefix),
+    [activeSpec, baseUrl, form, apiPrefix]
   );
 
   const generatedBody = useMemo(
@@ -450,7 +451,7 @@ export const CustomerPostmanDebugger: React.FC<CustomerPostmanDebuggerProps> = (
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
             <h2 className="text-xs font-bold uppercase tracking-wider text-white">
-              /api/v1/customer Collection
+              {apiPrefix}/customer Collection
             </h2>
             <span className="text-[10px] font-mono text-slate-400">
               ({CUSTOMER_V1_ENDPOINTS.length} Endpoints • Click to switch)
@@ -489,7 +490,7 @@ export const CustomerPostmanDebugger: React.FC<CustomerPostmanDebuggerProps> = (
                 <div className="flex flex-col">
                   <span className="text-xs font-bold leading-tight">{ep.shortLabel}</span>
                   <span className="text-[9px] font-mono text-slate-400 leading-tight">
-                    {ep.pathTemplate.replace('/api/v1/customer', '') || '/'}
+                    {ep.pathTemplate.replace(/^\/?api(\/v\d+)?\/customer/, '') || '/'}
                   </span>
                 </div>
               </button>
