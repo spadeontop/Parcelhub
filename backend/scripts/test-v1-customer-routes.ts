@@ -270,8 +270,8 @@ async function runV1CustomerTests() {
     assert.ok(Array.isArray(listJson.orders), "orders must be an array");
     const foundOrder = listJson.orders.find((o: { id: string }) => o.id === createdOrderId);
     assert.ok(foundOrder, "Newly created order must be in customer order list");
-    assert.strictEqual((foundOrder as any).imageUrl, undefined, "Customer list orders must omit imageUrl");
-    assert.strictEqual((foundOrder as any).proofImageUrl, undefined, "Customer list orders must omit proofImageUrl");
+    assert.strictEqual((foundOrder as Record<string, unknown>).imageUrl, undefined, "Customer list orders must omit imageUrl");
+    assert.strictEqual((foundOrder as Record<string, unknown>).proofImageUrl, undefined, "Customer list orders must omit proofImageUrl");
     console.log(`   ✅ Orders listed. Found ${listJson.orders.length} order(s). Images omitted from general list.`);
 
     // ==========================================
