@@ -101,3 +101,4 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     return jsonError("Unable to retrieve order photos. Please try again.", 500);
   }
 }
+

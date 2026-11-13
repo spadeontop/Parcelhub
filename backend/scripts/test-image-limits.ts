@@ -78,3 +78,4 @@ console.log("4. Testing validateImageSize for STAFF (200 KB limit)...");
 }
 
 console.log("\n🎉 ALL IMAGE SIZE UNIT TESTS PASSED (100% GREEN)!\n");
+
