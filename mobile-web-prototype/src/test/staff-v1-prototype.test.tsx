@@ -203,7 +203,7 @@ describe('Staff v1 Prototype (Postman Debugger + Real UI Toggle)', () => {
     // Use +₱100 preset chip (480 + 100 = 580) without typing JSON
     fireEvent.click(screen.getByRole('button', { name: /\+₱100 \(₱580\)/i }));
     // Verify simulated action button "Receive Cash & Activate" works in addition to "Send Request"
-    expect(screen.getByRole('button', { name: /Receive Cash & Activate/i })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /Receive Cash & Activate/i })[0]).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /Send Request/i }));
 
     await waitFor(() => {
@@ -250,7 +250,16 @@ describe('Staff v1 Prototype (Postman Debugger + Real UI Toggle)', () => {
     expect((screen.getByLabelText('Resolved Request URL') as HTMLInputElement).value).toBe(
       '/api/v1/staff/orders/ORD-C1-RDY-01/claim'
     );
-    expect(screen.getByRole('button', { name: /Release Parcel to Customer/i })).toBeInTheDocument();
+    const releaseBtn = screen.getByRole('button', { name: /Release Parcel to Customer/i });
+    expect(releaseBtn).toBeInTheDocument();
+    fireEvent.click(releaseBtn);
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/v1/staff/orders/ORD-C1-RDY-01/claim',
+        expect.objectContaining({ method: 'POST' })
+      );
+    });
 
     // Verify Request and Response are visible at the same time
     expect(screen.getByText('REQUEST SENT')).toBeInTheDocument();
@@ -280,7 +289,7 @@ describe('Staff v1 Prototype (Postman Debugger + Real UI Toggle)', () => {
     });
 
     // Real UI displays live orders from /api/v1/staff/orders (Unpaid tab active by default -> ORD-C1-PAY-01)
-    expect(screen.getByText('ORD-C1-PAY-01')).toBeInTheDocument();
+    expect(screen.getAllByText('ORD-C1-PAY-01')[0]).toBeInTheDocument();
 
     // Click order card in Real UI -> opens details modal and fires GET /api/v1/staff/orders/ORD-C1-PAY-01
     fireEvent.click(screen.getByRole('button', { name: /View complete details and actions for ORD-C1-PAY-01/i }));
@@ -298,5 +307,112 @@ describe('Staff v1 Prototype (Postman Debugger + Real UI Toggle)', () => {
     await waitFor(() => {
       expect(screen.getByText('/api/v1/staff Collection')).toBeInTheDocument();
     });
+  });
+
+  it('supports decoupled route, hardcoded presets (localhost, vercel, /api, /api/v1) and custom additions via +', async () => {
+    const fetchMock = createFetchMock();
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<StaffV1Workbench initialMode="debug" />);
+
+    // Check buildEndpointUrl decoupling
+    const form = {
+      username: 'staff',
+      password: 'password',
+      orderId: 'ORD-C1-PAY-01',
+      statusFilter: 'ALL',
+      limit: '20',
+      offset: '0',
+      amountReceived: '580',
+      imageUrl: '',
+    };
+
+    const loginSpec = getEndpointSpec('login');
+    // Default prefix is /api/v1
+    expect(buildEndpointUrl(loginSpec, 'http://localhost:3000', form)).toBe(
+      'http://localhost:3000/api/v1/staff/login'
+    );
+    // Explicit /api prefix decoupled
+    expect(buildEndpointUrl(loginSpec, 'http://localhost:3000', form, '/api')).toBe(
+      'http://localhost:3000/api/staff/login'
+    );
+
+    // 1. Target Host Presets
+    const hostSelect = screen.getByLabelText(/Backend Base URL Preset/i) as HTMLSelectElement;
+    expect(screen.getByRole('option', { name: /Vite Proxy \(\/api\)/i })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /http:\/\/localhost:3000/i })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /https:\/\/parcelhub-spade\.vercel\.app/i })).toBeInTheDocument();
+
+    // Select Vercel preset
+    fireEvent.change(hostSelect, { target: { value: 'https://parcelhub-spade.vercel.app' } });
+    expect(hostSelect.value).toBe('https://parcelhub-spade.vercel.app');
+
+    // Add custom host preset via '+'
+    const addHostBtn = screen.getByRole('button', { name: /Add custom preset/i });
+    fireEvent.click(addHostBtn);
+
+    const hostInput = screen.getByPlaceholderText(/e\.g\. localhost:3000 or URL/i);
+    expect(hostInput).toBeInTheDocument();
+
+    fireEvent.change(hostInput, { target: { value: '192.168.1.75:5000/' } });
+    fireEvent.click(screen.getByRole('button', { name: /Save Preset/i }));
+
+    await waitFor(() => {
+      const updatedHostSelect = screen.getByLabelText(/Backend Base URL Preset/i) as HTMLSelectElement;
+      expect(updatedHostSelect.value).toBe('http://192.168.1.75:5000');
+    });
+
+    const storedHosts = JSON.parse(localStorage.getItem('ph_v1_staff_custom_presets') || '[]');
+    expect(storedHosts).toContain('http://192.168.1.75:5000');
+
+    // Delete custom host preset via '✕'
+    const deleteHostBtn = screen.getByRole('button', { name: /Remove custom preset/i });
+    fireEvent.click(deleteHostBtn);
+
+    await waitFor(() => {
+      const resetHostSelect = screen.getByLabelText(/Backend Base URL Preset/i) as HTMLSelectElement;
+      expect(resetHostSelect.value).toBe('');
+    });
+
+    // 2. API Prefix Presets
+    const prefixSelect = screen.getByLabelText(/Staff Backend API Prefix Preset/i) as HTMLSelectElement;
+    expect(prefixSelect.value).toBe('/api/v1');
+
+    // Switch prefix to /api
+    fireEvent.change(prefixSelect, { target: { value: '/api' } });
+    expect(prefixSelect.value).toBe('/api');
+
+    // Brand badge updates to /api/staff
+    expect(screen.getByText('/api/staff')).toBeInTheDocument();
+
+    // Add custom prefix via '+'
+    const addPrefixBtn = screen.getByRole('button', { name: /Add custom prefix/i });
+    fireEvent.click(addPrefixBtn);
+
+    const prefixInput = screen.getByPlaceholderText(/e\.g\. \/api\/v2 or \/custom/i);
+    expect(prefixInput).toBeInTheDocument();
+
+    fireEvent.change(prefixInput, { target: { value: 'custom-staff/' } });
+    fireEvent.click(screen.getByRole('button', { name: /Save Prefix/i }));
+
+    await waitFor(() => {
+      const updatedPrefixSelect = screen.getByLabelText(/Staff Backend API Prefix Preset/i) as HTMLSelectElement;
+      expect(updatedPrefixSelect.value).toBe('/custom-staff');
+    });
+
+    const storedPrefixes = JSON.parse(localStorage.getItem('ph_v1_staff_prefix_presets') || '[]');
+    expect(storedPrefixes).toContain('/custom-staff');
+
+    // Delete custom prefix
+    const deletePrefixBtn = screen.getByRole('button', { name: /Remove custom prefix/i });
+    fireEvent.click(deletePrefixBtn);
+
+    await waitFor(() => {
+      const resetPrefixSelect = screen.getByLabelText(/Staff Backend API Prefix Preset/i) as HTMLSelectElement;
+      expect(resetPrefixSelect.value).toBe('/api/v1');
+    });
+
+    const storedPrefixesAfterDelete = JSON.parse(localStorage.getItem('ph_v1_staff_prefix_presets') || '[]');
+    expect(storedPrefixesAfterDelete).not.toContain('/custom-staff');
   });
 });

@@ -56,6 +56,7 @@ function getOrderStatusPillClasses(status: string): string {
 export const StaffPostmanDebugger: React.FC<StaffPostmanDebuggerProps> = ({ session }) => {
   const {
     baseUrl,
+    apiPrefix,
     authToken,
     staffUsername,
     orders,
@@ -181,8 +182,8 @@ export const StaffPostmanDebugger: React.FC<StaffPostmanDebuggerProps> = ({ sess
   };
 
   const resolvedUrl = useMemo(
-    () => buildEndpointUrl(activeSpec, baseUrl, form),
-    [activeSpec, baseUrl, form]
+    () => buildEndpointUrl(activeSpec, baseUrl, form, apiPrefix),
+    [activeSpec, baseUrl, form, apiPrefix]
   );
 
   const generatedBody = useMemo(
@@ -369,7 +370,7 @@ export const StaffPostmanDebugger: React.FC<StaffPostmanDebuggerProps> = ({ sess
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
             <h2 className="text-xs font-bold uppercase tracking-wider text-white">
-              /api/v1/staff Collection
+              {apiPrefix}/staff Collection
             </h2>
             <span className="text-[10px] font-mono text-slate-400">
               ({STAFF_V1_ENDPOINTS.length} Endpoints • Click to switch)
@@ -407,7 +408,7 @@ export const StaffPostmanDebugger: React.FC<StaffPostmanDebuggerProps> = ({ sess
                 <div className="flex flex-col">
                   <span className="text-xs font-bold leading-tight">{ep.shortLabel}</span>
                   <span className="text-[9px] font-mono text-slate-400 leading-tight">
-                    {ep.pathTemplate.replace('/api/v1/staff', '') || '/'}
+                    {ep.pathTemplate.replace(/^\/?api(\/v\d+)?\/staff/, '') || '/'}
                   </span>
                 </div>
               </button>

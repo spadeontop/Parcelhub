@@ -17,8 +17,10 @@ const TOKEN_STORAGE_KEY = 'ph_v1_staff_auth_token';
 const REFRESH_STORAGE_KEY = 'ph_v1_staff_refresh_token';
 const USERNAME_STORAGE_KEY = 'ph_v1_staff_username';
 const BASE_URL_STORAGE_KEY = 'ph_v1_staff_base_url';
+const API_PREFIX_STORAGE_KEY = 'ph_v1_staff_api_prefix';
 const EXPLICIT_LOGOUT_KEY = 'ph_v1_staff_explicit_logout';
 
+export const DEFAULT_STAFF_API_PREFIX = '/api/v1';
 export const DEFAULT_STAFF_TOKEN = 'mock-staff-jwt-token-12345';
 
 function safeGetStorage(key: string): string {
@@ -57,6 +59,8 @@ export interface UseStaffV1SessionReturn {
   setUiMode: (mode: UiMode) => void;
   baseUrl: string;
   setBaseUrl: (url: string) => void;
+  apiPrefix: string;
+  setApiPrefix: (prefix: string) => void;
   authToken: string;
   refreshToken: string;
   staffUsername: string;
@@ -90,6 +94,10 @@ export interface UseStaffV1SessionReturn {
 export function useStaffV1Session(initialMode: UiMode = 'debug'): UseStaffV1SessionReturn {
   const [uiMode, setUiMode] = useState<UiMode>(initialMode);
   const [baseUrl, setBaseUrlState] = useState<string>(() => safeGetStorage(BASE_URL_STORAGE_KEY));
+  const [apiPrefix, setApiPrefixState] = useState<string>(() => {
+    const stored = safeGetStorage(API_PREFIX_STORAGE_KEY);
+    return stored || DEFAULT_STAFF_API_PREFIX;
+  });
   const [authToken, setAuthToken] = useState<string>(() => {
     const stored = safeGetStorage(TOKEN_STORAGE_KEY);
     if (stored) return stored;
@@ -128,6 +136,11 @@ export function useStaffV1Session(initialMode: UiMode = 'debug'): UseStaffV1Sess
   const setBaseUrl = useCallback((url: string) => {
     setBaseUrlState(url);
     safeSetStorage(BASE_URL_STORAGE_KEY, url);
+  }, []);
+
+  const setApiPrefix = useCallback((prefix: string) => {
+    setApiPrefixState(prefix);
+    safeSetStorage(API_PREFIX_STORAGE_KEY, prefix);
   }, []);
 
   const setTokens = useCallback((auth: string, refresh = '', username?: string) => {
@@ -183,9 +196,14 @@ export function useStaffV1Session(initialMode: UiMode = 'debug'): UseStaffV1Sess
   const buildUrl = useCallback(
     (path: string) => {
       const cleanBase = baseUrl.trim().replace(/\/+$/, '');
-      return `${cleanBase}${path}`;
+      const cleanPrefix = apiPrefix.trim().replace(/\/+$/, '');
+      let routeSuffix = path.replace(/^\/?api(\/v\d+)?/, '');
+      if (!routeSuffix.startsWith('/')) {
+        routeSuffix = `/${routeSuffix}`;
+      }
+      return `${cleanBase}${cleanPrefix}${routeSuffix}`;
     },
-    [baseUrl]
+    [baseUrl, apiPrefix]
   );
 
   const sendRequest = useCallback(
@@ -381,6 +399,8 @@ export function useStaffV1Session(initialMode: UiMode = 'debug'): UseStaffV1Sess
     setUiMode,
     baseUrl,
     setBaseUrl,
+    apiPrefix,
+    setApiPrefix,
     authToken,
     refreshToken,
     staffUsername,
