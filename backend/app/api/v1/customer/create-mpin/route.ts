@@ -60,6 +60,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (customer.mpin) {
+      return jsonError(
+        "MPIN is already set. Please log in or use MPIN verification.",
+        409,
+        "Conflict"
+      );
+    }
+
     const hashedMpin = await bcrypt.hash(body.mpin, 10);
 
     const [updatedCustomer] = await db

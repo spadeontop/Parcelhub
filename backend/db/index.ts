@@ -13,11 +13,16 @@ function createDatabaseClient() {
   if (process.env.DATABASE_URL) {
     // If DATABASE_URL is provided (e.g. Supabase Postgres), lazily require postgres driver
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const postgres = require("postgres");
+    const postgresMod = require("postgres");
+    const postgres = postgresMod.default || postgresMod;
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { drizzle } = require("drizzle-orm/postgres-js");
-    const client = postgres(process.env.DATABASE_URL, { prepare: false });
-    return drizzle(client, { schema });
+    const client = postgres(process.env.DATABASE_URL, {
+      prepare: false,
+      max: 5,
+      ssl: "require",
+    });
+    return { db: drizzle(client, { schema }), pglite: undefined };
   }
 
   // Local development: Embedded PGlite in ./pgdata
@@ -28,9 +33,7 @@ function createDatabaseClient() {
 
 const instance = global.__drizzleDb ?? createDatabaseClient();
 
-if (process.env.NODE_ENV !== "production") {
-  global.__drizzleDb = instance;
-}
+global.__drizzleDb = instance;
 
 export const db = instance.db;
 export const pglite = instance.pglite;
