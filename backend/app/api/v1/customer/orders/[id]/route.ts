@@ -58,6 +58,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         or(eq(orders.id, identifier), eq(orders.ticketCode, identifier.toUpperCase())),
         eq(orders.customerId, auth.session.userId)
       ),
+      columns: {
+        imageUrl: false,
+        proofImageUrl: false,
+      },
     });
 
     if (!order) {
@@ -86,8 +90,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       change: order.change,
       status: order.status,
       statusTimeline: (order.statusTimeline ?? []) as unknown as OrderStatusHistoryTuple,
-      imageUrl: order.imageUrl,
-      proofImageUrl: order.proofImageUrl,
       claimInitiatedAt: order.claimInitiatedAt ? order.claimInitiatedAt.toISOString() : null,
       claimExpiresAt: order.claimExpiresAt ? order.claimExpiresAt.toISOString() : null,
       isClaimActive,

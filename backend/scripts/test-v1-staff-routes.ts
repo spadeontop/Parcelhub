@@ -191,7 +191,9 @@ async function runV1StaffSuite() {
       listData.orders.some((o: { id: string }) => o.id === testOrderId),
       "Ephemeral PAYMENT_REQUIRED order must appear in filtered list"
     );
-    console.log(`   ✅ Orders listed & filtered (${listData.orders.length} returned, invalid status rejected 400).`);
+    assert.strictEqual(listData.orders[0].imageUrl, undefined, "Staff list orders must omit imageUrl");
+    assert.strictEqual(listData.orders[0].proofImageUrl, undefined, "Staff list orders must omit proofImageUrl");
+    console.log(`   ✅ Orders listed & filtered (${listData.orders.length} returned, invalid status rejected 400). Images omitted from general list.`);
 
     // ---------------------------------------------------------
     // 4. View Order Details by ID, TicketCode, and 404 Guard
@@ -210,6 +212,8 @@ async function runV1StaffSuite() {
     assert.strictEqual(byIdRes.status, 200);
     const byIdData = await byIdRes.json();
     assert.strictEqual(byIdData.orderId, testOrderId);
+    assert.strictEqual(byIdData.imageUrl, undefined, "Staff order detail must omit imageUrl");
+    assert.strictEqual(byIdData.proofImageUrl, undefined, "Staff order detail must omit proofImageUrl");
 
     const byCodeRes = await getStaffOrder(
       makeReq(`/api/v1/staff/orders/${testTicketCode}`, { token: authToken }),

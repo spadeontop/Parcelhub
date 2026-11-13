@@ -269,7 +269,9 @@ async function runV1CustomerTests() {
     assert.ok(Array.isArray(listJson.orders), "orders must be an array");
     const foundOrder = listJson.orders.find((o: { id: string }) => o.id === createdOrderId);
     assert.ok(foundOrder, "Newly created order must be in customer order list");
-    console.log(`   ✅ Orders listed. Found ${listJson.orders.length} order(s).`);
+    assert.strictEqual((foundOrder as any).imageUrl, undefined, "Customer list orders must omit imageUrl");
+    assert.strictEqual((foundOrder as any).proofImageUrl, undefined, "Customer list orders must omit proofImageUrl");
+    console.log(`   ✅ Orders listed. Found ${listJson.orders.length} order(s). Images omitted from general list.`);
 
     // ==========================================
     // 9. Get Single Order by ID
@@ -286,7 +288,9 @@ async function runV1CustomerTests() {
     assert.strictEqual(getOrderRes.status, 200, `Expected 200, got ${getOrderRes.status}`);
     assert.strictEqual(getOrderJson.order.id, createdOrderId);
     assert.strictEqual(getOrderJson.order.trackingId, null);
-    console.log("   ✅ Single order retrieved and ownership verified.");
+    assert.strictEqual(getOrderJson.order.imageUrl, undefined, "Customer order detail must omit imageUrl");
+    assert.strictEqual(getOrderJson.order.proofImageUrl, undefined, "Customer order detail must omit proofImageUrl");
+    console.log("   ✅ Single order retrieved and ownership verified. Images omitted from detail response.");
 
     // ==========================================
     // 9b. One-Shot Order Continuation (PUT /api/v1/customer/orders/[id])
