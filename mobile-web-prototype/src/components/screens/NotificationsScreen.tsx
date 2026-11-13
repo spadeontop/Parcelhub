@@ -4,7 +4,7 @@ import { BrandHeader } from '../layout/BrandHeader';
 import { BottomNav } from '../layout/BottomNav';
 
 export const NotificationsScreen: React.FC = () => {
-  const { notifications, markAllNotificationsAsRead, navigateTo } = useApp();
+  const { notifications, markAllNotificationsAsRead } = useApp();
   const unreadCount = notifications.filter((n) => n.unread).length;
 
   return (

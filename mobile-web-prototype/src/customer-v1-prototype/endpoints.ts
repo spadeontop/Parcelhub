@@ -312,10 +312,17 @@ export interface CustomerEndpointFormValues {
 export function buildCustomerEndpointUrl(
   spec: CustomerEndpointSpec,
   baseUrl: string,
-  form: CustomerEndpointFormValues
+  form: CustomerEndpointFormValues,
+  apiPrefix: string = '/api/v1'
 ): string {
   const cleanBase = baseUrl.trim().replace(/\/+$/, '');
-  let path = spec.pathTemplate;
+  const cleanPrefix = apiPrefix.trim().replace(/\/+$/, '');
+  let routeSuffix = spec.pathTemplate.replace(/^\/?api(\/v\d+)?/, '');
+  if (!routeSuffix.startsWith('/')) {
+    routeSuffix = `/${routeSuffix}`;
+  }
+
+  let path = `${cleanPrefix}${routeSuffix}`;
 
   if (spec.hasOrderIdParam) {
     const cleanId = encodeURIComponent((form.orderId || 'ORD-C1-PEND-01').trim());

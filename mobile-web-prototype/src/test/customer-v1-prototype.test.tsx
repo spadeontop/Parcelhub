@@ -332,4 +332,88 @@ describe('Customer v1 Prototype (Postman Debugger + Complete Customer UI)', () =
     const storedPresetsAfterDelete = JSON.parse(localStorage.getItem('ph_v1_cust_custom_presets') || '[]');
     expect(storedPresetsAfterDelete).not.toContain('http://192.168.1.50:4000');
   });
+
+  it('decouples route and supports hardcoded API prefixes (/api, /api/v1) and custom prefixes via +', async () => {
+    const fetchMock = createCustomerFetchMock();
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<CustomerV1Workbench initialMode="debug" />);
+
+    // Check buildCustomerEndpointUrl decoupling
+    const form = {
+      email: 'user@example.com',
+      password: 'password',
+      firstName: 'John',
+      lastName: 'Doe',
+      middleInitial: 'D',
+      phoneNumber: '+639123456789',
+      mpin: '1234',
+      preAuthToken: 'pre-123',
+      refreshToken: 'ref-456',
+      orderId: 'ORD-C1-PEND-01',
+      typeFilter: 'ALL',
+      limit: '20',
+      offset: '0',
+      initImageUrl: 'https://storage.parcelhub.com/init/sample.jpg',
+      trackingId: 'PH-C1-001',
+      productName: 'Mouse',
+      recipientName: 'John Doe',
+      price: '480',
+    };
+
+    const loginSpec = getCustomerEndpointSpec('login');
+    // Default prefix is /api/v1
+    expect(buildCustomerEndpointUrl(loginSpec, 'http://localhost:3000', form)).toBe(
+      'http://localhost:3000/api/v1/customer/login'
+    );
+    // Explicit /api prefix decoupled
+    expect(buildCustomerEndpointUrl(loginSpec, 'http://localhost:3000', form, '/api')).toBe(
+      'http://localhost:3000/api/customer/login'
+    );
+
+    // Verify Prefix select element
+    const prefixSelect = screen.getByLabelText(/Customer Backend API Prefix Preset/i) as HTMLSelectElement;
+    expect(prefixSelect.value).toBe('/api/v1');
+
+    // Switch prefix to /api
+    fireEvent.change(prefixSelect, { target: { value: '/api' } });
+    expect(prefixSelect.value).toBe('/api');
+
+    // Brand badge updates to /api/customer
+    expect(screen.getByText('/api/customer')).toBeInTheDocument();
+
+    // Click '+' to add custom prefix
+    const addPrefixBtn = screen.getByRole('button', { name: /Add custom prefix/i });
+    fireEvent.click(addPrefixBtn);
+
+    const prefixInput = screen.getByPlaceholderText(/e\.g\. \/api\/v2 or \/custom/i);
+    expect(prefixInput).toBeInTheDocument();
+
+    // Enter prefix without leading slash and with trailing slash
+    fireEvent.change(prefixInput, { target: { value: 'custom-api/' } });
+    fireEvent.click(screen.getByRole('button', { name: /Save Prefix/i }));
+
+    // Should normalize to /custom-api and select it
+    await waitFor(() => {
+      const updatedPrefixSelect = screen.getByLabelText(/Customer Backend API Prefix Preset/i) as HTMLSelectElement;
+      expect(updatedPrefixSelect.value).toBe('/custom-api');
+      expect(screen.getByRole('option', { name: /\/custom-api \(Custom\)/i })).toBeInTheDocument();
+    });
+
+    // Check localStorage persistence
+    const storedPrefixes = JSON.parse(localStorage.getItem('ph_v1_cust_prefix_presets') || '[]');
+    expect(storedPrefixes).toContain('/custom-api');
+
+    // Delete custom prefix
+    const deletePrefixBtn = screen.getByRole('button', { name: /Remove custom prefix/i });
+    fireEvent.click(deletePrefixBtn);
+
+    await waitFor(() => {
+      const resetPrefixSelect = screen.getByLabelText(/Customer Backend API Prefix Preset/i) as HTMLSelectElement;
+      expect(resetPrefixSelect.value).toBe('/api/v1');
+    });
+
+    const storedPrefixesAfterDelete = JSON.parse(localStorage.getItem('ph_v1_cust_prefix_presets') || '[]');
+    expect(storedPrefixesAfterDelete).not.toContain('/custom-api');
+  });
 });

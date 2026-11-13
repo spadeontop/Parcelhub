@@ -9,6 +9,7 @@ export interface CustomerV1WorkbenchProps {
 }
 
 const CUSTOM_PRESETS_KEY = 'ph_v1_cust_custom_presets';
+const PREFIX_PRESETS_KEY = 'ph_v1_cust_prefix_presets';
 
 function getStoredCustomPresets(): string[] {
   try {
@@ -29,6 +30,25 @@ function saveStoredCustomPresets(presets: string[]): void {
   }
 }
 
+function getStoredPrefixPresets(): string[] {
+  try {
+    const raw = localStorage.getItem(PREFIX_PRESETS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveStoredPrefixPresets(presets: string[]): void {
+  try {
+    localStorage.setItem(PREFIX_PRESETS_KEY, JSON.stringify(presets));
+  } catch {
+    // Ignore storage errors
+  }
+}
+
 function normalizePresetUrl(raw: string): string {
   let cleaned = raw.trim().replace(/\/+$/, '');
   if (!cleaned) return '';
@@ -38,15 +58,39 @@ function normalizePresetUrl(raw: string): string {
   return cleaned;
 }
 
+function normalizePrefix(raw: string): string {
+  let cleaned = raw.trim().replace(/\/+$/, '');
+  if (!cleaned) return '';
+  if (!cleaned.startsWith('/')) {
+    cleaned = `/${cleaned}`;
+  }
+  return cleaned;
+}
+
 export const CustomerV1Workbench: React.FC<CustomerV1WorkbenchProps> = ({
   initialMode = 'debug',
 }) => {
   const session = useCustomerV1Session(initialMode);
-  const { uiMode, setUiMode, baseUrl, setBaseUrl, authToken, customerProfile, toast, showToast } = session;
+  const {
+    uiMode,
+    setUiMode,
+    baseUrl,
+    setBaseUrl,
+    apiPrefix,
+    setApiPrefix,
+    authToken,
+    customerProfile,
+    toast,
+    showToast,
+  } = session;
 
   const [customPresets, setCustomPresets] = useState<string[]>(getStoredCustomPresets);
   const [isAddingPreset, setIsAddingPreset] = useState<boolean>(false);
   const [newPresetUrl, setNewPresetUrl] = useState<string>('');
+
+  const [customPrefixes, setCustomPrefixes] = useState<string[]>(getStoredPrefixPresets);
+  const [isAddingPrefix, setIsAddingPrefix] = useState<boolean>(false);
+  const [newPrefixText, setNewPrefixText] = useState<string>('');
 
   const handleSavePreset = () => {
     const normalized = normalizePresetUrl(newPresetUrl);
@@ -84,6 +128,38 @@ export const CustomerV1Workbench: React.FC<CustomerV1WorkbenchProps> = ({
     showToast('Custom preset removed; reverted to Vite Proxy', 'success');
   };
 
+  const handleSavePrefix = () => {
+    const normalized = normalizePrefix(newPrefixText);
+    if (!normalized) {
+      setIsAddingPrefix(false);
+      setNewPrefixText('');
+      return;
+    }
+    const isHardcoded = normalized === '/api/v1' || normalized === '/api';
+    if (!isHardcoded && !customPrefixes.includes(normalized)) {
+      const updated = [...customPrefixes, normalized];
+      setCustomPrefixes(updated);
+      saveStoredPrefixPresets(updated);
+    }
+    setApiPrefix(normalized);
+    setIsAddingPrefix(false);
+    setNewPrefixText('');
+    showToast(`Active API prefix set to ${normalized}`, 'success');
+  };
+
+  const handleCancelPrefix = () => {
+    setIsAddingPrefix(false);
+    setNewPrefixText('');
+  };
+
+  const handleDeleteCustomPrefix = () => {
+    const updated = customPrefixes.filter((p) => p !== apiPrefix);
+    setCustomPrefixes(updated);
+    saveStoredPrefixPresets(updated);
+    setApiPrefix('/api/v1');
+    showToast('Custom prefix removed; reverted to /api/v1', 'success');
+  };
+
   return (
     <div className="h-screen bg-slate-950 text-slate-100 flex flex-col font-sans antialiased overflow-hidden">
       {/* Unified Top Workbench Bar */}
@@ -104,7 +180,7 @@ export const CustomerV1Workbench: React.FC<CustomerV1WorkbenchProps> = ({
                   ParcelHub Customer v1 Prototype
                 </h1>
                 <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">
-                  /api/v1/customer
+                  {apiPrefix}/customer
                 </span>
               </div>
               <p className="text-[11px] text-slate-400">
@@ -231,6 +307,92 @@ export const CustomerV1Workbench: React.FC<CustomerV1WorkbenchProps> = ({
                   title="Add custom backend preset"
                   aria-label="Add custom preset"
                   onClick={() => setIsAddingPreset(true)}
+                  className="w-5 h-5 rounded-md bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/40 text-xs font-bold transition flex items-center justify-center cursor-pointer shadow-sm"
+                >
+                  +
+                </button>
+              </div>
+            )}
+
+            {/* API Prefix Control */}
+            {isAddingPrefix ? (
+              <div className="flex items-center gap-1.5 bg-slate-950 border border-indigo-500/50 rounded-xl px-2.5 py-1 shadow-inner">
+                <span className="text-[10px] font-semibold uppercase text-indigo-400">New Prefix:</span>
+                <input
+                  type="text"
+                  autoFocus
+                  value={newPrefixText}
+                  onChange={(e) => setNewPrefixText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSavePrefix();
+                    if (e.key === 'Escape') handleCancelPrefix();
+                  }}
+                  placeholder="e.g. /api/v2 or /custom"
+                  className="bg-transparent text-xs font-mono text-white focus:outline-none w-32 sm:w-40"
+                />
+                <button
+                  type="button"
+                  onClick={handleSavePrefix}
+                  aria-label="Save Prefix"
+                  className="px-2 py-0.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold cursor-pointer transition shadow"
+                >
+                  Save
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCancelPrefix}
+                  aria-label="Cancel Prefix"
+                  className="px-1.5 py-0.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] cursor-pointer transition"
+                >
+                  ✕
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1">
+                <span className="text-[10px] font-semibold uppercase text-slate-500">Prefix:</span>
+                <select
+                  aria-label="Customer Backend API Prefix Preset"
+                  value={apiPrefix}
+                  onChange={(e) => setApiPrefix(e.target.value)}
+                  className="bg-transparent text-xs font-mono text-slate-200 focus:outline-none cursor-pointer max-w-[130px] truncate"
+                >
+                  <option value="/api/v1" className="bg-slate-900">
+                    /api/v1
+                  </option>
+                  <option value="/api" className="bg-slate-900">
+                    /api
+                  </option>
+                  {customPrefixes.map((pfx) => (
+                    <option key={pfx} value={pfx} className="bg-slate-900">
+                      {pfx} (Custom)
+                    </option>
+                  ))}
+                  {apiPrefix !== '/api/v1' &&
+                    apiPrefix !== '/api' &&
+                    !customPrefixes.includes(apiPrefix) && (
+                      <option value={apiPrefix} className="bg-slate-900">
+                        {apiPrefix}
+                      </option>
+                    )}
+                </select>
+
+                {customPrefixes.includes(apiPrefix) && (
+                  <button
+                    type="button"
+                    title="Remove this custom prefix"
+                    aria-label="Remove custom prefix"
+                    onClick={handleDeleteCustomPrefix}
+                    className="text-slate-400 hover:text-rose-400 transition px-1 text-xs cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  title="Add custom API prefix"
+                  aria-label="Add custom prefix"
+                  onClick={() => setIsAddingPrefix(true)}
                   className="w-5 h-5 rounded-md bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/40 text-xs font-bold transition flex items-center justify-center cursor-pointer shadow-sm"
                 >
                   +

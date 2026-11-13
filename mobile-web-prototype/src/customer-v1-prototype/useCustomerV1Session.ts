@@ -29,8 +29,10 @@ const PRE_AUTH_TOKEN_KEY = 'ph_v1_cust_pre_auth_token';
 const REFRESH_TOKEN_KEY = 'ph_v1_cust_refresh_token';
 const CUSTOMER_PROFILE_KEY = 'ph_v1_cust_profile';
 const BASE_URL_KEY = 'ph_v1_cust_base_url';
+const API_PREFIX_KEY = 'ph_v1_cust_api_prefix';
 const EXPLICIT_LOGOUT_KEY = 'ph_v1_cust_explicit_logout';
 
+export const DEFAULT_CUSTOMER_API_PREFIX = '/api/v1';
 export const DEFAULT_CUSTOMER_AUTH_TOKEN = 'mock-customer-jwt-auth-12345';
 export const DEFAULT_CUSTOMER_PRE_AUTH_TOKEN = 'mock-customer-jwt-preauth-67890';
 export const DEFAULT_CUSTOMER_REFRESH_TOKEN = 'mock-customer-jwt-refresh-abcde';
@@ -83,6 +85,8 @@ export interface UseCustomerV1SessionReturn {
   setUiMode: (mode: UiMode) => void;
   baseUrl: string;
   setBaseUrl: (url: string) => void;
+  apiPrefix: string;
+  setApiPrefix: (prefix: string) => void;
   preAuthToken: string;
   authToken: string;
   refreshToken: string;
@@ -142,6 +146,10 @@ export interface UseCustomerV1SessionReturn {
 export function useCustomerV1Session(initialMode: UiMode = 'debug'): UseCustomerV1SessionReturn {
   const [uiMode, setUiMode] = useState<UiMode>(initialMode);
   const [baseUrl, setBaseUrlState] = useState<string>(() => safeGetStorage(BASE_URL_KEY));
+  const [apiPrefix, setApiPrefixState] = useState<string>(() => {
+    const stored = safeGetStorage(API_PREFIX_KEY);
+    return stored || DEFAULT_CUSTOMER_API_PREFIX;
+  });
 
   const [preAuthToken, setPreAuthToken] = useState<string>(() => {
     const stored = safeGetStorage(PRE_AUTH_TOKEN_KEY);
@@ -206,6 +214,11 @@ export function useCustomerV1Session(initialMode: UiMode = 'debug'): UseCustomer
   const setBaseUrl = useCallback((url: string) => {
     setBaseUrlState(url);
     safeSetStorage(BASE_URL_KEY, url);
+  }, []);
+
+  const setApiPrefix = useCallback((prefix: string) => {
+    setApiPrefixState(prefix);
+    safeSetStorage(API_PREFIX_KEY, prefix);
   }, []);
 
   const setPreAuthTokenValue = useCallback((token: string) => {
@@ -280,9 +293,14 @@ export function useCustomerV1Session(initialMode: UiMode = 'debug'): UseCustomer
   const buildUrl = useCallback(
     (path: string) => {
       const cleanBase = baseUrl.trim().replace(/\/+$/, '');
-      return `${cleanBase}${path}`;
+      const cleanPrefix = apiPrefix.trim().replace(/\/+$/, '');
+      let routeSuffix = path.replace(/^\/?api(\/v\d+)?/, '');
+      if (!routeSuffix.startsWith('/')) {
+        routeSuffix = `/${routeSuffix}`;
+      }
+      return `${cleanBase}${cleanPrefix}${routeSuffix}`;
     },
-    [baseUrl]
+    [baseUrl, apiPrefix]
   );
 
   const sendRequest = useCallback(
@@ -600,6 +618,8 @@ export function useCustomerV1Session(initialMode: UiMode = 'debug'): UseCustomer
     setUiMode,
     baseUrl,
     setBaseUrl,
+    apiPrefix,
+    setApiPrefix,
     preAuthToken,
     authToken,
     refreshToken,
