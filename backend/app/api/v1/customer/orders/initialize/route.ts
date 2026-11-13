@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { db } from "@/db";
 import { orders, orderScreenshots } from "@/db/schema";
 import { authenticateCustomerRequest, checkCustomerBlacklisted } from "@/app/lib/v1/auth";
+import { validateImageSize } from "@/app/lib/v1/image";
 import { jsonError, jsonSuccess } from "@/app/lib/response";
 import {
   CustomerInitOrderReq,
@@ -57,6 +58,12 @@ export async function POST(request: NextRequest) {
 
     if (!imageUrl) {
       return jsonError("imageUrl is required to initialize an order", 400);
+    }
+
+    // 2b. Image Attachment Size Validation (<= CLIENT_IMAGE_MAX_KB, default 110KB)
+    const sizeCheck = validateImageSize(imageUrl, "CUSTOMER");
+    if (!sizeCheck.valid) {
+      return jsonError(sizeCheck.error || "Image exceeds size limit", 400, "ImagePayloadTooLarge");
     }
 
     // ---------------------------------------------------------

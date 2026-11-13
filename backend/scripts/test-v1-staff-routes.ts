@@ -293,6 +293,21 @@ async function runV1StaffSuite() {
     );
     assert.strictEqual(doublePayRes.status, 400, "Duplicate courier payment must return 400");
 
+    // Test oversized staff photo rejection (> 200KB)
+    const oversizedStaffBase64 = `data:image/webp;base64,${Buffer.alloc(210 * 1024, 0x41).toString("base64")}`;
+    const oversizePhotoRes = await attachPhoto(
+      makeReq(`/api/v1/staff/orders/${testOrderId}/make-claimable/attach-photo`, {
+        method: "POST",
+        token: authToken,
+        body: { imageUrl: oversizedStaffBase64 },
+      }),
+      { params: Promise.resolve({ id: testOrderId }) }
+    );
+    const oversizePhotoJson = await oversizePhotoRes.json();
+    assert.strictEqual(oversizePhotoRes.status, 400, "Oversized staff image (>200KB) must return 400");
+    assert.strictEqual(oversizePhotoJson.error, "ImagePayloadTooLarge", "Staff error must be ImagePayloadTooLarge");
+    console.log("   ✅ Oversized staff photo guard (>200KB) rejected with 400 ImagePayloadTooLarge.");
+
     const photoRes = await attachPhoto(
       makeReq(`/api/v1/staff/orders/${testOrderId}/make-claimable/attach-photo`, {
         method: "POST",

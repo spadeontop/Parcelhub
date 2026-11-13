@@ -209,6 +209,22 @@ async function runV1CustomerTests() {
     // 7. Order Initialization (imageUrl only + order_screenshots)
     // ==========================================
     console.log("7. Testing Order Initialization (POST /api/v1/customer/orders/initialize)...");
+
+    // 7a. Test oversized image rejection (> 110KB)
+    const oversizedBase64 = `data:image/webp;base64,${Buffer.alloc(120 * 1024, 0x41).toString("base64")}`;
+    const oversizeInitReq = makeReq("http://localhost:3000/api/v1/customer/orders/initialize", {
+      method: "POST",
+      token: authToken,
+      body: {
+        imageUrl: oversizedBase64,
+      },
+    });
+    const oversizeInitRes = await initCustomerOrder(oversizeInitReq);
+    const oversizeInitJson = await oversizeInitRes.json();
+    assert.strictEqual(oversizeInitRes.status, 400, "Oversized image attachment (>110KB) must be rejected with 400");
+    assert.strictEqual(oversizeInitJson.error, "ImagePayloadTooLarge", "Error code must be ImagePayloadTooLarge");
+    console.log("   ✅ Oversized customer image guard (>110KB) rejected with 400 ImagePayloadTooLarge.");
+
     const initReq = makeReq("http://localhost:3000/api/v1/customer/orders/initialize", {
       method: "POST",
       token: authToken,

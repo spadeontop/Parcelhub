@@ -3,6 +3,7 @@ import { eq, or } from "drizzle-orm";
 import { db } from "@/db";
 import { orders } from "@/db/schema";
 import { authenticateStaffRequest } from "@/app/lib/v1/auth";
+import { validateImageSize } from "@/app/lib/v1/image";
 import { jsonError, jsonSuccess } from "@/app/lib/response";
 import {
   StaffAttachPhotoReq,
@@ -46,6 +47,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const imageUrl = body.imageUrl?.trim();
     if (!imageUrl) {
       return jsonError("imageUrl is required", 400);
+    }
+
+    // 2b. Image Attachment Size Validation (<= STAFF_IMAGE_MAX_KB, default 200KB)
+    const sizeCheck = validateImageSize(imageUrl, "STAFF");
+    if (!sizeCheck.valid) {
+      return jsonError(sizeCheck.error || "Image exceeds size limit", 400, "ImagePayloadTooLarge");
     }
 
     // ---------------------------------------------------------
