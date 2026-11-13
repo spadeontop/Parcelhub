@@ -107,6 +107,8 @@ Dynamic runtime configuration (e.g. AI OCR verification toggles).
 
 ## ⚡ Useful Team Commands
 
+For complete Vercel & Supabase hosting instructions, refer to the [Deployment Guide](../DEPLOYMENT.md).
+
 All commands run from inside the `backend/` folder:
 
 ```powershell
