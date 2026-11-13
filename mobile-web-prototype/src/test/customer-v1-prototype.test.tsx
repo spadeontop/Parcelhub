@@ -280,4 +280,56 @@ describe('Customer v1 Prototype (Postman Debugger + Complete Customer UI)', () =
       expect(screen.getByText('/api/v1/customer Collection')).toBeInTheDocument();
     });
   });
+
+  it('supports hardcoded presets (localhost, vercel) and allows adding/removing custom presets via +', async () => {
+    const fetchMock = createCustomerFetchMock();
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<CustomerV1Workbench initialMode="debug" />);
+
+    const select = screen.getByLabelText(/Customer Backend Base URL Preset/i) as HTMLSelectElement;
+
+    // Verify hardcoded presets exist
+    expect(screen.getByRole('option', { name: /Vite Proxy \(\/api\)/i })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /http:\/\/localhost:3000/i })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /https:\/\/parcelhub-spade\.vercel\.app/i })).toBeInTheDocument();
+
+    // Select Vercel preset
+    fireEvent.change(select, { target: { value: 'https://parcelhub-spade.vercel.app' } });
+    expect(select.value).toBe('https://parcelhub-spade.vercel.app');
+
+    // Click '+' to open inline add preset input
+    const plusButton = screen.getByRole('button', { name: /Add custom preset/i });
+    fireEvent.click(plusButton);
+
+    const input = screen.getByPlaceholderText(/e\.g\. localhost:3000 or URL/i);
+    expect(input).toBeInTheDocument();
+
+    // Type raw URL without protocol and trailing slash
+    fireEvent.change(input, { target: { value: '192.168.1.50:4000/' } });
+    fireEvent.click(screen.getByRole('button', { name: /Save Preset/i }));
+
+    // Should auto-normalize to http://192.168.1.50:4000 and select it
+    await waitFor(() => {
+      const updatedSelect = screen.getByLabelText(/Customer Backend Base URL Preset/i) as HTMLSelectElement;
+      expect(updatedSelect.value).toBe('http://192.168.1.50:4000');
+      expect(screen.getByRole('option', { name: /http:\/\/192\.168\.1\.50:4000 \(Custom\)/i })).toBeInTheDocument();
+    });
+
+    // Check localStorage persistence
+    const storedPresets = JSON.parse(localStorage.getItem('ph_v1_cust_custom_presets') || '[]');
+    expect(storedPresets).toContain('http://192.168.1.50:4000');
+
+    // Delete custom preset via '✕' button
+    const deleteButton = screen.getByRole('button', { name: /Remove custom preset/i });
+    fireEvent.click(deleteButton);
+
+    await waitFor(() => {
+      const resetSelect = screen.getByLabelText(/Customer Backend Base URL Preset/i) as HTMLSelectElement;
+      expect(resetSelect.value).toBe('');
+    });
+
+    const storedPresetsAfterDelete = JSON.parse(localStorage.getItem('ph_v1_cust_custom_presets') || '[]');
+    expect(storedPresetsAfterDelete).not.toContain('http://192.168.1.50:4000');
+  });
 });

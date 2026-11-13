@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { UiMode } from './types';
 import { useCustomerV1Session } from './useCustomerV1Session';
 import { CustomerPostmanDebugger } from './components/CustomerPostmanDebugger';
@@ -8,11 +8,81 @@ export interface CustomerV1WorkbenchProps {
   initialMode?: UiMode;
 }
 
+const CUSTOM_PRESETS_KEY = 'ph_v1_cust_custom_presets';
+
+function getStoredCustomPresets(): string[] {
+  try {
+    const raw = localStorage.getItem(CUSTOM_PRESETS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveStoredCustomPresets(presets: string[]): void {
+  try {
+    localStorage.setItem(CUSTOM_PRESETS_KEY, JSON.stringify(presets));
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+function normalizePresetUrl(raw: string): string {
+  let cleaned = raw.trim().replace(/\/+$/, '');
+  if (!cleaned) return '';
+  if (!/^https?:\/\//i.test(cleaned)) {
+    cleaned = `http://${cleaned}`;
+  }
+  return cleaned;
+}
+
 export const CustomerV1Workbench: React.FC<CustomerV1WorkbenchProps> = ({
   initialMode = 'debug',
 }) => {
   const session = useCustomerV1Session(initialMode);
-  const { uiMode, setUiMode, baseUrl, setBaseUrl, authToken, customerProfile, toast } = session;
+  const { uiMode, setUiMode, baseUrl, setBaseUrl, authToken, customerProfile, toast, showToast } = session;
+
+  const [customPresets, setCustomPresets] = useState<string[]>(getStoredCustomPresets);
+  const [isAddingPreset, setIsAddingPreset] = useState<boolean>(false);
+  const [newPresetUrl, setNewPresetUrl] = useState<string>('');
+
+  const handleSavePreset = () => {
+    const normalized = normalizePresetUrl(newPresetUrl);
+    if (!normalized) {
+      setIsAddingPreset(false);
+      setNewPresetUrl('');
+      return;
+    }
+    const isHardcoded =
+      normalized === '' ||
+      normalized === 'http://localhost:3000' ||
+      normalized === 'https://parcelhub-spade.vercel.app';
+
+    if (!isHardcoded && !customPresets.includes(normalized)) {
+      const updated = [...customPresets, normalized];
+      setCustomPresets(updated);
+      saveStoredCustomPresets(updated);
+    }
+    setBaseUrl(normalized);
+    setIsAddingPreset(false);
+    setNewPresetUrl('');
+    showToast(`Active backend preset set to ${normalized}`, 'success');
+  };
+
+  const handleCancelPreset = () => {
+    setIsAddingPreset(false);
+    setNewPresetUrl('');
+  };
+
+  const handleDeleteCustomPreset = () => {
+    const updated = customPresets.filter((p) => p !== baseUrl);
+    setCustomPresets(updated);
+    saveStoredCustomPresets(updated);
+    setBaseUrl('');
+    showToast('Custom preset removed; reverted to Vite Proxy', 'success');
+  };
 
   return (
     <div className="h-screen bg-slate-950 text-slate-100 flex flex-col font-sans antialiased overflow-hidden">
@@ -79,31 +149,94 @@ export const CustomerV1Workbench: React.FC<CustomerV1WorkbenchProps> = ({
 
           {/* Right: Target Backend & Session Status */}
           <div className="flex items-center gap-2.5 flex-wrap">
-            <div className="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1">
-              <span className="text-[10px] font-semibold uppercase text-slate-500">Target:</span>
-              <select
-                aria-label="Customer Backend Base URL Preset"
-                value={baseUrl === '' || baseUrl === 'http://localhost:3000' ? baseUrl : '__custom__'}
-                onChange={(e) => {
-                  if (e.target.value !== '__custom__') {
-                    setBaseUrl(e.target.value);
-                  }
-                }}
-                className="bg-transparent text-xs font-mono text-slate-200 focus:outline-none cursor-pointer"
-              >
-                <option value="" className="bg-slate-900">
-                  Vite Proxy (/api)
-                </option>
-                <option value="http://localhost:3000" className="bg-slate-900">
-                  http://localhost:3000
-                </option>
-                {baseUrl !== '' && baseUrl !== 'http://localhost:3000' && (
-                  <option value="__custom__" className="bg-slate-900">
-                    {baseUrl}
+            {isAddingPreset ? (
+              <div className="flex items-center gap-1.5 bg-slate-950 border border-indigo-500/50 rounded-xl px-2.5 py-1 shadow-inner">
+                <span className="text-[10px] font-semibold uppercase text-indigo-400">New URL:</span>
+                <input
+                  type="text"
+                  autoFocus
+                  value={newPresetUrl}
+                  onChange={(e) => setNewPresetUrl(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSavePreset();
+                    if (e.key === 'Escape') handleCancelPreset();
+                  }}
+                  placeholder="e.g. localhost:3000 or URL"
+                  className="bg-transparent text-xs font-mono text-white focus:outline-none w-44 sm:w-52"
+                />
+                <button
+                  type="button"
+                  onClick={handleSavePreset}
+                  aria-label="Save Preset"
+                  className="px-2 py-0.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold cursor-pointer transition shadow"
+                >
+                  Save
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCancelPreset}
+                  aria-label="Cancel Preset"
+                  className="px-1.5 py-0.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] cursor-pointer transition"
+                >
+                  ✕
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1">
+                <span className="text-[10px] font-semibold uppercase text-slate-500">Target:</span>
+                <select
+                  aria-label="Customer Backend Base URL Preset"
+                  value={baseUrl}
+                  onChange={(e) => setBaseUrl(e.target.value)}
+                  className="bg-transparent text-xs font-mono text-slate-200 focus:outline-none cursor-pointer max-w-[220px] truncate"
+                >
+                  <option value="" className="bg-slate-900">
+                    Vite Proxy (/api)
                   </option>
+                  <option value="http://localhost:3000" className="bg-slate-900">
+                    http://localhost:3000
+                  </option>
+                  <option value="https://parcelhub-spade.vercel.app" className="bg-slate-900">
+                    https://parcelhub-spade.vercel.app
+                  </option>
+                  {customPresets.map((preset) => (
+                    <option key={preset} value={preset} className="bg-slate-900">
+                      {preset} (Custom)
+                    </option>
+                  ))}
+                  {baseUrl !== '' &&
+                    baseUrl !== 'http://localhost:3000' &&
+                    baseUrl !== 'https://parcelhub-spade.vercel.app' &&
+                    !customPresets.includes(baseUrl) && (
+                      <option value={baseUrl} className="bg-slate-900">
+                        {baseUrl}
+                      </option>
+                    )}
+                </select>
+
+                {customPresets.includes(baseUrl) && (
+                  <button
+                    type="button"
+                    title="Remove this custom preset"
+                    aria-label="Remove custom preset"
+                    onClick={handleDeleteCustomPreset}
+                    className="text-slate-400 hover:text-rose-400 transition px-1 text-xs cursor-pointer"
+                  >
+                    ✕
+                  </button>
                 )}
-              </select>
-            </div>
+
+                <button
+                  type="button"
+                  title="Add custom backend preset"
+                  aria-label="Add custom preset"
+                  onClick={() => setIsAddingPreset(true)}
+                  className="w-5 h-5 rounded-md bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/40 text-xs font-bold transition flex items-center justify-center cursor-pointer shadow-sm"
+                >
+                  +
+                </button>
+              </div>
+            )}
 
             {authToken ? (
               <span className="text-[11px] font-mono text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-1 rounded-full flex items-center gap-1.5">
