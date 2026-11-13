@@ -85,7 +85,27 @@ export async function GET(request: NextRequest) {
     const totalCount = Number(totalCountResult[0]?.count || 0);
 
     const ordersQuery = db
-      .select()
+      .select({
+        id: orders.id,
+        ticketCode: orders.ticketCode,
+        trackingId: orders.trackingId,
+        productName: orders.productName,
+        recipientName: orders.recipientName,
+        price: orders.price,
+        amountReceived: orders.amountReceived,
+        change: orders.change,
+        status: orders.status,
+        statusTimeline: orders.statusTimeline,
+        modifiedBy: orders.modifiedBy,
+        claimRequested: orders.claimRequested,
+        claimInitiatedAt: orders.claimInitiatedAt,
+        claimExpiresAt: orders.claimExpiresAt,
+        courierPaid: orders.courierPaid,
+        courierPaidBy: orders.courierPaidBy,
+        courierPaidAt: orders.courierPaidAt,
+        isRefunded: orders.isRefunded,
+        timestamp: orders.timestamp,
+      })
       .from(orders);
 
     const dbOrders = statusFilter
@@ -103,7 +123,7 @@ export async function GET(request: NextRequest) {
     const staffIdsToFetch: string[] = Array.from(
       new Set(
         dbOrders
-          .map((o: OrderRow): string | null => o.courierPaidBy)
+          .map((o: Omit<OrderRow, "imageUrl" | "proofImageUrl">): string | null => o.courierPaidBy)
           .filter((id: string | null): id is string => typeof id === "string" && id.length > 0)
       )
     );
@@ -122,7 +142,7 @@ export async function GET(request: NextRequest) {
 
     const nowMs = Date.now();
 
-    const formattedOrders: StaffOrderSummary[] = dbOrders.map((o: OrderRow) => {
+    const formattedOrders: StaffOrderSummary[] = dbOrders.map((o: Omit<OrderRow, "imageUrl" | "proofImageUrl">) => {
       let isClaimActive = false;
       let claimRemainingSeconds = 0;
 
@@ -150,8 +170,6 @@ export async function GET(request: NextRequest) {
         timestamp: o.timestamp.toISOString(),
         status: o.status,
         statusMessage: getStatusMessage(o.status),
-        imageUrl: o.imageUrl,
-        proofImageUrl: o.proofImageUrl,
         isClaimActive,
         claimRemainingSeconds,
         courierPaid: o.courierPaid,

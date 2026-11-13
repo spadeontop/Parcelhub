@@ -65,6 +65,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     // ---------------------------------------------------------
     const order = await db.query.orders.findFirst({
       where: or(eq(orders.id, lookupId), eq(orders.ticketCode, lookupId)),
+      columns: {
+        imageUrl: false,
+        proofImageUrl: false,
+      },
     });
 
     if (!order) {
@@ -105,8 +109,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       timestamp: order.timestamp.toISOString(),
       status: order.status,
       statusMessage: getStatusMessage(order.status),
-      imageUrl: order.imageUrl,
-      proofImageUrl: order.proofImageUrl,
       isClaimActive,
       claimRemainingSeconds,
       courierPaid: order.courierPaid,

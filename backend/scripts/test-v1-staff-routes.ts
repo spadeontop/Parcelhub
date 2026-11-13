@@ -32,6 +32,7 @@ import { signAuthToken } from "../app/lib/v1/jwt";
 import { POST as staffLogin } from "../app/api/v1/staff/login/route";
 import { GET as listStaffOrders } from "../app/api/v1/staff/orders/route";
 import { GET as getStaffOrder } from "../app/api/v1/staff/orders/[id]/route";
+import { GET as getStaffOrderPhoto } from "../app/api/v1/staff/orders/[id]/photo/route";
 import { POST as activateOrder } from "../app/api/v1/staff/orders/[id]/activate/route";
 import { POST as payCourier } from "../app/api/v1/staff/orders/[id]/make-claimable/pay/route";
 import { POST as attachPhoto } from "../app/api/v1/staff/orders/[id]/make-claimable/attach-photo/route";
@@ -191,7 +192,9 @@ async function runV1StaffSuite() {
       listData.orders.some((o: { id: string }) => o.id === testOrderId),
       "Ephemeral PAYMENT_REQUIRED order must appear in filtered list"
     );
-    console.log(`   ✅ Orders listed & filtered (${listData.orders.length} returned, invalid status rejected 400).`);
+    assert.strictEqual(listData.orders[0].imageUrl, undefined, "Staff list orders must omit imageUrl");
+    assert.strictEqual(listData.orders[0].proofImageUrl, undefined, "Staff list orders must omit proofImageUrl");
+    console.log(`   ✅ Orders listed & filtered (${listData.orders.length} returned, invalid status rejected 400). Images omitted from general list.`);
 
     // ---------------------------------------------------------
     // 4. View Order Details by ID, TicketCode, and 404 Guard
@@ -210,6 +213,8 @@ async function runV1StaffSuite() {
     assert.strictEqual(byIdRes.status, 200);
     const byIdData = await byIdRes.json();
     assert.strictEqual(byIdData.orderId, testOrderId);
+    assert.strictEqual(byIdData.imageUrl, undefined, "Staff order detail must omit imageUrl");
+    assert.strictEqual(byIdData.proofImageUrl, undefined, "Staff order detail must omit proofImageUrl");
 
     const byCodeRes = await getStaffOrder(
       makeReq(`/api/v1/staff/orders/${testTicketCode}`, { token: authToken }),
@@ -293,6 +298,21 @@ async function runV1StaffSuite() {
     );
     assert.strictEqual(doublePayRes.status, 400, "Duplicate courier payment must return 400");
 
+    // Test oversized staff photo rejection (> 200KB)
+    const oversizedStaffBase64 = `data:image/webp;base64,${Buffer.alloc(210 * 1024, 0x41).toString("base64")}`;
+    const oversizePhotoRes = await attachPhoto(
+      makeReq(`/api/v1/staff/orders/${testOrderId}/make-claimable/attach-photo`, {
+        method: "POST",
+        token: authToken,
+        body: { imageUrl: oversizedStaffBase64 },
+      }),
+      { params: Promise.resolve({ id: testOrderId }) }
+    );
+    const oversizePhotoJson = await oversizePhotoRes.json();
+    assert.strictEqual(oversizePhotoRes.status, 400, "Oversized staff image (>200KB) must return 400");
+    assert.strictEqual(oversizePhotoJson.error, "ImagePayloadTooLarge", "Staff error must be ImagePayloadTooLarge");
+    console.log("   ✅ Oversized staff photo guard (>200KB) rejected with 400 ImagePayloadTooLarge.");
+
     const photoRes = await attachPhoto(
       makeReq(`/api/v1/staff/orders/${testOrderId}/make-claimable/attach-photo`, {
         method: "POST",
@@ -303,6 +323,69 @@ async function runV1StaffSuite() {
     );
     assert.strictEqual(photoRes.status, 200, "Attaching proof photo after payment must return 200");
     console.log("   ✅ Photo-before-pay guard (400), courier pay (200), duplicate pay guard (400), and attach-photo -> READY_TO_CLAIM (200) verified.");
+
+    // ---------------------------------------------------------
+    // 6b. Dedicated Order Photo Retrieval (GET /api/v1/staff/orders/[id]/photo)
+    // ---------------------------------------------------------
+    console.log("\n6b. Testing Staff Order Photo Retrieval (GET /api/v1/staff/orders/[id]/photo)...");
+
+    // Missing token -> 401
+    const unauthStaffPhotoRes = await getStaffOrderPhoto(
+      makeReq(`/api/v1/staff/orders/${testOrderId}/photo`),
+      { params: Promise.resolve({ id: testOrderId }) }
+    );
+    assert.strictEqual(unauthStaffPhotoRes.status, 401, "Missing token on staff photo route must return 401");
+
+    // Invalid type -> 400
+    const invalidTypeStaffPhotoRes = await getStaffOrderPhoto(
+      makeReq(`/api/v1/staff/orders/${testOrderId}/photo?type=INVALID`, { token: authToken }),
+      { params: Promise.resolve({ id: testOrderId }) }
+    );
+    assert.strictEqual(invalidTypeStaffPhotoRes.status, 400, "Invalid type on staff photo route must return 400");
+
+    // Non-existent -> 404
+    const notFoundStaffPhotoRes = await getStaffOrderPhoto(
+      makeReq(`/api/v1/staff/orders/ORD-NONEXISTENT/photo`, { token: authToken }),
+      { params: Promise.resolve({ id: "ORD-NONEXISTENT" }) }
+    );
+    assert.strictEqual(notFoundStaffPhotoRes.status, 404, "Non-existent order must return 404");
+
+    // Default (type=all) by ID -> returns both screenshot and proof
+    const defaultStaffPhotoRes = await getStaffOrderPhoto(
+      makeReq(`/api/v1/staff/orders/${testOrderId}/photo`, { token: authToken }),
+      { params: Promise.resolve({ id: testOrderId }) }
+    );
+    assert.strictEqual(defaultStaffPhotoRes.status, 200);
+    const defaultStaffPhotoJson = await defaultStaffPhotoRes.json();
+    assert.strictEqual(defaultStaffPhotoJson.orderId, testOrderId);
+    assert.strictEqual(defaultStaffPhotoJson.proofImageUrl, "https://storage.parcelhub.com/proof/test.jpg");
+
+    // Lookup by ticketCode -> 200
+    const codeStaffPhotoRes = await getStaffOrderPhoto(
+      makeReq(`/api/v1/staff/orders/${testTicketCode}/photo`, { token: authToken }),
+      { params: Promise.resolve({ id: testTicketCode }) }
+    );
+    assert.strictEqual(codeStaffPhotoRes.status, 200);
+
+    // Filter type=proof -> returns proof, imageUrl is null
+    const proofStaffPhotoRes = await getStaffOrderPhoto(
+      makeReq(`/api/v1/staff/orders/${testOrderId}/photo?type=proof`, { token: authToken }),
+      { params: Promise.resolve({ id: testOrderId }) }
+    );
+    assert.strictEqual(proofStaffPhotoRes.status, 200);
+    const proofStaffPhotoJson = await proofStaffPhotoRes.json();
+    assert.strictEqual(proofStaffPhotoJson.imageUrl, null);
+    assert.strictEqual(proofStaffPhotoJson.proofImageUrl, "https://storage.parcelhub.com/proof/test.jpg");
+
+    // Filter type=screenshot -> proofImageUrl is null
+    const screenshotStaffPhotoRes = await getStaffOrderPhoto(
+      makeReq(`/api/v1/staff/orders/${testOrderId}/photo?type=screenshot`, { token: authToken }),
+      { params: Promise.resolve({ id: testOrderId }) }
+    );
+    assert.strictEqual(screenshotStaffPhotoRes.status, 200);
+    const screenshotStaffPhotoJson = await screenshotStaffPhotoRes.json();
+    assert.strictEqual(screenshotStaffPhotoJson.proofImageUrl, null);
+    console.log("   ✅ Staff order photo retrieval (default, by code, screenshot, proof, 400, 401, 404 guards) verified.");
 
     // ---------------------------------------------------------
     // 7. Claim Order Guards & Full Claim Completion

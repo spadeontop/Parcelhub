@@ -195,8 +195,6 @@ export type CustomerOrderDetail = {
   readonly change: number;
   readonly status: OrderStatus;
   readonly statusTimeline: OrderStatusHistoryTuple;
-  readonly imageUrl?: string | null;
-  readonly proofImageUrl?: string | null;
   readonly claimInitiatedAt?: ISO8601Timestamp | null;
   readonly claimExpiresAt?: ISO8601Timestamp | null;
   readonly isClaimActive?: boolean;
@@ -205,6 +203,19 @@ export type CustomerOrderDetail = {
 
 export type CustomerGetOrderRes = StandardSuccessResponse & {
   readonly order: CustomerOrderDetail;
+};
+
+// GET /api/v1/customer/orders/{id}/photo
+export type OrderPhotoType = "screenshot" | "proof" | "all";
+
+export type CustomerGetOrderPhotoQueryParams = {
+  readonly type?: OrderPhotoType;
+};
+
+export type CustomerGetOrderPhotoRes = StandardSuccessResponse & {
+  readonly orderId: OrderId;
+  readonly imageUrl: string | null;
+  readonly proofImageUrl: string | null;
 };
 
 // POST /api/v1/customer/orders/initialize
@@ -280,8 +291,6 @@ export type StaffOrderSummary = {
   readonly timestamp: ISO8601Timestamp;
   readonly status: OrderStatus;
   readonly statusMessage: string;
-  readonly imageUrl?: string | null;
-  readonly proofImageUrl?: string | null;
   readonly isClaimActive?: boolean;
   readonly claimRemainingSeconds?: number;
   readonly courierPaid?: boolean;
@@ -322,8 +331,6 @@ export type StaffOrderDetail = {
   readonly timestamp: ISO8601Timestamp;
   readonly status: OrderStatus;
   readonly statusMessage: string;
-  readonly imageUrl?: string | null;
-  readonly proofImageUrl?: string | null;
   readonly isClaimActive?: boolean;
   readonly claimRemainingSeconds?: number;
   readonly courierPaid?: boolean;
@@ -335,6 +342,17 @@ export type StaffOrderDetail = {
 };
 
 export type StaffGetOrderRes = StaffOrderDetail;
+
+// GET /api/v1/staff/orders/{id}/photo
+export type StaffGetOrderPhotoQueryParams = {
+  readonly type?: OrderPhotoType;
+};
+
+export type StaffGetOrderPhotoRes = StandardSuccessResponse & {
+  readonly orderId: OrderId;
+  readonly imageUrl: string | null;
+  readonly proofImageUrl: string | null;
+};
 
 // POST /api/v1/staff/orders/{id}/activate
 export type StaffActivateOrderReq = {
@@ -484,6 +502,7 @@ export type ApiRoutes =
   | readonly ["GET", "/api/v1/customer/profile"]
   | readonly ["GET", "/api/v1/customer/orders"]
   | readonly ["GET", `/api/v1/customer/orders/${string}`]
+  | readonly ["GET", `/api/v1/customer/orders/${string}/photo`]
   | readonly ["POST", "/api/v1/customer/orders/initialize"]
   | readonly ["PUT", `/api/v1/customer/orders/${string}`]
   | readonly ["DELETE", `/api/v1/customer/orders/${string}`]
@@ -491,6 +510,7 @@ export type ApiRoutes =
   | readonly ["POST", "/api/v1/staff/login"]
   | readonly ["GET", "/api/v1/staff/orders"]
   | readonly ["GET", `/api/v1/staff/orders/${string}`]
+  | readonly ["GET", `/api/v1/staff/orders/${string}/photo`]
   | readonly ["POST", `/api/v1/staff/orders/${string}/activate`]
   | readonly ["POST", `/api/v1/staff/orders/${string}/make-claimable/pay`]
   | readonly ["POST", `/api/v1/staff/orders/${string}/make-claimable/attach-photo`]

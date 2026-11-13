@@ -39,6 +39,7 @@ import {
   GET as getCustomerOrder,
   PUT as updateCustomerOrder,
 } from "../app/api/v1/customer/orders/[id]/route";
+import { GET as getCustomerOrderPhoto } from "../app/api/v1/customer/orders/[id]/photo/route";
 import { POST as claimCustomerOrder } from "../app/api/v1/customer/orders/[id]/claim/route";
 
 function makeReq(
@@ -209,6 +210,22 @@ async function runV1CustomerTests() {
     // 7. Order Initialization (imageUrl only + order_screenshots)
     // ==========================================
     console.log("7. Testing Order Initialization (POST /api/v1/customer/orders/initialize)...");
+
+    // 7a. Test oversized image rejection (> 110KB)
+    const oversizedBase64 = `data:image/webp;base64,${Buffer.alloc(120 * 1024, 0x41).toString("base64")}`;
+    const oversizeInitReq = makeReq("http://localhost:3000/api/v1/customer/orders/initialize", {
+      method: "POST",
+      token: authToken,
+      body: {
+        imageUrl: oversizedBase64,
+      },
+    });
+    const oversizeInitRes = await initCustomerOrder(oversizeInitReq);
+    const oversizeInitJson = await oversizeInitRes.json();
+    assert.strictEqual(oversizeInitRes.status, 400, "Oversized image attachment (>110KB) must be rejected with 400");
+    assert.strictEqual(oversizeInitJson.error, "ImagePayloadTooLarge", "Error code must be ImagePayloadTooLarge");
+    console.log("   ✅ Oversized customer image guard (>110KB) rejected with 400 ImagePayloadTooLarge.");
+
     const initReq = makeReq("http://localhost:3000/api/v1/customer/orders/initialize", {
       method: "POST",
       token: authToken,
@@ -253,7 +270,9 @@ async function runV1CustomerTests() {
     assert.ok(Array.isArray(listJson.orders), "orders must be an array");
     const foundOrder = listJson.orders.find((o: { id: string }) => o.id === createdOrderId);
     assert.ok(foundOrder, "Newly created order must be in customer order list");
-    console.log(`   ✅ Orders listed. Found ${listJson.orders.length} order(s).`);
+    assert.strictEqual((foundOrder as Record<string, unknown>).imageUrl, undefined, "Customer list orders must omit imageUrl");
+    assert.strictEqual((foundOrder as Record<string, unknown>).proofImageUrl, undefined, "Customer list orders must omit proofImageUrl");
+    console.log(`   ✅ Orders listed. Found ${listJson.orders.length} order(s). Images omitted from general list.`);
 
     // ==========================================
     // 9. Get Single Order by ID
@@ -270,7 +289,9 @@ async function runV1CustomerTests() {
     assert.strictEqual(getOrderRes.status, 200, `Expected 200, got ${getOrderRes.status}`);
     assert.strictEqual(getOrderJson.order.id, createdOrderId);
     assert.strictEqual(getOrderJson.order.trackingId, null);
-    console.log("   ✅ Single order retrieved and ownership verified.");
+    assert.strictEqual(getOrderJson.order.imageUrl, undefined, "Customer order detail must omit imageUrl");
+    assert.strictEqual(getOrderJson.order.proofImageUrl, undefined, "Customer order detail must omit proofImageUrl");
+    console.log("   ✅ Single order retrieved and ownership verified. Images omitted from detail response.");
 
     // ==========================================
     // 9b. One-Shot Order Continuation (PUT /api/v1/customer/orders/[id])
@@ -443,6 +464,74 @@ async function runV1CustomerTests() {
     );
     assert.strictEqual(cancelledReusePutRes.status, 200, "CANCELLED order must release trackingId");
     console.log("   ✅ One-shot PUT, AI_VERIFICATION gate, and paid trackingId lock checks passed.");
+
+    // ==========================================
+    // 9c. Dedicated Order Photo Retrieval (GET /api/v1/customer/orders/[id]/photo)
+    // ==========================================
+    console.log("9c. Testing Order Photo Retrieval (GET /api/v1/customer/orders/[id]/photo)...");
+
+    // Unauthorized without token -> 401
+    const unauthPhotoRes = await getCustomerOrderPhoto(
+      makeReq(`http://localhost:3000/api/v1/customer/orders/${createdOrderId}/photo`),
+      { params: Promise.resolve({ id: createdOrderId }) }
+    );
+    assert.strictEqual(unauthPhotoRes.status, 401, "Missing token on photo route must return 401");
+
+    // Invalid type filter -> 400
+    const invalidTypePhotoRes = await getCustomerOrderPhoto(
+      makeReq(`http://localhost:3000/api/v1/customer/orders/${createdOrderId}/photo?type=INVALID`, {
+        token: authToken,
+      }),
+      { params: Promise.resolve({ id: createdOrderId }) }
+    );
+    assert.strictEqual(invalidTypePhotoRes.status, 400, "Invalid type filter on photo route must return 400");
+
+    // Non-existent order -> 404
+    const notFoundPhotoRes = await getCustomerOrderPhoto(
+      makeReq(`http://localhost:3000/api/v1/customer/orders/ORD-NONEXISTENT/photo`, {
+        token: authToken,
+      }),
+      { params: Promise.resolve({ id: "ORD-NONEXISTENT" }) }
+    );
+    assert.strictEqual(notFoundPhotoRes.status, 404, "Non-existent order on photo route must return 404");
+
+    // Default (type=all): returns both screenshot and proof
+    const defaultPhotoRes = await getCustomerOrderPhoto(
+      makeReq(`http://localhost:3000/api/v1/customer/orders/${createdOrderId}/photo`, {
+        token: authToken,
+      }),
+      { params: Promise.resolve({ id: createdOrderId }) }
+    );
+    assert.strictEqual(defaultPhotoRes.status, 200);
+    const defaultPhotoJson = await defaultPhotoRes.json();
+    assert.strictEqual(defaultPhotoJson.orderId, createdOrderId);
+    assert.strictEqual(defaultPhotoJson.imageUrl, "https://example.com/receipt.jpg");
+    assert.strictEqual(defaultPhotoJson.proofImageUrl, null);
+
+    // Filter type=screenshot: returns screenshot, proof is null
+    const screenshotPhotoRes = await getCustomerOrderPhoto(
+      makeReq(`http://localhost:3000/api/v1/customer/orders/${createdOrderId}/photo?type=screenshot`, {
+        token: authToken,
+      }),
+      { params: Promise.resolve({ id: createdOrderId }) }
+    );
+    assert.strictEqual(screenshotPhotoRes.status, 200);
+    const screenshotPhotoJson = await screenshotPhotoRes.json();
+    assert.strictEqual(screenshotPhotoJson.imageUrl, "https://example.com/receipt.jpg");
+    assert.strictEqual(screenshotPhotoJson.proofImageUrl, null);
+
+    // Filter type=proof: screenshot is null, proof is null (not yet uploaded)
+    const proofPhotoRes = await getCustomerOrderPhoto(
+      makeReq(`http://localhost:3000/api/v1/customer/orders/${createdOrderId}/photo?type=proof`, {
+        token: authToken,
+      }),
+      { params: Promise.resolve({ id: createdOrderId }) }
+    );
+    assert.strictEqual(proofPhotoRes.status, 200);
+    const proofPhotoJson = await proofPhotoRes.json();
+    assert.strictEqual(proofPhotoJson.imageUrl, null);
+    assert.strictEqual(proofPhotoJson.proofImageUrl, null);
+    console.log("   ✅ Customer order photo retrieval (default, screenshot, proof, 400, 401, 404 guards) verified.");
 
     // ==========================================
     // 10. Claim Order (Status Check Guard)

@@ -60,18 +60,22 @@ export async function GET(request: NextRequest) {
     //    Query orders strictly for this customer, applying optional status filter,
     //    sorting by timestamp DESC, paginated by limit & offset.
     // ---------------------------------------------------------
-    const rows: OrderRow[] = await db.query.orders.findMany({
+    const rows = await db.query.orders.findMany({
       where: statusFilter
         ? and(eq(orders.customerId, auth.session.userId), eq(orders.status, statusFilter))
         : eq(orders.customerId, auth.session.userId),
       orderBy: [desc(orders.timestamp)],
       limit,
       offset,
+      columns: {
+        imageUrl: false,
+        proofImageUrl: false,
+      },
     });
 
     const now = new Date();
 
-    const orderSummaries: CustomerOrderSummary[] = rows.map((row: OrderRow) => ({
+    const orderSummaries: CustomerOrderSummary[] = rows.map((row: Omit<OrderRow, "imageUrl" | "proofImageUrl">) => ({
       id: row.id as OrderId,
       ticketCode: row.ticketCode,
       trackingId: row.trackingId,
