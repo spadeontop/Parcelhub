@@ -1,10 +1,11 @@
 import { NextRequest } from "next/server";
-import { eq, or } from "drizzle-orm";
+import { and, eq, inArray, ne, or } from "drizzle-orm";
 import { db } from "@/db";
 import { orders } from "@/db/schema";
 import { authenticateStaffRequest } from "@/app/lib/v1/auth";
 import { jsonError, jsonSuccess } from "@/app/lib/response";
 import {
+  OrderStatus,
   StaffActivateOrderReq,
   StaffActivateOrderRes,
   StatusTimelineEntry,
@@ -78,6 +79,33 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         `amountReceived must be at least the order price of ${order.price}`,
         400
       );
+    }
+
+    // ---------------------------------------------------------
+    // Unique Tracking ID Enforcement:
+    // Ensure another active parcel (AWAITING_PARCEL, READY_TO_CLAIM, CLAIMED)
+    // doesn't already hold the same trackingId before activating this order.
+    // ---------------------------------------------------------
+    if (order.trackingId) {
+      const activePaidDuplicate = await db.query.orders.findFirst({
+        where: and(
+          eq(orders.trackingId, order.trackingId),
+          ne(orders.id, order.id),
+          inArray(orders.status, [
+            "AWAITING_PARCEL",
+            "READY_TO_CLAIM",
+            "CLAIMED",
+          ] as OrderStatus[])
+        ),
+      });
+
+      if (activePaidDuplicate) {
+        return jsonError(
+          `Tracking ID "${order.trackingId}" is already registered to another active parcel. Cannot activate duplicate parcel.`,
+          409,
+          "Conflict"
+        );
+      }
     }
 
     const change = Math.max(0, body.amountReceived - order.price);
