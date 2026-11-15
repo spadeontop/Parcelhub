@@ -19,6 +19,59 @@ export function getStatusLabel(status: OrderStatus): string {
   }
 }
 
+export interface StatusTheme {
+  label: string;
+  dotColor: string;
+  textColor: string;
+}
+
+export function getStatusTheme(status: OrderStatus): StatusTheme {
+  switch (status) {
+    case 'PENDING_INITIALIZATION':
+      return {
+        label: 'Pending Initialization',
+        dotColor: '#64748b',
+        textColor: '#64748b',
+      };
+    case 'PAYMENT_REQUIRED':
+      return {
+        label: 'Payment Required',
+        dotColor: '#d97706',
+        textColor: '#d97706',
+      };
+    case 'AWAITING_PARCEL':
+      return {
+        label: 'Awaiting Parcel',
+        dotColor: '#2563eb',
+        textColor: '#2563eb',
+      };
+    case 'READY_TO_CLAIM':
+      return {
+        label: 'Ready to Claim',
+        dotColor: '#059669',
+        textColor: '#059669',
+      };
+    case 'CLAIMED':
+      return {
+        label: 'Claimed',
+        dotColor: '#64748b',
+        textColor: '#64748b',
+      };
+    case 'CANCELLED':
+      return {
+        label: 'Cancelled',
+        dotColor: '#dc2626',
+        textColor: '#dc2626',
+      };
+    default:
+      return {
+        label: status,
+        dotColor: '#64748b',
+        textColor: '#64748b',
+      };
+  }
+}
+
 export function getStatusTextColor(status: OrderStatus): string {
   switch (status) {
     case 'PENDING_INITIALIZATION':
