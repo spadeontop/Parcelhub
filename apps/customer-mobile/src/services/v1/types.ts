@@ -19,6 +19,20 @@ export type ApiErrorResponse = {
   readonly statusCode: number;
 };
 
+// Customer Profile Contract
+export type CustomerProfile = {
+  readonly id: CustomerId;
+  readonly email: string;
+  readonly firstName: string;
+  readonly lastName: string;
+  readonly middleInitial?: string;
+  readonly phoneNumber: string;
+  readonly blacklisted?: boolean;
+  readonly blacklistReason?: string | null;
+  readonly createdAt?: ISO8601Timestamp;
+  readonly updatedAt?: ISO8601Timestamp;
+};
+
 // POST /api/v1/customer/login
 export type CustomerLoginReq = {
   readonly email: string;
@@ -41,6 +55,18 @@ export type CustomerRegisterReq = {
 
 export type CustomerRegisterRes = StandardSuccessResponse & {
   readonly preAuthToken: JWTToken;
+};
+
+// POST /api/v1/customer/mpin
+export type CustomerVerifyMpinReq = {
+  readonly preAuthToken: JWTToken;
+  readonly mpin: MPIN;
+};
+
+export type CustomerVerifyMpinRes = StandardSuccessResponse & {
+  readonly authToken: JWTToken;
+  readonly refreshToken: JWTToken;
+  readonly customer?: CustomerProfile;
 };
 
 /**

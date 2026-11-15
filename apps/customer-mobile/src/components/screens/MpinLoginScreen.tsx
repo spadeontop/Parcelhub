@@ -30,7 +30,26 @@ export const MpinLoginScreen: React.FC = () => {
             setIsVerifying(true);
             verifyCustomerMpin(nextPin)
               .catch((err: any) => {
-                showToast(err?.message || 'Invalid MPIN. Try again.');
+                const status = err?.statusCode;
+                const isUnreachable = err?.isNetworkError || status === 0;
+                const apiMessage =
+                  err?.message || 'Server unreachable. Please check your connection.';
+
+                if (isUnreachable) {
+                  showToast(apiMessage);
+                  setPin('');
+                  return;
+                }
+
+                // If pre-auth token has expired (5m TTL), backend returns 401 "Please log in again"
+                if (status === 401 && apiMessage.toLowerCase().includes('log in again')) {
+                  showToast(apiMessage);
+                  navigateTo('login');
+                  return;
+                }
+
+                // Strictly pass through backend response message (e.g. "Incorrect MPIN", "Account suspended")
+                showToast(apiMessage);
                 setPin('');
               })
               .finally(() => {
@@ -40,7 +59,7 @@ export const MpinLoginScreen: React.FC = () => {
         }
       }
     },
-    [pin, isVerifying, verifyCustomerMpin, showToast]
+    [pin, isVerifying, verifyCustomerMpin, showToast, navigateTo]
   );
 
   const handleBackspace = useCallback(() => {

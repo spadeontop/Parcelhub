@@ -892,15 +892,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     [preAuthToken, pendingRegistration, apiUrl, showToast, refetchOrders],
   );
 
-  // Auth: Verify MPIN
+  // Auth: Verify MPIN (v1)
   const verifyCustomerMpin = useCallback(
     async (mpin: string): Promise<CustomerVerifyMpinRes> => {
-      if (!preAuthToken) {
-        throw new Error("Pre-auth token missing. Please log in first.");
+      let activePreAuthToken = preAuthToken;
+      if (!activePreAuthToken) {
+        activePreAuthToken = await tokenStorageV1.getPreAuthToken();
       }
-      const res = await customerApi.verifyMpin({ preAuthToken, mpin }, apiUrl);
+
+      if (!activePreAuthToken) {
+        throw new Error("Please log in again");
+      }
+
+      const res = await customerApiV1.verifyMpin(
+        { preAuthToken: activePreAuthToken, mpin: mpin as any },
+        apiUrl
+      );
+
+      await tokenStorageV1.setAuthToken(res.authToken);
       setAuthToken(res.authToken);
-      if (res.refreshToken) setRefreshToken(res.refreshToken);
+
+      if (res.refreshToken) {
+        await tokenStorageV1.setRefreshToken(res.refreshToken);
+        setRefreshToken(res.refreshToken);
+      }
+
       if (res.customer) {
         setAuthCustomer({
           email: res.customer.email,
@@ -910,12 +926,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
           phonenumber: res.customer.phoneNumber,
         });
       }
+
+      // Clear pre-auth token upon successful full auth
+      await tokenStorageV1.clearPreAuthToken();
+      setPreAuthToken(null);
+
       showToast(res.statusMessage || "Access granted!");
       setActiveScreen("home");
       refetchOrders();
       return res;
     },
-    [preAuthToken, apiUrl, showToast, refetchOrders],
+    [preAuthToken, apiUrl, showToast, refetchOrders]
   );
 
   const updateAuthCustomer = useCallback(
