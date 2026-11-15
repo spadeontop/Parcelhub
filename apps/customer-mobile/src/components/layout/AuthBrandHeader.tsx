@@ -11,7 +11,7 @@ interface AuthBrandHeaderProps {
 
 export const AuthBrandHeader: React.FC<AuthBrandHeaderProps> = ({
   title = 'ParcelHub',
-  subtitle = 'Create your account',
+  subtitle = 'Customer Mobile Portal',
   onBack,
   onHelp,
 }) => {
@@ -22,24 +22,23 @@ export const AuthBrandHeader: React.FC<AuthBrandHeaderProps> = ({
     <View
       className="bg-[#2563eb] px-5"
       style={{
-        paddingTop: isCompact ? 10 : 16,
-        paddingBottom: isCompact ? 10 : 16,
+        paddingTop: isCompact ? 14 : 24,
+        paddingBottom: isCompact ? 18 : 28,
       }}
     >
       {/* Top action row */}
       <View
         className="flex-row items-center justify-between"
-        style={{ marginBottom: isCompact ? 4 : 8 }}
+        style={{ marginBottom: isCompact ? 6 : 10 }}
       >
         {onBack ? (
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={onBack}
-            className="w-8 h-8 rounded-full bg-white/20 items-center justify-center border border-white/30"
+            className="w-9 h-9 rounded-full bg-white/10 items-center justify-center border border-white/20"
             accessibilityLabel="Go back"
           >
-            {/* White back arrow */}
-            <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+            <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
               <Path
                 d="M15 19l-7-7 7-7"
                 stroke="#ffffff"
@@ -50,18 +49,17 @@ export const AuthBrandHeader: React.FC<AuthBrandHeaderProps> = ({
             </Svg>
           </TouchableOpacity>
         ) : (
-          <View className="w-8 h-8" />
+          <View className="w-9 h-9" />
         )}
 
         {onHelp ? (
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={onHelp}
-            className="w-8 h-8 rounded-full bg-white/20 items-center justify-center border border-white/30"
+            className="w-9 h-9 rounded-full bg-white/10 items-center justify-center border border-white/20"
             accessibilityLabel="Help"
           >
-            {/* White question mark / help */}
-            <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+            <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
               <Path
                 d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3m.08 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"
                 stroke="#ffffff"
@@ -72,24 +70,24 @@ export const AuthBrandHeader: React.FC<AuthBrandHeaderProps> = ({
             </Svg>
           </TouchableOpacity>
         ) : (
-          <View className="w-8 h-8" />
+          <View className="w-9 h-9" />
         )}
       </View>
 
       {/* Brand logo & title */}
       <View className="items-center justify-center">
-        {/* Isometric Cube / Box Logo matching Figma */}
+        {/* Isometric Cube / Box Logo */}
         <View
           className="rounded-2xl bg-white/15 items-center justify-center border border-white/25"
           style={{
-            width: isCompact ? 36 : 44,
-            height: isCompact ? 36 : 44,
-            marginBottom: isCompact ? 4 : 8,
+            width: isCompact ? 42 : 52,
+            height: isCompact ? 42 : 52,
+            marginBottom: isCompact ? 6 : 10,
           }}
         >
           <Svg
-            width={isCompact ? 22 : 26}
-            height={isCompact ? 22 : 26}
+            width={isCompact ? 24 : 30}
+            height={isCompact ? 24 : 30}
             viewBox="0 0 24 24"
             fill="none"
           >
@@ -111,15 +109,15 @@ export const AuthBrandHeader: React.FC<AuthBrandHeaderProps> = ({
 
         <Text
           className="font-bold text-white tracking-tight text-center"
-          style={{ fontSize: isCompact ? 18 : 20 }}
+          style={{ fontSize: isCompact ? 20 : 22 }}
         >
           {title}
         </Text>
         <Text
           className="font-normal text-[#dbeafe] text-center"
           style={{
-            fontSize: isCompact ? 11 : 12.5,
-            marginTop: 2,
+            fontSize: isCompact ? 12 : 13,
+            marginTop: 3,
           }}
         >
           {subtitle}

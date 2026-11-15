@@ -20,6 +20,7 @@ interface AuthInputProps extends TextInputProps {
   isPassword?: boolean;
   isValid?: boolean; // When explicitly provided or computed
   feedbackState?: InputFeedbackState;
+  showSuccessCheck?: boolean; // Set to false to hide the green checkmark
 }
 
 // Built-in validation helpers
@@ -40,6 +41,7 @@ export const AuthInput: React.FC<AuthInputProps> = ({
   isPassword: isPasswordProp,
   isValid: isValidProp,
   feedbackState,
+  showSuccessCheck = true,
   secureTextEntry,
   keyboardType: keyboardTypeProp,
   autoCapitalize: autoCapitalizeProp,
@@ -128,7 +130,7 @@ export const AuthInput: React.FC<AuthInputProps> = ({
     : '#94a3b8';
 
   // Shows checkmark if valid and not in error state
-  const hasCheck = computedIsValid && hasValue && !isError;
+  const hasCheck = showSuccessCheck && computedIsValid && hasValue && !isError;
   const paddingRight = isPassword && hasCheck ? 64 : isPassword || hasCheck ? 38 : 0;
 
   // Derive default keyboardType and autoCapitalize from type

@@ -1,207 +1,183 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableWithoutFeedback,
+  Keyboard,
+  TouchableOpacity,
+  useWindowDimensions,
+} from 'react-native';
 import { useApp } from '../../context/AppContext';
-import { ParcelHubLogoSvg } from '../common/Icons';
-import { PasswordEyeToggle } from '../common/PasswordEyeToggle';
+import { AuthBrandHeader } from '../layout/AuthBrandHeader';
+import { LoginNarrationHeader } from '../common/LoginNarrationHeader';
+import { AuthInput } from '../common/AuthInput';
+import { AuthButton } from '../common/AuthButton';
 import { clearRetainedRegistrationData } from '../../services/registrationState';
 
 export const LoginScreen: React.FC = () => {
   const { navigateTo, loginCustomer, clearPendingRegistration, showToast } = useApp();
+  const { height } = useWindowDimensions();
+  const isCompact = height < 700;
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async () => {
+    Keyboard.dismiss();
     setEmailError('');
     setPasswordError('');
 
     const trimmedEmail = email.trim();
-    if (!trimmedEmail) {
-      setEmailError('Please enter your email.');
-      showToast('Please enter your email.');
-      return;
-    }
-    if (!password) {
-      setPasswordError('Please enter your password.');
-      showToast('Please enter your password.');
-      return;
-    }
-
     setIsLoading(true);
     try {
       await loginCustomer({ email: trimmedEmail, password });
     } catch (err: any) {
-      // Basis from backend/app/types/api.ts (ApiErrorResponse: statusCode 404/401, error "Not Found"/"Unauthorized")
+      const rawMessage = err?.message || 'Login failed. Please check your credentials.';
       const status = err?.statusCode;
       const errorType = err?.error;
-      const rawMessage = err?.message || '';
       const msg = rawMessage.toLowerCase();
 
-      const isUnregisteredEmail =
-        status === 404 ||
-        errorType === 'Not Found' ||
-        msg.includes('not registered') ||
-        msg.includes('unregistered') ||
-        msg.includes('does not exist') ||
-        msg.includes('no account') ||
-        msg.includes('email not found') ||
-        msg.includes('user not found');
-
-      const isWrongPassword =
-        msg.includes('incorrect password') ||
-        msg.includes('wrong password') ||
-        msg.includes('invalid password') ||
-        (status === 401 && !isUnregisteredEmail && !msg.includes('email'));
-
-      if (isUnregisteredEmail) {
-        setEmailError(
-          rawMessage.includes('registered') || rawMessage.includes('found')
-            ? rawMessage
-            : 'Email is not registered'
-        );
-      } else if (isWrongPassword) {
-        setPasswordError(
-          rawMessage.includes('password') || rawMessage.includes('incorrect')
-            ? rawMessage
-            : 'Incorrect password'
-        );
+      if (status === 404 || errorType === 'Not Found' || msg.includes('not registered')) {
+        setEmailError(rawMessage);
+      } else if (status === 401 || errorType === 'Unauthorized' || msg.includes('password')) {
+        setPasswordError(rawMessage);
       } else {
-        showToast(rawMessage || 'Login failed. Please check your credentials.');
+        showToast(rawMessage);
       }
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleNavigateToRegister = () => {
+    Keyboard.dismiss();
+    clearRetainedRegistrationData();
+    clearPendingRegistration();
+    navigateTo('register');
+  };
+
+  const handleForgotPassword = () => {
+    Keyboard.dismiss();
+    showToast('Please contact your branch administrator to reset your credentials.');
+  };
+
   return (
-    <ScrollView
-      contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
-      style={{ flex: 1, backgroundColor: '#ffffff' }}
-      className="flex-1 bg-white px-6 py-8"
-      showsVerticalScrollIndicator={false}
-      keyboardShouldPersistTaps="handled"
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      className="flex-1 bg-[#2563eb]"
     >
-      {/* Centered Large Official Logo */}
-      <View className="items-center justify-center mb-6">
-        <ParcelHubLogoSvg size={76} />
-        <View className="flex-row items-center mt-2">
-          <Text className="text-2xl font-black tracking-tight text-[#215cd4]">
-            Parcel
-          </Text>
-          <Text className="text-2xl font-black tracking-tight text-[#111827]">
-            Hub
-          </Text>
-        </View>
-        <Text className="text-xs text-gray-400 mt-1">Customer Mobile Portal</Text>
-      </View>
-
-      {/* Form with Inputs */}
-      <View className="space-y-4">
-        <View>
-          <Text
-            className={`text-xs font-bold mb-1 ${
-              emailError ? 'text-red-500' : 'text-gray-600'
-            }`}
-          >
-            Email
-          </Text>
-          <TextInput
-            value={email}
-            onChangeText={(val) => {
-              setEmail(val);
-              if (emailError) setEmailError('');
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+        <View className="flex-1 bg-[#2563eb]">
+          {/* Top Brand Header (Vector 73.42% bottom, height ~236px) */}
+          <AuthBrandHeader
+            title="ParcelHub"
+            subtitle="Customer Mobile Portal"
+            onHelp={() => {
+              Keyboard.dismiss();
+              navigateTo('faq');
             }}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            placeholder="Enter email address"
-            placeholderTextColor="#9ca3af"
-            className={`w-full h-12 border rounded-xl px-3.5 text-sm font-medium text-gray-900 bg-white ${
-              emailError ? 'border-red-500' : 'border-gray-300'
-            }`}
           />
-          {emailError ? (
-            <Text
-              accessibilityRole="alert"
-              accessibilityLiveRegion="polite"
-              className="text-[11.5px] font-medium text-red-500 mt-1.5 ml-1"
-            >
-              {emailError}
-            </Text>
-          ) : null}
-        </View>
 
-        <View>
-          <Text
-            className={`text-xs font-bold mb-1 ${
-              passwordError ? 'text-red-500' : 'text-gray-600'
-            }`}
-          >
-            Password
-          </Text>
-          <View className="relative justify-center">
-            <TextInput
-              value={password}
-              onChangeText={(val) => {
-                setPassword(val);
-                if (passwordError) setPasswordError('');
-              }}
-              secureTextEntry={!showPassword}
-              placeholder="Enter password"
-              placeholderTextColor="#9ca3af"
-              className={`w-full h-12 border rounded-xl px-3.5 pr-12 text-sm font-medium text-gray-900 bg-white ${
-                passwordError ? 'border-red-500' : 'border-gray-300'
-              }`}
-            />
-            <PasswordEyeToggle
-              isVisible={showPassword}
-              onToggle={() => setShowPassword((prev) => !prev)}
-              accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
-              className="absolute right-2.5 top-0 bottom-0 justify-center z-20"
-            />
-          </View>
-          {passwordError ? (
-            <Text
-              accessibilityRole="alert"
-              accessibilityLiveRegion="polite"
-              className="text-[11.5px] font-medium text-red-500 mt-1.5 ml-1"
-            >
-              {passwordError}
-            </Text>
-          ) : null}
-        </View>
-
-        {/* Submit Button */}
-        <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={handleSubmit}
-          disabled={isLoading}
-          className="w-full mt-3 h-12 rounded-xl bg-[#215cd4] items-center justify-center shadow-md"
-        >
-          {isLoading ? (
-            <ActivityIndicator color="#ffffff" />
-          ) : (
-            <Text className="text-white font-bold text-sm tracking-wide">
-              Sign In
-            </Text>
-          )}
-        </TouchableOpacity>
-
-        <View className="flex-row items-center justify-center mt-4">
-          <Text className="text-xs text-gray-500">Don’t have an account? </Text>
-          <TouchableOpacity
-            onPress={() => {
-              clearRetainedRegistrationData();
-              clearPendingRegistration();
-              navigateTo('register');
+          {/* Main White Sheet (Vector: background #FFFFFF, rounded-t-3xl) */}
+          <View
+            className="flex-1 bg-white rounded-t-3xl px-4"
+            style={{
+              paddingTop: isCompact ? 24 : 32,
+              paddingBottom: isCompact ? 20 : 36,
             }}
           >
-            <Text className="text-xs font-bold text-[#215cd4]">Sign Up</Text>
-          </TouchableOpacity>
+            {/* Form Content Area */}
+            <View>
+              {/* Login Narration Header */}
+              <View className="px-1.5">
+                <LoginNarrationHeader
+                  title="Welcome!"
+                  subtitle={'Sign in to track deliveries, manage hub\npickups, and view your QR passes.'}
+                />
+              </View>
+
+              {/* Input Fields */}
+              <View>
+                {/* Email Input */}
+                <AuthInput
+                  label="Email"
+                  type="email"
+                  showSuccessCheck={false}
+                  value={email}
+                  onChangeText={(val) => {
+                    setEmail(val);
+                    if (emailError) setEmailError('');
+                  }}
+                  error={emailError}
+                  returnKeyType="next"
+                />
+
+                {/* Password Input */}
+                <AuthInput
+                  label="Password"
+                  type="password"
+                  showSuccessCheck={false}
+                  value={password}
+                  onChangeText={(val) => {
+                    setPassword(val);
+                    if (passwordError) setPasswordError('');
+                  }}
+                  error={passwordError}
+                  returnKeyType="done"
+                  onSubmitEditing={handleSubmit}
+                />
+
+                {/* Utility Row: Forgot Password (right-aligned in Figma: right: 8.97%) */}
+                <View className="items-end mt-1 mb-5 px-1">
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={handleForgotPassword}
+                    className="py-1"
+                  >
+                    <Text className="text-[12px] font-bold text-[#2563eb]">
+                      Forgot password?
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Actions Area: Sign In Button & Sign Up link placed directly below the input fields */}
+              <View className="gap-3.5 mt-1">
+                <AuthButton
+                  label="Sign In"
+                  variant="primary"
+                  disabled={isLoading}
+                  onPress={handleSubmit}
+                  isLoading={isLoading}
+                />
+
+                {/* Don't have an account? Sign Up row */}
+                <View className="flex-row items-center justify-center py-1">
+                  <Text className="text-[13px] font-normal text-[#64748b]">
+                    Don't have an account?{' '}
+                  </Text>
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={handleNavigateToRegister}
+                    className="py-1"
+                  >
+                    <Text className="text-[13px] font-bold text-[#2563eb]">
+                      Sign Up
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </View>
         </View>
-      </View>
-    </ScrollView>
+      </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
   );
 };
+
+export default LoginScreen;
