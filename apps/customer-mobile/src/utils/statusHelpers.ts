@@ -76,21 +76,57 @@ export function getStatusDotClass(status: OrderStatus): string {
   }
 }
 
-export function getStatusBgClass(status: OrderStatus): string {
+export function getStatusPillStyles(status: OrderStatus): {
+  containerStyle: { backgroundColor: string; borderColor?: string; borderWidth?: number };
+  textColor: string;
+} {
   switch (status) {
     case 'PENDING_INITIALIZATION':
-      return 'bg-gray-50 border border-gray-200';
-    case 'READY_TO_CLAIM':
-      return 'bg-[#e8fbf3] border border-[#a7f3d0]';
-    case 'AWAITING_PARCEL':
-      return 'bg-[#eff6ff] border border-[#bfdbfe]';
+      return {
+        containerStyle: { backgroundColor: '#f3f4f6' },
+        textColor: '#6b7280',
+      };
     case 'PAYMENT_REQUIRED':
-      return 'bg-[#fef9c3] border border-[#fde047]';
+      return {
+        containerStyle: {
+          backgroundColor: '#fffbeb',
+          borderColor: '#fef3c7',
+          borderWidth: 1,
+        },
+        textColor: '#b45309',
+      };
+    case 'AWAITING_PARCEL':
+      return {
+        containerStyle: { backgroundColor: '#eff6ff' },
+        textColor: '#2563eb',
+      };
+    case 'READY_TO_CLAIM':
+      return {
+        containerStyle: {
+          backgroundColor: '#ecfdf5',
+          borderColor: '#d1fae5',
+          borderWidth: 1,
+        },
+        textColor: '#047857',
+      };
     case 'CLAIMED':
-      return 'bg-gray-100 border border-gray-200';
+      return {
+        containerStyle: { backgroundColor: '#f1f5f9' },
+        textColor: '#64748b',
+      };
     case 'CANCELLED':
-      return 'bg-rose-50 border border-rose-200';
+      return {
+        containerStyle: {
+          backgroundColor: '#fef2f2',
+          borderColor: '#fee2e2',
+          borderWidth: 1,
+        },
+        textColor: '#b91c1c',
+      };
     default:
-      return 'bg-gray-100 border border-gray-200';
+      return {
+        containerStyle: { backgroundColor: '#f3f4f6' },
+        textColor: '#6b7280',
+      };
   }
 }

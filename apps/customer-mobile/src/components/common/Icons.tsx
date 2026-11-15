@@ -2,11 +2,18 @@ import React from 'react';
 import Svg, { Path, Line, Circle } from 'react-native-svg';
 
 export const HomeIcon: React.FC<{ size?: number; color?: string }> = ({ size = 22, color = '#215cd4' }) => (
-  <Svg width={size} height={size} viewBox="0 0 110 104" fill="none">
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path
-      d="M3 52.516L50.7547 4.756C53.1013 2.41467 56.8987 2.41467 59.24 4.756L107 52.516M15 40.516V94.516C15 97.828 17.688 100.516 21 100.516H43V74.516C43 71.204 45.688 68.516 49 68.516H61C64.312 68.516 67 71.204 67 74.516V100.516H89C92.312 100.516 95 97.828 95 94.516V40.516M35 100.516H79"
+      d="M3 11L12 3L21 11V22C21 22.5523 20.5523 23 20 23H4C3.44772 23 3 22.5523 3 22V11Z"
       stroke={color}
-      strokeWidth="7"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <Path
+      d="M10 23V15H14V23"
+      stroke={color}
+      strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
     />
@@ -14,13 +21,34 @@ export const HomeIcon: React.FC<{ size?: number; color?: string }> = ({ size = 2
 );
 
 export const OrdersIcon: React.FC<{ size?: number; color?: string }> = ({ size = 22, color = '#215cd4' }) => (
-  <Svg width={size} height={size} viewBox="0 0 94 110" fill="none">
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path
-      d="M31 55H51M31 71H51M31 87H51M67 91H79C82.1826 91 85.2348 89.7357 87.4853 87.4853C89.7357 85.2348 91 82.1826 91 79V23.576C91 17.5227 86.4933 12.3867 80.4613 11.8853C78.4666 11.7199 76.47 11.5777 74.472 11.4587M43.5333 11.4587C44.2908 9.00906 45.8127 6.86632 47.8761 5.34421C49.9394 3.8221 52.436 3.0006 55 3H63C68.3973 3 72.9627 6.56267 74.472 11.4587C74.8259 12.6058 75.0004 13.7995 75 15C75 16.0609 74.5786 17.0783 73.8284 17.8284C73.0783 18.5786 72.0609 19 71 19H47C44.792 19 43 17.208 43 15C43 13.768 43.1867 12.5787 43.5333 11.4587ZM43.5333 11.4587C41.528 11.5813 39.5333 11.7253 37.5387 11.8853C31.5067 12.3867 27 17.5227 27 23.576V35M27 35H9C5.688 35 3 37.688 3 41V101C3 104.312 5.688 107 9 107H61C64.312 107 67 104.312 67 101V41C67 37.688 64.312 35 61 35H27ZM19 55H19.0427V55.0427H19V55ZM19 71H19.0427V71.0427H19V71ZM19 87H19.0427V87.0427H19V87Z"
+      d="M4 4H16C17.1046 4 18 4.89543 18 6V21C18 22.1046 17.1046 23 16 23H4C2.89543 23 2 22.1046 2 21V6C2 4.89543 2.89543 4 4 4Z"
       stroke={color}
-      strokeWidth="7"
+      strokeWidth="1.8"
+    />
+    <Path
+      d="M6 4V2.25C6 1.55964 6.55964 1 7.25 1H12.75C13.4404 1 14 1.55964 14 2.25V4"
+      stroke={color}
+      strokeWidth="1.8"
+    />
+    <Path
+      d="M5.5 10.5H14.5"
+      stroke={color}
+      strokeWidth="1.6"
       strokeLinecap="round"
-      strokeLinejoin="round"
+    />
+    <Path
+      d="M5.5 15H14.5"
+      stroke={color}
+      strokeWidth="1.6"
+      strokeLinecap="round"
+    />
+    <Path
+      d="M5.5 19.5H10.5"
+      stroke={color}
+      strokeWidth="1.6"
+      strokeLinecap="round"
     />
   </Svg>
 );
@@ -38,13 +66,17 @@ export const HelpIcon: React.FC<{ size?: number; color?: string }> = ({ size = 2
 );
 
 export const ProfileIcon: React.FC<{ size?: number; color?: string }> = ({ size = 22, color = '#215cd4' }) => (
-  <Svg width={size} height={size} viewBox="0 0 86 110" fill="none">
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path
-      d="M62.9947 23C62.9947 28.3043 60.8875 33.3914 57.1368 37.1421C53.3861 40.8929 48.299 43 42.9947 43C37.6903 43 32.6033 40.8929 28.8525 37.1421C25.1018 33.3914 22.9947 28.3043 22.9947 23C22.9947 17.6957 25.1018 12.6086 28.8525 8.85786C32.6033 5.10714 37.6903 3 42.9947 3C48.299 3 53.3861 5.10714 57.1368 8.85786C60.8875 12.6086 62.9947 17.6957 62.9947 23ZM3 98.296C3.17139 87.8019 7.46047 77.7955 14.9423 70.4349C22.4241 63.0743 32.4991 58.9492 42.9947 58.9492C53.4902 58.9492 63.5653 63.0743 71.0471 70.4349C78.5289 77.7955 82.818 87.8019 82.9893 98.296C70.4421 104.049 56.7981 107.019 42.9947 107C28.7227 107 15.176 103.885 3 98.296Z"
+      d="M20 21V19C20 16.7909 18.2091 15 16 15H8C5.79086 15 4 16.7909 4 19V21"
       stroke={color}
-      strokeWidth="7"
+      strokeWidth="1.8"
       strokeLinecap="round"
-      strokeLinejoin="round"
+    />
+    <Path
+      d="M12 11.5C14.0711 11.5 15.75 9.82107 15.75 7.75C15.75 5.67893 14.0711 4 12 4C9.92893 4 8.25 5.67893 8.25 7.75C8.25 9.82107 9.92893 11.5 12 11.5Z"
+      stroke={color}
+      strokeWidth="1.8"
     />
   </Svg>
 );
@@ -191,18 +223,17 @@ export const ParcelHubLogoSvg: React.FC<{ size?: number }> = ({ size = 40 }) => 
 export const BellIcon: React.FC<{ size?: number; color?: string }> = ({ size = 22, color = '#215cd4' }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path
-      d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"
+      d="M21.5 17.8234H3.5C5.3 16.2705 6.5 14.1999 6.5 11.3529V7.4705C6.5 3.847 9.2 1 12.5 1C15.8 1 18.5 3.847 18.5 7.4705V11.3529C18.5 14.1999 19.7 16.2705 21.5 17.8234Z"
       stroke={color}
-      strokeWidth="2"
+      strokeWidth="1.8"
       strokeLinecap="round"
       strokeLinejoin="round"
     />
     <Path
-      d="M13.73 21a2 2 0 0 1-3.46 0"
+      d="M10.25 21.7061C10.85 22.4825 11.6 23 12.5 23C13.4 23 14.15 22.4825 14.75 21.7061"
       stroke={color}
-      strokeWidth="2"
+      strokeWidth="1.8"
       strokeLinecap="round"
-      strokeLinejoin="round"
     />
   </Svg>
 );
