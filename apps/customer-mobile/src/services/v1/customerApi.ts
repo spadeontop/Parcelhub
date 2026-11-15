@@ -5,22 +5,34 @@ export const customerApiV1 = {
   /**
    * POST /api/v1/customer/login
    * Authenticates customer credentials and returns a preAuthToken (5m TTL).
-   * Conforms to backend/app/types/v1/api.ts contract.
+   * All business errors strictly pass through the backend API response message.
+   * Only network / connection dropouts produce an unreachable API error.
    */
   async login(
     payload: CustomerLoginReq,
     baseUrl: string = ENV.API_BASE_URL
   ): Promise<CustomerLoginRes> {
-    const res = await fetch(`${baseUrl}/api/v1/customer/login`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        email: payload.email.trim(),
-        password: payload.password,
-      }),
-    });
+    let res: Response;
+
+    try {
+      res = await fetch(`${baseUrl}/api/v1/customer/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: payload.email.trim(),
+          password: payload.password,
+        }),
+      });
+    } catch {
+      throw new ApiError(
+        'Server unreachable. Please check your internet connection.',
+        0,
+        'NetworkError',
+        true
+      );
+    }
 
     const data = await res.json().catch(() => null);
 
@@ -32,9 +44,19 @@ export const customerApiV1 = {
     }
 
     const statusCode = data?.statusCode || res.status;
-    const errorType = data?.error || (statusCode === 401 ? 'Unauthorized' : statusCode === 404 ? 'Not Found' : statusCode === 403 ? 'Forbidden' : 'Bad Request');
-    const message = data?.message || data?.error || data?.statusMessage || `Login failed (HTTP ${res.status})`;
+    const errorType = data?.error || 'Error';
+    const backendMessage = data?.message || data?.error;
 
-    throw new ApiError(message, statusCode, errorType);
+    if (backendMessage) {
+      throw new ApiError(backendMessage, statusCode, errorType, false);
+    }
+
+    // In the rare event the server responded with non-JSON (e.g., HTML 502/503 from a proxy)
+    throw new ApiError(
+      `Service temporarily unavailable (${res.status})`,
+      statusCode,
+      'GatewayError',
+      true
+    );
   },
 };

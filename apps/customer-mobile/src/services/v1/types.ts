@@ -30,17 +30,24 @@ export type CustomerLoginRes = StandardSuccessResponse & {
 };
 
 /**
- * Standard typed API error carrying status code and error classification
- * from v1 backend jsonError responses.
+ * Standard typed API error carrying status code, error classification,
+ * and a flag indicating if the error was due to an unreachable API.
  */
 export class ApiError extends Error {
   readonly statusCode: number;
   readonly error: string;
+  readonly isNetworkError: boolean;
 
-  constructor(message: string, statusCode: number, error: string = 'Bad Request') {
+  constructor(
+    message: string,
+    statusCode: number,
+    error: string = 'Bad Request',
+    isNetworkError: boolean = false
+  ) {
     super(message);
     this.name = 'ApiError';
     this.statusCode = statusCode;
     this.error = error;
+    this.isNetworkError = isNetworkError;
   }
 }

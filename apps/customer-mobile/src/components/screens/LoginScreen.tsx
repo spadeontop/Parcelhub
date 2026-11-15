@@ -38,53 +38,27 @@ export const LoginScreen: React.FC = () => {
     try {
       await loginCustomer({ email: trimmedEmail, password });
     } catch (err: any) {
-      // Basis from backend/app/types/v1/api.ts (ApiErrorResponse: statusCode 404/401/403)
       const status = err?.statusCode;
-      const errorType = err?.error;
-      const rawMessage = err?.message || '';
-      const msg = rawMessage.toLowerCase();
+      const isUnreachable = err?.isNetworkError || status === 0;
+      const apiMessage = err?.message || 'Server unreachable. Please check your connection.';
 
-      const isBlacklistedAccount =
-        status === 403 ||
-        errorType === 'Forbidden' ||
-        msg.includes('blacklisted') ||
-        msg.includes('suspended');
+      if (isUnreachable) {
+        showToast(apiMessage);
+        return;
+      }
 
-      const isUnregisteredEmail =
-        status === 404 ||
-        errorType === 'Not Found' ||
-        msg.includes('not registered') ||
-        msg.includes('unregistered') ||
-        msg.includes('does not exist') ||
-        msg.includes('no account') ||
-        msg.includes('email not found') ||
-        msg.includes('user not found');
-
-      const isWrongPassword =
-        msg.includes('incorrect password') ||
-        msg.includes('wrong password') ||
-        msg.includes('invalid password') ||
-        (status === 401 && !isUnregisteredEmail && !isBlacklistedAccount && !msg.includes('email'));
-
-      if (isBlacklistedAccount) {
+      // Feedback error strictly comes from the backend API response itself
+      if (status === 404) {
+        setEmailError(apiMessage);
+      } else if (status === 401) {
+        setPasswordError(apiMessage);
+      } else if (status === 403) {
         // Logic handled behind the scenes without altering UI rendering layout
         setIsBlacklisted(true);
-        setBlacklistReason(rawMessage || 'Account is blacklisted');
-        showToast(rawMessage || 'Account is suspended. Please contact support.');
-      } else if (isUnregisteredEmail) {
-        setEmailError(
-          rawMessage.includes('registered') || rawMessage.includes('found')
-            ? rawMessage
-            : 'Email is not registered'
-        );
-      } else if (isWrongPassword) {
-        setPasswordError(
-          rawMessage.includes('password') || rawMessage.includes('incorrect')
-            ? rawMessage
-            : 'Incorrect password'
-        );
+        setBlacklistReason(apiMessage);
+        showToast(apiMessage);
       } else {
-        showToast(rawMessage || 'Login failed. Please check your credentials.');
+        showToast(apiMessage);
       }
     } finally {
       setIsLoading(false);
