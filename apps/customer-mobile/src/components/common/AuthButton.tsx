@@ -22,23 +22,28 @@ export const AuthButton: React.FC<AuthButtonProps> = ({
   const { height } = useWindowDimensions();
   const isCompact = height < 700;
   const isPrimary = variant === 'primary';
-  const isTextOnly = variant === 'text' || variant === 'secondary';
+  const isActionDisabled = disabled || isLoading;
 
   return (
     <TouchableOpacity
       activeOpacity={0.7}
       onPress={onPress}
-      disabled={disabled || isLoading}
+      disabled={isActionDisabled}
       className={`w-full rounded-xl flex-row items-center justify-center ${
-        isPrimary ? 'bg-[#2563eb]' : 'bg-transparent'
-      } ${disabled || isLoading ? 'opacity-60' : ''}`}
+        isPrimary
+          ? isActionDisabled
+            ? 'bg-[#93c5fd]' // Soft disabled blue when requirements not satisfied
+            : 'bg-[#2563eb]' // Active brand blue
+          : 'bg-transparent'
+      }`}
       style={{
         height: isCompact ? 40 : 44,
-        shadowColor: isPrimary ? '#2563eb' : undefined,
-        shadowOffset: isPrimary ? { width: 0, height: 3 } : undefined,
-        shadowOpacity: isPrimary ? 0.18 : 0,
-        shadowRadius: isPrimary ? 6 : 0,
-        elevation: isPrimary ? 2 : 0,
+        shadowColor: isPrimary && !isActionDisabled ? '#2563eb' : undefined,
+        shadowOffset: isPrimary && !isActionDisabled ? { width: 0, height: 3 } : undefined,
+        shadowOpacity: isPrimary && !isActionDisabled ? 0.18 : 0,
+        shadowRadius: isPrimary && !isActionDisabled ? 6 : 0,
+        elevation: isPrimary && !isActionDisabled ? 2 : 0,
+        cursor: isActionDisabled ? ('not-allowed' as any) : ('pointer' as any),
       }}
     >
       {isLoading ? (
@@ -47,7 +52,11 @@ export const AuthButton: React.FC<AuthButtonProps> = ({
         <View className="flex-row items-center justify-center gap-1.5">
           <Text
             className={`font-semibold ${
-              isPrimary ? 'text-white' : 'text-[#64748b]'
+              isPrimary
+                ? isActionDisabled
+                  ? 'text-white/80'
+                  : 'text-white'
+                : 'text-[#64748b]'
             }`}
             style={{ fontSize: isCompact ? 13.5 : 14 }}
           >
@@ -57,7 +66,7 @@ export const AuthButton: React.FC<AuthButtonProps> = ({
             <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
               <Path
                 d="M5 12h14m-7-7l7 7-7 7"
-                stroke="#ffffff"
+                stroke={isActionDisabled ? 'rgba(255,255,255,0.7)' : '#ffffff'}
                 strokeWidth={2.2}
                 strokeLinecap="round"
                 strokeLinejoin="round"

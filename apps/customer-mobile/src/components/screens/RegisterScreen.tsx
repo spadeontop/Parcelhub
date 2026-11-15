@@ -36,6 +36,8 @@ export const RegisterScreen: React.FC = () => {
   const [password, setPassword] = useState(retained.password);
   const [confirmPassword, setConfirmPassword] = useState(retained.confirmPassword);
   const [emailError, setEmailError] = useState(retained.emailError || '');
+  const [passwordError, setPasswordError] = useState('');
+  const [confirmPasswordError, setConfirmPasswordError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   // Retain inputted data and current step
@@ -53,14 +55,33 @@ export const RegisterScreen: React.FC = () => {
     });
   }, [currentStep, firstName, lastName, middleInitial, email, phone, password, confirmPassword, emailError]);
 
+  // Validation rules for Step 1
+  const isFirstNameValid = firstName.trim().length >= 1;
+  const isLastNameValid = lastName.trim().length >= 1;
+  const isStep1Valid = isFirstNameValid && isLastNameValid;
+
+  // Validation rules for Step 2
+  const isEmailValid = /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(email.trim());
+  const isPhoneValid = (() => {
+    const cleaned = phone.replace(/[\s\-\(\)]/g, '');
+    return /^(\+63|0)?9\d{9}$/.test(cleaned) || (cleaned.length >= 10 && /^\+?\d+$/.test(cleaned));
+  })();
+  const hasMinLength = password.length >= 8;
+  const hasUppercase = /[A-Z]/.test(password);
+  const hasLowercase = /[a-z]/.test(password);
+  const hasNumber = /\d/.test(password);
+  const hasSymbol = /[!@#$%^&*(),.?":{}|<>_\-]/.test(password);
+  const isPasswordValid = hasMinLength && hasUppercase && hasLowercase && hasNumber && hasSymbol;
+  const isConfirmPasswordValid = Boolean(
+    isPasswordValid && confirmPassword.length > 0 && confirmPassword === password
+  );
+  const isStep2Valid = isEmailValid && isPhoneValid && isPasswordValid && isConfirmPasswordValid && !emailError;
+
   const handleNextStep = () => {
     Keyboard.dismiss();
-    if (!firstName.trim()) {
-      showToast('Please enter your first name.');
-      return;
-    }
-    if (!lastName.trim()) {
-      showToast('Please enter your last name.');
+    if (!isStep1Valid) {
+      if (!isFirstNameValid) showToast('Please enter your first name.');
+      else if (!isLastNameValid) showToast('Please enter your last name.');
       return;
     }
     setCurrentStep(2);
@@ -79,30 +100,37 @@ export const RegisterScreen: React.FC = () => {
     setPassword('');
     setConfirmPassword('');
     setEmailError('');
+    setPasswordError('');
+    setConfirmPasswordError('');
     navigateTo('login');
   };
 
   const handleRegister = async () => {
     Keyboard.dismiss();
     setEmailError('');
-    if (!email.trim()) {
-      showToast('Please enter your email.');
-      return;
-    }
-    if (!phone.trim()) {
-      showToast('Please enter your phone number.');
-      return;
-    }
-    if (!password.trim()) {
-      showToast('Please enter a password.');
-      return;
-    }
-    if (!confirmPassword.trim()) {
-      showToast('Please confirm your password.');
-      return;
-    }
-    if (password !== confirmPassword) {
-      showToast('Passwords do not match.');
+    setPasswordError('');
+    setConfirmPasswordError('');
+
+    if (!isStep2Valid) {
+      if (!isEmailValid) {
+        setEmailError('Please enter a valid email.');
+        showToast('Please enter a valid email.');
+        return;
+      }
+      if (!isPhoneValid) {
+        showToast('Please enter a valid phone number.');
+        return;
+      }
+      if (!isPasswordValid) {
+        setPasswordError('Password must have uppercase, lowercase, number & symbol.');
+        showToast('Password must have uppercase, lowercase, number & symbol.');
+        return;
+      }
+      if (!isConfirmPasswordValid) {
+        setConfirmPasswordError('Passwords do not match.');
+        showToast('Passwords do not match.');
+        return;
+      }
       return;
     }
 
@@ -198,6 +226,7 @@ export const RegisterScreen: React.FC = () => {
                     onChangeText={setFirstName}
                     autoCapitalize="words"
                     returnKeyType="next"
+                    isValid={isFirstNameValid}
                   />
 
                   <AuthInput
@@ -206,6 +235,7 @@ export const RegisterScreen: React.FC = () => {
                     onChangeText={setLastName}
                     autoCapitalize="words"
                     returnKeyType="next"
+                    isValid={isLastNameValid}
                   />
 
                   <AuthInput
@@ -229,38 +259,47 @@ export const RegisterScreen: React.FC = () => {
 
                   <AuthInput
                     label="Email"
+                    type="email"
                     value={email}
                     onChangeText={(val) => {
                       setEmail(val);
                       if (emailError) setEmailError('');
                     }}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
                     error={emailError}
                     returnKeyType="next"
                   />
 
                   <AuthInput
                     label="Phone number"
+                    type="phone"
                     value={phone}
                     onChangeText={setPhone}
-                    keyboardType="phone-pad"
                     returnKeyType="next"
                   />
 
                   <AuthInput
                     label="Password"
                     value={password}
-                    onChangeText={setPassword}
+                    onChangeText={(val) => {
+                      setPassword(val);
+                      if (passwordError) setPasswordError('');
+                    }}
                     isPassword
+                    isValid={isPasswordValid}
+                    error={passwordError}
                     returnKeyType="next"
                   />
 
                   <AuthInput
                     label="Confirm password"
                     value={confirmPassword}
-                    onChangeText={setConfirmPassword}
+                    onChangeText={(val) => {
+                      setConfirmPassword(val);
+                      if (confirmPasswordError) setConfirmPasswordError('');
+                    }}
                     isPassword
+                    isValid={isConfirmPasswordValid}
+                    error={confirmPasswordError}
                     returnKeyType="done"
                     onSubmitEditing={Keyboard.dismiss}
                   />
@@ -272,7 +311,7 @@ export const RegisterScreen: React.FC = () => {
                       marginTop: 2,
                     }}
                   >
-                    Use at least 8 characters with a number & symbol.
+                    At least 8 characters with uppercase, lowercase, number & symbol.
                   </Text>
                 </View>
               )}
@@ -285,6 +324,7 @@ export const RegisterScreen: React.FC = () => {
                   <AuthButton
                     label="Next"
                     variant="primary"
+                    disabled={!isStep1Valid}
                     onPress={handleNextStep}
                     showArrow
                   />
@@ -299,6 +339,7 @@ export const RegisterScreen: React.FC = () => {
                   <AuthButton
                     label="Register"
                     variant="primary"
+                    disabled={!isStep2Valid || isLoading}
                     onPress={handleRegister}
                     isLoading={isLoading}
                   />
