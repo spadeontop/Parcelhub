@@ -4,6 +4,8 @@ import {
   CustomerLoginRes,
   CustomerRegisterReq,
   CustomerRegisterRes,
+  CustomerCreateMpinReq,
+  CustomerCreateMpinRes,
   CustomerVerifyMpinReq,
   CustomerVerifyMpinRes,
   ApiError,
@@ -110,6 +112,63 @@ export const customerApiV1 = {
       return {
         statusMessage: data.statusMessage || 'Registration successful',
         preAuthToken: data.preAuthToken,
+      };
+    }
+
+    const statusCode = data?.statusCode || res.status;
+    const errorType = data?.error || 'Error';
+    const backendMessage = data?.message || data?.error;
+
+    if (backendMessage) {
+      throw new ApiError(backendMessage, statusCode, errorType, false);
+    }
+
+    throw new ApiError(
+      `Service temporarily unavailable (${res.status})`,
+      statusCode,
+      'GatewayError',
+      true
+    );
+  },
+
+  /**
+   * POST /api/v1/customer/create-mpin
+   * Sets up initial 4-digit MPIN for customer using preAuthToken.
+   * Returns authToken (15m), refreshToken (30d), and customer profile.
+   * All business errors strictly pass through the backend API response message.
+   * Only network / connection dropouts produce an unreachable API error.
+   */
+  async createMpin(
+    payload: CustomerCreateMpinReq,
+    baseUrl: string = ENV.API_BASE_URL
+  ): Promise<CustomerCreateMpinRes> {
+    let res: Response;
+
+    try {
+      res = await fetch(`${baseUrl}/api/v1/customer/create-mpin`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+    } catch {
+      throw new ApiError(
+        'Server unreachable. Please check your internet connection.',
+        0,
+        'NetworkError',
+        true
+      );
+    }
+
+    const data = await res.json().catch(() => null);
+
+    if (res.ok && data?.authToken) {
+      return {
+        statusMessage: data.statusMessage || 'MPIN created successfully',
+        authToken: data.authToken,
+        refreshToken: data.refreshToken,
+        customer: data.customer,
       };
     }
 

@@ -3,7 +3,10 @@ import { View, Text, TouchableOpacity, ScrollView } from "react-native";
 import { useApp } from "../../context/AppContext";
 import { ParcelHubLogoSvg, ArrowLeftIcon } from "../common/Icons";
 import { NumericKeypad } from "../common/NumericKeypad";
-import { setRetainedRegistrationData } from "../../services/registrationState";
+import {
+  setRetainedRegistrationData,
+  clearRetainedRegistrationData,
+} from "../../services/registrationState";
 
 export const MpinCreateScreen: React.FC = () => {
   const { authCustomer, createCustomerMpin, navigateTo, showToast } = useApp();
@@ -98,20 +101,34 @@ export const MpinCreateScreen: React.FC = () => {
     try {
       await createCustomerMpin(pin1);
     } catch (err: any) {
-      const msg = err?.message || "Failed to create MPIN. Please try again.";
-      showToast(msg);
+      const status = err?.statusCode;
+      const isUnreachable = err?.isNetworkError || status === 0;
+      const apiMessage =
+        err?.message || "Server unreachable. Please check your connection.";
 
-      const isDuplicate =
-        err?.statusCode === 409 ||
-        err?.error === "Conflict" ||
-        msg.toLowerCase().includes("already exists") ||
-        msg.toLowerCase().includes("duplicate") ||
-        msg.toLowerCase().includes("already registered");
-
-      if (isDuplicate) {
-        setRetainedRegistrationData({ emailError: msg });
-        navigateTo("register");
+      if (isUnreachable) {
+        showToast(apiMessage);
+        return;
       }
+
+      // If pre-auth token expired (5m TTL), backend returns 401 "Please log in again"
+      if (status === 401 && apiMessage.toLowerCase().includes("log in again")) {
+        showToast(apiMessage);
+        clearRetainedRegistrationData();
+        navigateTo("login");
+        return;
+      }
+
+      // If MPIN already set, backend returns 409 "MPIN is already set. Please log in or use MPIN verification."
+      if (status === 409 && apiMessage.toLowerCase().includes("log in")) {
+        showToast(apiMessage);
+        clearRetainedRegistrationData();
+        navigateTo("login");
+        return;
+      }
+
+      // Any other backend error (e.g. 400 "MPIN must be 4 numbers", 403 "Account suspended: ...")
+      showToast(apiMessage);
     } finally {
       setIsSubmitting(false);
     }

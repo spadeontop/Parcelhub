@@ -57,6 +57,18 @@ export type CustomerRegisterRes = StandardSuccessResponse & {
   readonly preAuthToken: JWTToken;
 };
 
+// POST /api/v1/customer/create-mpin
+export type CustomerCreateMpinReq = {
+  readonly preAuthToken: JWTToken;
+  readonly mpin: MPIN;
+};
+
+export type CustomerCreateMpinRes = StandardSuccessResponse & {
+  readonly authToken: JWTToken;
+  readonly refreshToken: JWTToken;
+  readonly customer?: CustomerProfile;
+};
+
 // POST /api/v1/customer/mpin
 export type CustomerVerifyMpinReq = {
   readonly preAuthToken: JWTToken;

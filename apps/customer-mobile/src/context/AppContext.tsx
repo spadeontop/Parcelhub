@@ -840,7 +840,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     [apiUrl, showToast]
   );
 
-  // Auth: Create MPIN
+  // Auth: Create MPIN (v1)
   const createCustomerMpin = useCallback(
     async (mpin: string): Promise<CustomerCreateMpinRes> => {
       let activePreAuthToken = preAuthToken;
@@ -859,17 +859,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       }
 
       if (!activePreAuthToken) {
-        throw new Error(
-          "Pre-auth token missing. Please register or log in first.",
-        );
+        throw new Error("Please log in again");
       }
 
-      const res = await customerApi.createMpin(
+      const res = await customerApiV1.createMpin(
         { preAuthToken: activePreAuthToken, mpin: mpin as any },
         apiUrl,
       );
+
+      await tokenStorageV1.setAuthToken(res.authToken);
       setAuthToken(res.authToken);
-      if (res.refreshToken) setRefreshToken(res.refreshToken);
+
+      if (res.refreshToken) {
+        await tokenStorageV1.setRefreshToken(res.refreshToken);
+        setRefreshToken(res.refreshToken);
+      }
+
       if (res.customer) {
         setAuthCustomer({
           email: res.customer.email,
@@ -880,7 +885,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         });
       }
 
-      // Successfully saved and MPIN verified: clear pending and retained form data
+      // Clear pre-auth token upon successful full auth
+      await tokenStorageV1.clearPreAuthToken();
+      setPreAuthToken(null);
       setPendingRegistration(null);
       clearRetainedRegistrationData();
 
