@@ -103,17 +103,15 @@ export const BackArrowIcon: React.FC<{ size?: number; color?: string }> = ({ siz
   </Svg>
 );
 
-export const BackspaceIcon: React.FC<{ size?: number; color?: string }> = ({ size = 20, color = '#374151' }) => (
+export const BackspaceIcon: React.FC<{ size?: number; color?: string }> = ({ size = 24, color = '#64748B' }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path
+      d="M14 12L12 14L7.5 13L3 12M14 12L16 10M14 12L12 10M14 12L16 14M3 12L9.414 5.586C9.78899 5.2109 10.2976 5.00011 10.828 5H20C21.1038 5 22 5.89617 22 7V17C22 18.1038 21.1038 19 20 19H10.828C10.2976 18.9999 9.78899 18.7891 9.414 18.414L3 12Z"
+      stroke={color}
+      strokeWidth="1.8"
       strokeLinecap="round"
       strokeLinejoin="round"
-      strokeWidth="2"
-      stroke={color}
-      d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"
     />
-    <Line x1="18" y1="9" x2="12" y2="15" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    <Line x1="12" y1="9" x2="18" y2="15" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
   </Svg>
 );
 

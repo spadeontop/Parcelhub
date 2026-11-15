@@ -41,26 +41,33 @@ export const NumericKeypad: React.FC<NumericKeypadProps> = ({
 
   return (
     <View
-      className={`w-full max-w-[260px] self-center mb-4 ${className}`.trim()}
+      className={`w-full max-w-[280px] self-center ${className}`.trim()}
       style={style}
       testID={testID}
     >
       {digitRows.map((row, rowIndex) => (
-        <View key={rowIndex} className="flex-row justify-between mb-3">
+        <View key={rowIndex} className="flex-row justify-between mb-[14px]">
           {row.map((digit) => (
             <TouchableOpacity
               key={digit}
               activeOpacity={0.7}
               disabled={disabled}
               onPress={() => onPressDigit(digit)}
-              className={`w-[58px] h-[58px] rounded-full border border-gray-200 bg-white items-center justify-center shadow-xs active:bg-gray-50 ${
+              className={`w-16 h-16 rounded-full border border-[#e2e8f0] bg-white items-center justify-center ${
                 disabled ? 'opacity-50' : ''
               }`}
+              style={{
+                shadowColor: '#000000',
+                shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: 0.05,
+                shadowRadius: 1,
+                elevation: 1,
+              }}
               accessibilityRole="button"
               accessibilityLabel={digit}
               testID={testID ? `${testID}-digit-${digit}` : undefined}
             >
-              <Text className="text-gray-900 text-lg font-semibold">{digit}</Text>
+              <Text className="text-[#1e293b] text-[20px] font-bold leading-7">{digit}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -72,45 +79,52 @@ export const NumericKeypad: React.FC<NumericKeypadProps> = ({
             activeOpacity={0.7}
             disabled={disabled}
             onPress={onPressClear}
-            className={`w-[58px] h-[58px] rounded-full border border-gray-200 bg-white items-center justify-center shadow-xs active:bg-gray-50 ${
+            className={`w-16 h-16 rounded-full items-center justify-center ${
               disabled ? 'opacity-50' : ''
             }`}
             accessibilityRole="button"
             accessibilityLabel={clearLabel}
             testID={testID ? `${testID}-clear` : undefined}
           >
-            <Text className="text-gray-500 text-xs font-semibold">{clearLabel}</Text>
+            <Text className="text-[#64748b] text-[12px] font-semibold">{clearLabel}</Text>
           </TouchableOpacity>
         ) : (
-          <View className="w-[58px] h-[58px]" />
+          <View className="w-16 h-16" />
         )}
 
         <TouchableOpacity
           activeOpacity={0.7}
           disabled={disabled}
           onPress={() => onPressDigit('0')}
-          className={`w-[58px] h-[58px] rounded-full border border-gray-200 bg-white items-center justify-center shadow-xs active:bg-gray-50 ${
+          className={`w-16 h-16 rounded-full border border-[#e2e8f0] bg-white items-center justify-center ${
             disabled ? 'opacity-50' : ''
           }`}
+          style={{
+            shadowColor: '#000000',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.05,
+            shadowRadius: 1,
+            elevation: 1,
+          }}
           accessibilityRole="button"
           accessibilityLabel="0"
           testID={testID ? `${testID}-digit-0` : undefined}
         >
-          <Text className="text-gray-900 text-lg font-semibold">0</Text>
+          <Text className="text-[#1e293b] text-[20px] font-bold leading-7">0</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           activeOpacity={0.7}
           disabled={disabled}
           onPress={onPressBackspace}
-          className={`w-[58px] h-[58px] rounded-full border border-gray-200 bg-white items-center justify-center shadow-xs active:bg-gray-50 ${
+          className={`w-16 h-16 rounded-full items-center justify-center ${
             disabled ? 'opacity-50' : ''
           }`}
           accessibilityRole="button"
           accessibilityLabel="Backspace"
           testID={testID ? `${testID}-backspace` : undefined}
         >
-          <BackspaceIcon size={20} color="#374151" />
+          <BackspaceIcon size={24} color="#64748B" />
         </TouchableOpacity>
       </View>
     </View>

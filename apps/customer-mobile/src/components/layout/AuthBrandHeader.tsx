@@ -22,8 +22,8 @@ export const AuthBrandHeader: React.FC<AuthBrandHeaderProps> = ({
     <View
       className="bg-[#2563eb] px-5"
       style={{
-        paddingTop: isCompact ? 14 : 24,
-        paddingBottom: isCompact ? 18 : 28,
+        paddingTop: isCompact ? 16 : 28,
+        paddingBottom: isCompact ? 24 : 36,
       }}
     >
       {/* Top action row */}
@@ -78,29 +78,42 @@ export const AuthBrandHeader: React.FC<AuthBrandHeaderProps> = ({
       <View className="items-center justify-center">
         {/* Isometric Cube / Box Logo */}
         <View
-          className="rounded-2xl bg-white/15 items-center justify-center border border-white/25"
+          className="rounded-[12px] bg-[rgba(255,255,255,0.16)] items-center justify-center border border-[rgba(255,255,255,0.2)]"
           style={{
-            width: isCompact ? 42 : 52,
-            height: isCompact ? 42 : 52,
-            marginBottom: isCompact ? 6 : 10,
+            width: isCompact ? 38 : 44,
+            height: isCompact ? 38 : 44,
+            marginBottom: isCompact ? 6 : 8,
+            shadowColor: '#000000',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.05,
+            shadowRadius: 2,
+            elevation: 1,
           }}
         >
           <Svg
-            width={isCompact ? 24 : 30}
-            height={isCompact ? 24 : 30}
+            width={isCompact ? 20 : 24}
+            height={isCompact ? 20 : 24}
             viewBox="0 0 24 24"
             fill="none"
           >
             <Path
-              d="M12 2L3 7v10l9 5 9-5V7l-9-5z"
+              d="M21 16V8C20.9993 7.2862 20.6182 6.6269 20 6.27L13 2.27C12.3812 1.91273 11.6188 1.91273 11 2.27L4 6.27C3.38183 6.6269 3.00073 7.2862 3 8V16C3.00073 16.7138 3.38183 17.3731 4 17.73L11 21.73C11.6188 22.0873 12.3812 22.0873 13 21.73L20 17.73C20.6182 17.3731 20.9993 16.7138 21 16V16"
               stroke="#ffffff"
-              strokeWidth={1.8}
+              strokeWidth={2.2}
+              strokeLinecap="round"
               strokeLinejoin="round"
             />
             <Path
-              d="M12 12L3 7M12 12l9-5M12 12v10"
+              d="M3.27 6.96L12 12.01L20.73 6.96"
               stroke="#ffffff"
-              strokeWidth={1.8}
+              strokeWidth={2.2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <Path
+              d="M12 22.08V12"
+              stroke="#ffffff"
+              strokeWidth={2.2}
               strokeLinecap="round"
               strokeLinejoin="round"
             />
@@ -108,16 +121,19 @@ export const AuthBrandHeader: React.FC<AuthBrandHeaderProps> = ({
         </View>
 
         <Text
-          className="font-bold text-white tracking-tight text-center"
-          style={{ fontSize: isCompact ? 20 : 22 }}
+          className="font-bold text-white text-center"
+          style={{
+            fontSize: isCompact ? 20 : 22,
+            letterSpacing: -0.55,
+          }}
         >
           {title}
         </Text>
         <Text
-          className="font-normal text-[#dbeafe] text-center"
+          className="font-medium text-[#dbeafe] text-center"
           style={{
             fontSize: isCompact ? 12 : 13,
-            marginTop: 3,
+            marginTop: 2,
           }}
         >
           {subtitle}
