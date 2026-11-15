@@ -12,11 +12,15 @@ export const LoginScreen: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  const [isBlacklisted, setIsBlacklisted] = useState(false);
+  const [blacklistReason, setBlacklistReason] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async () => {
     setEmailError('');
     setPasswordError('');
+    setIsBlacklisted(false);
+    setBlacklistReason(null);
 
     const trimmedEmail = email.trim();
     if (!trimmedEmail) {
@@ -34,11 +38,17 @@ export const LoginScreen: React.FC = () => {
     try {
       await loginCustomer({ email: trimmedEmail, password });
     } catch (err: any) {
-      // Basis from backend/app/types/api.ts (ApiErrorResponse: statusCode 404/401, error "Not Found"/"Unauthorized")
+      // Basis from backend/app/types/v1/api.ts (ApiErrorResponse: statusCode 404/401/403)
       const status = err?.statusCode;
       const errorType = err?.error;
       const rawMessage = err?.message || '';
       const msg = rawMessage.toLowerCase();
+
+      const isBlacklistedAccount =
+        status === 403 ||
+        errorType === 'Forbidden' ||
+        msg.includes('blacklisted') ||
+        msg.includes('suspended');
 
       const isUnregisteredEmail =
         status === 404 ||
@@ -54,9 +64,14 @@ export const LoginScreen: React.FC = () => {
         msg.includes('incorrect password') ||
         msg.includes('wrong password') ||
         msg.includes('invalid password') ||
-        (status === 401 && !isUnregisteredEmail && !msg.includes('email'));
+        (status === 401 && !isUnregisteredEmail && !isBlacklistedAccount && !msg.includes('email'));
 
-      if (isUnregisteredEmail) {
+      if (isBlacklistedAccount) {
+        // Logic handled behind the scenes without altering UI rendering layout
+        setIsBlacklisted(true);
+        setBlacklistReason(rawMessage || 'Account is blacklisted');
+        showToast(rawMessage || 'Account is suspended. Please contact support.');
+      } else if (isUnregisteredEmail) {
         setEmailError(
           rawMessage.includes('registered') || rawMessage.includes('found')
             ? rawMessage
@@ -113,6 +128,7 @@ export const LoginScreen: React.FC = () => {
             onChangeText={(val) => {
               setEmail(val);
               if (emailError) setEmailError('');
+              if (isBlacklisted) setIsBlacklisted(false);
             }}
             keyboardType="email-address"
             autoCapitalize="none"
@@ -147,6 +163,7 @@ export const LoginScreen: React.FC = () => {
               onChangeText={(val) => {
                 setPassword(val);
                 if (passwordError) setPasswordError('');
+                if (isBlacklisted) setIsBlacklisted(false);
               }}
               secureTextEntry={!showPassword}
               placeholder="Enter password"
