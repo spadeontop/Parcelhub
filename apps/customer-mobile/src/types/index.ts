@@ -10,19 +10,19 @@ export type JWTToken = string;
 export type MPIN = string;
 
 export type OrderStatus =
-  | 'PENDING_INITIALIZATION'
-  | 'PAYMENT_REQUIRED'
-  | 'AWAITING_PARCEL'
-  | 'READY_TO_CLAIM'
-  | 'CLAIMED'
-  | 'CANCELLED';
+  | "PENDING_INITIALIZATION"
+  | "PAYMENT_REQUIRED"
+  | "AWAITING_PARCEL"
+  | "READY_TO_CLAIM"
+  | "CLAIMED"
+  | "CANCELLED";
 
 export type TransactionFilter =
-  | 'ALL'
-  | 'READY_TO_CLAIM'
-  | 'AWAITING_PARCEL'
-  | 'PAYMENT_REQUIRED'
-  | 'CLAIMED';
+  | "ALL"
+  | "READY_TO_CLAIM"
+  | "AWAITING_PARCEL"
+  | "PAYMENT_REQUIRED"
+  | "CLAIMED";
 
 export type StatusTimelineEntry = {
   readonly status: OrderStatus;
@@ -240,36 +240,36 @@ export interface NotificationItem {
 }
 
 export type ScreenId =
-  | 'home'
-  | 'create_order'
-  | 'confirm_order'
-  | 'payment_verification'
-  | 'qr_screen'
-  | 'order_details'
-  | 'transactions'
-  | 'notifications'
-  | 'login'
-  | 'register'
-  | 'mpin_login'
-  | 'mpin_create'
-  | 'profile'
-  | 'faq';
+  | "home"
+  | "create_order"
+  | "confirm_order"
+  | "payment_verification"
+  | "qr_screen"
+  | "order_details"
+  | "transactions"
+  | "notifications"
+  | "login"
+  | "register"
+  | "mpin_login"
+  | "mpin_create"
+  | "profile"
+  | "faq";
 
 export type ScenarioId =
-  | 'figma-1'
-  | 'figma-2'
-  | 'figma-3'
-  | 'figma-4'
-  | 'figma-5'
-  | 'figma-6'
-  | 'figma-7'
-  | 'figma-8'
-  | 'figma-9'
-  | 'figma-10'
-  | 'figma-11'
-  | 'figma-12'
-  | 'figma-login'
-  | 'figma-register'
-  | 'figma-mpin-login'
-  | 'figma-mpin-create'
-  | 'figma-profile';
+  | "figma-1"
+  | "figma-2"
+  | "figma-3"
+  | "figma-4"
+  | "figma-5"
+  | "figma-6"
+  | "figma-7"
+  | "figma-8"
+  | "figma-9"
+  | "figma-10"
+  | "figma-11"
+  | "figma-12"
+  | "figma-login"
+  | "figma-register"
+  | "figma-mpin-login"
+  | "figma-mpin-create"
+  | "figma-profile";

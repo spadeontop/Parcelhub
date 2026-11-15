@@ -29,6 +29,20 @@ export type CustomerLoginRes = StandardSuccessResponse & {
   readonly preAuthToken: JWTToken;
 };
 
+// POST /api/v1/customer/register
+export type CustomerRegisterReq = {
+  readonly email: string;
+  readonly password: string;
+  readonly firstName: string;
+  readonly lastName: string;
+  readonly middleInitial?: string;
+  readonly phoneNumber: string;
+};
+
+export type CustomerRegisterRes = StandardSuccessResponse & {
+  readonly preAuthToken: JWTToken;
+};
+
 /**
  * Standard typed API error carrying status code, error classification,
  * and a flag indicating if the error was due to an unreachable API.

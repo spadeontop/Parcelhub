@@ -25,7 +25,7 @@ import {
   AuthCustomer,
 } from "../types";
 import { customerApi } from "../services/customerApi";
-import { customerApiV1, tokenStorageV1 } from '../services/v1';
+import { customerApiV1, tokenStorageV1 } from "../services/v1";
 import {
   orderApi,
   getStatedFee,
@@ -818,10 +818,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     [apiUrl, showToast],
   );
 
-  // Auth: Register (prepares registration data without saving to backend until MPIN is confirmed)
+  // Auth: Register (v1)
   const registerCustomer = useCallback(
     async (payload: CustomerRegisterReq): Promise<CustomerRegisterRes> => {
-      setPendingRegistration(payload);
+      const res = await customerApiV1.register(payload, apiUrl);
+      await tokenStorageV1.setPreAuthToken(res.preAuthToken);
+      setPreAuthToken(res.preAuthToken);
+      setPendingRegistration(null);
       setAuthCustomer((prev) => ({
         ...prev,
         email: payload.email,
@@ -830,13 +833,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         phonenumber: payload.phoneNumber,
         middleinitial: payload.middleInitial,
       }));
-      setActiveScreen("mpin_create");
-      return {
-        statusMessage: "Please create your 4-digit MPIN.",
-        preAuthToken: "",
-      };
+      showToast(res.statusMessage || 'Registration successful! Please create your MPIN.');
+      setActiveScreen('mpin_create');
+      return res;
     },
-    [],
+    [apiUrl, showToast]
   );
 
   // Auth: Create MPIN
@@ -844,10 +845,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     async (mpin: string): Promise<CustomerCreateMpinRes> => {
       let activePreAuthToken = preAuthToken;
 
-      // Only save registration to the backend when MPIN is being created/confirmed
+      if (!activePreAuthToken) {
+        activePreAuthToken = await tokenStorageV1.getPreAuthToken();
+      }
+
+      // Fallback if legacy pendingRegistration was set
       if (pendingRegistration) {
-        const regRes = await customerApi.register(pendingRegistration, apiUrl);
+        const regRes = await customerApiV1.register(pendingRegistration, apiUrl);
         activePreAuthToken = regRes.preAuthToken;
+        await tokenStorageV1.setPreAuthToken(regRes.preAuthToken);
         setPreAuthToken(regRes.preAuthToken);
         setPendingRegistration(null);
       }

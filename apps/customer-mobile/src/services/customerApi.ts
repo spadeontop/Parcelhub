@@ -1,4 +1,4 @@
-import * as SecureStore from 'expo-secure-store';
+import * as SecureStore from "expo-secure-store";
 import {
   CustomerRegisterReq,
   CustomerRegisterRes,
@@ -9,15 +9,15 @@ import {
   CustomerVerifyMpinReq,
   CustomerVerifyMpinRes,
   CustomerProfileRes,
-} from '../types';
-import { ENV } from '../config/env';
+} from "../types";
+import { ENV } from "../config/env";
 
-const REFRESH_TOKEN_KEY = 'parcelhub_customer_refresh_token';
-const AUTH_TOKEN_KEY = 'parcelhub_customer_auth_token';
-const PRE_AUTH_TOKEN_KEY = 'parcelhub_customer_pre_auth_token';
-const PROFILE_KEY = 'parcelhub_customer_profile';
-const API_URL_KEY = 'parcelhub_api_base_url';
-const LIVE_MODE_KEY = 'parcelhub_is_live_mode';
+const REFRESH_TOKEN_KEY = "parcelhub_customer_refresh_token";
+const AUTH_TOKEN_KEY = "parcelhub_customer_auth_token";
+const PRE_AUTH_TOKEN_KEY = "parcelhub_customer_pre_auth_token";
+const PROFILE_KEY = "parcelhub_customer_profile";
+const API_URL_KEY = "parcelhub_api_base_url";
+const LIVE_MODE_KEY = "parcelhub_is_live_mode";
 
 const isBusinessClientError = (status: number) =>
   status >= 400 && status < 500 && status !== 404 && status !== 405;
@@ -82,7 +82,7 @@ export const customerApi = {
   async getStoredIsLiveMode(): Promise<boolean | null> {
     try {
       const val = await SecureStore.getItemAsync(LIVE_MODE_KEY);
-      return val !== null ? val === 'true' : null;
+      return val !== null ? val === "true" : null;
     } catch {
       return null;
     }
@@ -90,7 +90,7 @@ export const customerApi = {
 
   async setStoredIsLiveMode(isLive: boolean): Promise<void> {
     try {
-      await SecureStore.setItemAsync(LIVE_MODE_KEY, isLive ? 'true' : 'false');
+      await SecureStore.setItemAsync(LIVE_MODE_KEY, isLive ? "true" : "false");
     } catch {}
   },
 
@@ -134,7 +134,7 @@ export const customerApi = {
 
     try {
       const res = await fetch(`${baseUrl}/api/customer/orders`, {
-        method: 'GET',
+        method: "GET",
         signal: controller.signal,
       });
       clearTimeout(timeout);
@@ -143,7 +143,10 @@ export const customerApi = {
         alive: true,
         status: res.status,
         latencyMs,
-        message: res.status === 401 ? 'Backend active (401 Auth Required)' : `HTTP ${res.status} OK`,
+        message:
+          res.status === 401
+            ? "Backend active (401 Auth Required)"
+            : `HTTP ${res.status} OK`,
       };
     } catch (err: any) {
       clearTimeout(timeout);
@@ -152,7 +155,10 @@ export const customerApi = {
         alive: false,
         status: 0,
         latencyMs,
-        message: err?.name === 'AbortError' ? 'Connection timed out (4s)' : 'Server unreachable / offline',
+        message:
+          err?.name === "AbortError"
+            ? "Connection timed out (4s)"
+            : "Server unreachable / offline",
       };
     }
   },
@@ -163,11 +169,11 @@ export const customerApi = {
    */
   async register(
     payload: CustomerRegisterReq,
-    baseUrl: string = ENV.API_BASE_URL
+    baseUrl: string = ENV.API_BASE_URL,
   ): Promise<CustomerRegisterRes> {
     const res = await fetch(`${baseUrl}/api/customer/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         email: payload.email,
         password: payload.password,
@@ -182,14 +188,18 @@ export const customerApi = {
 
     if (res.ok && data?.preAuthToken) {
       const responseData: CustomerRegisterRes = {
-        statusMessage: data.statusMessage || 'Registration successful',
+        statusMessage: data.statusMessage || "Registration successful",
         preAuthToken: data.preAuthToken,
       };
       await this.setStoredPreAuthToken(responseData.preAuthToken);
       return responseData;
     }
 
-    const errorMsg = data?.message || data?.error || data?.statusMessage || `Registration failed (HTTP ${res.status})`;
+    const errorMsg =
+      data?.message ||
+      data?.error ||
+      data?.statusMessage ||
+      `Registration failed (HTTP ${res.status})`;
     const error: any = new Error(errorMsg);
     error.statusCode = data?.statusCode || res.status;
     error.error = data?.error;
@@ -202,11 +212,11 @@ export const customerApi = {
    */
   async login(
     payload: CustomerLoginReq,
-    baseUrl: string = ENV.API_BASE_URL
+    baseUrl: string = ENV.API_BASE_URL,
   ): Promise<CustomerLoginRes> {
     const res = await fetch(`${baseUrl}/api/customer/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
 
@@ -214,14 +224,18 @@ export const customerApi = {
 
     if (res.ok && data?.preAuthToken) {
       const responseData: CustomerLoginRes = {
-        statusMessage: data.statusMessage || 'Credentials verified',
+        statusMessage: data.statusMessage || "Credentials verified",
         preAuthToken: data.preAuthToken,
       };
       await this.setStoredPreAuthToken(responseData.preAuthToken);
       return responseData;
     }
 
-    const errorMsg = data?.message || data?.error || data?.statusMessage || `Login failed (HTTP ${res.status})`;
+    const errorMsg =
+      data?.message ||
+      data?.error ||
+      data?.statusMessage ||
+      `Login failed (HTTP ${res.status})`;
     const error: any = new Error(errorMsg);
     error.statusCode = data?.statusCode || res.status;
     error.error = data?.error;
@@ -234,11 +248,11 @@ export const customerApi = {
    */
   async createMpin(
     payload: CustomerCreateMpinReq,
-    baseUrl: string = ENV.API_BASE_URL
+    baseUrl: string = ENV.API_BASE_URL,
   ): Promise<CustomerCreateMpinRes> {
     const res = await fetch(`${baseUrl}/api/customer/create-mpin`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
 
@@ -246,7 +260,7 @@ export const customerApi = {
 
     if (res.ok && data?.authToken) {
       const responseData: CustomerCreateMpinRes = {
-        statusMessage: data.statusMessage || 'MPIN created successfully',
+        statusMessage: data.statusMessage || "MPIN created successfully",
         authToken: data.authToken,
         refreshToken: data.refreshToken,
         customer: data.customer,
@@ -261,7 +275,11 @@ export const customerApi = {
       return responseData;
     }
 
-    const errorMsg = data?.message || data?.error || data?.statusMessage || `Failed to create MPIN (HTTP ${res.status})`;
+    const errorMsg =
+      data?.message ||
+      data?.error ||
+      data?.statusMessage ||
+      `Failed to create MPIN (HTTP ${res.status})`;
     throw new Error(errorMsg);
   },
 
@@ -271,11 +289,11 @@ export const customerApi = {
    */
   async verifyMpin(
     payload: CustomerVerifyMpinReq,
-    baseUrl: string = ENV.API_BASE_URL
+    baseUrl: string = ENV.API_BASE_URL,
   ): Promise<CustomerVerifyMpinRes> {
     const res = await fetch(`${baseUrl}/api/customer/mpin`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
 
@@ -283,7 +301,7 @@ export const customerApi = {
 
     if (res.ok && data?.authToken) {
       const responseData: CustomerVerifyMpinRes = {
-        statusMessage: data.statusMessage || 'Access granted',
+        statusMessage: data.statusMessage || "Access granted",
         authToken: data.authToken,
         refreshToken: data.refreshToken,
         customer: data.customer,
@@ -298,7 +316,11 @@ export const customerApi = {
       return responseData;
     }
 
-    const errorMsg = data?.message || data?.error || data?.statusMessage || `MPIN verification failed (HTTP ${res.status})`;
+    const errorMsg =
+      data?.message ||
+      data?.error ||
+      data?.statusMessage ||
+      `MPIN verification failed (HTTP ${res.status})`;
     throw new Error(errorMsg);
   },
 
@@ -308,12 +330,12 @@ export const customerApi = {
    */
   async getProfile(
     authToken: string,
-    baseUrl: string = ENV.API_BASE_URL
+    baseUrl: string = ENV.API_BASE_URL,
   ): Promise<CustomerProfileRes> {
     const res = await fetch(`${baseUrl}/api/customer/profile`, {
-      method: 'GET',
+      method: "GET",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         Authorization: `Bearer ${authToken}`,
       },
     });
@@ -322,14 +344,18 @@ export const customerApi = {
 
     if (res.ok && data?.customer) {
       const responseData: CustomerProfileRes = {
-        statusMessage: data.statusMessage || 'Profile retrieved successfully',
+        statusMessage: data.statusMessage || "Profile retrieved successfully",
         customer: data.customer,
       };
       await this.setStoredProfile(responseData.customer);
       return responseData;
     }
 
-    const errorMsg = data?.message || data?.error || data?.statusMessage || `Failed to fetch profile (HTTP ${res.status})`;
+    const errorMsg =
+      data?.message ||
+      data?.error ||
+      data?.statusMessage ||
+      `Failed to fetch profile (HTTP ${res.status})`;
     throw new Error(errorMsg);
   },
 };

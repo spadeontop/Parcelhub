@@ -1,16 +1,24 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
-import { useApp } from '../../context/AppContext';
-import { ParcelHubLogoSvg } from '../common/Icons';
-import { PasswordEyeToggle } from '../common/PasswordEyeToggle';
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  ActivityIndicator,
+} from "react-native";
+import { useApp } from "../../context/AppContext";
+import { ParcelHubLogoSvg } from "../common/Icons";
+import { PasswordEyeToggle } from "../common/PasswordEyeToggle";
 import {
   getRetainedRegistrationData,
   setRetainedRegistrationData,
   clearRetainedRegistrationData,
-} from '../../services/registrationState';
+} from "../../services/registrationState";
 
 export const RegisterScreen: React.FC = () => {
-  const { navigateTo, registerCustomer, clearPendingRegistration, showToast } = useApp();
+  const { navigateTo, registerCustomer, clearPendingRegistration, showToast } =
+    useApp();
   const retained = getRetainedRegistrationData();
   const [currentStep, setCurrentStep] = useState<1 | 2>(retained.currentStep);
 
@@ -22,9 +30,11 @@ export const RegisterScreen: React.FC = () => {
   const [phone, setPhone] = useState(retained.phone);
   const [password, setPassword] = useState(retained.password);
   const [showPassword, setShowPassword] = useState(false);
-  const [confirmPassword, setConfirmPassword] = useState(retained.confirmPassword);
+  const [confirmPassword, setConfirmPassword] = useState(
+    retained.confirmPassword,
+  );
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [emailError, setEmailError] = useState(retained.emailError || '');
+  const [emailError, setEmailError] = useState(retained.emailError || "");
   const [isLoading, setIsLoading] = useState(false);
 
   // Retain inputted data and current step
@@ -40,15 +50,25 @@ export const RegisterScreen: React.FC = () => {
       confirmPassword,
       emailError,
     });
-  }, [currentStep, firstName, lastName, middleInitial, email, phone, password, confirmPassword, emailError]);
+  }, [
+    currentStep,
+    firstName,
+    lastName,
+    middleInitial,
+    email,
+    phone,
+    password,
+    confirmPassword,
+    emailError,
+  ]);
 
   const handleNextStep = () => {
     if (!firstName.trim()) {
-      showToast('Please enter your first name.');
+      showToast("Please enter your first name.");
       return;
     }
     if (!lastName.trim()) {
-      showToast('Please enter your last name.');
+      showToast("Please enter your last name.");
       return;
     }
     setCurrentStep(2);
@@ -58,47 +78,39 @@ export const RegisterScreen: React.FC = () => {
     clearRetainedRegistrationData();
     clearPendingRegistration();
     setCurrentStep(1);
-    setFirstName('');
-    setLastName('');
-    setMiddleInitial('');
-    setEmail('');
-    setPhone('');
-    setPassword('');
-    setConfirmPassword('');
-    setEmailError('');
+    setFirstName("");
+    setLastName("");
+    setMiddleInitial("");
+    setEmail("");
+    setPhone("");
+    setPassword("");
+    setConfirmPassword("");
+    setEmailError("");
     setShowPassword(false);
     setShowConfirmPassword(false);
-    navigateTo('login');
+    navigateTo("login");
   };
 
   const handleRegister = async () => {
-    setEmailError('');
+    setEmailError("");
     if (!email.trim()) {
-      showToast('Please enter your email.');
+      showToast("Please enter your email.");
       return;
     }
     if (!phone.trim()) {
-      showToast('Please enter your phone number.');
+      showToast("Please enter your phone number.");
       return;
     }
     if (!password.trim()) {
-      showToast('Please enter a password.');
+      showToast("Please enter a password.");
       return;
     }
     if (!confirmPassword.trim()) {
-      showToast('Please confirm your password.');
+      showToast("Please confirm your password.");
       return;
     }
     if (password !== confirmPassword) {
-      showToast('Passwords do not match.');
-      return;
-    }
-
-    // Check duplicate email using backend error contract as basis (ApiErrorResponse / 409 Conflict):
-    // Seeded accounts like user@example.com return "Customer with this email already exists"
-    const normalizedEmail = email.trim().toLowerCase();
-    if (normalizedEmail === 'user@example.com' || normalizedEmail === 'staff@parcelhub.com') {
-      setEmailError('Customer with this email already exists');
+      showToast("Passwords do not match.");
       return;
     }
 
@@ -113,21 +125,20 @@ export const RegisterScreen: React.FC = () => {
         phoneNumber: phone.trim(),
       });
     } catch (err: any) {
-      // Basis from backend/app/types/api.ts (ApiErrorResponse: statusCode 409, error "Conflict", message "Customer with this email already exists")
-      const isDuplicate =
-        err?.statusCode === 409 ||
-        err?.error === 'Conflict' ||
-        (err?.message && (
-          err.message.toLowerCase().includes('already exists') ||
-          err.message.toLowerCase().includes('duplicate') ||
-          err.message.toLowerCase().includes('already registered') ||
-          err.message.toLowerCase().includes('conflict')
-        ));
+      const status = err?.statusCode;
+      const isUnreachable = err?.isNetworkError || status === 0;
+      const apiMessage = err?.message || "Server unreachable. Please check your connection.";
 
-      if (isDuplicate) {
-        setEmailError(err?.message || 'Customer with this email already exists');
+      if (isUnreachable) {
+        showToast(apiMessage);
+        return;
+      }
+
+      // Feedback error strictly comes from the backend API response itself (e.g. 409 Conflict)
+      if (status === 409) {
+        setEmailError(apiMessage);
       } else {
-        showToast(err?.message || 'Registration failed. Please check your information.');
+        showToast(apiMessage);
       }
     } finally {
       setIsLoading(false);
@@ -136,8 +147,8 @@ export const RegisterScreen: React.FC = () => {
 
   return (
     <ScrollView
-      contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
-      style={{ flex: 1, backgroundColor: '#ffffff' }}
+      contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }}
+      style={{ flex: 1, backgroundColor: "#ffffff" }}
       className="flex-1 bg-white px-6 py-8"
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
@@ -171,7 +182,7 @@ export const RegisterScreen: React.FC = () => {
           <View className="flex-1 rounded-full bg-[#215cd4]" />
           <View
             className={`flex-1 rounded-full ${
-              currentStep === 2 ? 'bg-[#215cd4]' : 'bg-gray-200'
+              currentStep === 2 ? "bg-[#215cd4]" : "bg-gray-200"
             }`}
           />
         </View>
@@ -235,7 +246,7 @@ export const RegisterScreen: React.FC = () => {
             onPress={handleNextStep}
             className="w-full h-11 bg-[#215cd4] rounded-lg items-center justify-center mt-4"
             style={{
-              shadowColor: '#000',
+              shadowColor: "#000",
               shadowOffset: { width: 0, height: 1 },
               shadowOpacity: 0.05,
               shadowRadius: 2,
@@ -251,7 +262,9 @@ export const RegisterScreen: React.FC = () => {
             onPress={handleBackToLogin}
             className="w-full h-10 bg-[#e8eefb] rounded-lg items-center justify-center mt-2.5"
           >
-            <Text className="text-[#1e3a8a] font-semibold text-[13px]">Back to login</Text>
+            <Text className="text-[#1e3a8a] font-semibold text-[13px]">
+              Back to login
+            </Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -262,7 +275,7 @@ export const RegisterScreen: React.FC = () => {
             <View className="absolute -top-2 left-3 bg-white px-1.5 z-10">
               <Text
                 className={`text-[11px] font-semibold tracking-tight ${
-                  emailError ? 'text-red-500' : 'text-gray-600'
+                  emailError ? "text-red-500" : "text-gray-600"
                 }`}
               >
                 Email
@@ -272,14 +285,14 @@ export const RegisterScreen: React.FC = () => {
               value={email}
               onChangeText={(val) => {
                 setEmail(val);
-                if (emailError) setEmailError('');
+                if (emailError) setEmailError("");
               }}
               keyboardType="email-address"
               autoCapitalize="none"
               placeholder="e.g. juan@example.com"
               placeholderTextColor="#9ca3af"
               className={`w-full h-11 border rounded-lg px-3.5 text-[13.5px] font-medium text-gray-900 bg-white ${
-                emailError ? 'border-red-500' : 'border-gray-300'
+                emailError ? "border-red-500" : "border-gray-300"
               }`}
             />
             {emailError ? (
@@ -325,7 +338,9 @@ export const RegisterScreen: React.FC = () => {
               <PasswordEyeToggle
                 isVisible={showPassword}
                 onToggle={() => setShowPassword((prev) => !prev)}
-                accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+                accessibilityLabel={
+                  showPassword ? "Hide password" : "Show password"
+                }
                 className="absolute right-2 top-0 bottom-0 justify-center z-20"
               />
             </View>
@@ -351,7 +366,9 @@ export const RegisterScreen: React.FC = () => {
                 isVisible={showConfirmPassword}
                 onToggle={() => setShowConfirmPassword((prev) => !prev)}
                 accessibilityLabel={
-                  showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'
+                  showConfirmPassword
+                    ? "Hide confirm password"
+                    : "Show confirm password"
                 }
                 className="absolute right-2 top-0 bottom-0 justify-center z-20"
               />
@@ -364,10 +381,10 @@ export const RegisterScreen: React.FC = () => {
             onPress={handleRegister}
             disabled={isLoading}
             className={`w-full h-11 bg-[#215cd4] rounded-lg items-center justify-center mt-4 ${
-              isLoading ? 'opacity-60' : ''
+              isLoading ? "opacity-60" : ""
             }`}
             style={{
-              shadowColor: '#000',
+              shadowColor: "#000",
               shadowOffset: { width: 0, height: 1 },
               shadowOpacity: 0.05,
               shadowRadius: 2,
@@ -377,7 +394,9 @@ export const RegisterScreen: React.FC = () => {
             {isLoading ? (
               <ActivityIndicator color="#ffffff" size="small" />
             ) : (
-              <Text className="text-white font-semibold text-[14.5px]">Register</Text>
+              <Text className="text-white font-semibold text-[14.5px]">
+                Register
+              </Text>
             )}
           </TouchableOpacity>
 
@@ -387,7 +406,9 @@ export const RegisterScreen: React.FC = () => {
             onPress={() => setCurrentStep(1)}
             className="w-full h-10 bg-[#e8eefb] rounded-lg items-center justify-center mt-2.5"
           >
-            <Text className="text-[#1e3a8a] font-semibold text-[13px]">Back</Text>
+            <Text className="text-[#1e3a8a] font-semibold text-[13px]">
+              Back
+            </Text>
           </TouchableOpacity>
         </View>
       )}
