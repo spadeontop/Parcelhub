@@ -33,6 +33,11 @@ export type CustomerProfile = {
   readonly updatedAt?: ISO8601Timestamp;
 };
 
+// GET /api/v1/customer/profile
+export type CustomerProfileRes = StandardSuccessResponse & {
+  readonly customer: CustomerProfile;
+};
+
 // POST /api/v1/customer/login
 export type CustomerLoginReq = {
   readonly email: string;

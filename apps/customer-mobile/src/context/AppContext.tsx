@@ -25,7 +25,7 @@ import {
   AuthCustomer,
 } from "../types";
 import { customerApi } from "../services/customerApi";
-import { customerApiV1, tokenStorageV1 } from "../services/v1";
+import { customerApiV1, tokenStorageV1, CustomerProfile } from "../services/v1";
 import {
   orderApi,
   getStatedFee,
@@ -93,6 +93,7 @@ export interface AppContextType {
   createCustomerMpin: (mpin: string) => Promise<CustomerCreateMpinRes>;
   verifyCustomerMpin: (mpin: string) => Promise<CustomerVerifyMpinRes>;
   updateAuthCustomer: (partial: Partial<AuthCustomer>) => void;
+  fetchProfile: () => Promise<CustomerProfile | null>;
   signOutCustomer: () => void;
 
   // Navigation & Actions
@@ -287,11 +288,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
           storedUrl,
           storedProfile,
         ] = await Promise.all([
-          customerApi.getStoredAuthToken(),
-          customerApi.getStoredRefreshToken(),
+          tokenStorageV1.getAuthToken().then((t) => t || customerApi.getStoredAuthToken()),
+          tokenStorageV1.getRefreshToken().then((t) => t || customerApi.getStoredRefreshToken()),
           customerApi.getStoredIsLiveMode(),
           customerApi.getStoredApiUrl(),
-          customerApi.getStoredProfile(),
+          tokenStorageV1.getStoredProfile().then((p) => p || customerApi.getStoredProfile()),
         ]);
 
         if (storedLive !== null) setIsLiveModeState(storedLive);
@@ -300,12 +301,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         if (storedProfile) {
           setAuthCustomer({
             email: storedProfile.email || "",
-            firstname: storedProfile.firstName || storedProfile.firstname || "",
-            lastname: storedProfile.lastName || storedProfile.lastname || "",
+            firstname: storedProfile.firstName || (storedProfile as any).firstname || "",
+            lastname: storedProfile.lastName || (storedProfile as any).lastname || "",
             middleinitial:
-              storedProfile.middleInitial || storedProfile.middleinitial || "",
+              storedProfile.middleInitial || (storedProfile as any).middleinitial || "",
             phonenumber:
-              storedProfile.phoneNumber || storedProfile.phonenumber || "",
+              storedProfile.phoneNumber || (storedProfile as any).phonenumber || "",
           });
         }
 
@@ -314,11 +315,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
           setRefreshToken(storedRefresh);
           setActiveScreen("home");
 
-          // Fetch fresh customer profile
-          customerApi
+          // Fetch fresh customer profile (v1)
+          customerApiV1
             .getProfile(storedAuth, storedUrl || apiUrl)
-            .then((res) => {
+            .then(async (res) => {
               if (res?.customer) {
+                await tokenStorageV1.setStoredProfile(res.customer);
                 setAuthCustomer({
                   email: res.customer.email,
                   firstname: res.customer.firstName,
@@ -954,6 +956,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     [showToast],
   );
 
+  // Profile: Fetch / Refresh customer profile (v1)
+  const fetchProfile = useCallback(async (): Promise<CustomerProfile | null> => {
+    let activeAuthToken = authToken;
+    if (!activeAuthToken) {
+      activeAuthToken = await tokenStorageV1.getAuthToken();
+    }
+    if (!activeAuthToken) return null;
+
+    const res = await customerApiV1.getProfile(activeAuthToken, apiUrl);
+    if (res?.customer) {
+      await tokenStorageV1.setStoredProfile(res.customer);
+      setAuthCustomer({
+        email: res.customer.email,
+        firstname: res.customer.firstName,
+        lastname: res.customer.lastName,
+        middleinitial: res.customer.middleInitial || "",
+        phonenumber: res.customer.phoneNumber,
+      });
+      return res.customer;
+    }
+    return null;
+  }, [authToken, apiUrl]);
+
   const signOutCustomer = useCallback(() => {
     customerApi.clearTokens();
     tokenStorageV1.clearTokens();
@@ -1073,6 +1098,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         createCustomerMpin,
         verifyCustomerMpin,
         updateAuthCustomer,
+        fetchProfile,
         signOutCustomer,
         navigateTo,
         setHasOrders,

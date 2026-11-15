@@ -8,6 +8,7 @@ import {
   CustomerCreateMpinRes,
   CustomerVerifyMpinReq,
   CustomerVerifyMpinRes,
+  CustomerProfileRes,
   ApiError,
 } from './types';
 
@@ -225,6 +226,61 @@ export const customerApiV1 = {
         statusMessage: data.statusMessage || 'MPIN verified',
         authToken: data.authToken,
         refreshToken: data.refreshToken,
+        customer: data.customer,
+      };
+    }
+
+    const statusCode = data?.statusCode || res.status;
+    const errorType = data?.error || 'Error';
+    const backendMessage = data?.message || data?.error;
+
+    if (backendMessage) {
+      throw new ApiError(backendMessage, statusCode, errorType, false);
+    }
+
+    throw new ApiError(
+      `Service temporarily unavailable (${res.status})`,
+      statusCode,
+      'GatewayError',
+      true
+    );
+  },
+
+  /**
+   * GET /api/v1/customer/profile
+   * Retrieves profile of currently authenticated customer.
+   * Requires Authorization: Bearer <authToken>.
+   * All business errors strictly pass through the backend API response message.
+   * Only network / connection dropouts produce an unreachable API error.
+   */
+  async getProfile(
+    authToken: string,
+    baseUrl: string = ENV.API_BASE_URL
+  ): Promise<CustomerProfileRes> {
+    let res: Response;
+
+    try {
+      res = await fetch(`${baseUrl}/api/v1/customer/profile`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
+        },
+      });
+    } catch {
+      throw new ApiError(
+        'Server unreachable. Please check your internet connection.',
+        0,
+        'NetworkError',
+        true
+      );
+    }
+
+    const data = await res.json().catch(() => null);
+
+    if (res.ok && data?.customer) {
+      return {
+        statusMessage: data.statusMessage || 'Profile retrieved successfully',
         customer: data.customer,
       };
     }

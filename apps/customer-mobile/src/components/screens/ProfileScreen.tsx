@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, RefreshControl } from 'react-native';
 import { useApp } from '../../context/AppContext';
 import { BottomNav } from '../layout/BottomNav';
 import { BackButton } from '../common/BackButton';
@@ -29,13 +29,51 @@ function getMaskedPhone(phone?: string): string {
 }
 
 export const ProfileScreen: React.FC = () => {
-  const { authCustomer, navigateTo } = useApp();
+  const { authCustomer, navigateTo, fetchProfile, signOutCustomer, showToast } = useApp();
 
   // Modal display states
   const [isEditContactOpen, setIsEditContactOpen] = useState<boolean>(false);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState<boolean>(false);
   const [isDeleteAccountOpen, setIsDeleteAccountOpen] = useState<boolean>(false);
   const [isSignOutOpen, setIsSignOutOpen] = useState<boolean>(false);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+
+  const loadProfile = useCallback(async () => {
+    try {
+      setIsRefreshing(true);
+      await fetchProfile();
+    } catch (err: any) {
+      const status = err?.statusCode;
+      const isUnreachable = err?.isNetworkError || status === 0;
+      const apiMessage = err?.message || 'Server unreachable. Please check your connection.';
+
+      if (isUnreachable) {
+        showToast(apiMessage);
+        return;
+      }
+
+      // If token expired (15m TTL), backend returns 401 "Please log in again"
+      if (status === 401 && apiMessage.toLowerCase().includes('log in again')) {
+        showToast(apiMessage);
+        signOutCustomer();
+        return;
+      }
+
+      // If blacklisted (403 "Account suspended: ...")
+      if (status === 403) {
+        showToast(apiMessage);
+        return;
+      }
+
+      showToast(apiMessage);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [fetchProfile, signOutCustomer, showToast]);
+
+  useEffect(() => {
+    loadProfile();
+  }, [loadProfile]);
 
   const maskedEmail = getMaskedEmail(authCustomer?.email);
   const maskedPhone = getMaskedPhone(authCustomer?.phonenumber);
@@ -62,7 +100,18 @@ export const ProfileScreen: React.FC = () => {
         <View className="w-8 h-8" />
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        className="flex-1"
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={loadProfile}
+            colors={['#215cd4']}
+            tintColor="#215cd4"
+          />
+        }
+      >
         {/* Card 1: Profile overview */}
         <View className="rounded-2xl border border-gray-200 bg-white p-5 mb-4 shadow-sm">
           <Text className="text-[15px] font-bold text-gray-900 mb-4">

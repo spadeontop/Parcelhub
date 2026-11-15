@@ -1,4 +1,5 @@
 import * as SecureStore from 'expo-secure-store';
+import { CustomerProfile } from './types';
 
 const REFRESH_TOKEN_KEY = 'parcelhub_customer_refresh_token';
 const AUTH_TOKEN_KEY = 'parcelhub_customer_auth_token';
@@ -51,6 +52,21 @@ export const tokenStorageV1 = {
   async setRefreshToken(token: string): Promise<void> {
     try {
       await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, token);
+    } catch {}
+  },
+
+  async getStoredProfile(): Promise<CustomerProfile | null> {
+    try {
+      const raw = await SecureStore.getItemAsync(PROFILE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  },
+
+  async setStoredProfile(profile: CustomerProfile): Promise<void> {
+    try {
+      await SecureStore.setItemAsync(PROFILE_KEY, JSON.stringify(profile));
     } catch {}
   },
 
