@@ -1,10 +1,10 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator, useWindowDimensions } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 interface AuthButtonProps {
   label: string;
-  variant?: 'primary' | 'secondary';
+  variant?: 'primary' | 'secondary' | 'text';
   onPress: () => void;
   isLoading?: boolean;
   disabled?: boolean;
@@ -19,38 +19,37 @@ export const AuthButton: React.FC<AuthButtonProps> = ({
   disabled = false,
   showArrow = false,
 }) => {
+  const { height } = useWindowDimensions();
+  const isCompact = height < 700;
   const isPrimary = variant === 'primary';
+  const isTextOnly = variant === 'text' || variant === 'secondary';
 
   return (
     <TouchableOpacity
-      activeOpacity={0.8}
+      activeOpacity={0.7}
       onPress={onPress}
       disabled={disabled || isLoading}
-      className={`w-full h-12 rounded-xl flex-row items-center justify-center mb-3 ${
-        isPrimary
-          ? 'bg-[#2563eb]'
-          : 'bg-white border border-[#cbd5e1]'
+      className={`w-full rounded-xl flex-row items-center justify-center ${
+        isPrimary ? 'bg-[#2563eb]' : 'bg-transparent'
       } ${disabled || isLoading ? 'opacity-60' : ''}`}
-      style={
-        isPrimary
-          ? {
-              shadowColor: '#2563eb',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.2,
-              shadowRadius: 8,
-              elevation: 3,
-            }
-          : undefined
-      }
+      style={{
+        height: isCompact ? 40 : 44,
+        shadowColor: isPrimary ? '#2563eb' : undefined,
+        shadowOffset: isPrimary ? { width: 0, height: 3 } : undefined,
+        shadowOpacity: isPrimary ? 0.18 : 0,
+        shadowRadius: isPrimary ? 6 : 0,
+        elevation: isPrimary ? 2 : 0,
+      }}
     >
       {isLoading ? (
-        <ActivityIndicator color={isPrimary ? '#ffffff' : '#334155'} size="small" />
+        <ActivityIndicator color={isPrimary ? '#ffffff' : '#64748b'} size="small" />
       ) : (
         <View className="flex-row items-center justify-center gap-1.5">
           <Text
-            className={`font-bold text-[14px] ${
-              isPrimary ? 'text-white' : 'text-[#334155]'
+            className={`font-semibold ${
+              isPrimary ? 'text-white' : 'text-[#64748b]'
             }`}
+            style={{ fontSize: isCompact ? 13.5 : 14 }}
           >
             {label}
           </Text>

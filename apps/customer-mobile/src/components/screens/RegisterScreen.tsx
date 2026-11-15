@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableWithoutFeedback,
+  Keyboard,
+  useWindowDimensions,
+} from 'react-native';
 import { useApp } from '../../context/AppContext';
 import { AuthBrandHeader } from '../layout/AuthBrandHeader';
 import { FormCardHeader } from '../common/FormCardHeader';
@@ -13,6 +21,9 @@ import {
 
 export const RegisterScreen: React.FC = () => {
   const { navigateTo, registerCustomer, clearPendingRegistration, showToast } = useApp();
+  const { height } = useWindowDimensions();
+  const isCompact = height < 700;
+
   const retained = getRetainedRegistrationData();
   const [currentStep, setCurrentStep] = useState<1 | 2>(retained.currentStep);
 
@@ -43,6 +54,7 @@ export const RegisterScreen: React.FC = () => {
   }, [currentStep, firstName, lastName, middleInitial, email, phone, password, confirmPassword, emailError]);
 
   const handleNextStep = () => {
+    Keyboard.dismiss();
     if (!firstName.trim()) {
       showToast('Please enter your first name.');
       return;
@@ -55,6 +67,7 @@ export const RegisterScreen: React.FC = () => {
   };
 
   const handleBackToLogin = () => {
+    Keyboard.dismiss();
     clearRetainedRegistrationData();
     clearPendingRegistration();
     setCurrentStep(1);
@@ -70,6 +83,7 @@ export const RegisterScreen: React.FC = () => {
   };
 
   const handleRegister = async () => {
+    Keyboard.dismiss();
     setEmailError('');
     if (!email.trim()) {
       showToast('Please enter your email.');
@@ -134,156 +148,171 @@ export const RegisterScreen: React.FC = () => {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       className="flex-1 bg-[#2563eb]"
     >
-      {/* Figma Top Header with Brand Header */}
-      <AuthBrandHeader
-        title="ParcelHub"
-        subtitle={
-          currentStep === 1
-            ? 'Create your account'
-            : 'Almost there — secure your account'
-        }
-        onBack={currentStep === 2 ? () => setCurrentStep(1) : handleBackToLogin}
-        onHelp={() => navigateTo('faq')}
-      />
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+        <View className="flex-1 bg-[#2563eb]">
+          {/* Header */}
+          <AuthBrandHeader
+            title="ParcelHub"
+            subtitle={
+              currentStep === 1
+                ? 'Create your account'
+                : 'Almost there — secure your account'
+            }
+            onBack={currentStep === 2 ? () => { Keyboard.dismiss(); setCurrentStep(1); } : handleBackToLogin}
+            onHelp={() => { Keyboard.dismiss(); navigateTo('faq'); }}
+          />
 
-      {/* Figma Main Sheet container */}
-      <ScrollView
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}
-        className="flex-1 bg-[#f8fafc] rounded-t-3xl px-4 pt-5"
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        {/* Form Card */}
-        <View
-          className="bg-white rounded-2xl p-4 border border-[#e2e8f0]"
-          style={{
-            shadowColor: '#000000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.05,
-            shadowRadius: 10,
-            elevation: 2,
-          }}
-        >
-          {currentStep === 1 ? (
-            /* STEP 1: Personal Details */
-            <View>
-              <FormCardHeader
-                step={1}
-                title="Personal Details"
-                subtitle="Enter your name for deliveries"
-              />
+          {/* Main non-scrollable sheet */}
+          <View
+            className="flex-1 bg-[#f8fafc] rounded-t-3xl px-4 justify-between"
+            style={{
+              paddingTop: isCompact ? 12 : 16,
+              paddingBottom: isCompact ? 16 : 24,
+            }}
+          >
+            {/* Top/Middle Area: Form Card */}
+            <View
+              className="bg-white rounded-2xl border border-[#e2e8f0]"
+              style={{
+                paddingHorizontal: 16,
+                paddingVertical: isCompact ? 12 : 16,
+                shadowColor: '#000000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.04,
+                shadowRadius: 8,
+                elevation: 2,
+              }}
+            >
+              {currentStep === 1 ? (
+                /* STEP 1: Personal Details */
+                <View>
+                  <FormCardHeader
+                    step={1}
+                    title="Personal Details"
+                    subtitle="Enter your name for deliveries"
+                  />
 
-              <AuthInput
-                label="First name"
-                placeholder="e.g. Juan"
-                value={firstName}
-                onChangeText={setFirstName}
-                autoCapitalize="words"
-              />
+                  <AuthInput
+                    label="First name"
+                    value={firstName}
+                    onChangeText={setFirstName}
+                    autoCapitalize="words"
+                    returnKeyType="next"
+                  />
 
-              <AuthInput
-                label="Last name"
-                placeholder="e.g. Dela Cruz"
-                value={lastName}
-                onChangeText={setLastName}
-                autoCapitalize="words"
-              />
+                  <AuthInput
+                    label="Last name"
+                    value={lastName}
+                    onChangeText={setLastName}
+                    autoCapitalize="words"
+                    returnKeyType="next"
+                  />
 
-              <AuthInput
-                label="Middle initial (optional)"
-                placeholder="e.g. D."
-                value={middleInitial}
-                onChangeText={setMiddleInitial}
-                maxLength={4}
-                autoCapitalize="characters"
-              />
+                  <AuthInput
+                    label="Middle initial (optional)"
+                    value={middleInitial}
+                    onChangeText={setMiddleInitial}
+                    maxLength={4}
+                    autoCapitalize="characters"
+                    returnKeyType="done"
+                    onSubmitEditing={Keyboard.dismiss}
+                  />
+                </View>
+              ) : (
+                /* STEP 2: Account & Security */
+                <View>
+                  <FormCardHeader
+                    step={2}
+                    title="Account & Security"
+                    subtitle="Set up your login credentials and contact info"
+                  />
+
+                  <AuthInput
+                    label="Email"
+                    value={email}
+                    onChangeText={(val) => {
+                      setEmail(val);
+                      if (emailError) setEmailError('');
+                    }}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    error={emailError}
+                    returnKeyType="next"
+                  />
+
+                  <AuthInput
+                    label="Phone number"
+                    value={phone}
+                    onChangeText={setPhone}
+                    keyboardType="phone-pad"
+                    returnKeyType="next"
+                  />
+
+                  <AuthInput
+                    label="Password"
+                    value={password}
+                    onChangeText={setPassword}
+                    isPassword
+                    returnKeyType="next"
+                  />
+
+                  <AuthInput
+                    label="Confirm password"
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    isPassword
+                    returnKeyType="done"
+                    onSubmitEditing={Keyboard.dismiss}
+                  />
+
+                  <Text
+                    className="font-normal text-[#94a3b8] px-1"
+                    style={{
+                      fontSize: isCompact ? 10 : 11,
+                      marginTop: 2,
+                    }}
+                  >
+                    Use at least 8 characters with a number & symbol.
+                  </Text>
+                </View>
+              )}
             </View>
-          ) : (
-            /* STEP 2: Account & Security */
-            <View>
-              <FormCardHeader
-                step={2}
-                title="Account & Security"
-                subtitle="Set up your login credentials and contact info"
-              />
 
-              <AuthInput
-                label="Email"
-                placeholder="e.g. juan@example.com"
-                value={email}
-                onChangeText={(val) => {
-                  setEmail(val);
-                  if (emailError) setEmailError('');
-                }}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                error={emailError}
-              />
-
-              <AuthInput
-                label="Phone number"
-                placeholder="e.g. 09171234567"
-                value={phone}
-                onChangeText={setPhone}
-                keyboardType="phone-pad"
-              />
-
-              <AuthInput
-                label="Password"
-                placeholder="Create password"
-                value={password}
-                onChangeText={setPassword}
-                isPassword
-              />
-
-              <AuthInput
-                label="Confirm password"
-                placeholder="Confirm password"
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                isPassword
-              />
-
-              <Text className="text-[11px] font-normal text-[#94a3b8] mt-0.5 mb-1 px-1">
-                Use at least 8 characters with a number & symbol.
-              </Text>
+            {/* Bottom Pinned Action Buttons */}
+            <View className="gap-2.5">
+              {currentStep === 1 ? (
+                <>
+                  <AuthButton
+                    label="Next"
+                    variant="primary"
+                    onPress={handleNextStep}
+                    showArrow
+                  />
+                  <AuthButton
+                    label="Back to login"
+                    variant="secondary"
+                    onPress={handleBackToLogin}
+                  />
+                </>
+              ) : (
+                <>
+                  <AuthButton
+                    label="Register"
+                    variant="primary"
+                    onPress={handleRegister}
+                    isLoading={isLoading}
+                  />
+                  <AuthButton
+                    label="Back"
+                    variant="secondary"
+                    onPress={() => { Keyboard.dismiss(); setCurrentStep(1); }}
+                  />
+                </>
+              )}
             </View>
-          )}
+          </View>
         </View>
-
-        {/* Buttons section (placed below card per Figma layout) */}
-        <View className="mt-6">
-          {currentStep === 1 ? (
-            <>
-              <AuthButton
-                label="Next"
-                variant="primary"
-                onPress={handleNextStep}
-                showArrow
-              />
-              <AuthButton
-                label="Back to login"
-                variant="secondary"
-                onPress={handleBackToLogin}
-              />
-            </>
-          ) : (
-            <>
-              <AuthButton
-                label="Register"
-                variant="primary"
-                onPress={handleRegister}
-                isLoading={isLoading}
-              />
-              <AuthButton
-                label="Back"
-                variant="secondary"
-                onPress={() => setCurrentStep(1)}
-              />
-            </>
-          )}
-        </View>
-      </ScrollView>
+      </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
   );
 };
