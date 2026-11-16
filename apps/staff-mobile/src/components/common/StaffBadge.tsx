@@ -29,9 +29,9 @@ export const StaffBadge: React.FC<StaffBadgeProps> = ({ status, variant = 'card'
       label = 'Awaiting Parcel';
       break;
     case 'READY_TO_CLAIM':
-      bgColor = 'bg-[#ECFDF5]';
-      textColor = 'text-[#047857]';
-      label = 'Ready to Claim';
+      bgColor = 'bg-[#DCFCE7]';
+      textColor = 'text-[#15803D]';
+      label = 'Ready for claim';
       break;
     case 'CLAIMED':
       bgColor = 'bg-[#F1F5F9]';

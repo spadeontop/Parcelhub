@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { StaffOrder } from '../../../types';
 import { OrderConfirmationCheckbox } from './OrderConfirmationCheckbox';
 import { OrderCardContainer } from '../../common/OrderCardContainer';
+import { PaymentSummaryCard } from './PaymentSummaryCard';
 
 interface StaffReadyActionSectionProps {
   order: StaffOrder;
@@ -11,6 +12,11 @@ interface StaffReadyActionSectionProps {
   onReturnHome: () => void;
 }
 
+/**
+ * Action Section for READY_TO_CLAIM status:
+ * 1. Initial State (Figma 1343:1709): Payment summary card, disabled checkbox & button
+ * 2. Active State (Figma 1352:2371): Payment summary card, Claiming Time Remaining card with countdown & Active badge
+ */
 export const StaffReadyActionSection: React.FC<StaffReadyActionSectionProps> = ({
   order,
   isReleasing,
@@ -57,6 +63,16 @@ export const StaffReadyActionSection: React.FC<StaffReadyActionSectionProps> = (
   const isTimerExpired = isInitiated && secondsRemaining <= 0;
   const canRelease = isInitiated && isConfirmed && secondsRemaining > 0 && !isReleasing;
 
+  const price = typeof order.amountToPay === 'number' ? order.amountToPay : 480;
+  const paidAmount =
+    typeof order.amountReceived === 'number'
+      ? order.amountReceived
+      : Math.max(500, price);
+  const change =
+    typeof order.change === 'number'
+      ? order.change
+      : Math.max(0, paidAmount - price);
+
   const handleRelease = async () => {
     if (!canRelease || isLocked) return;
     setIsLocked(true);
@@ -64,34 +80,59 @@ export const StaffReadyActionSection: React.FC<StaffReadyActionSectionProps> = (
   };
 
   return (
-    <View className="space-y-4">
-      {/* Card: CLAIMING TIME REMAINING */}
-      <OrderCardContainer className="mb-4">
-        <Text className="text-[11px] font-bold text-[#94A3B8] tracking-wider uppercase mb-1">
-          CLAIMING TIME REMAINING
-        </Text>
-        {isInitiated ? (
-          <>
-            <Text className="text-4xl font-extrabold text-[#059669] my-1">
+    <View>
+      {/* Payment Summary Card matching Figma 1343:1709 & 1352:2371 */}
+      <PaymentSummaryCard
+        price={price}
+        paidAmount={paidAmount}
+        change={change}
+        className="mb-4"
+      />
+
+      {/* Claiming Time Remaining Card when Active (Figma 1352:2371) */}
+      {isInitiated && secondsRemaining > 0 && (
+        <OrderCardContainer className="mb-4">
+          <Text className="text-[11px] font-bold text-[#64748B] tracking-wider uppercase mb-1">
+            CLAIMING TIME REMAINING
+          </Text>
+          <View className="flex-row items-center justify-between mt-1">
+            <Text className="text-[32px] font-bold text-[#15803D]">
               {formattedTimer}
             </Text>
-            <Text className="text-xs text-[#64748B]">
-              {isTimerExpired
-                ? 'Claiming window has expired. Ask customer to re-initiate.'
-                : 'Releasing order is only valid with this timer on.'}
+            <View className="bg-[#DCFCE7] rounded-full px-3 py-1 flex-row items-center gap-1.5">
+              <View className="w-2 h-2 rounded-full bg-[#15803D]" />
+              <Text className="text-[11px] font-semibold text-[#15803D]">
+                Active
+              </Text>
+            </View>
+          </View>
+          <Text className="text-[12px] font-normal text-[#64748B] mt-2">
+            Releasing order is only valid with this timer on.
+          </Text>
+        </OrderCardContainer>
+      )}
+
+      {/* Claiming Time Remaining Card when Expired */}
+      {isTimerExpired && (
+        <OrderCardContainer className="mb-4">
+          <Text className="text-[11px] font-bold text-[#64748B] tracking-wider uppercase mb-1">
+            CLAIMING TIME REMAINING
+          </Text>
+          <View className="flex-row items-center justify-between mt-1">
+            <Text className="text-[32px] font-bold text-[#BE123C]">
+              0:00
             </Text>
-          </>
-        ) : (
-          <>
-            <Text className="text-sm font-semibold text-[#64748B] my-2">
-              Claim has not been initiated by the customer
-            </Text>
-            <Text className="text-xs text-[#94A3B8]">
-              The countdown timer will start once the customer initiates the claim on their app.
-            </Text>
-          </>
-        )}
-      </OrderCardContainer>
+            <View className="bg-[#FFE4E6] rounded-full px-3 py-1">
+              <Text className="text-[11px] font-semibold text-[#BE123C]">
+                Expired
+              </Text>
+            </View>
+          </View>
+          <Text className="text-[12px] font-normal text-[#64748B] mt-2">
+            Claiming window has expired. Ask customer to re-initiate.
+          </Text>
+        </OrderCardContainer>
+      )}
 
       {/* Confirmation Checkbox */}
       <OrderConfirmationCheckbox
@@ -111,19 +152,17 @@ export const StaffReadyActionSection: React.FC<StaffReadyActionSectionProps> = (
         activeOpacity={0.85}
         onPress={handleRelease}
         disabled={!canRelease || isReleasing || isLocked}
-        className={`w-full h-[48px] rounded-xl items-center justify-center shadow-sm mb-2 ${
-          canRelease && !isReleasing && !isLocked ? 'bg-black active:bg-neutral-800' : 'bg-[#94A3B8]'
+        className={`w-full h-[48px] rounded-xl items-center justify-center mb-2 shadow-sm ${
+          canRelease && !isReleasing && !isLocked
+            ? 'bg-black active:bg-neutral-800'
+            : 'bg-[#94A3B8]'
         }`}
       >
         {isReleasing ? (
           <ActivityIndicator size="small" color="#FFFFFF" />
         ) : (
           <Text className="text-white font-bold text-[15px]">
-            {!isInitiated
-              ? 'Awaiting Customer Initiation'
-              : isTimerExpired
-              ? 'Claim Window Expired'
-              : 'Release Order'}
+            Release Order
           </Text>
         )}
       </TouchableOpacity>
@@ -132,7 +171,7 @@ export const StaffReadyActionSection: React.FC<StaffReadyActionSectionProps> = (
       <TouchableOpacity
         activeOpacity={0.7}
         onPress={onReturnHome}
-        className="w-full py-3 items-center justify-center"
+        className="w-full py-2.5 items-center justify-center mt-1"
       >
         <Text className="text-[13px] font-bold text-[#475569]">
           Return to Home
