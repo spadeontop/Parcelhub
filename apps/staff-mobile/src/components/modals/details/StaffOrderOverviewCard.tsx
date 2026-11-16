@@ -2,16 +2,16 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { StaffOrder } from '../../../types';
+import { StaffBadge } from '../../common/StaffBadge';
 import { Copy, Check } from '../../common/Icons';
 
-interface StaffOrderOverviewCardProps {
+export interface StaffOrderOverviewCardProps {
   order: StaffOrder;
   showFinancials?: boolean;
 }
 
 export const StaffOrderOverviewCard: React.FC<StaffOrderOverviewCardProps> = ({
   order,
-  showFinancials = true,
 }) => {
   const [copied, setCopied] = useState<boolean>(false);
 
@@ -22,76 +22,58 @@ export const StaffOrderOverviewCard: React.FC<StaffOrderOverviewCardProps> = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const paidAmount = order.amountReceived ?? (order.amountToPay + (order.change || 0));
-  const price = order.amountToPay;
-  const change = order.change || 0;
+  const orderId = order.id || order.trackingId;
+  const recipientName = order.customer || order.productName || 'John Doe';
+  const trackingNumber = order.trackingId || 'PH2696153368792H';
 
   return (
-    <View className="bg-white border border-[#E2E8F0] rounded-2xl p-5 mb-4 shadow-xs">
-      <Text className="text-[11px] font-bold text-[#94A3B8] tracking-wider uppercase mb-3">
-        ORDER OVERVIEW
+    <View className="bg-white border border-[#E2E8F0] rounded-[20px] p-5 mb-4 shadow-sm">
+      {/* Top Row: Order ticket label + Status badge */}
+      <View className="flex-row items-center justify-between">
+        <Text className="text-[12px] font-normal text-[#64748B]">
+          Order ticket
+        </Text>
+        <StaffBadge status={order.status} variant="modal" />
+      </View>
+
+      {/* Big Order ID */}
+      <Text className="text-[22px] font-bold text-[#0F172A] mt-1 tracking-tight">
+        {orderId}
       </Text>
 
-      {/* Order ID */}
-      <View className="flex-row items-center justify-between py-1.5">
-        <Text className="text-xs text-[#64748B] font-medium">Order ID</Text>
-        <Text className="text-xs font-bold text-[#0F172A] font-mono">
-          {order.id}
+      {/* Recipient Section */}
+      <View className="mt-3">
+        <Text className="text-[12px] font-normal text-[#64748B]">
+          Recipient
+        </Text>
+        <Text className="text-[15px] font-bold text-[#0F172A] mt-0.5">
+          {recipientName}
         </Text>
       </View>
 
-      {/* Recipient */}
-      <View className="flex-row items-center justify-between py-1.5">
-        <Text className="text-xs text-[#64748B] font-medium">Recipient</Text>
-        <Text className="text-xs font-semibold text-[#0F172A]">
-          {order.customer}
+      {/* Tracking Number Section */}
+      <View className="mt-3">
+        <Text className="text-[12px] font-normal text-[#64748B]">
+          Tracking Number
         </Text>
-      </View>
-
-      {/* Tracking Number with Copy Action */}
-      <View className="flex-row items-center justify-between py-1.5">
-        <Text className="text-xs text-[#64748B] font-medium">Tracking Number</Text>
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={handleCopy}
-          className="flex-row items-center gap-1.5 bg-[#F1F5F9] px-2.5 py-1 rounded-lg border border-[#E2E8F0]/60 active:bg-slate-200"
+          className="bg-[#F1F5F9] rounded-xl px-4 py-3 flex-row items-center justify-between mt-1 active:bg-slate-200"
+          accessibilityLabel="Copy tracking number"
         >
-          <Text className="text-[11px] font-mono font-bold text-[#0F172A]">
-            {order.trackingId || 'N/A'}
+          <Text className="text-[13px] font-bold text-[#334155] font-mono">
+            {trackingNumber}
           </Text>
-          {copied ? (
-            <Check size={12} color="#059669" />
-          ) : (
-            <Copy size={12} color="#64748B" />
-          )}
+          <View className="p-0.5">
+            {copied ? (
+              <Check size={16} color="#059669" strokeWidth={2.5} />
+            ) : (
+              <Copy size={16} color="#64748B" />
+            )}
+          </View>
         </TouchableOpacity>
       </View>
-
-      {/* Paid Amount / Price / Change */}
-      {showFinancials && (
-        <>
-          <View className="flex-row items-center justify-between py-1.5">
-            <Text className="text-xs text-[#64748B] font-medium">Paid Amount</Text>
-            <Text className="text-xs font-bold text-[#0F172A]">
-              ₱{(paidAmount || 0).toLocaleString()}
-            </Text>
-          </View>
-
-          <View className="flex-row items-center justify-between py-1.5 border-b border-[#F8FAFC]">
-            <Text className="text-xs text-[#64748B] font-medium">Price</Text>
-            <Text className="text-xs font-bold text-[#0F172A]">
-              ₱{(price || 0).toLocaleString()}
-            </Text>
-          </View>
-
-          <View className="flex-row items-center justify-between py-1.5">
-            <Text className="text-xs text-[#64748B] font-medium">Change</Text>
-            <Text className="text-xs font-bold text-[#0F172A]">
-              ₱{(change || 0).toLocaleString()}
-            </Text>
-          </View>
-        </>
-      )}
     </View>
   );
 };

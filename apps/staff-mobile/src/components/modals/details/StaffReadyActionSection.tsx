@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { StaffOrder } from '../../../types';
-import { Check } from '../../common/Icons';
+import { OrderConfirmationCheckbox } from './OrderConfirmationCheckbox';
 
 interface StaffReadyActionSectionProps {
   order: StaffOrder;
@@ -64,8 +64,8 @@ export const StaffReadyActionSection: React.FC<StaffReadyActionSectionProps> = (
 
   return (
     <View className="space-y-4">
-      {/* Card 2: CLAIMING TIME REMAINING */}
-      <View className="bg-white border border-[#E2E8F0] rounded-2xl p-5 mb-4 shadow-xs">
+      {/* Card: CLAIMING TIME REMAINING */}
+      <View className="bg-white border border-[#E2E8F0] rounded-[20px] p-5 mb-4 shadow-sm">
         <Text className="text-[11px] font-bold text-[#94A3B8] tracking-wider uppercase mb-1">
           CLAIMING TIME REMAINING
         </Text>
@@ -92,49 +92,32 @@ export const StaffReadyActionSection: React.FC<StaffReadyActionSectionProps> = (
         )}
       </View>
 
-      {/* Confirmation Checkbox matching ready-to-claim.png */}
-      <TouchableOpacity
-        activeOpacity={isLocked || isReleasing ? 1 : 0.8}
-        onPress={() => {
+      {/* Confirmation Checkbox */}
+      <OrderConfirmationCheckbox
+        checked={isConfirmed}
+        onToggle={() => {
           if (!isLocked && !isReleasing && isInitiated && !isTimerExpired) {
             setIsConfirmed((prev) => !prev);
           }
         }}
         disabled={isLocked || isReleasing || !isInitiated || isTimerExpired}
-        className={`flex-row items-start gap-3 px-1 mb-5 ${
-          !isInitiated || isTimerExpired ? 'opacity-50' : 'opacity-100'
-        }`}
-      >
-        <View
-          className={`w-5 h-5 rounded-md items-center justify-center mt-0.5 ${
-            isConfirmed ? 'bg-[#215CD4]' : 'bg-white border-2 border-[#CBD5E1]'
-          } ${isLocked ? 'opacity-90' : ''}`}
-        >
-          {isConfirmed && <Check size={14} color="#FFFFFF" strokeWidth={3} />}
-        </View>
-        <View className="flex-1">
-          <Text className="text-xs font-bold text-[#0F172A]">
-            I confirm that I want to release the order
-          </Text>
-          <Text className="text-[11px] text-[#64748B] mt-0.5 leading-relaxed">
-            Only initiate release when customer is physically claiming their order.
-          </Text>
-        </View>
-      </TouchableOpacity>
+        title="I confirm that I want to release the order"
+        subtitle="Only initiate release when customer is physically claiming their order."
+      />
 
       {/* Primary Action Button */}
       <TouchableOpacity
         activeOpacity={0.85}
         onPress={handleRelease}
         disabled={!canRelease || isReleasing || isLocked}
-        className={`w-full py-4 rounded-xl items-center justify-center shadow-md mb-2 ${
-          canRelease && !isReleasing && !isLocked ? 'bg-[#215CD4] active:bg-[#1d4ed8]' : 'bg-[#94A3B8]'
+        className={`w-full h-[48px] rounded-xl items-center justify-center shadow-sm mb-2 ${
+          canRelease && !isReleasing && !isLocked ? 'bg-black active:bg-neutral-800' : 'bg-[#94A3B8]'
         }`}
       >
         {isReleasing ? (
           <ActivityIndicator size="small" color="#FFFFFF" />
         ) : (
-          <Text className="text-white font-bold text-sm">
+          <Text className="text-white font-bold text-[15px]">
             {!isInitiated
               ? 'Awaiting Customer Initiation'
               : isTimerExpired
@@ -150,7 +133,7 @@ export const StaffReadyActionSection: React.FC<StaffReadyActionSectionProps> = (
         onPress={onReturnHome}
         className="w-full py-3 items-center justify-center"
       >
-        <Text className="text-xs font-semibold text-[#475569]">
+        <Text className="text-[13px] font-bold text-[#475569]">
           Return to Home
         </Text>
       </TouchableOpacity>
