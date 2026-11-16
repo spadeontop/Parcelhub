@@ -1,16 +1,14 @@
 name: Build Customer Mobile APK
 
+# Triggered strictly on-demand via the GitHub Actions tab ("Run workflow" button)
+# Does NOT automatically rebuild on everyday git pushes, saving your build minutes.
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - feat/customer-fcm-integration
-      - dev
-      - main
-    paths:
-      - 'apps/customer-mobile/**'
-      - 'packages/contracts/**'
-      - '.github/workflows/build-customer-apk.yml'
+    inputs:
+      environment:
+        description: 'Target Backend URL'
+        required: false
+        default: 'https://parcelhub-spade.vercel.app'
 
 permissions:
   contents: write
@@ -69,7 +67,7 @@ jobs:
 
       - name: 10. Publish Direct APK Download to GitHub Releases
         uses: softprops/action-gh-release@v2
-        if: github.ref == 'refs/heads/feat/customer-fcm-integration' || github.event_name == 'workflow_dispatch'
+        continue-on-error: true
         with:
           tag_name: apk-latest
           name: ParcelHub Customer Mobile Standalone APK
