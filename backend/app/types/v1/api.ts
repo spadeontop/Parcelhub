@@ -27,10 +27,10 @@ export type {
   OrderScreenshotRow,
   NewOrderScreenshotRow,
   OrderScreenshotChecks,
+  FcmTokenRow,
+  NewFcmTokenRow,
 } from "@/db/schema";
 
-export type FcmTokenRow = typeof import("@/db/schema").fcmTokens.$inferSelect;
-export type NewFcmTokenRow = typeof import("@/db/schema").fcmTokens.$inferInsert;
 export type AppConfigRow = typeof import("@/db/schema").appConfig.$inferSelect;
 export type NewAppConfigRow = typeof import("@/db/schema").appConfig.$inferInsert;
 
@@ -478,6 +478,13 @@ export type NotificationUploadTokenReq = {
 
 export type NotificationUploadTokenRes = StandardSuccessResponse;
 
+// DELETE /api/v1/notification/token
+export type NotificationDeleteTokenReq = {
+  readonly fcmToken?: string;
+};
+
+export type NotificationDeleteTokenRes = StandardSuccessResponse;
+
 // POST /api/v1/notification/send-notification
 export type NotificationSendReq = {
   readonly notificationBody: string;
@@ -524,4 +531,5 @@ export type ApiRoutes =
   | readonly ["POST", `/api/v1/admin/blacklist/customer/${string}`]
   | readonly ["POST", `/api/v1/admin/config/${AdminOcrConfigTarget}/ai-ocr-verify/${AdminOcrConfigAction}`]
   | readonly ["POST", "/api/v1/notification/upload-token"]
+  | readonly ["DELETE", "/api/v1/notification/token"]
   | readonly ["POST", "/api/v1/notification/send-notification"];
