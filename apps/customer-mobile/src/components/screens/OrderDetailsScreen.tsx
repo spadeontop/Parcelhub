@@ -6,6 +6,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Animated,
+  BackHandler,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import Svg, { Path } from 'react-native-svg';
@@ -26,10 +27,10 @@ export const OrderDetailsScreen: React.FC = () => {
     isOrderClaimUnlocked,
     getOrderClaimRemainingSeconds,
     showToast,
-    seenClaimedPassOrders,
-    markClaimedPassSeen,
-    seenExpiredPassOrders,
-    markExpiredPassSeen,
+    activeClaimPassOrderId,
+    dismissedClaimPasses,
+    openClaimPass,
+    closeClaimPass,
   } = useApp();
 
   const order = getCurrentOrder();
@@ -68,21 +69,17 @@ export const OrderDetailsScreen: React.FC = () => {
 
   // State calculations for the focused release / claim view
   const isClaimed = status === 'CLAIMED';
-  const hasSeenClaimedPass = Boolean(seenClaimedPassOrders[order.id]);
-  const hasSeenExpiredPass = Boolean(seenExpiredPassOrders[order.id]);
 
-  // Show the Claimed QR pass only once right after handover; subsequent visits open the dedicated Complete Details stepper page
-  const isClaimedPassVisible = isClaimed && !hasSeenClaimedPass;
-  const isReleaseActive = status === 'READY_TO_CLAIM' && isClaimActive && remainingSecs > 0;
+  // Focused release pass is ONLY visible when explicitly initiated by the user for this order
+  // and has not been closed/dismissed. Once closed, neither Claimed nor Expired pass displays again.
+  const isPassActiveForThisOrder = activeClaimPassOrderId === order.id;
+  const isPassDismissed = Boolean(dismissedClaimPasses[order.id]);
+  const isFocusedPassView = isPassActiveForThisOrder && !isPassDismissed;
+
   const isReleaseExpired =
-    status === 'READY_TO_CLAIM' &&
-    Boolean(order.claimInitiatedAt) &&
-    remainingSecs === 0 &&
-    !hasSeenExpiredPass;
+    (status === 'READY_TO_CLAIM' || isFocusedPassView) && remainingSecs === 0 && !isClaimed;
+  const isReleaseActive = isFocusedPassView && !isClaimed && !isReleaseExpired;
   const isExpiringSoon = isReleaseActive && remainingSecs <= 60;
-
-  // Whether to show the focused release/claim pass vs the dedicated complete details page
-  const isFocusedPassView = isReleaseActive || isReleaseExpired || isClaimedPassVisible;
 
   // Header subtitle label derived from status helper
   const headerSubtitle = getStatusLabel(status);
@@ -110,6 +107,19 @@ export const OrderDetailsScreen: React.FC = () => {
     }
   }, [isFocusedPassView]);
 
+  // Handle hardware back on Android: dismiss the pass and return to Complete Details
+  useEffect(() => {
+    if (!isFocusedPassView) return;
+
+    const onBackPress = () => {
+      handleCloseFocusedPass();
+      return true;
+    };
+
+    const backSubscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => backSubscription.remove();
+  }, [isFocusedPassView, order.id, closeClaimPass]);
+
   const handleInitiateClaim = async () => {
     if (!claimConfirmed) {
       showToast('Please check the confirmation box before initiating claim.');
@@ -120,11 +130,13 @@ export const OrderDetailsScreen: React.FC = () => {
     setIsClaimLocked(true);
     setIsInitiatingClaim(true);
     try {
+      openClaimPass(order.id);
       await Promise.all([
         customerInitiateClaim(order.id),
         new Promise((resolve) => setTimeout(resolve, 450)),
       ]);
     } catch {
+      closeClaimPass(order.id);
       // Handled in context toast
     } finally {
       setIsInitiatingClaim(false);
@@ -135,6 +147,7 @@ export const OrderDetailsScreen: React.FC = () => {
     if (isRefreshingRelease) return;
     setIsRefreshingRelease(true);
     try {
+      openClaimPass(order.id);
       await customerInitiateClaim(order.id);
     } catch {
       // Handled in context toast
@@ -143,16 +156,20 @@ export const OrderDetailsScreen: React.FC = () => {
     }
   };
 
-  const handleExitFocusedPass = () => {
+  // Close the focused pass view and remain on Complete Details (Figma 8:2)
+  const handleCloseFocusedPass = () => {
     setClaimConfirmed(false);
     setIsClaimLocked(false);
     setIsInitiatingClaim(false);
-    if (isClaimed) {
-      markClaimedPassSeen(order.id);
-    }
-    if (status === 'READY_TO_CLAIM' && remainingSecs === 0) {
-      markExpiredPassSeen(order.id);
-    }
+    closeClaimPass(order.id);
+  };
+
+  // Close the focused pass view and navigate back to Home
+  const handleReturnHomeFromPass = () => {
+    setClaimConfirmed(false);
+    setIsClaimLocked(false);
+    setIsInitiatingClaim(false);
+    closeClaimPass(order.id);
     navigateTo('home');
   };
 
@@ -234,7 +251,7 @@ export const OrderDetailsScreen: React.FC = () => {
             {/* Go Back Button */}
             <TouchableOpacity
               activeOpacity={0.7}
-              onPress={handleExitFocusedPass}
+              onPress={handleCloseFocusedPass}
               style={{
                 width: 40,
                 height: 40,
@@ -560,7 +577,7 @@ export const OrderDetailsScreen: React.FC = () => {
                 {/* Return to Home Action Button (Figma 1308:288, 1309:223, 1309:271) */}
                 <TouchableOpacity
                   activeOpacity={0.7}
-                  onPress={handleExitFocusedPass}
+                  onPress={handleReturnHomeFromPass}
                   className="w-full py-3 items-center justify-center"
                 >
                   <Text className="text-[14px] font-bold text-[#334155] text-center">
@@ -968,7 +985,7 @@ export const OrderDetailsScreen: React.FC = () => {
                     </TouchableOpacity>
 
                     {/* Previous Window Elapsed Note */}
-                    {order.claimInitiatedAt && (
+                    {order.claimInitiatedAt && remainingSecs === 0 && (
                       <View className="bg-amber-50 py-2 px-3 rounded-xl border border-amber-200">
                         <Text className="text-[11px] text-amber-700 font-semibold text-center">
                           Previous claim window elapsed. Press Initiate Claim to unlock counter.
