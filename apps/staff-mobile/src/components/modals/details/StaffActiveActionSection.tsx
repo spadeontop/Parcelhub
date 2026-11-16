@@ -283,10 +283,8 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
           /* Photo Attached State: Verified (1346:1883) or Invalid (1346:2329) */
           /* ------------------------------------------------------------- */
           <>
-            {/* Verification Status Pill Badge (Interactive test switcher on click) */}
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={toggleValidationState}
+            {/* Verification Status Pill Badge (Figma 1350:21 & 1346:2343) */}
+            <View
               className={`rounded-[6px] px-2.5 py-1 flex-row items-center gap-1.5 self-start mt-2.5 mb-3.5 border ${
                 photoValidationState === 'VALID'
                   ? 'bg-[#ECFDF3] border-[#ABEFC6]'
@@ -313,7 +311,7 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
               >
                 {photoValidationState === 'VALID' ? 'Photo verified' : 'Invalid photo'}
               </Text>
-            </TouchableOpacity>
+            </View>
 
             {/* Photo Preview Container with "Parcel Waybill Photo" Mockup */}
             <View className="bg-[#F8FAFC] rounded-[12px] p-4 items-center justify-center border border-[#F1F5F9]">
@@ -328,16 +326,6 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
                 </Text>
               </View>
             </View>
-
-            {/* Test Simulation Switcher Pill */}
-            <TouchableOpacity
-              onPress={toggleValidationState}
-              className="mt-2.5 self-center py-1 px-3 rounded-full bg-slate-100 border border-slate-200"
-            >
-              <Text className="text-[10px] font-semibold text-slate-500">
-                Tap to toggle: {photoValidationState === 'VALID' ? 'Switch to Invalid State' : 'Switch to Valid State'}
-              </Text>
-            </TouchableOpacity>
           </>
         )}
       </OrderCardContainer>
