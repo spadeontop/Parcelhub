@@ -1,41 +1,56 @@
 import React from 'react';
 import { View, TextInput, TouchableOpacity } from 'react-native';
-import { Search, X } from '../common/Icons';
+import { Search, X, QrCode } from '../common/Icons';
 
 interface StaffSearchBarProps {
   searchQuery: string;
   onSearchChange: (text: string) => void;
   onClear: () => void;
-  onOpenLookup?: () => void;
+  onOpenLookup: () => void;
 }
 
 export const StaffSearchBar: React.FC<StaffSearchBarProps> = ({
   searchQuery,
   onSearchChange,
   onClear,
+  onOpenLookup,
 }) => {
   return (
-    <View className="mt-2.5">
-      <View className="flex-row items-center bg-white border border-[#E2E8F0] rounded-xl px-3 py-2 shadow-xs">
-        <Search size={15} color="#94A3B8" />
+    <View className="flex-row items-center gap-2.5 px-5 pt-4 pb-2">
+      {/* Main Search Field */}
+      <View className="flex-1 bg-white border border-[#E2E8F0] rounded-[16px] h-[40px] flex-row items-center px-3.5 shadow-xs">
+        <Search size={16} color="#94A3B8" />
         <TextInput
           value={searchQuery}
           onChangeText={onSearchChange}
-          placeholder="Search by tracking, order ID, or name..."
+          placeholder="order , tracking, waybill..."
           placeholderTextColor="#94A3B8"
           autoCapitalize="none"
           autoCorrect={false}
-          className="flex-1 ml-2 text-xs text-[#0F172A] font-medium p-0"
+          className="flex-1 ml-2 text-[12px] text-[#0F172A] p-0 font-normal"
         />
         {searchQuery.length > 0 && (
           <TouchableOpacity
             onPress={onClear}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             className="w-5 h-5 rounded-full bg-slate-100 items-center justify-center ml-1"
+            accessibilityLabel="Clear search"
           >
-            <X size={11} color="#64748B" />
+            <X size={12} color="#64748B" />
           </TouchableOpacity>
         )}
       </View>
+
+      {/* Standalone QR Wing Button */}
+      <TouchableOpacity
+        onPress={onOpenLookup}
+        activeOpacity={0.85}
+        className="bg-[#0F172A] active:bg-slate-800 w-[40px] h-[40px] rounded-[16px] items-center justify-center shadow-sm"
+        accessibilityRole="button"
+        accessibilityLabel="Scan QR or enter waybill lookup"
+      >
+        <QrCode size={20} color="#FFFFFF" />
+      </TouchableOpacity>
     </View>
   );
 };

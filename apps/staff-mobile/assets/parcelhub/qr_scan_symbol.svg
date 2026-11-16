@@ -1,0 +1,7 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="QR scan symbol" opacity="0.7">
+<path id="Vector" d="M6 10V8C6 6.89617 6.89617 6 8 6H10M20 6H22C23.1038 6 24 6.89617 24 8V10M24 20V22C24 23.1038 23.1038 24 22 24H20M10 24H8C6.89617 24 6 23.1038 6 22V20" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" stroke="#E2E8F0"/>
+<path id="Vector_2" d="M15 14H17C17.5519 14 18 14.4481 18 15V17C18 17.5519 17.5519 18 17 18H15C14.4481 18 14 17.5519 14 17V15C14 14.4481 14.4481 14 15 14V14" fill="#E2E8F0" fill-opacity="0.3" stroke-width="4" stroke="#E2E8F0"/>
+<path id="Vector_3" d="M27 26H29C29.5519 26 30 26.4481 30 27V29C30 29.5519 29.5519 30 29 30H27C26.4481 30 26 29.5519 26 29V27C26 26.4481 26.4481 26 27 26V26" fill="#E2E8F0" fill-opacity="0.3" stroke-width="4" stroke="#E2E8F0"/>
+</g>
+</svg>

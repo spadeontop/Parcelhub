@@ -1,57 +1,73 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { useStaff } from '../../context/StaffContext';
-import { RefreshCw } from '../common/Icons';
+import { ChevronDown } from '../common/Icons';
+import { ParcelHubLogo } from '../auth/ParcelHubLogo';
 
 interface StaffHeaderProps {
-  children?: React.ReactNode;
+  onOpenAccount: () => void;
 }
 
-export const StaffHeader: React.FC<StaffHeaderProps> = ({ children }) => {
-  const { isOnline, isRefreshing, refreshOrders } = useStaff();
+export const StaffHeader: React.FC<StaffHeaderProps> = ({ onOpenAccount }) => {
+  const { staffUser } = useStaff();
+
+  const staffName = staffUser?.name || 'John Doe';
+  const staffId = staffUser?.id || 'STF-1991';
+  const hubName = staffUser?.hubName || "LILY'S CATERING HUB";
 
   return (
-    <View className="bg-transparent px-5 pt-3 pb-2">
-      {/* Top Header matching home.png */}
-      <View className="flex-row items-start justify-between">
+    <View
+      style={{ minHeight: 80, zIndex: 20 }}
+      className="bg-black px-5 pt-5 pb-7 flex-row items-center justify-between"
+    >
+      {/* Brand Identity & Hub Name (Clickable to open staff terminal / desk details) */}
+      <TouchableOpacity
+        onPress={onOpenAccount}
+        activeOpacity={0.8}
+        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        className="flex-row items-center gap-2.5 flex-1 mr-2"
+        accessibilityRole="button"
+        accessibilityLabel={`ParcelHub ${hubName}. Open hub details`}
+      >
+        <ParcelHubLogo size={36} />
         <View>
-          <Text className="text-[11px] font-bold text-[#215CD4] uppercase tracking-wider">
-            INVENTORY & ASSETS
+          <Text className="text-[18px] font-bold text-white tracking-tight leading-5">
+            ParcelHub
           </Text>
-          <Text className="text-2xl font-bold text-[#1E1E1E] tracking-tight mt-0.5">
-            Items & Claims
+          <Text className="text-[11px] font-bold text-[#DBEAFE] tracking-wider uppercase mt-0.5">
+            {hubName}
+          </Text>
+        </View>
+      </TouchableOpacity>
+
+      {/* Staff account — signed in name button (Clickable to open staff account menu) */}
+      <TouchableOpacity
+        onPress={onOpenAccount}
+        activeOpacity={0.8}
+        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        className="bg-[#151A23] border border-[#303846] rounded-[12px] px-3 py-1.5 flex-row items-center gap-2"
+        accessibilityRole="button"
+        accessibilityLabel={`Signed in as ${staffName}, ${staffId}. Open account menu`}
+      >
+        {/* Status dot (green online) */}
+        <View className="w-[7px] h-[7px] rounded-full bg-[#10B981]" />
+
+        {/* Staff details */}
+        <View className="items-start">
+          <Text
+            className="text-[11px] font-semibold text-white leading-tight max-w-[80px]"
+            numberOfLines={1}
+          >
+            {staffName}
+          </Text>
+          <Text className="text-[9px] font-normal text-[#B8C4D4] leading-tight">
+            {staffId}
           </Text>
         </View>
 
-        {/* Live sync & refresh */}
-        <View className="flex-row items-center gap-2 pt-1">
-          <View
-            className={`flex-row items-center gap-1.5 px-2 py-0.5 rounded-full border ${
-              isOnline ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200'
-            }`}
-          >
-            <View className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-            <Text className={`text-[10px] font-semibold ${isOnline ? 'text-emerald-700' : 'text-rose-700'}`}>
-              {isOnline ? 'Live' : 'Offline'}
-            </Text>
-          </View>
-
-          <TouchableOpacity
-            onPress={refreshOrders}
-            disabled={isRefreshing}
-            className="w-7 h-7 rounded-full bg-white border border-[#E2E8F0] items-center justify-center active:bg-slate-100 shadow-xs"
-            accessibilityLabel="Refresh orders"
-          >
-            <RefreshCw
-              size={12}
-              color={isRefreshing ? '#215CD4' : '#64748B'}
-            />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Embedded Search Bar */}
-      {children}
+        {/* Dropdown indicator */}
+        <ChevronDown size={14} color="#B8C4D4" />
+      </TouchableOpacity>
     </View>
   );
 };
