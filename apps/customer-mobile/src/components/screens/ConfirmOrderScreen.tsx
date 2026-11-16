@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import Svg, { Path } from 'react-native-svg';
@@ -195,24 +196,34 @@ export const ConfirmOrderScreen: React.FC = () => {
             }}
           >
             {/* Receipt Thumbnail / Document Icon Box */}
-            <View className="w-16 h-16 rounded-[14px] bg-[#f8fafc] border border-[#e2e8f0] items-center justify-center mr-3.5 shrink-0">
-              <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-                <Path
-                  d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
-                  stroke="#64748b"
-                  strokeWidth={1.8}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
+            <View className="w-16 h-16 rounded-[14px] bg-[#f8fafc] border border-[#e2e8f0] items-center justify-center mr-3.5 shrink-0 overflow-hidden">
+              {orderDraft.imageUrl ? (
+                <Image
+                  source={{ uri: orderDraft.imageUrl }}
+                  style={{ width: '100%', height: '100%' }}
+                  resizeMode="cover"
                 />
-                <Path
-                  d="M14 2v6h6M16 13H8M16 17H8M10 9H8"
-                  stroke="#64748b"
-                  strokeWidth={1.8}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </Svg>
-              <Text className="text-[9px] font-bold text-[#64748b] mt-0.5">Receipt</Text>
+              ) : (
+                <>
+                  <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+                    <Path
+                      d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                      stroke="#64748b"
+                      strokeWidth={1.8}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <Path
+                      d="M14 2v6h6M16 13H8M16 17H8M10 9H8"
+                      stroke="#64748b"
+                      strokeWidth={1.8}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </Svg>
+                  <Text className="text-[9px] font-bold text-[#64748b] mt-0.5">Receipt</Text>
+                </>
+              )}
             </View>
 
             {/* Receipt Details & Status */}
