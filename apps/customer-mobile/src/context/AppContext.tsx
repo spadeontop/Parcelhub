@@ -107,6 +107,8 @@ export interface AppContextType {
   markAllNotificationsAsRead: () => void;
   seenClaimedPassOrders: Record<string, boolean>;
   markClaimedPassSeen: (orderId: string) => void;
+  seenExpiredPassOrders: Record<string, boolean>;
+  markExpiredPassSeen: (orderId: string) => void;
   customerInitiateClaim: (orderId: string) => Promise<void>;
   isOrderClaimUnlocked: (order: Order) => boolean;
   getOrderClaimRemainingSeconds: (order: Order) => number;
@@ -553,15 +555,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const closeNotificationsModal = useCallback(() => setIsNotificationsModalOpen(false), []);
 
   const [seenClaimedPassOrders, setSeenClaimedPassOrders] = useState<Record<string, boolean>>({});
+  const [seenExpiredPassOrders, setSeenExpiredPassOrders] = useState<Record<string, boolean>>({});
 
   const markClaimedPassSeen = useCallback((orderId: string) => {
     setSeenClaimedPassOrders((prev) => ({ ...prev, [orderId]: true }));
+  }, []);
+
+  const markExpiredPassSeen = useCallback((orderId: string) => {
+    setSeenExpiredPassOrders((prev) => ({ ...prev, [orderId]: true }));
   }, []);
 
   // Direct One-Tap Claim Unlock
   const customerInitiateClaim = useCallback(
     async (orderId: string) => {
       try {
+        // Reset expired seen state when re-initiating claim
+        setSeenExpiredPassOrders((prev) => {
+          const next = { ...prev };
+          delete next[orderId];
+          return next;
+        });
         showToast('Unlocking counter pickup pass...');
         const res = await orderApi.claimOrder(authToken, orderId, apiUrl);
 
@@ -917,6 +930,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         markAllNotificationsAsRead,
         seenClaimedPassOrders,
         markClaimedPassSeen,
+        seenExpiredPassOrders,
+        markExpiredPassSeen,
         customerInitiateClaim,
         isOrderClaimUnlocked,
         getOrderClaimRemainingSeconds,

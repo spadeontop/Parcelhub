@@ -155,7 +155,7 @@ export const FaqScreen: React.FC<FaqScreenProps> = ({ onBack }) => {
                   style={{
                     flexDirection: 'row',
                     alignItems: 'center',
-                    justifyContent: 'between',
+                    justifyContent: 'space-between',
                     gap: 12,
                     width: '100%',
                   }}

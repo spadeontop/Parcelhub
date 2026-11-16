@@ -28,6 +28,8 @@ export const OrderDetailsScreen: React.FC = () => {
     showToast,
     seenClaimedPassOrders,
     markClaimedPassSeen,
+    seenExpiredPassOrders,
+    markExpiredPassSeen,
   } = useApp();
 
   const order = getCurrentOrder();
@@ -67,12 +69,16 @@ export const OrderDetailsScreen: React.FC = () => {
   // State calculations for the focused release / claim view
   const isClaimed = status === 'CLAIMED';
   const hasSeenClaimedPass = Boolean(seenClaimedPassOrders[order.id]);
+  const hasSeenExpiredPass = Boolean(seenExpiredPassOrders[order.id]);
 
   // Show the Claimed QR pass only once right after handover; subsequent visits open the dedicated Complete Details stepper page
   const isClaimedPassVisible = isClaimed && !hasSeenClaimedPass;
   const isReleaseActive = status === 'READY_TO_CLAIM' && isClaimActive && remainingSecs > 0;
   const isReleaseExpired =
-    status === 'READY_TO_CLAIM' && Boolean(order.claimInitiatedAt) && remainingSecs === 0;
+    status === 'READY_TO_CLAIM' &&
+    Boolean(order.claimInitiatedAt) &&
+    remainingSecs === 0 &&
+    !hasSeenExpiredPass;
   const isExpiringSoon = isReleaseActive && remainingSecs <= 60;
 
   // Whether to show the focused release/claim pass vs the dedicated complete details page
@@ -143,6 +149,9 @@ export const OrderDetailsScreen: React.FC = () => {
     setIsInitiatingClaim(false);
     if (isClaimed) {
       markClaimedPassSeen(order.id);
+    }
+    if (status === 'READY_TO_CLAIM' && remainingSecs === 0) {
+      markExpiredPassSeen(order.id);
     }
     navigateTo('home');
   };

@@ -13,6 +13,7 @@ interface AppHeaderProps {
   onBack?: () => void;
   showBackButton?: boolean;
   centerTitle?: boolean;
+  backgroundColor?: string;
 }
 
 export const AppHeader: React.FC<AppHeaderProps> = ({
@@ -25,6 +26,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   onBack,
   showBackButton = false,
   centerTitle = false,
+  backgroundColor,
 }) => {
   const { navigateTo } = useApp();
   const { height } = useWindowDimensions();
@@ -36,20 +38,21 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   if (centerTitle) {
     return (
       <View
-        className="bg-[#2563eb] px-5"
+        className="px-5"
         style={{
+          backgroundColor: backgroundColor || '#2563eb',
           paddingTop: isCompact ? 14 : 24,
           paddingBottom: isCompact ? 20 : 28,
         }}
       >
         <View className="flex-row items-center justify-between relative min-h-[40px]">
           {/* Left Slot */}
-          <View className="w-9 h-9 justify-center items-start z-10">
+          <View className="w-10 h-10 justify-center items-start z-10">
             {showBackButton ? (
               <TouchableOpacity
                 activeOpacity={0.7}
                 onPress={onBack || (() => navigateTo('home'))}
-                className="w-9 h-9 rounded-full bg-white/20 items-center justify-center border border-white/20"
+                className="w-10 h-10 rounded-full bg-white/20 items-center justify-center border border-white/20"
                 accessibilityLabel="Back"
               >
                 <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
@@ -68,7 +71,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           {/* Centered Title & Subtitle */}
           <View className="absolute left-0 right-0 top-0 bottom-0 items-center justify-center pointer-events-none">
             <Text
-              className="font-bold text-white tracking-tight leading-[26px] text-[18px] text-center"
+              className="font-bold text-white tracking-tight leading-[28px] text-[20px] text-center"
               numberOfLines={1}
             >
               {title}
@@ -81,7 +84,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                     style={{ backgroundColor: statusDotColor }}
                   />
                 )}
-                <Text className="text-[11px] font-normal text-[#dbeafe] text-center">
+                <Text className="text-[12px] font-medium text-[#dbeafe] text-center">
                   {subtitle}
                 </Text>
               </View>
@@ -89,21 +92,21 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           </View>
 
           {/* Right Slot */}
-          <View className="w-9 h-9 justify-center items-end z-10">
+          <View className="w-10 h-10 justify-center items-end z-10">
             {rightElement ? (
               rightElement
             ) : onHelp ? (
               <TouchableOpacity
                 activeOpacity={0.7}
                 onPress={handleHelp}
-                className="w-9 h-9 rounded-full bg-white/20 items-center justify-center border border-white/20"
+                className="w-10 h-10 rounded-full bg-white/20 items-center justify-center border border-white/20"
                 accessibilityLabel="Help"
               >
                 <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
                   <Path
-                    d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3m.08 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"
+                    d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3m.08 4h.01"
                     stroke="#ffffff"
-                    strokeWidth={2}
+                    strokeWidth={2.2}
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   />
@@ -118,8 +121,9 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
   return (
     <View
-      className="bg-[#2563eb] px-5"
+      className="px-5"
       style={{
+        backgroundColor: backgroundColor || '#2563eb',
         paddingTop: isCompact ? 14 : 24,
         paddingBottom: isCompact ? 20 : 28,
       }}
