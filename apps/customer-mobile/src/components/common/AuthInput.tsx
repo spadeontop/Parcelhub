@@ -21,6 +21,7 @@ interface AuthInputProps extends TextInputProps {
   isValid?: boolean; // When explicitly provided or computed
   feedbackState?: InputFeedbackState;
   showSuccessCheck?: boolean; // Set to false to hide the green checkmark
+  rightElement?: React.ReactNode;
 }
 
 // Built-in validation helpers
@@ -42,6 +43,7 @@ export const AuthInput: React.FC<AuthInputProps> = ({
   isValid: isValidProp,
   feedbackState,
   showSuccessCheck = true,
+  rightElement,
   secureTextEntry,
   keyboardType: keyboardTypeProp,
   autoCapitalize: autoCapitalizeProp,
@@ -131,7 +133,7 @@ export const AuthInput: React.FC<AuthInputProps> = ({
 
   // Shows checkmark if valid and not in error state
   const hasCheck = showSuccessCheck && computedIsValid && hasValue && !isError;
-  const paddingRight = isPassword && hasCheck ? 64 : isPassword || hasCheck ? 38 : 0;
+  const paddingRight = rightElement ? 80 : isPassword && hasCheck ? 64 : isPassword || hasCheck ? 38 : 0;
 
   // Derive default keyboardType and autoCapitalize from type
   const keyboardType =
@@ -220,13 +222,15 @@ export const AuthInput: React.FC<AuthInputProps> = ({
           />
         </View>
 
-        {/* Right Action Icons (Green Check & Password Eye) */}
+        {/* Right Action Icons (Green Check, Password Eye, or custom rightElement) */}
         <View
           className="absolute right-3 top-0 bottom-0 flex-row items-center gap-1.5"
           style={{ zIndex: 10 }}
         >
+          {rightElement}
+
           {/* Green Check (Filled / Valid indicator) - clean checkmark without circle background */}
-          {hasCheck && (
+          {!rightElement && hasCheck && (
             <View className="justify-center items-center px-0.5">
               <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
                 <Path
@@ -241,7 +245,7 @@ export const AuthInput: React.FC<AuthInputProps> = ({
           )}
 
           {/* Password Eye Toggle */}
-          {isPassword && (
+          {!rightElement && isPassword && (
             <TouchableOpacity
               activeOpacity={0.7}
               onPress={() => setShowPassword((prev) => !prev)}

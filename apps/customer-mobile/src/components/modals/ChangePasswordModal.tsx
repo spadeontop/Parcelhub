@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { useApp } from '../../context/AppContext';
-import { ModalFloatingInput } from '../common/ModalFloatingInput';
+import { AuthInput } from '../common/AuthInput';
 
 interface ChangePasswordModalProps {
   visible: boolean;
@@ -30,11 +30,6 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
   const [newPassword, setNewPassword] = useState<string>('');
   const [confirmPassword, setConfirmPassword] = useState<string>('');
   const [verificationCode, setVerificationCode] = useState<string>('');
-
-  // Password visibility states
-  const [showCurrentPassword, setShowCurrentPassword] = useState<boolean>(false);
-  const [showNewPassword, setShowNewPassword] = useState<boolean>(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
 
   // Timer countdown
   const [timerSeconds, setTimerSeconds] = useState<number>(299); // 04:59
@@ -61,9 +56,6 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
       setNewPassword('');
       setConfirmPassword('');
       setVerificationCode('');
-      setShowCurrentPassword(false);
-      setShowNewPassword(false);
-      setShowConfirmPassword(false);
       setTimerSeconds(299);
       setIsTimerRunning(false);
       setCodeSent(false);
@@ -106,16 +98,16 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
       showToast('Please enter your current password.');
       return;
     }
-    if (!newPassword || !isNewPasswordValid) {
-      showToast('New password must have at least 8 chars, uppercase, lowercase, number & symbol.');
+    if (!isNewPasswordValid) {
+      showToast('New password does not meet the security requirements.');
       return;
     }
-    if (newPassword !== confirmPassword) {
+    if (!isConfirmPasswordMatch) {
       showToast('New password and confirmation do not match.');
       return;
     }
-    if (!verificationCode.trim()) {
-      showToast('Please enter the verification code.');
+    if (!verificationCode || verificationCode.length < 6) {
+      showToast('Please enter the 6-digit verification code.');
       return;
     }
 
@@ -127,165 +119,99 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
     onClose();
   };
 
-  if (!visible) return null;
-
   return (
     <Modal
+      visible={visible}
       transparent
       animationType="fade"
-      visible={visible}
-      onRequestClose={handleDiscardChanges}
+      onRequestClose={onClose}
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View className="flex-1 bg-black/60 justify-center items-center px-4">
+        <View
+          className="flex-1 justify-center items-center px-4"
+          style={{ backgroundColor: 'rgba(15, 23, 42, 0.45)' }}
+        >
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             className="w-full max-w-[360px]"
           >
             <View
-              className="w-full bg-white rounded-[16px] border border-[#f1f5f9] p-[21px]"
+              className="bg-white rounded-[20px] p-[18px] border border-[#f1f5f9]"
               style={{
-                shadowColor: '#0f172a',
-                shadowOffset: { width: 0, height: 8 },
-                shadowOpacity: 0.12,
-                shadowRadius: 16,
-                elevation: 8,
+                shadowColor: '#000000',
+                shadowOffset: { width: 0, height: 12 },
+                shadowOpacity: 0.15,
+                shadowRadius: 28,
+                elevation: 10,
               }}
             >
               {/* Header */}
-              <View className="pb-[14px] border-b border-[#f1f5f9]">
-                <View className="flex-row items-start justify-between">
-                  <View className="flex-1 pr-2">
-                    <Text className="text-[16px] font-bold text-[#1e293b] tracking-[-0.4px]">
-                      Change Password
-                    </Text>
-                    <Text className="text-[12px] text-[#64748b] mt-1">
-                      Update your password and verify via code
-                    </Text>
-                  </View>
-
-                  <TouchableOpacity
-                    activeOpacity={0.7}
-                    onPress={handleDiscardChanges}
-                    className="w-7 h-7 rounded-full bg-[#f1f5f9] items-center justify-center -mr-1 -mt-0.5"
-                    accessibilityLabel="Close"
-                  >
-                    <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+              <View className="flex-row items-center justify-between pb-3 border-b border-[#f1f5f9]">
+                <View className="flex-row items-center flex-1 pr-2">
+                  <View className="w-9 h-9 rounded-[10px] bg-[#eff6ff] items-center justify-center mr-3">
+                    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
                       <Path
-                        d="M18 6L6 18M6 6l12 12"
-                        stroke="#64748b"
+                        d="M12 15v2m-6 4h12a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2zm10-10V7a4 4 0 0 0-8 0v4h8z"
+                        stroke="#2563eb"
                         strokeWidth={2}
                         strokeLinecap="round"
                         strokeLinejoin="round"
                       />
                     </Svg>
-                  </TouchableOpacity>
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-[16px] font-bold text-[#1e293b]">
+                      Change Password
+                    </Text>
+                    <Text className="text-[11px] font-medium text-[#64748b]">
+                      Update your account security credentials
+                    </Text>
+                  </View>
                 </View>
+
+                {/* Close Button */}
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={onClose}
+                  className="w-7 h-7 rounded-full bg-[#f1f5f9] items-center justify-center -mr-1 -mt-0.5"
+                  accessibilityLabel="Close"
+                >
+                  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+                    <Path
+                      d="M18 6L6 18M6 6l12 12"
+                      stroke="#64748b"
+                      strokeWidth={2}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </Svg>
+                </TouchableOpacity>
               </View>
 
-              {/* Form Fields */}
-              <View className="pt-[14px] flex-col gap-[12px]">
+              {/* Form Fields using Register AuthInput components */}
+              <View className="pt-[14px]">
                 {/* Field 1: Current Password */}
-                <ModalFloatingInput
+                <AuthInput
                   label="Current Password"
                   value={currentPassword}
                   onChangeText={setCurrentPassword}
-                  secureTextEntry={!showCurrentPassword}
-                  rightElement={
-                    <TouchableOpacity
-                      activeOpacity={0.7}
-                      onPress={() => setShowCurrentPassword(!showCurrentPassword)}
-                      className="p-1"
-                      accessibilityLabel="Toggle password visibility"
-                    >
-                      <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-                        <Path
-                          d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"
-                          stroke="#64748b"
-                          strokeWidth={1.8}
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                        <Path
-                          d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"
-                          stroke="#64748b"
-                          strokeWidth={1.8}
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                        {!showCurrentPassword && (
-                          <Path
-                            d="M2 2l20 20"
-                            stroke="#64748b"
-                            strokeWidth={1.8}
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        )}
-                      </Svg>
-                    </TouchableOpacity>
-                  }
+                  isPassword
+                  showSuccessCheck={false}
                 />
 
                 {/* Field 2: New Password */}
-                <ModalFloatingInput
+                <AuthInput
                   label="New Password"
                   value={newPassword}
                   onChangeText={setNewPassword}
-                  secureTextEntry={!showNewPassword}
+                  isPassword
                   isValid={isNewPasswordValid}
-                  rightElement={
-                    <View className="flex-row items-center gap-1">
-                      {isNewPasswordValid && (
-                        <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-                          <Path
-                            d="M20 6L9 17l-5-5"
-                            stroke="#10b981"
-                            strokeWidth={2.5}
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </Svg>
-                      )}
-                      <TouchableOpacity
-                        activeOpacity={0.7}
-                        onPress={() => setShowNewPassword(!showNewPassword)}
-                        className="p-1"
-                        accessibilityLabel="Toggle password visibility"
-                      >
-                        <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-                          <Path
-                            d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"
-                            stroke="#64748b"
-                            strokeWidth={1.8}
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                          <Path
-                            d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"
-                            stroke="#64748b"
-                            strokeWidth={1.8}
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                          {!showNewPassword && (
-                            <Path
-                              d="M2 2l20 20"
-                              stroke="#64748b"
-                              strokeWidth={1.8}
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          )}
-                        </Svg>
-                      </TouchableOpacity>
-                    </View>
-                  }
+                  showSuccessCheck
                 />
 
                 {/* Password Strength Requirement Indicators (shown while typing new password) */}
                 {newPassword.length > 0 && (
-                  <View className="bg-slate-50 border border-slate-100 rounded-[10px] p-2.5 flex-row flex-wrap gap-x-3 gap-y-1">
+                  <View className="bg-slate-50 border border-slate-100 rounded-[10px] p-2.5 flex-row flex-wrap gap-x-3 gap-y-1 mb-2">
                     <Text
                       className={`text-[10px] font-semibold ${
                         hasMinLength ? 'text-[#059669]' : 'text-slate-400'
@@ -325,76 +251,24 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                 )}
 
                 {/* Field 3: Confirm Password */}
-                <ModalFloatingInput
+                <AuthInput
                   label="Confirm Password"
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
-                  secureTextEntry={!showConfirmPassword}
-                  error={isConfirmMismatch}
+                  isPassword
+                  error={isConfirmMismatch ? 'Passwords do not match' : undefined}
                   isValid={isConfirmPasswordMatch}
-                  rightElement={
-                    <View className="flex-row items-center gap-1">
-                      {isConfirmPasswordMatch && (
-                        <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-                          <Path
-                            d="M20 6L9 17l-5-5"
-                            stroke="#10b981"
-                            strokeWidth={2.5}
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </Svg>
-                      )}
-                      <TouchableOpacity
-                        activeOpacity={0.7}
-                        onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                        className="p-1"
-                        accessibilityLabel="Toggle password visibility"
-                      >
-                        <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-                          <Path
-                            d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"
-                            stroke={isConfirmMismatch ? '#ef4444' : '#64748b'}
-                            strokeWidth={1.8}
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                          <Path
-                            d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"
-                            stroke={isConfirmMismatch ? '#ef4444' : '#64748b'}
-                            strokeWidth={1.8}
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                          {!showConfirmPassword && (
-                            <Path
-                              d="M2 2l20 20"
-                              stroke={isConfirmMismatch ? '#ef4444' : '#64748b'}
-                              strokeWidth={1.8}
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          )}
-                        </Svg>
-                      </TouchableOpacity>
-                    </View>
-                  }
+                  showSuccessCheck
                 />
 
-                {/* Confirm mismatch error message */}
-                {isConfirmMismatch && (
-                  <Text className="text-[11px] text-[#dc2626] font-medium -mt-1 pl-1">
-                    Passwords do not match
-                  </Text>
-                )}
-
                 {/* Field 4: Verification Code */}
-                <ModalFloatingInput
+                <AuthInput
                   label="Verification Code"
                   value={verificationCode}
                   onChangeText={setVerificationCode}
                   keyboardType="number-pad"
                   maxLength={6}
+                  showSuccessCheck={false}
                   rightElement={
                     isTimerRunning && timerSeconds > 0 ? (
                       <TouchableOpacity
@@ -419,7 +293,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                 />
 
                 {/* Field 5: Info Notice Banner */}
-                <View className="bg-[#f8fafc] border border-[#f1f5f9] rounded-[10px] p-[11px] flex-row items-start">
+                <View className="bg-[#f8fafc] border border-[#f1f5f9] rounded-[10px] p-[11px] flex-row items-start mb-3">
                   <Svg
                     width={16}
                     height={16}
