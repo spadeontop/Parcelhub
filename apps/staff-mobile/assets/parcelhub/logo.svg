@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="512" height="512" fill="none">
+  <!-- Full-Bleed Background (set adaptiveIcon.backgroundColor to #F4F4F5 in app.json) -->
+  <rect width="108" height="108" fill="#F4F4F5" />
+
+  <!-- Safe-Zone Scaled Glyph (Centered 64x64 inside 72x72 safe area) -->
+  <g transform="translate(22, 22)">
+    <!-- Top-Left Charcoal L-Bracket -->
+    <path d="M0 0 H42 V16 H16 V64 H0 Z" fill="#18181B" />
+
+    <!-- Bottom-Right Charcoal L-Bracket -->
+    <path d="M64 64 H22 V48 H48 V0 H64 Z" fill="#18181B" />
+
+    <!-- Center Brand Blue Square -->
+    <rect x="22" y="22" width="20" height="20" fill="#1D63ED" />
+  </g>
+</svg>
