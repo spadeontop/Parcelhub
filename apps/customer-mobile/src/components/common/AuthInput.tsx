@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
+  Text,
   TextInput,
   TextInputProps,
   TouchableOpacity,
@@ -148,10 +149,11 @@ export const AuthInput: React.FC<AuthInputProps> = ({
       <TouchableOpacity
         activeOpacity={1}
         onPress={() => inputRef.current?.focus()}
-        className="w-full rounded-xl border bg-white px-3.5 relative justify-center"
+        className="w-full rounded-2xl border px-3.5 relative justify-center"
         style={{
           height: isCompact ? 48 : 54,
           borderColor,
+          backgroundColor: isError ? '#fff9f9' : '#ffffff',
           cursor: 'text' as any,
         }}
       >
@@ -295,26 +297,18 @@ export const AuthInput: React.FC<AuthInputProps> = ({
         </View>
       </TouchableOpacity>
 
-      {/* Error Feedback Message matching Figma */}
+      {/* Error Feedback Message matching Figma (Node 1249:666) */}
       {isError && error ? (
-        <View className="flex-row items-center gap-1 mt-1 ml-1">
-          <View className="w-3.5 h-3.5 rounded-full bg-[#ef4444] items-center justify-center">
-            <Svg width={8} height={8} viewBox="0 0 24 24" fill="none">
-              <Path
-                d="M12 8v5M12 16h.01"
-                stroke="#ffffff"
-                strokeWidth={3}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </Svg>
-          </View>
-          <Animated.Text
-            className="font-medium text-[#dc2626]"
-            style={{ fontSize: 11 }}
+        <View style={{ marginTop: 4, marginLeft: 4 }}>
+          <Text
+            style={{
+              fontSize: 11,
+              color: '#dc2626',
+              fontWeight: '400',
+            }}
           >
             {error}
-          </Animated.Text>
+          </Text>
         </View>
       ) : null}
     </View>

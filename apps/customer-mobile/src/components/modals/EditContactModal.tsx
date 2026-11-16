@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { useApp } from '../../context/AppContext';
-import { ModalFloatingInput } from '../common/ModalFloatingInput';
+import { AuthInput } from '../common/AuthInput';
 
 interface EditContactModalProps {
   visible: boolean;
@@ -48,15 +48,9 @@ export const EditContactModal: React.FC<EditContactModalProps> = ({
       setIsTimerRunning(false);
       setCodeSent(false);
     }
-  }, [
-    visible,
-    authCustomer?.firstname,
-    authCustomer?.middleinitial,
-    authCustomer?.lastname,
-    authCustomer?.phonenumber,
-  ]);
+  }, [visible, authCustomer]);
 
-  // Countdown timer for 04:59
+  // Countdown timer effect
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | null = null;
     if (visible && isTimerRunning && timerSeconds > 0) {
@@ -89,40 +83,23 @@ export const EditContactModal: React.FC<EditContactModalProps> = ({
   };
 
   const handleSaveChanges = () => {
-    if (!firstName.trim()) {
-      showToast('Please enter your first name.');
+    if (!firstName.trim() || !lastName.trim()) {
+      showToast('First and last name cannot be empty.');
       return;
     }
-    if (!lastName.trim()) {
-      showToast('Please enter your last name.');
-      return;
-    }
-    if (!phoneNumber.trim()) {
-      showToast('Please enter a phone number.');
-      return;
-    }
-    if (!verificationCode.trim()) {
-      showToast('Please enter the verification code.');
+    if (!verificationCode || verificationCode.length < 6) {
+      showToast('Please enter the 6-digit verification code.');
       return;
     }
 
-    const newUpdates: {
-      firstname?: string;
-      middleinitial?: string;
-      lastname?: string;
-      phonenumber?: string;
-    } = {
+    updateAuthCustomer({
       firstname: firstName.trim(),
       middleinitial: middleInitial.trim(),
       lastname: lastName.trim(),
-    };
+      phonenumber: phoneNumber.trim(),
+    });
 
-    if (phoneNumber && !phoneNumber.includes('****')) {
-      newUpdates.phonenumber = phoneNumber.trim();
-    }
-
-    updateAuthCustomer(newUpdates);
-    showToast('Contact details saved successfully!');
+    showToast('Contact details updated successfully!');
     onClose();
   };
 
@@ -130,112 +107,130 @@ export const EditContactModal: React.FC<EditContactModalProps> = ({
     onClose();
   };
 
-  if (!visible) return null;
-
   return (
     <Modal
+      visible={visible}
       transparent
       animationType="fade"
-      visible={visible}
-      onRequestClose={handleDiscardChanges}
+      onRequestClose={onClose}
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View className="flex-1 bg-black/60 justify-center items-center px-4">
+        <View
+          className="flex-1 justify-center items-center px-4"
+          style={{ backgroundColor: 'rgba(15, 23, 42, 0.45)' }}
+        >
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             className="w-full max-w-[360px]"
           >
             <View
-              className="w-full bg-white rounded-[16px] border border-[#f1f5f9] p-[21px]"
+              className="bg-white rounded-[20px] p-[18px] border border-[#f1f5f9]"
               style={{
-                shadowColor: '#0f172a',
-                shadowOffset: { width: 0, height: 8 },
-                shadowOpacity: 0.12,
-                shadowRadius: 16,
-                elevation: 8,
+                shadowColor: '#000000',
+                shadowOffset: { width: 0, height: 12 },
+                shadowOpacity: 0.15,
+                shadowRadius: 28,
+                elevation: 10,
               }}
             >
               {/* Header */}
-              <View className="pb-[14px] border-b border-[#f1f5f9]">
-                <View className="flex-row items-start justify-between">
-                  <View className="flex-1 pr-2">
-                    <Text className="text-[16px] font-bold text-[#1e293b] tracking-[-0.4px]">
-                      Edit Contact & Details
-                    </Text>
-                    <Text className="text-[12px] text-[#64748b] mt-1">
-                      Update your contact information below
-                    </Text>
-                  </View>
-
-                  <TouchableOpacity
-                    activeOpacity={0.7}
-                    onPress={handleDiscardChanges}
-                    className="w-7 h-7 rounded-full bg-[#f1f5f9] items-center justify-center -mr-1 -mt-0.5"
-                    accessibilityLabel="Close"
-                  >
-                    <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+              <View className="flex-row items-center justify-between pb-3 border-b border-[#f1f5f9]">
+                <View className="flex-row items-center flex-1 pr-2">
+                  <View className="w-9 h-9 rounded-[10px] bg-[#eff6ff] items-center justify-center mr-3">
+                    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
                       <Path
-                        d="M18 6L6 18M6 6l12 12"
-                        stroke="#64748b"
+                        d="M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0zM12 14a7 7 0 0 0-7 7h14a7 7 0 0 0-7-7z"
+                        stroke="#2563eb"
                         strokeWidth={2}
                         strokeLinecap="round"
                         strokeLinejoin="round"
                       />
                     </Svg>
-                  </TouchableOpacity>
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-[16px] font-bold text-[#1e293b]">
+                      Edit Contact Details
+                    </Text>
+                    <Text className="text-[11px] font-medium text-[#64748b]">
+                      Update your recipient identity &amp; info
+                    </Text>
+                  </View>
                 </View>
+
+                {/* Close Button */}
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={handleDiscardChanges}
+                  className="w-7 h-7 rounded-full bg-[#f1f5f9] items-center justify-center -mr-1 -mt-0.5"
+                  accessibilityLabel="Close"
+                >
+                  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+                    <Path
+                      d="M18 6L6 18M6 6l12 12"
+                      stroke="#64748b"
+                      strokeWidth={2}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </Svg>
+                </TouchableOpacity>
               </View>
 
-              {/* Form Fields */}
-              <View className="pt-[14px] flex-col gap-[12px]">
+              {/* Form Fields using AuthInput */}
+              <View className="pt-[14px]">
                 {/* Row 1: First Name & M.I. */}
                 <View className="flex-row items-center gap-[10px]">
                   {/* First Name */}
                   <View className="flex-1">
-                    <ModalFloatingInput
+                    <AuthInput
                       label="First name"
                       value={firstName}
                       onChangeText={setFirstName}
                       autoCapitalize="words"
+                      showSuccessCheck={false}
                     />
                   </View>
 
                   {/* M.I. */}
                   <View className="w-[80px]">
-                    <ModalFloatingInput
+                    <AuthInput
                       label="M.I."
                       value={middleInitial}
                       onChangeText={setMiddleInitial}
                       maxLength={2}
                       autoCapitalize="characters"
-                      style={{ textAlign: 'center' as any }}
+                      showSuccessCheck={false}
                     />
                   </View>
                 </View>
 
                 {/* Row 2: Last Name */}
-                <ModalFloatingInput
+                <AuthInput
                   label="Last name"
                   value={lastName}
                   onChangeText={setLastName}
                   autoCapitalize="words"
+                  showSuccessCheck={false}
                 />
 
                 {/* Row 3: Phone number */}
-                <ModalFloatingInput
+                <AuthInput
                   label="Phone number"
+                  type="phone"
                   value={phoneNumber}
                   onChangeText={setPhoneNumber}
                   keyboardType="phone-pad"
+                  showSuccessCheck={false}
                 />
 
                 {/* Row 4: Verification Code */}
-                <ModalFloatingInput
+                <AuthInput
                   label="Verification Code"
                   value={verificationCode}
                   onChangeText={setVerificationCode}
                   keyboardType="number-pad"
                   maxLength={6}
+                  showSuccessCheck={false}
                   rightElement={
                     isTimerRunning && timerSeconds > 0 ? (
                       <TouchableOpacity
@@ -259,8 +254,8 @@ export const EditContactModal: React.FC<EditContactModalProps> = ({
                   }
                 />
 
-                {/* Row 5: Info Notice Banner */}
-                <View className="bg-[#f8fafc] border border-[#f1f5f9] rounded-[10px] p-[11px] flex-row items-start">
+                {/* Info Notice Banner */}
+                <View className="bg-[#f8fafc] border border-[#f1f5f9] rounded-[10px] p-[11px] flex-row items-start mb-3">
                   <Svg
                     width={16}
                     height={16}
@@ -288,7 +283,7 @@ export const EditContactModal: React.FC<EditContactModalProps> = ({
                   </Text>
                 </View>
 
-                {/* Row 6: Modal Actions */}
+                {/* Modal Actions */}
                 <View className="flex-row items-center gap-[10px] pt-1">
                   <TouchableOpacity
                     activeOpacity={0.8}
