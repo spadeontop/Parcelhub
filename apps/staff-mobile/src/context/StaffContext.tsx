@@ -165,23 +165,14 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return () => clearInterval(interval);
   }, [staffUser, fetchOrders]);
 
-  // Helper to determine if an unpaid order was placed within the last 5 minutes
-  const isRecentUnpaid = useCallback((order: StaffOrder) => {
-    if (order.status !== 'PAYMENT_REQUIRED') return false;
-    if (!order.timestamp) return true;
-    const time = new Date(order.timestamp).getTime();
-    if (isNaN(time)) return true;
-    const diffMinutes = (Date.now() - time) / (1000 * 60);
-    return diffMinutes <= 5;
-  }, []);
-
   // Compute Badge Counts for Tabs
   const badgeCounts: StaffBadgeCounts = useMemo(() => ({
+    all: orders.length,
     active: orders.filter((o) => o.status === 'AWAITING_PARCEL').length,
     ready: orders.filter((o) => o.status === 'READY_TO_CLAIM').length,
-    unpaid: orders.filter((o) => isRecentUnpaid(o)).length,
+    unpaid: orders.filter((o) => o.status === 'PAYMENT_REQUIRED').length,
     claimed: orders.filter((o) => o.status === 'CLAIMED').length,
-  }), [orders, isRecentUnpaid]);
+  }), [orders]);
 
   // Filter orders by active tab
   const tabOrders = useMemo(() => {
@@ -191,13 +182,13 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       case 'ready':
         return orders.filter((o) => o.status === 'READY_TO_CLAIM');
       case 'unpaid':
-        return orders.filter((o) => isRecentUnpaid(o));
+        return orders.filter((o) => o.status === 'PAYMENT_REQUIRED');
       case 'claimed':
         return orders.filter((o) => o.status === 'CLAIMED');
       default:
         return orders;
     }
-  }, [orders, activeTab, isRecentUnpaid]);
+  }, [orders, activeTab]);
 
   // Filter orders by search query
   const filteredOrders = useMemo(() => {
