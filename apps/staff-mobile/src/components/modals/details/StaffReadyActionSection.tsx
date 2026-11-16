@@ -99,8 +99,7 @@ export const StaffReadyActionSection: React.FC<StaffReadyActionSectionProps> = (
             <Text className="text-[32px] font-bold text-[#15803D]">
               {formattedTimer}
             </Text>
-            <View className="bg-[#DCFCE7] rounded-full px-3 py-1 flex-row items-center gap-1.5">
-              <View className="w-2 h-2 rounded-full bg-[#15803D]" />
+            <View className="bg-[#DCFCE7] rounded-full px-3 py-1 items-center justify-center">
               <Text className="text-[11px] font-semibold text-[#15803D]">
                 Active
               </Text>

@@ -358,18 +358,18 @@ export const StaffClaimedSummarySection: React.FC<StaffClaimedSummarySectionProp
         </View>
       </OrderCardContainer>
 
-      {/* Confirmation & Return to Home Primary Button matching Figma 1346:2136 */}
+      {/* Summary Note & Return to Home Button (consistent with other states) */}
       <View className="items-center pt-1 pb-4">
-        <Text className="text-[11.5px] text-[#64748B] text-center mb-4">
+        <Text className="text-[11.5px] text-[#64748B] text-center mb-3">
           Order completed and logged in hub records.
         </Text>
 
         <TouchableOpacity
-          activeOpacity={0.85}
+          activeOpacity={0.7}
           onPress={onReturnHome}
-          className="w-full h-[48px] rounded-xl bg-black active:bg-neutral-800 items-center justify-center shadow-sm"
+          className="w-full py-2.5 items-center justify-center"
         >
-          <Text className="text-white font-bold text-[15px]">
+          <Text className="text-[13px] font-bold text-[#475569]">
             Return to Home
           </Text>
         </TouchableOpacity>

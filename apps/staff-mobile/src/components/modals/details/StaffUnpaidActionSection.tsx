@@ -21,6 +21,7 @@ export const StaffUnpaidActionSection: React.FC<StaffUnpaidActionSectionProps> =
   const [cashText, setCashText] = useState<string>('1000');
   const [isConfirmed, setIsConfirmed] = useState<boolean>(false);
   const [isLocked, setIsLocked] = useState<boolean>(false);
+  const [isInputFocused, setIsInputFocused] = useState<boolean>(false);
 
   useEffect(() => {
     setIsConfirmed(false);
@@ -49,11 +50,19 @@ export const StaffUnpaidActionSection: React.FC<StaffUnpaidActionSectionProps> =
         </Text>
 
         {/* Currency Input Field */}
-        <View className="border-2 border-[#2563EB] rounded-xl px-4 py-2.5 flex-row items-center justify-between bg-white mb-4">
+        <View
+          className={`rounded-xl px-4 py-2.5 flex-row items-center justify-between bg-white mb-4 ${
+            isInputFocused
+              ? 'border-2 border-[#2563EB]'
+              : 'border border-[#CBD5E1]'
+          }`}
+        >
           <Text className="text-[18px] font-bold text-[#64748B]">₱</Text>
           <TextInput
             value={cashText}
             onChangeText={setCashText}
+            onFocus={() => setIsInputFocused(true)}
+            onBlur={() => setIsInputFocused(false)}
             keyboardType="numeric"
             placeholder="0"
             placeholderTextColor="#94A3B8"
