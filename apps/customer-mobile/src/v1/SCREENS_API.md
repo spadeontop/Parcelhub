@@ -206,7 +206,7 @@ This document maps every customer mobile screen in `apps/customer-mobile/src/com
 
 ## 7. ConfirmOrderScreen (`confirm_order`)
 - **File**: `apps/customer-mobile/src/components/screens/ConfirmOrderScreen.tsx`
-- **UI Purpose**: Form where customer reviews and sets complete parcel details (product name, recipient name, COD price, tracking ID) associated with the initialized `orderId` and `ticketCode`.
+- **UI Purpose**: Form where customer reviews and sets complete parcel details (product name, recipient name [autofilled from account profile full name], COD price, tracking ID) associated with the initialized `orderId` and `ticketCode`.
 - **Independent API Call**:
   - *Trigger*: User checks confirmation checkbox and clicks **Confirm & Submit**.
   - *Logic*: With the `orderId` already initialized from the previous screen, this screen independently dispatches the one-shot `PUT /api/v1/customer/orders/{id}` to complete the order details and transition status from `PENDING_INITIALIZATION` to `PAYMENT_REQUIRED`.
@@ -250,7 +250,7 @@ This document maps every customer mobile screen in `apps/customer-mobile/src/com
 
 ## 10. OrderDetailsScreen (`order_details`)
 - **File**: `apps/customer-mobile/src/components/screens/OrderDetailsScreen.tsx`
-- **UI Purpose**: Real-time order inspection, delivery timeline, claim countdown timer, and claim pass triggering.
+- **UI Purpose**: Real-time order inspection, delivery timeline, server-synchronized claim countdown timer (dynamically driven strictly by server `claimRemainingSeconds`), and claim pass triggering.
 - **Independent API Calls**:
   - **Call A (Live Polling / Single Order Fetch)**:
     - *Trigger*: Screen mount and recurring interval timer.
