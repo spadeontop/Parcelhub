@@ -196,26 +196,15 @@ export const CloseIcon: React.FC<{ size?: number; color?: string }> = ({ size = 
   </Svg>
 );
 
-export const ParcelHubLogoSvg: React.FC<{ size?: number }> = ({ size = 40 }) => (
-  <Svg width={size} height={size} viewBox="0 0 100 100" fill="none">
-    <Path d="M50 10L86 31V73L50 94L14 73V31L50 10Z" fill="#215CD4" />
-    <Path d="M50 10L86 31L50 52L14 31L50 10Z" fill="#3B82F6" />
-    <Path d="M14 31L50 52V94L14 73V31Z" fill="#1D4ED8" />
-    <Path d="M86 31L50 52V94L86 73V31Z" fill="#1E40AF" />
+export const ParcelHubLogoSvg: React.FC<{ size?: number; style?: any }> = ({ size = 40, style }) => (
+  <Svg width={size} height={size} viewBox="0 0 52 52" fill="none" style={style}>
     <Path
-      d="M50 20L75 34.5V64.5L50 79L25 64.5V34.5L50 20Z"
-      stroke="#FFFFFF"
-      strokeWidth="4"
-      strokeLinecap="round"
-      strokeLinejoin="round"
+      d="M37 0H15C6.71573 0 0 6.71573 0 15V37C0 45.2843 6.71573 52 15 52H37C45.2843 52 52 45.2843 52 37V15C52 6.71573 45.2843 0 37 0Z"
+      fill="#1E1E1E"
     />
-    <Path
-      d="M50 20V79M25 34.5L50 49L75 34.5"
-      stroke="#FFFFFF"
-      strokeWidth="4"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
+    <Path d="M6 6H33V15H15V46H6V6Z" fill="#FFFFFF" />
+    <Path d="M46 46H19V37H37V6H46V46Z" fill="#FFFFFF" />
+    <Path d="M33 19H19V33H33V19Z" fill="#2563EB" />
   </Svg>
 );
 
