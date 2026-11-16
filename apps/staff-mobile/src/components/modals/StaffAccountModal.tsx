@@ -1,5 +1,14 @@
-import React from 'react';
-import { Modal, View, Text, TouchableOpacity, Pressable } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  Modal,
+  View,
+  Text,
+  TouchableOpacity,
+  Pressable,
+  Animated,
+  Dimensions,
+  StyleSheet,
+} from 'react-native';
 import { X } from '../common/Icons';
 import { useStaff } from '../../context/StaffContext';
 
@@ -13,11 +22,69 @@ export const StaffAccountModal: React.FC<StaffAccountModalProps> = ({
   onClose,
 }) => {
   const { staffUser, logout } = useStaff();
+  const screenHeight = Dimensions.get('window').height;
+
+  // Animation drivers
+  const backdropOpacity = useRef(new Animated.Value(0)).current;
+  const sheetTranslateY = useRef(new Animated.Value(screenHeight)).current;
+  const [modalVisible, setModalVisible] = useState(isOpen);
+
+  useEffect(() => {
+    if (isOpen) {
+      setModalVisible(true);
+      Animated.parallel([
+        Animated.timing(backdropOpacity, {
+          toValue: 1,
+          duration: 220,
+          useNativeDriver: true,
+        }),
+        Animated.timing(sheetTranslateY, {
+          toValue: 0,
+          duration: 280,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(backdropOpacity, {
+          toValue: 0,
+          duration: 180,
+          useNativeDriver: true,
+        }),
+        Animated.timing(sheetTranslateY, {
+          toValue: screenHeight,
+          duration: 220,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        setModalVisible(false);
+      });
+    }
+  }, [isOpen, screenHeight, backdropOpacity, sheetTranslateY]);
+
+  const handleClose = () => {
+    Animated.parallel([
+      Animated.timing(backdropOpacity, {
+        toValue: 0,
+        duration: 180,
+        useNativeDriver: true,
+      }),
+      Animated.timing(sheetTranslateY, {
+        toValue: screenHeight,
+        duration: 220,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      onClose();
+    });
+  };
 
   const handleSignOut = async () => {
-    onClose();
+    handleClose();
     await logout();
   };
+
+  if (!modalVisible) return null;
 
   const staffName = staffUser?.name || 'John Doe';
   const staffId = staffUser?.id || 'STF-1991';
@@ -26,22 +93,39 @@ export const StaffAccountModal: React.FC<StaffAccountModalProps> = ({
 
   return (
     <Modal
-      visible={isOpen}
-      animationType="fade"
+      visible={modalVisible}
       transparent
-      onRequestClose={onClose}
+      animationType="none"
+      onRequestClose={handleClose}
+      statusBarTranslucent
     >
-      <View className="flex-1 justify-end bg-black/60">
-        {/* Dismiss backdrop */}
-        <Pressable
-          className="flex-1"
-          onPress={onClose}
-          accessibilityLabel="Dismiss account modal"
-        />
+      <View style={StyleSheet.absoluteFill} className="justify-end">
+        {/* Stationary Dark Backdrop (Fades in/out smoothly without sliding!) */}
+        <Animated.View
+          style={[
+            StyleSheet.absoluteFill,
+            {
+              backgroundColor: 'rgba(4, 7, 13, 0.58)',
+              opacity: backdropOpacity,
+            },
+          ]}
+        >
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={handleClose}
+            accessibilityLabel="Dismiss account modal"
+          />
+        </Animated.View>
 
-        {/* Staff Account Sheet matching Figma 1336:3 */}
-        <View
-          style={{ borderTopLeftRadius: 24, borderTopRightRadius: 24 }}
+        {/* Staff Account Sheet (Slides up from below) */}
+        <Animated.View
+          style={[
+            {
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              transform: [{ translateY: sheetTranslateY }],
+            },
+          ]}
           className="bg-white pt-3 pb-9 px-6 shadow-2xl"
         >
           {/* Sheet Handle */}
@@ -59,7 +143,7 @@ export const StaffAccountModal: React.FC<StaffAccountModalProps> = ({
             </View>
 
             <TouchableOpacity
-              onPress={onClose}
+              onPress={handleClose}
               activeOpacity={0.7}
               className="w-10 h-10 rounded-full bg-[#F1F5F9] items-center justify-center active:bg-slate-200"
               accessibilityLabel="Close staff account"
@@ -125,7 +209,7 @@ export const StaffAccountModal: React.FC<StaffAccountModalProps> = ({
           <Text className="text-[11px] font-normal text-[#64748B] text-center mt-3">
             You&apos;ll return to the staff sign-in screen.
           </Text>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );

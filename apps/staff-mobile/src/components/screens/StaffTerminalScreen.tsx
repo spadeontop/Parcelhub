@@ -103,12 +103,15 @@ export const StaffTerminalScreen: React.FC = () => {
             </Text>
           </View>
 
-          {/* Elevated Activities List Card Wrapper */}
-          <View className="bg-white border border-[#F3F4F6] rounded-[20px] mx-5 p-4 shadow-sm">
+          {/* Activities List Card Wrapper (no border or bottom shadow line matching Figma) */}
+          <View
+            style={{ borderWidth: 0, shadowOpacity: 0, elevation: 0 }}
+            className="bg-white rounded-[20px] mx-5 p-4"
+          >
             {pagedOrders.length > 0 ? (
               pagedOrders.map((order, idx) => (
                 <StaffOrderCard
-                  key={order.id}
+                  key={`${order.id}-${idx}`}
                   order={order}
                   onPress={openOrderDetails}
                   showDivider={idx < pagedOrders.length - 1}
@@ -168,10 +171,10 @@ export const StaffTerminalScreen: React.FC = () => {
                   const isActive = currentPage === pageNum;
                   return (
                     <TouchableOpacity
-                      key={pageNum}
+                      key={`page-${pageNum}`}
                       onPress={() => setCurrentPage(pageNum)}
                       activeOpacity={0.8}
-                      className={`size-[40px] rounded-[12px] items-center justify-center ${
+                      className={`w-10 h-10 rounded-[12px] items-center justify-center ${
                         isActive
                           ? 'bg-[#2563EB]'
                           : 'bg-white border border-[#E2E8F0]'
