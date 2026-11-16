@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  Modal,
   View,
   Text,
   TextInput,
@@ -9,11 +8,11 @@ import {
   Animated,
   Easing,
   Alert,
+  StyleSheet,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { StaffOrder } from '../../types';
-import { StaffHeader } from '../header/StaffHeader';
-import { ArrowLeft, Search, X, Check } from '../common/Icons';
+import { ArrowLeft, Search, X } from '../common/Icons';
 
 export interface StaffScanQrModalProps {
   isOpen: boolean;
@@ -72,11 +71,11 @@ const QrScanSymbol: React.FC<{ size?: number }> = ({ size = 48 }) => (
 );
 
 /**
- * Full-screen QR Scanning modal strictly conforming to Figma node 1355:3
+ * Inline Content Sheet QR Scanner conforming to Figma node 1355:3
  * "ParcelHub — Scan QR code"
  *
- * NOTE: The header stays stationary at the top and the backdrop fades in,
- * while ONLY the curved content sheet slides up smoothly from below.
+ * Renders directly inside the main sheet container so the header stays
+ * 100% stationary with zero jump/re-render, and the laser line sweeps smoothly.
  */
 export const StaffScanQrModal: React.FC<StaffScanQrModalProps> = ({
   isOpen,
@@ -84,30 +83,40 @@ export const StaffScanQrModal: React.FC<StaffScanQrModalProps> = ({
   onClose,
   onSelectOrder,
   onNotFound,
-  onOpenAccount,
 }) => {
   const [isManualSearchVisible, setIsManualSearchVisible] = useState<boolean>(false);
   const [lookupText, setLookupText] = useState<string>('');
+  const [rendered, setRendered] = useState<boolean>(isOpen);
+
   const scanLineAnim = useRef(new Animated.Value(0)).current;
   const sheetSlideAnim = useRef(new Animated.Value(600)).current;
 
-  // Slide only the content sheet up from below when opening
   useEffect(() => {
     if (isOpen) {
+      setRendered(true);
       sheetSlideAnim.setValue(600);
       Animated.timing(sheetSlideAnim, {
         toValue: 0,
-        duration: 280,
+        duration: 320,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }).start();
+    } else if (rendered) {
+      Animated.timing(sheetSlideAnim, {
+        toValue: 600,
+        duration: 240,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }).start(() => {
+        setRendered(false);
+      });
     }
   }, [isOpen]);
 
   const handleClose = () => {
     Animated.timing(sheetSlideAnim, {
       toValue: 600,
-      duration: 220,
+      duration: 240,
       easing: Easing.in(Easing.cubic),
       useNativeDriver: true,
     }).start(() => {
@@ -115,21 +124,21 @@ export const StaffScanQrModal: React.FC<StaffScanQrModalProps> = ({
     });
   };
 
-  // Animate the laser scan line vertically across the viewfinder
+  // Smooth, continuous laser beam scan line (1.8s sweep)
   useEffect(() => {
     if (!isOpen) return;
     const animation = Animated.loop(
       Animated.sequence([
         Animated.timing(scanLineAnim, {
           toValue: 1,
-          duration: 220,
-          easing: Easing.inOut(Easing.ease),
+          duration: 1800,
+          easing: Easing.inOut(Easing.quad),
           useNativeDriver: true,
         }),
         Animated.timing(scanLineAnim, {
           toValue: 0,
-          duration: 220,
-          easing: Easing.inOut(Easing.ease),
+          duration: 1800,
+          easing: Easing.inOut(Easing.quad),
           useNativeDriver: true,
         }),
       ])
@@ -140,7 +149,7 @@ export const StaffScanQrModal: React.FC<StaffScanQrModalProps> = ({
 
   const translateY = scanLineAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [20, 150],
+    outputRange: [16, 148],
   });
 
   const handleLookup = () => {
@@ -173,207 +182,199 @@ export const StaffScanQrModal: React.FC<StaffScanQrModalProps> = ({
     }
   };
 
+  if (!rendered) return null;
+
   return (
-    <Modal
-      visible={isOpen}
-      animationType="fade"
-      transparent
-      onRequestClose={handleClose}
-      statusBarTranslucent
+    <Animated.View
+      style={[
+        StyleSheet.absoluteFill,
+        {
+          borderTopLeftRadius: 28,
+          borderTopRightRadius: 28,
+          transform: [{ translateY: sheetSlideAnim }],
+          zIndex: 50,
+        },
+      ]}
+      className="bg-[#F8FAFC] overflow-hidden"
     >
-      <View className="flex-1 bg-black">
-        {/* Stationary Top Header — Locked at the top, does NOT slide from bottom! */}
-        <StaffHeader onOpenAccount={onOpenAccount || handleClose} />
-
-        {/* Curved Content Sheet — Only this sheet slides up from the bottom! */}
-        <Animated.View
-          style={{
-            borderTopLeftRadius: 28,
-            borderTopRightRadius: 28,
-            transform: [{ translateY: sheetSlideAnim }],
-          }}
-          className="flex-1 bg-[#F8FAFC] overflow-hidden"
-        >
-          <ScrollView
-            className="flex-1"
-            contentContainerStyle={{ padding: 24, paddingBottom: 40 }}
-            showsVerticalScrollIndicator={false}
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{ padding: 24, paddingBottom: 40 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* 1. Scanner Navigation (Figma 1355:6) */}
+        <View className="flex-row items-center mb-5">
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={handleClose}
+            accessibilityLabel="Back to orders"
+            className="w-[44px] h-[44px] rounded-[14px] bg-white border border-[#E2E8F0] items-center justify-center shadow-xs active:bg-slate-50"
           >
-            {/* 1. Scanner Navigation (Figma 1355:6) */}
-            <View className="flex-row items-center mb-5">
+            <ArrowLeft size={22} color="#0F172A" />
+          </TouchableOpacity>
+          <Text className="text-[20px] font-bold text-[#0F172A] leading-7 ml-3.5">
+            Scan QR code
+          </Text>
+        </View>
+
+        {/* 2. Scan Instructions (Figma 1355:7) */}
+        <View className="mb-5">
+          <Text className="text-[13px] font-normal text-[#64748B] leading-[20px]">
+            Align the parcel’s QR code inside the frame to find its order details.
+          </Text>
+        </View>
+
+        {/* 3. Camera Preview Box (Figma 1355:8) */}
+        <View className="bg-[#111827] h-[340px] rounded-[24px] overflow-hidden items-center justify-between py-5 mb-5 relative">
+          {/* Camera Preview Label Badge (Figma 1355:32) */}
+          <View className="bg-[#1E293B] rounded-full px-4 py-1.5">
+            <Text className="text-[10px] font-semibold text-[#CBD5E1] tracking-wider text-center uppercase">
+              CAMERA PREVIEW
+            </Text>
+          </View>
+
+          {/* QR Alignment Guide Viewfinder (Figma 1355:34) */}
+          <TouchableOpacity
+            activeOpacity={0.9}
+            onPress={handleSimulatedScan}
+            accessibilityLabel="Camera viewfinder. Tap to simulate QR code scan."
+            className="w-[240px] h-[224px] rounded-[20px] bg-[#182235] items-center justify-center relative overflow-hidden my-auto"
+          >
+            {/* Corner Brackets (Figma 1355:35) */}
+            <View className="absolute inset-0 items-center justify-center pointer-events-none">
+              <ScanningCorners width={240} height={224} />
+            </View>
+
+            {/* Center QR Scan Symbol (Figma 1355:37) */}
+            <View className="items-center justify-center mb-1">
+              <QrScanSymbol size={48} />
+            </View>
+
+            {/* Animated Horizontal Laser Scan Line (Figma 1355:41) */}
+            <Animated.View
+              style={{
+                transform: [{ translateY }],
+              }}
+              className="absolute left-4 right-4 h-[2px] bg-[#60A5FA] rounded-full shadow-sm"
+            />
+
+            {/* Viewfinder Subtext (Figma 1355:42) */}
+            <Text className="text-[12px] font-medium text-[#CBD5E1] text-center mt-3">
+              Position QR code here
+            </Text>
+          </TouchableOpacity>
+
+          {/* Bottom Camera Note (Figma 1355:43) */}
+          <Text className="text-[11px] font-normal text-[#CBD5E1] text-center">
+            Scanning starts when a code is in view
+          </Text>
+        </View>
+
+        {/* 4. Scanning Guidance (Figma 1355:9) */}
+        <View className="mb-5 items-center">
+          <Text className="text-[12px] font-normal text-[#64748B] text-center leading-[18px]">
+            Keep the code flat, well lit and fully visible.{'\n'}
+            Order and waybill QR codes are supported.
+          </Text>
+        </View>
+
+        {/* 5. Manual Search Section (Figma 1355:10) */}
+        {!isManualSearchVisible ? (
+          <View className="items-center">
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => setIsManualSearchVisible(true)}
+              className="w-full h-[48px] bg-[#2563EB] rounded-[14px] items-center justify-center shadow-xs active:bg-blue-700"
+            >
+              <Text className="text-white font-semibold text-[14px]">
+                Search manually
+              </Text>
+            </TouchableOpacity>
+
+            <Text className="text-[11px] font-normal text-[#64748B] text-center mt-2.5">
+              Use an order, tracking or waybill number instead.
+            </Text>
+          </View>
+        ) : (
+          /* Inline Manual Search Input Card */
+          <View className="bg-white rounded-2xl p-4 shadow-sm border border-[#E2E8F0]">
+            <View className="flex-row items-center justify-between mb-2.5">
+              <Text className="text-[12px] font-bold text-[#1E293B] uppercase tracking-wide">
+                Manual Order Lookup
+              </Text>
               <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={handleClose}
-                accessibilityLabel="Back to orders"
-                className="w-[44px] h-[44px] rounded-[14px] bg-white border border-[#E2E8F0] items-center justify-center shadow-xs active:bg-slate-50"
+                onPress={() => setIsManualSearchVisible(false)}
+                className="p-1"
               >
-                <ArrowLeft size={22} color="#0F172A" />
+                <X size={16} color="#64748B" />
               </TouchableOpacity>
-              <Text className="text-[20px] font-bold text-[#0F172A] leading-7 ml-3.5">
-                Scan QR code
-              </Text>
             </View>
 
-            {/* 2. Scan Instructions (Figma 1355:7) */}
-            <View className="mb-5">
-              <Text className="text-[13px] font-normal text-[#64748B] leading-[20px]">
-                Align the parcel’s QR code inside the frame to find its order details.
-              </Text>
-            </View>
-
-            {/* 3. Camera Preview Box (Figma 1355:8) */}
-            <View className="bg-[#111827] h-[340px] rounded-[24px] overflow-hidden items-center justify-between py-5 mb-5 relative">
-              {/* Camera Preview Label Badge (Figma 1355:32) */}
-              <View className="bg-[#1E293B] rounded-full px-4 py-1.5">
-                <Text className="text-[10px] font-semibold text-[#CBD5E1] tracking-wider text-center uppercase">
-                  CAMERA PREVIEW
-                </Text>
-              </View>
-
-              {/* QR Alignment Guide Viewfinder (Figma 1355:34) */}
-              <TouchableOpacity
-                activeOpacity={0.9}
-                onPress={handleSimulatedScan}
-                accessibilityLabel="Camera viewfinder. Tap to simulate QR code scan."
-                className="w-[240px] h-[224px] rounded-[20px] bg-[#182235] items-center justify-center relative overflow-hidden my-auto"
-              >
-                {/* Corner Brackets (Figma 1355:35) */}
-                <View className="absolute inset-0 items-center justify-center pointer-events-none">
-                  <ScanningCorners width={240} height={224} />
-                </View>
-
-                {/* Center QR Scan Symbol (Figma 1355:37) */}
-                <View className="items-center justify-center mb-1">
-                  <QrScanSymbol size={48} />
-                </View>
-
-                {/* Animated Horizontal Laser Scan Line (Figma 1355:41) */}
-                <Animated.View
-                  style={{
-                    transform: [{ translateY }],
-                  }}
-                  className="absolute left-4 right-4 h-[2px] bg-[#60A5FA] rounded-full shadow-sm"
-                />
-
-                {/* Viewfinder Subtext (Figma 1355:42) */}
-                <Text className="text-[12px] font-medium text-[#CBD5E1] text-center mt-3">
-                  Position QR code here
-                </Text>
-              </TouchableOpacity>
-
-              {/* Bottom Camera Note (Figma 1355:43) */}
-              <Text className="text-[11px] font-normal text-[#CBD5E1] text-center">
-                Scanning starts when a code is in view
-              </Text>
-            </View>
-
-            {/* 4. Scanning Guidance (Figma 1355:9) */}
-            <View className="mb-5 items-center">
-              <Text className="text-[12px] font-normal text-[#64748B] text-center leading-[18px]">
-                Keep the code flat, well lit and fully visible.{'\n'}
-                Order and waybill QR codes are supported.
-              </Text>
-            </View>
-
-            {/* 5. Manual Search Section (Figma 1355:10) */}
-            {!isManualSearchVisible ? (
-              <View className="items-center">
-                <TouchableOpacity
-                  activeOpacity={0.85}
-                  onPress={() => setIsManualSearchVisible(true)}
-                  className="w-full h-[48px] bg-[#2563EB] rounded-[14px] items-center justify-center shadow-xs active:bg-blue-700"
-                >
-                  <Text className="text-white font-semibold text-[14px]">
-                    Search manually
-                  </Text>
+            <View className="flex-row items-center bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl px-3.5 py-2.5 mb-3">
+              <Search size={16} color="#94A3B8" />
+              <TextInput
+                value={lookupText}
+                onChangeText={setLookupText}
+                placeholder="e.g. PH2696153368792H or ORD-392"
+                placeholderTextColor="#94A3B8"
+                autoCapitalize="characters"
+                autoCorrect={false}
+                className="flex-1 ml-2 text-xs font-mono font-bold text-[#0F172A] p-0"
+              />
+              {lookupText.length > 0 && (
+                <TouchableOpacity onPress={() => setLookupText('')}>
+                  <X size={14} color="#64748B" />
                 </TouchableOpacity>
+              )}
+            </View>
 
-                <Text className="text-[11px] font-normal text-[#64748B] text-center mt-2.5">
-                  Use an order, tracking or waybill number instead.
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={handleLookup}
+              disabled={!lookupText.trim()}
+              className={`py-3 rounded-xl items-center justify-center shadow-xs ${
+                lookupText.trim()
+                  ? 'bg-[#2563EB] active:bg-blue-700'
+                  : 'bg-[#94A3B8]'
+              }`}
+            >
+              <Text className="text-white font-bold text-xs">
+                Find Order Details
+              </Text>
+            </TouchableOpacity>
+
+            {/* Quick Pick Chips for Testing/Speed */}
+            {orders.length > 0 && (
+              <View className="mt-3 border-t border-[#F1F5F9] pt-2.5">
+                <Text className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider mb-2">
+                  Recent Orders
                 </Text>
-              </View>
-            ) : (
-              /* Inline Manual Search Input Card */
-              <View className="bg-white rounded-2xl p-4 shadow-sm border border-[#E2E8F0]">
-                <View className="flex-row items-center justify-between mb-2.5">
-                  <Text className="text-[12px] font-bold text-[#1E293B] uppercase tracking-wide">
-                    Manual Order Lookup
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => setIsManualSearchVisible(false)}
-                    className="p-1"
-                  >
-                    <X size={16} color="#64748B" />
-                  </TouchableOpacity>
-                </View>
-
-                <View className="flex-row items-center bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl px-3.5 py-2.5 mb-3">
-                  <Search size={16} color="#94A3B8" />
-                  <TextInput
-                    value={lookupText}
-                    onChangeText={setLookupText}
-                    placeholder="e.g. PH2696153368792H or ORD-392"
-                    placeholderTextColor="#94A3B8"
-                    autoCapitalize="characters"
-                    autoCorrect={false}
-                    className="flex-1 ml-2 text-xs font-mono font-bold text-[#0F172A] p-0"
-                  />
-                  {lookupText.length > 0 && (
-                    <TouchableOpacity onPress={() => setLookupText('')}>
-                      <X size={14} color="#64748B" />
-                    </TouchableOpacity>
-                  )}
-                </View>
-
-                <TouchableOpacity
-                  activeOpacity={0.85}
-                  onPress={handleLookup}
-                  disabled={!lookupText.trim()}
-                  className={`py-3 rounded-xl items-center justify-center shadow-xs ${
-                    lookupText.trim()
-                      ? 'bg-[#2563EB] active:bg-blue-700'
-                      : 'bg-[#94A3B8]'
-                  }`}
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  className="flex-row gap-2"
                 >
-                  <Text className="text-white font-bold text-xs">
-                    Find Order Details
-                  </Text>
-                </TouchableOpacity>
-
-                {/* Quick Pick Chips for Testing/Speed */}
-                {orders.length > 0 && (
-                  <View className="mt-3 border-t border-[#F1F5F9] pt-2.5">
-                    <Text className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider mb-2">
-                      Recent Orders
-                    </Text>
-                    <ScrollView
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                      className="flex-row gap-2"
+                  {orders.slice(0, 4).map((o) => (
+                    <TouchableOpacity
+                      key={o.id}
+                      onPress={() => {
+                        onSelectOrder(o);
+                        handleClose();
+                      }}
+                      className="bg-[#F1F5F9] px-2.5 py-1.5 rounded-lg border border-[#E2E8F0] active:bg-slate-200"
                     >
-                      {orders.slice(0, 4).map((o) => (
-                        <TouchableOpacity
-                          key={o.id}
-                          onPress={() => {
-                            onSelectOrder(o);
-                            handleClose();
-                          }}
-                          className="bg-[#F1F5F9] px-2.5 py-1.5 rounded-lg border border-[#E2E8F0] active:bg-slate-200"
-                        >
-                          <Text className="text-[11px] font-mono font-semibold text-[#0F172A]">
-                            {o.id}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </ScrollView>
-                  </View>
-                )}
+                      <Text className="text-[11px] font-mono font-semibold text-[#0F172A]">
+                        {o.id}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
               </View>
             )}
-          </ScrollView>
-        </Animated.View>
-      </View>
-    </Modal>
+          </View>
+        )}
+      </ScrollView>
+    </Animated.View>
   );
 };
 

@@ -86,7 +86,7 @@ export const StaffTerminalScreen: React.FC = () => {
       {/* Main Sheet with curved top corners */}
       <View
         style={{ borderTopLeftRadius: 28, borderTopRightRadius: 28 }}
-        className="flex-1 bg-[#F8FAFC] overflow-hidden"
+        className="flex-1 bg-[#F8FAFC] overflow-hidden relative"
       >
         {/* Fixed Sheet Controls: Search & QR Wing Button */}
         <StaffSearchBar
@@ -241,6 +241,18 @@ export const StaffTerminalScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* In-sheet QR Scanner View (Figma node 1355:3) */}
+        <StaffManualLookupModal
+          isOpen={isLookupOpen}
+          orders={orders}
+          onClose={() => setIsLookupOpen(false)}
+          onSelectOrder={openOrderDetails}
+          onOpenAccount={() => setIsDeskInfoOpen(true)}
+          onNotFound={(query) =>
+            showToast(`No order found matching "${query}"`, 'error')
+          }
+        />
       </View>
 
       {/* Staff Account Modal (Figma 1336:3) */}
@@ -254,18 +266,6 @@ export const StaffTerminalScreen: React.FC = () => {
         order={selectedOrder}
         isOpen={isDetailsOpen}
         onClose={closeOrderDetails}
-      />
-
-      {/* Full-screen QR Scanner Modal (Figma node 1355:3) */}
-      <StaffManualLookupModal
-        isOpen={isLookupOpen}
-        orders={orders}
-        onClose={() => setIsLookupOpen(false)}
-        onSelectOrder={openOrderDetails}
-        onOpenAccount={() => setIsDeskInfoOpen(true)}
-        onNotFound={(query) =>
-          showToast(`No order found matching "${query}"`, 'error')
-        }
       />
     </View>
   );
