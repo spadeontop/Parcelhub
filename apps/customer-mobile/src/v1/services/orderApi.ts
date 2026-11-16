@@ -2,6 +2,13 @@ import { v1Fetch } from './apiClient';
 import {
   CustomerListOrdersQueryParams,
   CustomerListOrdersRes,
+  CustomerInitOrderRes,
+  CustomerUpdateOrderReq,
+  CustomerUpdateOrderRes,
+  CustomerGetOrderRes,
+  CustomerClaimOrderRes,
+  CustomerGetOrderPhotoRes,
+  OrderPhotoType,
 } from '../types/api';
 
 export const orderApi = {
@@ -25,5 +32,92 @@ export const orderApi = {
       method: 'GET',
       token: authToken,
     });
+  },
+
+  /**
+   * GET /api/v1/customer/orders/{id}
+   * Fetches single order detail by UUID or ticketCode
+   */
+  async getOrder(
+    authToken: string,
+    orderId: string
+  ): Promise<CustomerGetOrderRes> {
+    return await v1Fetch<CustomerGetOrderRes>(
+      `/api/v1/customer/orders/${encodeURIComponent(orderId)}`,
+      {
+        method: 'GET',
+        token: authToken,
+      }
+    );
+  },
+
+  /**
+   * POST /api/v1/customer/orders/initialize
+   * Initializes a draft order with a receipt screenshot and generates a ticketCode
+   */
+  async initializeOrder(
+    authToken: string,
+    imageUrl: string
+  ): Promise<CustomerInitOrderRes> {
+    return await v1Fetch<CustomerInitOrderRes>('/api/v1/customer/orders/initialize', {
+      method: 'POST',
+      token: authToken,
+      body: JSON.stringify({ imageUrl }),
+    });
+  },
+
+  /**
+   * PUT /api/v1/customer/orders/{id}
+   * Updates order details from PENDING_INITIALIZATION to PAYMENT_REQUIRED (one-shot)
+   */
+  async confirmOrder(
+    authToken: string,
+    orderId: string,
+    orderData: CustomerUpdateOrderReq['order']
+  ): Promise<CustomerUpdateOrderRes> {
+    return await v1Fetch<CustomerUpdateOrderRes>(
+      `/api/v1/customer/orders/${encodeURIComponent(orderId)}`,
+      {
+        method: 'PUT',
+        token: authToken,
+        body: JSON.stringify({ order: orderData }),
+      }
+    );
+  },
+
+  /**
+   * POST /api/v1/customer/orders/{id}/claim
+   * Initiates claim pass countdown for READY_TO_CLAIM order
+   */
+  async claimOrder(
+    authToken: string,
+    orderId: string
+  ): Promise<CustomerClaimOrderRes> {
+    return await v1Fetch<CustomerClaimOrderRes>(
+      `/api/v1/customer/orders/${encodeURIComponent(orderId)}/claim`,
+      {
+        method: 'POST',
+        token: authToken,
+        body: JSON.stringify({}),
+      }
+    );
+  },
+
+  /**
+   * GET /api/v1/customer/orders/{id}/photo
+   * Retrieves parcel screenshot and/or proof of delivery photo
+   */
+  async getOrderPhoto(
+    authToken: string,
+    orderId: string,
+    type: OrderPhotoType = 'all'
+  ): Promise<CustomerGetOrderPhotoRes> {
+    return await v1Fetch<CustomerGetOrderPhotoRes>(
+      `/api/v1/customer/orders/${encodeURIComponent(orderId)}/photo?type=${type}`,
+      {
+        method: 'GET',
+        token: authToken,
+      }
+    );
   },
 };

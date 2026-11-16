@@ -1,20 +1,55 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
+import * as Clipboard from 'expo-clipboard';
 import { StatusBar } from 'expo-status-bar';
-import { useApp } from '../../context/AppContext';
+import { useV1 } from '../../v1/context/V1Context';
+import { CustomerOrderDetail } from '../../v1/types/api';
 import { ArrowLeftIcon, DownloadIcon } from '../common/Icons';
 
 export const QrScreen: React.FC = () => {
-  const { getCurrentOrder, copyToClipboard, navigateTo, showToast } = useApp();
-  const order = getCurrentOrder();
+  const { selectedOrderId, orders, fetchOrderDetail, navigateTo, showToast } = useV1();
+  const [orderDetail, setOrderDetail] = useState<CustomerOrderDetail | null>(null);
+
+  const cachedSummary = orders.find(
+    (o) => o.id === selectedOrderId || o.ticketCode === selectedOrderId
+  );
+
+  useEffect(() => {
+    let isMounted = true;
+    if (selectedOrderId) {
+      fetchOrderDetail(selectedOrderId)
+        .then((detail) => {
+          if (isMounted) setOrderDetail(detail);
+        })
+        .catch(() => {
+          // If network fetch fails, fallback to cached summary
+        });
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedOrderId, fetchOrderDetail]);
+
+  const ticketCode = orderDetail?.ticketCode || cachedSummary?.ticketCode;
+  const orderId = orderDetail?.id || cachedSummary?.id || selectedOrderId || '';
+
+  // Encode ticketCode if present (e.g. 941-53N), falling back to UUID order.id
+  const qrValue = ticketCode || orderId || 'PARCELHUB-DEMO';
+  const displayTicket = ticketCode || orderId || '---';
 
   const handleSavePhoto = () => {
     showToast('Pickup QR pass saved to device photo storage!');
   };
 
-  const handleCopyTicket = () => {
-    copyToClipboard(order.id, 'Ticket');
+  const handleCopyTicket = async () => {
+    if (!displayTicket || displayTicket === '---') return;
+    try {
+      await Clipboard.setStringAsync(displayTicket);
+      showToast(`Copied Ticket (${displayTicket}) to clipboard!`);
+    } catch {
+      showToast('Failed to copy ticket to clipboard.');
+    }
   };
 
   return (
@@ -152,7 +187,7 @@ export const QrScreen: React.FC = () => {
                 }}
               >
                 <QRCode
-                  value={order.id || 'PARCELHUB-DEMO'}
+                  value={qrValue}
                   size={172}
                   color="#0f172a"
                   backgroundColor="#ffffff"
@@ -201,7 +236,7 @@ export const QrScreen: React.FC = () => {
                   marginTop: 2,
                 }}
               >
-                {order.id}
+                {displayTicket}
               </Text>
             </TouchableOpacity>
 

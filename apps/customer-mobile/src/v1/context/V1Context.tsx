@@ -5,6 +5,7 @@ import React, {
   useCallback,
   useRef,
   useEffect,
+  useMemo,
   ReactNode,
 } from 'react';
 import {
@@ -13,15 +14,31 @@ import {
   CustomerLoginReq,
   CustomerLoginRes,
   CustomerCreateMpinRes,
+  CustomerInitOrderRes,
+  CustomerUpdateOrderReq,
+  CustomerUpdateOrderRes,
+  CustomerClaimOrderRes,
+  CustomerOrderDetail,
   CustomerProfile,
   CustomerOrderSummary,
   CustomerListOrdersQueryParams,
   JWTToken,
+  OrderId,
 } from '../types/api';
 import { authApi } from '../services/authApi';
 import { orderApi } from '../services/orderApi';
 import { customerApi } from '../services/customerApi';
 import { v1Storage } from '../utils/storage';
+import { formatOrderDate } from '../utils/date';
+
+export type CustomerNotification = {
+  readonly id: string;
+  readonly orderId?: string;
+  readonly title: string;
+  readonly body: string;
+  readonly time: string;
+  readonly unread: boolean;
+};
 
 export type ScreenId =
   | 'register'
@@ -63,6 +80,28 @@ const DEFAULT_REGISTRATION_DRAFT: RegistrationDraft = {
   emailError: '',
 };
 
+export type OrderDraft = {
+  readonly orderId?: OrderId | null;
+  readonly ticketCode?: string | null;
+  readonly imageUrl?: string | null;
+  readonly trackingId?: string;
+  readonly productName?: string;
+  readonly recipientName?: string;
+  readonly price?: number;
+  readonly totalAmount?: string;
+};
+
+const DEFAULT_ORDER_DRAFT: OrderDraft = {
+  orderId: null,
+  ticketCode: null,
+  imageUrl: null,
+  trackingId: '',
+  productName: '',
+  recipientName: '',
+  price: 0,
+  totalAmount: '',
+};
+
 export type ToastState = {
   readonly show: boolean;
   readonly message: string;
@@ -82,12 +121,27 @@ export type V1ContextType = {
   readonly registrationDraft: RegistrationDraft;
   readonly updateRegistrationDraft: (partial: Partial<RegistrationDraft>) => void;
   readonly clearRegistrationDraft: () => void;
+  readonly orderDraft: OrderDraft;
+  readonly updateOrderDraft: (partial: Partial<OrderDraft>) => void;
+  readonly clearOrderDraft: () => void;
   readonly registerCustomer: (payload: CustomerRegisterReq) => Promise<CustomerRegisterRes>;
   readonly loginCustomer: (payload: CustomerLoginReq) => Promise<CustomerLoginRes>;
   readonly createCustomerMpin: (mpin: string) => Promise<CustomerCreateMpinRes>;
   readonly verifyCustomerMpin: (mpin: string) => Promise<void>;
   readonly refetchOrders: (query?: CustomerListOrdersQueryParams) => Promise<void>;
   readonly refetchProfile: () => Promise<void>;
+  readonly initializeCustomerOrder: (imageUrl: string) => Promise<CustomerInitOrderRes>;
+  readonly confirmCustomerOrder: (
+    orderData: CustomerUpdateOrderReq['order']
+  ) => Promise<CustomerUpdateOrderRes>;
+  readonly fetchOrderDetail: (orderId: string) => Promise<CustomerOrderDetail>;
+  readonly claimCustomerOrder: (orderId: string) => Promise<CustomerClaimOrderRes>;
+  readonly isPodModalOpen: boolean;
+  readonly openPodModal: () => void;
+  readonly closePodModal: () => void;
+  readonly notifications: readonly CustomerNotification[];
+  readonly markAllNotificationsAsRead: () => void;
+  readonly signOutCustomer: () => Promise<void>;
 };
 
 const V1Context = createContext<V1ContextType | undefined>(undefined);
@@ -103,6 +157,7 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [registrationDraft, setRegistrationDraft] = useState<RegistrationDraft>(
     DEFAULT_REGISTRATION_DRAFT
   );
+  const [orderDraft, setOrderDraft] = useState<OrderDraft>(DEFAULT_ORDER_DRAFT);
 
   // Toast notification state
   const [toast, setToast] = useState<ToastState>({ show: false, message: '' });
@@ -134,6 +189,14 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
 
   const clearRegistrationDraft = useCallback(() => {
     setRegistrationDraft(DEFAULT_REGISTRATION_DRAFT);
+  }, []);
+
+  const updateOrderDraft = useCallback((partial: Partial<OrderDraft>) => {
+    setOrderDraft((prev) => ({ ...prev, ...partial }));
+  }, []);
+
+  const clearOrderDraft = useCallback(() => {
+    setOrderDraft(DEFAULT_ORDER_DRAFT);
   }, []);
 
   // V1 Profile Refresh with 401 Silent Renewal trigger
@@ -354,6 +417,168 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
     [preAuthToken, showToast]
   );
 
+  // V1 Initialize Order Action (V1 Feature #5 Decoupled Order Creation)
+  const initializeCustomerOrder = useCallback(
+    async (imageUrl: string): Promise<CustomerInitOrderRes> => {
+      let token = authToken;
+      if (!token) token = await v1Storage.getAuthToken();
+      if (!token) {
+        showToast('Session expired. Please log in again.');
+        setActiveScreen('login');
+        throw new Error('Please log in again');
+      }
+
+      const res = await orderApi.initializeOrder(token, imageUrl);
+
+      // Pre-fill recipient name from customer account profile full name (V1 Feature #5)
+      const defaultRecipient = customer
+        ? `${customer.firstName || ''} ${customer.lastName || ''}`.trim()
+        : '';
+
+      updateOrderDraft({
+        orderId: res.orderId,
+        ticketCode: res.ticketCode,
+        imageUrl,
+        recipientName: defaultRecipient,
+      });
+
+      showToast(res.statusMessage || 'Order initialized');
+      setActiveScreen('confirm_order');
+      return res;
+    },
+    [authToken, customer, showToast, updateOrderDraft]
+  );
+
+  const confirmCustomerOrder = useCallback(
+    async (orderData: CustomerUpdateOrderReq['order']): Promise<CustomerUpdateOrderRes> => {
+      const token = authToken || (await v1Storage.getAuthToken());
+      if (!token) {
+        setActiveScreen('login');
+        throw new Error('Please log in again');
+      }
+
+      const orderId = orderDraft.orderId;
+      if (!orderId) {
+        showToast('No active order to confirm. Please start again.');
+        setActiveScreen('create_order');
+        throw new Error('No active order ID');
+      }
+
+      try {
+        const res = await orderApi.confirmOrder(token, orderId, orderData);
+        setSelectedOrderId(orderId);
+        showToast(res.statusMessage || 'Order details confirmed');
+        clearOrderDraft();
+        setActiveScreen('payment_verification');
+        return res;
+      } catch (err: any) {
+        if (
+          err?.statusCode === 400 &&
+          (err?.error === 'OrderNotEditable' ||
+            err?.message?.includes('Only PENDING_INITIALIZATION'))
+        ) {
+          showToast(err?.message || 'This order was already confirmed.');
+          setSelectedOrderId(orderId);
+          clearOrderDraft();
+          setActiveScreen('payment_verification');
+        }
+        throw err;
+      }
+    },
+    [
+      authToken,
+      orderDraft.orderId,
+      showToast,
+      clearOrderDraft,
+      setActiveScreen,
+      setSelectedOrderId,
+    ]
+  );
+
+  const fetchOrderDetail = useCallback(
+    async (orderId: string): Promise<CustomerOrderDetail> => {
+      const token = authToken || (await v1Storage.getAuthToken());
+      if (!token) {
+        setActiveScreen('login');
+        throw new Error('Please log in again');
+      }
+      const res = await orderApi.getOrder(token, orderId);
+      return res.order;
+    },
+    [authToken, setActiveScreen]
+  );
+
+  const [isPodModalOpen, setIsPodModalOpen] = useState<boolean>(false);
+  const openPodModal = useCallback(() => setIsPodModalOpen(true), []);
+  const closePodModal = useCallback(() => setIsPodModalOpen(false), []);
+
+  const claimCustomerOrder = useCallback(
+    async (orderId: string): Promise<CustomerClaimOrderRes> => {
+      const token = authToken || (await v1Storage.getAuthToken());
+      if (!token) {
+        setActiveScreen('login');
+        throw new Error('Please log in again');
+      }
+      const res = await orderApi.claimOrder(token, orderId);
+      showToast(res.statusMessage || 'Order claim initiated');
+      return res;
+    },
+    [authToken, setActiveScreen, showToast]
+  );
+
+  const [readNotificationIds, setReadNotificationIds] = useState<ReadonlySet<string>>(
+    new Set()
+  );
+
+  const notifications = useMemo<readonly CustomerNotification[]>(() => {
+    return orders.map((o) => {
+      let title = 'Order Update';
+      let body = `${o.productName || 'Your order'} status is now ${o.status}.`;
+      if (o.status === 'READY_TO_CLAIM') {
+        title = 'Parcel Ready for Claim! 📦';
+        body = `${o.productName || 'Your parcel'} has arrived at Lily’s Catering Hub and is ready for pickup.`;
+      } else if (o.status === 'AWAITING_PARCEL') {
+        title = 'Payment Verified';
+        body = `Payment received for ${o.productName || 'your parcel'}. Now awaiting courier arrival.`;
+      } else if (o.status === 'PAYMENT_REQUIRED') {
+        title = 'Order Created';
+        body = `Order initialized for ${o.productName || 'item'}. Please complete payment at Lily’s Catering Hub.`;
+      } else if (o.status === 'CLAIMED') {
+        title = 'Parcel Claimed';
+        body = `${o.productName || 'Parcel'} was claimed. Thank you for using ParcelHub!`;
+      }
+
+      const notifId = `${o.id}_${o.status}`;
+      return {
+        id: notifId,
+        orderId: o.id,
+        title,
+        body,
+        time: formatOrderDate(o.timestamp),
+        unread: !readNotificationIds.has(notifId),
+      };
+    });
+  }, [orders, readNotificationIds]);
+
+  const markAllNotificationsAsRead = useCallback(() => {
+    const allIds = new Set<string>();
+    notifications.forEach((n) => allIds.add(n.id));
+    setReadNotificationIds(allIds);
+  }, [notifications]);
+
+  const signOutCustomer = useCallback(async () => {
+    await v1Storage.clearAllTokens();
+    setPreAuthToken(null);
+    setAuthToken(null);
+    setCustomer(null);
+    setOrders([]);
+    setSelectedOrderId(null);
+    clearRegistrationDraft();
+    clearOrderDraft();
+    setActiveScreen('login');
+    showToast('Signed out successfully');
+  }, [clearRegistrationDraft, clearOrderDraft, showToast]);
+
   const value: V1ContextType = {
     activeScreen,
     navigateTo,
@@ -368,12 +593,25 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
     registrationDraft,
     updateRegistrationDraft,
     clearRegistrationDraft,
+    orderDraft,
+    updateOrderDraft,
+    clearOrderDraft,
     registerCustomer,
     loginCustomer,
     createCustomerMpin,
     verifyCustomerMpin,
     refetchOrders,
     refetchProfile,
+    initializeCustomerOrder,
+    confirmCustomerOrder,
+    fetchOrderDetail,
+    claimCustomerOrder,
+    isPodModalOpen,
+    openPodModal,
+    closePodModal,
+    notifications,
+    markAllNotificationsAsRead,
+    signOutCustomer,
   };
 
   return <V1Context.Provider value={value}>{children}</V1Context.Provider>;

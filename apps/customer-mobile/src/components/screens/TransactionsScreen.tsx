@@ -9,11 +9,19 @@ import {
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { StatusBar } from 'expo-status-bar';
-import { useApp } from '../../context/AppContext';
-import { TransactionFilter } from '../../types';
+import { useV1 } from '../../v1/context/V1Context';
+import { OrderStatus } from '../../v1/types/api';
 import { BottomNav } from '../layout/BottomNav';
 import { AppHeader } from '../layout/AppHeader';
 import { getStatusTheme } from '../../utils/statusHelpers';
+import { formatOrderDate } from '../../v1/utils/date';
+
+export type TransactionFilter =
+  | 'ALL'
+  | 'READY_TO_CLAIM'
+  | 'AWAITING_PARCEL'
+  | 'PAYMENT_REQUIRED'
+  | 'CLAIMED';
 
 const FILTERS: TransactionFilter[] = [
   'ALL',
@@ -41,15 +49,25 @@ const getFilterLabel = (filter: TransactionFilter): string => {
 };
 
 export const TransactionsScreen: React.FC = () => {
-  const { orders, transactionFilter, setTransactionFilter, navigateTo, refetchOrders } = useApp();
+  const { orders, navigateTo, refetchOrders } = useV1();
+  const [transactionFilter, setTransactionFilter] = useState<TransactionFilter>('ALL');
   const [refreshing, setRefreshing] = useState(false);
   const { height } = useWindowDimensions();
   const isCompact = height < 700;
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await refetchOrders(transactionFilter);
-    setRefreshing(false);
+    try {
+      await refetchOrders(
+        transactionFilter === 'ALL'
+          ? undefined
+          : { type: transactionFilter as OrderStatus }
+      );
+    } catch {
+      // Ignored for pull to refresh
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const filteredOrders =
@@ -172,10 +190,10 @@ export const TransactionsScreen: React.FC = () => {
                         numberOfLines={1}
                         ellipsizeMode="tail"
                       >
-                        {order.product || 'Unknown Package'}
+                        {order.productName || 'Unknown Package'}
                       </Text>
                       <Text className="text-[11px] font-normal text-[#94a3b8] leading-[16px] mt-1">
-                        {order.dateLabel || 'Recent Order'}
+                        {formatOrderDate(order.timestamp) || 'Recent Order'}
                       </Text>
                     </View>
 

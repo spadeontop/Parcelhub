@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import Svg, { Path } from 'react-native-svg';
-import { useApp } from '../../context/AppContext';
+import { useV1 } from '../../v1/context/V1Context';
 import { AppHeader } from '../layout/AppHeader';
 
 export interface FaqItem {
@@ -55,7 +55,7 @@ export interface FaqScreenProps {
 }
 
 export const FaqScreen: React.FC<FaqScreenProps> = ({ onBack }) => {
-  const { navigateTo } = useApp();
+  const { navigateTo } = useV1();
   // Default: all dropdowns closed
   const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({});
 

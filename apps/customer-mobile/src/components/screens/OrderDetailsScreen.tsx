@@ -11,70 +11,133 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import Svg, { Path } from 'react-native-svg';
 import QRCode from 'react-native-qrcode-svg';
-import { useApp } from '../../context/AppContext';
+import * as Clipboard from 'expo-clipboard';
+import { useV1 } from '../../v1/context/V1Context';
+import { CustomerOrderDetail } from '../../v1/types/api';
 import { CopyIcon, QrCodeIcon, ClockIcon } from '../common/Icons';
 import { AppHeader } from '../layout/AppHeader';
 import { getStatusLabel } from '../../utils/statusHelpers';
 
 export const OrderDetailsScreen: React.FC = () => {
   const {
-    getCurrentOrder,
-    hubOpen,
+    selectedOrderId,
+    orders,
+    customer,
+    fetchOrderDetail,
+    claimCustomerOrder,
+    openPodModal,
     navigateTo,
-    copyToClipboard,
-    openProofOfDeliveryModal,
-    customerInitiateClaim,
-    isOrderClaimUnlocked,
-    getOrderClaimRemainingSeconds,
     showToast,
-    activeClaimPassOrderId,
-    dismissedClaimPasses,
-    openClaimPass,
-    closeClaimPass,
-  } = useApp();
+  } = useV1();
 
-  const order = getCurrentOrder();
-  const status = order.status;
-
-  // Memoize the SVG QR code so it doesn't recalculate every second on timer ticks
-  const memoizedQr = useMemo(
-    () => (
-      <QRCode
-        value={order.id || 'PARCELHUB-RELEASE'}
-        size={210}
-        color="#0f172a"
-        backgroundColor="#ffffff"
-      />
-    ),
-    [order.id]
-  );
-
+  const [orderDetail, setOrderDetail] = useState<CustomerOrderDetail | null>(null);
   const [claimConfirmed, setClaimConfirmed] = useState<boolean>(false);
   const [isInitiatingClaim, setIsInitiatingClaim] = useState<boolean>(false);
   const [isClaimLocked, setIsClaimLocked] = useState<boolean>(false);
   const [isRefreshingRelease, setIsRefreshingRelease] = useState<boolean>(false);
+  const [isPassDismissed, setIsPassDismissed] = useState<boolean>(false);
+  const [isClaimSessionActive, setIsClaimSessionActive] = useState<boolean>(false);
+
+  // Hub status defaults to open
+  const hubOpen = true;
+
+  // Cached summary fallback
+  const cachedSummary = orders.find(
+    (o) => o.id === selectedOrderId || o.ticketCode === selectedOrderId
+  );
+
+  const orderId = orderDetail?.id || cachedSummary?.id || selectedOrderId || '';
+  const ticketCode = orderDetail?.ticketCode || cachedSummary?.ticketCode || '';
+  const status = orderDetail?.status || cachedSummary?.status || 'PENDING_INITIALIZATION';
+  const productName = orderDetail?.productName || cachedSummary?.productName || 'Order Item';
+  const recipientName =
+    orderDetail?.recipientName ||
+    (customer?.firstName ? `${customer.firstName} ${customer.lastName || ''}`.trim() : 'Recipient');
+  const price = orderDetail?.price ?? 0;
+  const change = orderDetail?.change ?? 0;
+  const trackingNumber = orderDetail?.trackingId || cachedSummary?.trackingId || '—';
+  const statusTimeline = orderDetail?.statusTimeline || [];
+
+  // Countdown seconds timer state
+  const [remainingSecs, setRemainingSecs] = useState<number>(0);
+  const remainingSecsRef = useRef<number>(0);
+  remainingSecsRef.current = remainingSecs;
+
+  // Polling every 5 seconds with 3-second jitter buffer per Feature #8
+  useEffect(() => {
+    if (!selectedOrderId) return;
+    let isMounted = true;
+
+    const fetchOrder = async () => {
+      try {
+        const detail = await fetchOrderDetail(selectedOrderId);
+        if (!isMounted) return;
+        setOrderDetail(detail);
+
+        const serverSeconds = detail.claimRemainingSeconds ?? 0;
+        if (detail.isClaimActive && serverSeconds > 0) {
+          const current = remainingSecsRef.current;
+          const diff = Math.abs(current - serverSeconds);
+          // Only hard update if difference is > 3 seconds to avoid flicking
+          if (diff > 3 || current <= 0) {
+            setRemainingSecs(serverSeconds);
+          }
+        } else if (!detail.isClaimActive) {
+          setRemainingSecs(0);
+        }
+      } catch {
+        // Network errors handled gracefully without disrupting current view
+      }
+    };
+
+    fetchOrder();
+    const pollInterval = setInterval(fetchOrder, 5000);
+    return () => {
+      isMounted = false;
+      clearInterval(pollInterval);
+    };
+  }, [selectedOrderId, fetchOrderDetail]);
+
+  // Local 1-second countdown decrement
+  useEffect(() => {
+    if (remainingSecs <= 0) return;
+    const timer = setInterval(() => {
+      setRemainingSecs((prev) => (prev <= 1 ? 0 : prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [remainingSecs > 0]);
 
   // Reset confirmation checkbox whenever the viewed order changes
   useEffect(() => {
     setClaimConfirmed(false);
     setIsClaimLocked(false);
     setIsInitiatingClaim(false);
-  }, [order.id]);
+    setIsPassDismissed(false);
+    setIsClaimSessionActive(false);
+  }, [selectedOrderId]);
 
-  const isClaimActive = isOrderClaimUnlocked(order);
-  const remainingSecs = getOrderClaimRemainingSeconds(order);
+  // Memoize the SVG QR code so it doesn't recalculate every second on timer ticks
+  const qrIdentifier = ticketCode || orderId || 'PARCELHUB-RELEASE';
+  const memoizedQr = useMemo(
+    () => (
+      <QRCode
+        value={qrIdentifier}
+        size={210}
+        color="#0f172a"
+        backgroundColor="#ffffff"
+      />
+    ),
+    [qrIdentifier]
+  );
+
   const mm = Math.floor(remainingSecs / 60);
   const ss = remainingSecs % 60;
   const timeFormatted = `${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
 
-  // State calculations for the focused release / claim view
   const isClaimed = status === 'CLAIMED';
-
-  // Focused release pass is ONLY visible when explicitly initiated by the user for this order
-  // and has not been closed/dismissed. Once closed, neither Claimed nor Expired pass displays again.
-  const isPassActiveForThisOrder = activeClaimPassOrderId === order.id;
-  const isPassDismissed = Boolean(dismissedClaimPasses[order.id]);
-  const isFocusedPassView = isPassActiveForThisOrder && !isPassDismissed;
+  const isServerClaimActive = Boolean(orderDetail?.isClaimActive) && remainingSecs > 0;
+  const isFocusedPassView =
+    (isServerClaimActive || isClaimSessionActive) && !isPassDismissed;
 
   const isReleaseExpired =
     (status === 'READY_TO_CLAIM' || isFocusedPassView) && remainingSecs === 0 && !isClaimed;
@@ -118,50 +181,59 @@ export const OrderDetailsScreen: React.FC = () => {
 
     const backSubscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
     return () => backSubscription.remove();
-  }, [isFocusedPassView, order.id, closeClaimPass]);
+  }, [isFocusedPassView]);
 
   const handleInitiateClaim = async () => {
     if (!claimConfirmed) {
       showToast('Please check the confirmation box before initiating claim.');
       return;
     }
-    if (isInitiatingClaim) return;
+    if (isInitiatingClaim || !orderId) return;
 
     setIsClaimLocked(true);
     setIsInitiatingClaim(true);
     try {
-      openClaimPass(order.id);
-      await Promise.all([
-        customerInitiateClaim(order.id),
-        new Promise((resolve) => setTimeout(resolve, 450)),
-      ]);
-    } catch {
-      closeClaimPass(order.id);
-      // Handled in context toast
+      setIsPassDismissed(false);
+      setIsClaimSessionActive(true);
+      const claimRes = await claimCustomerOrder(orderId);
+      const initialSeconds = (claimRes.durationMinutes || 5) * 60;
+      setRemainingSecs(initialSeconds);
+      // Fetch fresh order
+      const fresh = await fetchOrderDetail(orderId);
+      setOrderDetail(fresh);
+    } catch (err: any) {
+      setIsClaimSessionActive(false);
+      showToast(err?.message || 'Failed to initiate claim.');
     } finally {
       setIsInitiatingClaim(false);
     }
   };
 
   const handleRefreshRelease = async () => {
-    if (isRefreshingRelease) return;
+    if (isRefreshingRelease || !orderId) return;
     setIsRefreshingRelease(true);
     try {
-      openClaimPass(order.id);
-      await customerInitiateClaim(order.id);
-    } catch {
-      // Handled in context toast
+      setIsPassDismissed(false);
+      setIsClaimSessionActive(true);
+      const claimRes = await claimCustomerOrder(orderId);
+      const initialSeconds = (claimRes.durationMinutes || 5) * 60;
+      setRemainingSecs(initialSeconds);
+      const fresh = await fetchOrderDetail(orderId);
+      setOrderDetail(fresh);
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to refresh release window.');
     } finally {
       setIsRefreshingRelease(false);
     }
   };
 
-  // Close the focused pass view and remain on Complete Details (Figma 8:2)
+  // Close the focused pass view and remain on Complete Details
   const handleCloseFocusedPass = () => {
     setClaimConfirmed(false);
     setIsClaimLocked(false);
     setIsInitiatingClaim(false);
-    closeClaimPass(order.id);
+    setIsPassDismissed(true);
+    setIsClaimSessionActive(false);
   };
 
   // Close the focused pass view and navigate back to Home
@@ -169,11 +241,22 @@ export const OrderDetailsScreen: React.FC = () => {
     setClaimConfirmed(false);
     setIsClaimLocked(false);
     setIsInitiatingClaim(false);
-    closeClaimPass(order.id);
+    setIsPassDismissed(true);
+    setIsClaimSessionActive(false);
     navigateTo('home');
   };
 
-  // Stepper completion checks
+  const handleCopyTracking = async () => {
+    if (!trackingNumber || trackingNumber === '—') return;
+    try {
+      await Clipboard.setStringAsync(trackingNumber);
+      showToast(`Copied Tracking Number (${trackingNumber}) to clipboard!`);
+    } catch {
+      showToast('Failed to copy tracking number.');
+    }
+  };
+
+  // Stepper timeline completion checks
   const isStep1Done =
     status === 'AWAITING_PARCEL' || status === 'READY_TO_CLAIM' || status === 'CLAIMED';
   const isStep1Active = status === 'PAYMENT_REQUIRED';
@@ -185,6 +268,21 @@ export const OrderDetailsScreen: React.FC = () => {
   const isStep3Active = status === 'READY_TO_CLAIM';
 
   const isStep4Done = status === 'CLAIMED';
+
+  // Format stepper timestamps from statusTimeline
+  const formatTimelineTimestamp = (statusKey: string, fallback?: string): string => {
+    if (!statusTimeline || !Array.isArray(statusTimeline)) {
+      return fallback || '';
+    }
+    const entry = (statusTimeline as any[]).find((e: any) => e.status === statusKey);
+    if (!entry?.timestamp) return fallback || '';
+    try {
+      const d = new Date(entry.timestamp);
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch {
+      return fallback || '';
+    }
+  };
 
   // Helper for tracking node matching Figma node 8:2
   const renderStepNode = (isDone: boolean, isActive: boolean) => {
@@ -324,7 +422,7 @@ export const OrderDetailsScreen: React.FC = () => {
       {/* Main Curved Transition Sheet matching Figma node 8:13 */}
       <View className="flex-1 bg-[#f1f5f9] rounded-t-[24px] pt-4 overflow-hidden">
         {isFocusedPassView ? (
-          /* Full-screen Focused Claim Pass (Ready, Claimed, and Expired states - Figma 1308:177, 1309:187, 1309:235) */
+          /* Full-screen Focused Claim Pass (Ready, Claimed, and Expired states) */
           <Animated.View
             style={{
               flex: 1,
@@ -355,7 +453,7 @@ export const OrderDetailsScreen: React.FC = () => {
                       TICKET
                     </Text>
                     <Text className="text-[15px] font-bold text-[#1e293b] mt-0.5">
-                      {order.id}
+                      {ticketCode || orderId}
                     </Text>
                   </View>
 
@@ -376,7 +474,7 @@ export const OrderDetailsScreen: React.FC = () => {
                         {memoizedQr}
                       </View>
 
-                      {/* Claimed Overlay Badge - Figma 1309:187 Frame 3 (80x80) */}
+                      {/* Claimed Overlay Badge */}
                       {isClaimed && (
                         <View className="absolute inset-0 items-center justify-center">
                           <View
@@ -411,7 +509,7 @@ export const OrderDetailsScreen: React.FC = () => {
                         </View>
                       )}
 
-                      {/* Expired Overlay Badge - Figma 1309:235 Frame 3 (80x80) */}
+                      {/* Expired Overlay Badge */}
                       {isReleaseExpired && (
                         <View className="absolute inset-0 items-center justify-center">
                           <View
@@ -510,7 +608,7 @@ export const OrderDetailsScreen: React.FC = () => {
                   </View>
                 </View>
 
-                {/* ClaimSuccess_OrderCard (Figma 1308:231, 1309:214, 1309:262) */}
+                {/* Order Details Card */}
                 <View
                   style={{
                     shadowColor: '#000',
@@ -533,7 +631,7 @@ export const OrderDetailsScreen: React.FC = () => {
                         numberOfLines={1}
                         className="text-[13px] font-bold text-[#1e293b] flex-1 text-right ml-4"
                       >
-                        {order.product}
+                        {productName}
                       </Text>
                     </View>
 
@@ -542,14 +640,14 @@ export const OrderDetailsScreen: React.FC = () => {
                       <Text className="text-[12px] text-[#64748b]">Cash Change</Text>
                       <View className="bg-[#eff6ff] px-3 py-1 rounded-[8px] items-center justify-center">
                         <Text className="text-[13px] font-bold text-[#2563eb]">
-                          {order.change || '₱20'}
+                          {`₱${change.toLocaleString('en-US')}`}
                         </Text>
                       </View>
                     </View>
                   </View>
                 </View>
 
-                {/* ReleaseTimeout_Button_Reactivate (Only in Expired state - Figma 1309:290) */}
+                {/* ReleaseTimeout Reactivate Button */}
                 {isReleaseExpired && (
                   <TouchableOpacity
                     activeOpacity={0.8}
@@ -574,7 +672,7 @@ export const OrderDetailsScreen: React.FC = () => {
                   </TouchableOpacity>
                 )}
 
-                {/* Return to Home Action Button (Figma 1308:288, 1309:223, 1309:271) */}
+                {/* Return to Home Action Button */}
                 <TouchableOpacity
                   activeOpacity={0.7}
                   onPress={handleReturnHomeFromPass}
@@ -588,13 +686,13 @@ export const OrderDetailsScreen: React.FC = () => {
             </ScrollView>
           </Animated.View>
         ) : (
-          /* Dedicated Complete Details Stepper Page (Figma node 8:2) */
+          /* Dedicated Complete Details Stepper Page */
           <ScrollView
             className="flex-1 px-4"
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 40 }}
           >
-            {/* Section 1: Order Overview Card (Figma node 8:14) */}
+            {/* Section 1: Order Overview Card */}
             <View
               className="bg-white border border-[#f1f5f9] rounded-[16px] p-[17px] mb-3.5"
               style={{
@@ -614,7 +712,7 @@ export const OrderDetailsScreen: React.FC = () => {
                 <View className="flex-row items-center justify-between py-[2px]">
                   <Text className="text-[14px] text-[#64748b] font-normal">Product</Text>
                   <Text className="text-[14px] font-bold text-[#111827] tracking-[-0.35px]">
-                    {order.product}
+                    {productName}
                   </Text>
                 </View>
 
@@ -622,7 +720,7 @@ export const OrderDetailsScreen: React.FC = () => {
                 <View className="flex-row items-center justify-between py-[2px]">
                   <Text className="text-[14px] text-[#64748b] font-normal">Price</Text>
                   <Text className="text-[14px] font-semibold text-[#111827]">
-                    {order.codAmount || '—'}
+                    {price > 0 ? `₱${price.toLocaleString('en-US')}` : '—'}
                   </Text>
                 </View>
 
@@ -630,7 +728,7 @@ export const OrderDetailsScreen: React.FC = () => {
                 <View className="flex-row items-center justify-between py-[2px]">
                   <Text className="text-[14px] text-[#64748b] font-normal">Recipient</Text>
                   <Text className="text-[14px] font-medium text-[#1e293b]">
-                    {order.recipient}
+                    {recipientName}
                   </Text>
                 </View>
 
@@ -639,11 +737,11 @@ export const OrderDetailsScreen: React.FC = () => {
                   <Text className="text-[14px] text-[#64748b] font-normal">Tracking Number</Text>
                   <TouchableOpacity
                     activeOpacity={0.7}
-                    onPress={() => copyToClipboard(order.trackingNumber, 'Tracking Number')}
+                    onPress={handleCopyTracking}
                     className="bg-[#f1f5f9] flex-row items-center gap-[6px] px-[10px] py-[4px] rounded-[6px]"
                   >
                     <Text className="font-mono font-bold text-[12px] text-[#334155]">
-                      {order.trackingNumber}
+                      {trackingNumber}
                     </Text>
                     <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
                       <Path
@@ -668,7 +766,7 @@ export const OrderDetailsScreen: React.FC = () => {
                 <View className="flex-row items-center justify-between py-[2px]">
                   <Text className="text-[14px] text-[#64748b] font-normal">Paid Amount</Text>
                   <Text className="text-[14px] font-semibold text-[#111827]">
-                    {order.paidAmount || '—'}
+                    {status === 'PAYMENT_REQUIRED' ? '—' : `₱${price.toLocaleString('en-US')}`}
                   </Text>
                 </View>
 
@@ -676,13 +774,13 @@ export const OrderDetailsScreen: React.FC = () => {
                 <View className="border-t border-[#f1f5f9] flex-row items-center justify-between pt-[11px] pb-[2px]">
                   <Text className="text-[14px] text-[#64748b] font-normal">Change</Text>
                   <Text className="text-[14px] font-bold text-[#1e293b]">
-                    {status === 'PAYMENT_REQUIRED' ? 'To Be Determined' : order.change || '₱0'}
+                    {status === 'PAYMENT_REQUIRED' ? 'To Be Determined' : `₱${change.toLocaleString('en-US')}`}
                   </Text>
                 </View>
               </View>
             </View>
 
-            {/* Section 2: Hub Location Card (Figma node 8:52) */}
+            {/* Section 2: Hub Location Card */}
             <View
               className="bg-white border border-[#f1f5f9] rounded-[16px] p-[17px] mb-3.5 flex-row items-center justify-between"
               style={{
@@ -725,7 +823,7 @@ export const OrderDetailsScreen: React.FC = () => {
               </View>
             </View>
 
-            {/* Section 3: Tracking Progress Card (Figma node 8:63) */}
+            {/* Section 3: Tracking Progress Card */}
             <View
               className="bg-white border border-[#f1f5f9] rounded-[16px] p-[17px] mb-4"
               style={{
@@ -783,7 +881,9 @@ export const OrderDetailsScreen: React.FC = () => {
                         isStep1Active ? 'text-[#215cd4]' : 'text-[#94a3b8]'
                       }`}
                     >
-                      {order.orderPlacedTime || 'Oct 18, 12:32 AM'}
+                      {formatTimelineTimestamp('PENDING_INITIALIZATION') ||
+                        formatTimelineTimestamp('PAYMENT_REQUIRED') ||
+                        'Oct 18, 12:32 AM'}
                     </Text>
                   </View>
                   <Text className="text-[12px] font-normal text-[#64748b] mt-0.5">
@@ -814,7 +914,7 @@ export const OrderDetailsScreen: React.FC = () => {
                           isStep2Active ? 'text-[#215cd4]' : 'text-[#94a3b8]'
                         }`}
                       >
-                        {order.awaitingParcelTime || '02:32 AM'}
+                        {formatTimelineTimestamp('AWAITING_PARCEL') || '02:32 AM'}
                       </Text>
                     )}
                   </View>
@@ -850,7 +950,7 @@ export const OrderDetailsScreen: React.FC = () => {
                           isStep3Active ? 'text-[#215cd4]' : 'text-[#94a3b8]'
                         }`}
                       >
-                        {order.readyToClaimTime || '06:32 AM'}
+                        {formatTimelineTimestamp('READY_TO_CLAIM') || '06:32 AM'}
                       </Text>
                     )}
                   </View>
@@ -866,7 +966,7 @@ export const OrderDetailsScreen: React.FC = () => {
                   {(isStep3Active || isStep3Done) && (
                     <TouchableOpacity
                       activeOpacity={0.7}
-                      onPress={openProofOfDeliveryModal}
+                      onPress={openPodModal}
                       className="flex-row items-center pt-[9px] pb-[3px]"
                     >
                       <Text className="text-[12px] font-semibold text-[#215cd4] mr-1">
@@ -900,7 +1000,7 @@ export const OrderDetailsScreen: React.FC = () => {
                     </Text>
                     {isStep4Done && (
                       <Text className="text-[11px] font-medium text-[#94a3b8]">
-                        {order.claimedTime || 'Oct 18, 08:11 AM'}
+                        {formatTimelineTimestamp('CLAIMED') || 'Oct 18, 08:11 AM'}
                       </Text>
                     )}
                   </View>
@@ -944,7 +1044,7 @@ export const OrderDetailsScreen: React.FC = () => {
               {status === 'READY_TO_CLAIM' &&
                 (hubOpen ? (
                   <View className="gap-3">
-                    {/* Confirmation Checkbox matching Figma node 8:117 */}
+                    {/* Confirmation Checkbox */}
                     <TouchableOpacity
                       activeOpacity={isClaimLocked || isInitiatingClaim ? 1 : 0.8}
                       disabled={isClaimLocked || isInitiatingClaim}
@@ -985,7 +1085,7 @@ export const OrderDetailsScreen: React.FC = () => {
                     </TouchableOpacity>
 
                     {/* Previous Window Elapsed Note */}
-                    {order.claimInitiatedAt && remainingSecs === 0 && (
+                    {orderDetail?.claimInitiatedAt && remainingSecs === 0 && (
                       <View className="bg-amber-50 py-2 px-3 rounded-xl border border-amber-200">
                         <Text className="text-[11px] text-amber-700 font-semibold text-center">
                           Previous claim window elapsed. Press Initiate Claim to unlock counter.
@@ -993,7 +1093,7 @@ export const OrderDetailsScreen: React.FC = () => {
                       </View>
                     )}
 
-                    {/* Primary Claim Button matching Figma node 8:127 */}
+                    {/* Primary Claim Button */}
                     <TouchableOpacity
                       activeOpacity={0.8}
                       onPress={handleInitiateClaim}
@@ -1043,7 +1143,7 @@ export const OrderDetailsScreen: React.FC = () => {
                   </View>
                 ))}
 
-              {/* Return to Home Secondary Button matching Figma node 8:130 */}
+              {/* Return to Home Secondary Button */}
               <TouchableOpacity
                 activeOpacity={0.7}
                 onPress={() => navigateTo('home')}
