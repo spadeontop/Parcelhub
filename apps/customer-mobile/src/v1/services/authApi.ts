@@ -7,6 +7,10 @@ import {
   CustomerLoginRes,
   CustomerCreateMpinReq,
   CustomerCreateMpinRes,
+  CustomerVerifyMpinReq,
+  CustomerVerifyMpinRes,
+  CustomerRefreshTokenReq,
+  CustomerRefreshTokenRes,
 } from '../types/api';
 
 export const authApi = {
@@ -77,6 +81,53 @@ export const authApi = {
       await v1Storage.setCustomerProfile(res.customer);
     }
     await v1Storage.clearPreAuthToken();
+
+    return res;
+  },
+
+  /**
+   * POST /api/v1/customer/mpin
+   * Verifies 4-digit MPIN against preAuthToken, returns authToken, refreshToken, and profile
+   */
+  async verifyMpin(payload: CustomerVerifyMpinReq): Promise<CustomerVerifyMpinRes> {
+    const res = await v1Fetch<CustomerVerifyMpinRes>('/api/v1/customer/mpin', {
+      method: 'POST',
+      body: JSON.stringify({
+        preAuthToken: payload.preAuthToken,
+        mpin: payload.mpin,
+      }),
+    });
+
+    if (res?.authToken) {
+      await v1Storage.setAuthToken(res.authToken);
+    }
+    if (res?.refreshToken) {
+      await v1Storage.setRefreshToken(res.refreshToken);
+    }
+    if (res?.customer) {
+      await v1Storage.setCustomerProfile(res.customer);
+    }
+    await v1Storage.clearPreAuthToken();
+
+    return res;
+  },
+
+  /**
+   * POST /api/v1/customer/refresh
+   * Exchanges refreshToken + 4-digit MPIN for renewed authToken (Silent Session Unlock)
+   */
+  async refreshToken(payload: CustomerRefreshTokenReq): Promise<CustomerRefreshTokenRes> {
+    const res = await v1Fetch<CustomerRefreshTokenRes>('/api/v1/customer/refresh', {
+      method: 'POST',
+      body: JSON.stringify({
+        refreshToken: payload.refreshToken,
+        mpin: payload.mpin,
+      }),
+    });
+
+    if (res?.authToken) {
+      await v1Storage.setAuthToken(res.authToken);
+    }
 
     return res;
   },

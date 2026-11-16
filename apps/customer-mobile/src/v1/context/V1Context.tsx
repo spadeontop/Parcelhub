@@ -78,6 +78,7 @@ export type V1ContextType = {
   readonly registerCustomer: (payload: CustomerRegisterReq) => Promise<CustomerRegisterRes>;
   readonly loginCustomer: (payload: CustomerLoginReq) => Promise<CustomerLoginRes>;
   readonly createCustomerMpin: (mpin: string) => Promise<CustomerCreateMpinRes>;
+  readonly verifyCustomerMpin: (mpin: string) => Promise<void>;
 };
 
 const V1Context = createContext<V1ContextType | undefined>(undefined);
@@ -210,6 +211,54 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
     [preAuthToken, showToast, clearRegistrationDraft]
   );
 
+  // V1 Verify MPIN Action (Dual-Mode: preAuthToken or refreshToken)
+  const verifyCustomerMpin = useCallback(
+    async (mpin: string): Promise<void> => {
+      let activePreAuth = preAuthToken;
+      if (!activePreAuth) {
+        activePreAuth = await v1Storage.getPreAuthToken();
+      }
+
+      if (activePreAuth) {
+        // Mode A: Session verification with preAuthToken
+        const res = await authApi.verifyMpin({
+          preAuthToken: activePreAuth,
+          mpin: mpin as any,
+        });
+
+        setAuthToken(res.authToken);
+        if (res.customer) {
+          setCustomer(res.customer);
+        }
+        setPreAuthToken(null);
+
+        showToast(res.statusMessage || 'Access granted');
+        setActiveScreen('home');
+        return;
+      }
+
+      // Mode B: Silent session unlock with refreshToken
+      const storedRefresh = await v1Storage.getRefreshToken();
+      if (storedRefresh) {
+        const res = await authApi.refreshToken({
+          refreshToken: storedRefresh,
+          mpin: mpin as any,
+        });
+
+        setAuthToken(res.authToken);
+        showToast(res.statusMessage || 'Session renewed');
+        setActiveScreen('home');
+        return;
+      }
+
+      // Neither token available -> redirect to login
+      showToast('Session expired. Please log in again.');
+      setActiveScreen('login');
+      throw new Error('Please log in again');
+    },
+    [preAuthToken, showToast]
+  );
+
   const value: V1ContextType = {
     activeScreen,
     navigateTo,
@@ -224,6 +273,7 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
     registerCustomer,
     loginCustomer,
     createCustomerMpin,
+    verifyCustomerMpin,
   };
 
   return <V1Context.Provider value={value}>{children}</V1Context.Provider>;

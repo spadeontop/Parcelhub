@@ -7,12 +7,12 @@ import {
   ScrollView,
   useWindowDimensions,
 } from 'react-native';
-import { useApp } from '../../context/AppContext';
+import { useV1 } from '../../v1/context/V1Context';
 import { AuthBrandHeader } from '../layout/AuthBrandHeader';
 import { NumericKeypad } from '../common/NumericKeypad';
 
 export const MpinLoginScreen: React.FC = () => {
-  const { authCustomer, verifyCustomerMpin, navigateTo, showToast } = useApp();
+  const { customer, verifyCustomerMpin, navigateTo, showToast } = useV1();
   const { height } = useWindowDimensions();
   const isCompact = height < 700;
 
@@ -44,8 +44,32 @@ export const MpinLoginScreen: React.FC = () => {
             verifyCustomerMpin(nextPin)
               .catch((err: any) => {
                 const msg = err?.message || 'Invalid MPIN';
-                setErrorMessage(msg);
+                const status = err?.statusCode;
+
                 setPin('');
+
+                // Backend-authoritative error handling (Rule #9)
+                // If MPIN unset (HTTP 400), navigate to mpin_create
+                if (status === 400 && msg.toLowerCase().includes('set up your mpin')) {
+                  showToast(msg);
+                  navigateTo('mpin_create');
+                  return;
+                }
+
+                // If Incorrect MPIN (HTTP 401), render inline red error below the dots
+                if (status === 401 && msg.toLowerCase().includes('incorrect')) {
+                  setErrorMessage(msg);
+                  return;
+                }
+
+                // If session expired (HTTP 401) or account blacklisted (HTTP 403), route to login
+                if (status === 401 || status === 403) {
+                  showToast(msg);
+                  navigateTo('login');
+                  return;
+                }
+
+                setErrorMessage(msg);
               })
               .finally(() => {
                 setIsVerifying(false);
@@ -54,7 +78,7 @@ export const MpinLoginScreen: React.FC = () => {
         }
       }
     },
-    [pin, isVerifying, errorMessage, verifyCustomerMpin]
+    [pin, isVerifying, errorMessage, verifyCustomerMpin, showToast, navigateTo]
   );
 
   const handleBackspace = useCallback(() => {
@@ -89,7 +113,7 @@ export const MpinLoginScreen: React.FC = () => {
     showToast('Please contact your branch administrator to reset your MPIN.');
   };
 
-  const displayEmail = authCustomer?.email || 'user@example.com';
+  const displayEmail = customer?.email || 'user@example.com';
 
   return (
     <View className="flex-1 bg-[#2563eb]">
