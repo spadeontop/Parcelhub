@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
+import { StatusBar } from 'expo-status-bar';
 import { useApp } from '../../context/AppContext';
 import { ArrowLeftIcon, DownloadIcon } from '../common/Icons';
 
@@ -17,108 +18,117 @@ export const QrScreen: React.FC = () => {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F8F9FF' }} className="flex-1 bg-[#F8F9FF]">
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: 36 }}
+    <View style={{ flex: 1, backgroundColor: '#215CD4' }} className="flex-1 bg-[#215CD4]">
+      <StatusBar style="light" />
+
+      {/* Curved Top App Bar / Technical Precision Header */}
+      <View
+        style={{
+          backgroundColor: '#215CD4',
+          borderBottomLeftRadius: 32,
+          borderBottomRightRadius: 32,
+          paddingTop: 40,
+          paddingHorizontal: 20,
+          paddingBottom: 32,
+          position: 'relative',
+          overflow: 'hidden',
+        }}
       >
-        {/* Curved Top App Bar / Technical Precision Header */}
+        {/* Header Row */}
         <View
           style={{
-            backgroundColor: '#215CD4',
-            borderBottomLeftRadius: 32,
-            borderBottomRightRadius: 32,
-            paddingTop: 48,
-            paddingHorizontal: 24,
-            paddingBottom: 64,
+            flexDirection: 'row',
+            alignItems: 'center',
             position: 'relative',
-            overflow: 'hidden',
+            width: '100%',
+            height: 40,
           }}
         >
-          {/* Header Row */}
+          {/* Button - Go Back */}
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => navigateTo('home')}
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              backgroundColor: 'rgba(255, 255, 255, 0.15)',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 10,
+            }}
+            accessibilityLabel="Go Back"
+          >
+            <ArrowLeftIcon size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+
+          {/* Centered Screen Title Header */}
           <View
             style={{
-              flexDirection: 'row',
+              position: 'absolute',
+              left: 0,
+              right: 0,
               alignItems: 'center',
-              position: 'relative',
-              width: '100%',
-              height: 46,
+              justifyContent: 'center',
             }}
           >
-            {/* Button - Go Back */}
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() => navigateTo('home')}
+            <Text
               style={{
-                width: 40,
-                height: 40,
-                borderRadius: 20,
-                backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                alignItems: 'center',
-                justifyContent: 'center',
-                zIndex: 10,
-              }}
-              accessibilityLabel="Go Back"
-            >
-              <ArrowLeftIcon size={20} color="#FFFFFF" />
-            </TouchableOpacity>
-
-            {/* Centered Screen Title Header */}
-            <View
-              style={{
-                position: 'absolute',
-                left: 0,
-                right: 0,
-                alignItems: 'center',
-                justifyContent: 'center',
+                fontWeight: '700',
+                fontSize: 20,
+                lineHeight: 28,
+                letterSpacing: -0.5,
+                color: '#FFFFFF',
+                textAlign: 'center',
               }}
             >
-              <Text
-                style={{
-                  fontWeight: '700',
-                  fontSize: 20,
-                  lineHeight: 28,
-                  letterSpacing: -0.5,
-                  color: '#FFFFFF',
-                  textAlign: 'center',
-                }}
-              >
-                Generated QR
-              </Text>
-              <Text
-                style={{
-                  fontWeight: '500',
-                  fontSize: 12,
-                  lineHeight: 16,
-                  letterSpacing: 0.3,
-                  color: 'rgba(219, 234, 254, 0.9)',
-                  textAlign: 'center',
-                  marginTop: 2,
-                }}
-              >
-                Ready to Scan
-              </Text>
-            </View>
+              Generated QR
+            </Text>
+            <Text
+              style={{
+                fontWeight: '500',
+                fontSize: 12,
+                lineHeight: 16,
+                letterSpacing: 0.3,
+                color: 'rgba(219, 234, 254, 0.9)',
+                textAlign: 'center',
+                marginTop: 2,
+              }}
+            >
+              Ready to Scan
+            </Text>
           </View>
         </View>
+      </View>
 
-        {/* Main - PassContentSection */}
-        <View style={{ paddingHorizontal: 20 }}>
+      {/* Scrollable Content Container with Top Rounded Corners */}
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: '#F1F5F9',
+          borderTopLeftRadius: 24,
+          borderTopRightRadius: 24,
+          overflow: 'hidden',
+        }}
+      >
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, paddingTop: 20, paddingBottom: 32 }}
+        >
           {/* Section - Elevated Verification Card (White Surface, 24px Radius) */}
           <View
             style={{
-              marginTop: -32,
               backgroundColor: '#FFFFFF',
               borderWidth: 1,
               borderColor: 'rgba(241, 245, 249, 0.8)',
               borderRadius: 24,
-              padding: 24,
+              padding: 25,
               alignItems: 'center',
               shadowColor: '#215CD4',
               shadowOffset: { width: 0, height: 10 },
               shadowOpacity: 0.08,
-              shadowRadius: 20,
-              elevation: 6,
+              shadowRadius: 30,
+              elevation: 4,
             }}
           >
             {/* Scannable High-Contrast QR Code Area */}
@@ -132,11 +142,13 @@ export const QrScreen: React.FC = () => {
             >
               <View
                 style={{
-                  padding: 12,
+                  width: 197,
+                  height: 209,
                   backgroundColor: '#FFFFFF',
                   borderRadius: 16,
                   alignItems: 'center',
                   justifyContent: 'center',
+                  padding: 12,
                 }}
               >
                 <QRCode
@@ -158,7 +170,7 @@ export const QrScreen: React.FC = () => {
                 borderWidth: 1,
                 borderColor: 'rgba(33, 92, 212, 0.1)',
                 borderRadius: 16,
-                paddingVertical: 14,
+                paddingVertical: 17,
                 paddingHorizontal: 16,
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -169,7 +181,7 @@ export const QrScreen: React.FC = () => {
                 style={{
                   fontWeight: '700',
                   fontSize: 11,
-                  lineHeight: 16,
+                  lineHeight: 16.5,
                   letterSpacing: 1.1,
                   textTransform: 'uppercase',
                   color: '#215CD4',
@@ -194,30 +206,32 @@ export const QrScreen: React.FC = () => {
             </TouchableOpacity>
 
             {/* Explanatory Instructions */}
-            <Text
-              style={{
-                marginTop: 19,
-                fontSize: 13,
-                lineHeight: 21,
-                fontWeight: '400',
-                color: '#6B7280',
-                textAlign: 'center',
-                maxWidth: 280,
-              }}
-            >
-              Please wait by the counter. Show this screen only if requested by staff.
-            </Text>
+            <View style={{ paddingTop: 19.065, paddingHorizontal: 16, alignItems: 'center' }}>
+              <Text
+                style={{
+                  fontSize: 13,
+                  lineHeight: 21.13,
+                  fontWeight: '400',
+                  color: '#6B7280',
+                  textAlign: 'center',
+                  maxWidth: 280,
+                }}
+              >
+                Please wait by the counter. Show this screen only if requested by staff.
+              </Text>
+            </View>
           </View>
 
           {/* Footer - Action Button Group */}
-          <View style={{ marginTop: 24, gap: 12 }}>
+          <View style={{ marginTop: 24, gap: 12, width: '100%', alignItems: 'center' }}>
             {/* Save Pass to Gallery Button */}
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={handleSavePhoto}
               style={{
                 width: '100%',
-                height: 50,
+                paddingVertical: 15,
+                paddingHorizontal: 21,
                 backgroundColor: '#FFFFFF',
                 borderWidth: 1,
                 borderColor: 'rgba(33, 92, 212, 0.15)',
@@ -229,11 +243,11 @@ export const QrScreen: React.FC = () => {
                 shadowColor: '#215CD4',
                 shadowOffset: { width: 0, height: 2 },
                 shadowOpacity: 0.06,
-                shadowRadius: 8,
+                shadowRadius: 4,
                 elevation: 2,
               }}
             >
-              <DownloadIcon size={16} color="#215CD4" strokeWidth={1.8} />
+              <DownloadIcon size={16} color="#215CD4" strokeWidth={1.33} />
               <Text
                 style={{
                   fontWeight: '600',
@@ -271,8 +285,8 @@ export const QrScreen: React.FC = () => {
               </Text>
             </TouchableOpacity>
           </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </View>
     </View>
   );
 };
