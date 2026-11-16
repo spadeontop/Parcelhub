@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { StaffOrder } from '../../../types';
 import { OrderConfirmationCheckbox } from './OrderConfirmationCheckbox';
+import { OrderCardContainer } from '../../common/OrderCardContainer';
 
 interface StaffReadyActionSectionProps {
   order: StaffOrder;
@@ -65,7 +66,7 @@ export const StaffReadyActionSection: React.FC<StaffReadyActionSectionProps> = (
   return (
     <View className="space-y-4">
       {/* Card: CLAIMING TIME REMAINING */}
-      <View className="bg-white border border-[#E2E8F0] rounded-[20px] p-5 mb-4 shadow-sm">
+      <OrderCardContainer className="mb-4">
         <Text className="text-[11px] font-bold text-[#94A3B8] tracking-wider uppercase mb-1">
           CLAIMING TIME REMAINING
         </Text>
@@ -90,7 +91,7 @@ export const StaffReadyActionSection: React.FC<StaffReadyActionSectionProps> = (
             </Text>
           </>
         )}
-      </View>
+      </OrderCardContainer>
 
       {/* Confirmation Checkbox */}
       <OrderConfirmationCheckbox

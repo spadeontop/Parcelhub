@@ -4,12 +4,17 @@ import * as Clipboard from 'expo-clipboard';
 import { StaffOrder } from '../../../types';
 import { StaffBadge } from '../../common/StaffBadge';
 import { Copy, Check } from '../../common/Icons';
+import { OrderCardContainer } from '../../common/OrderCardContainer';
 
 export interface StaffOrderOverviewCardProps {
   order: StaffOrder;
   showFinancials?: boolean;
 }
 
+/**
+ * Order Overview Card strictly conforming to Figma node 1346:2252.
+ * Uses OrderCardContainer for zero-border, rounded-16px, soft-shadow aesthetics.
+ */
 export const StaffOrderOverviewCard: React.FC<StaffOrderOverviewCardProps> = ({
   order,
 }) => {
@@ -27,39 +32,39 @@ export const StaffOrderOverviewCard: React.FC<StaffOrderOverviewCardProps> = ({
   const trackingNumber = order.trackingId || 'PH2696153368792H';
 
   return (
-    <View className="bg-white border border-[#E2E8F0] rounded-[20px] p-5 mb-4 shadow-sm">
-      {/* Top Row: Order ticket label + Status badge */}
+    <OrderCardContainer className="mb-4">
+      {/* Top Row: Order ticket + Order ID on left, Status badge on right (Figma 1346:2253-2256) */}
       <View className="flex-row items-center justify-between">
-        <Text className="text-[12px] font-normal text-[#64748B]">
-          Order ticket
-        </Text>
+        <View>
+          <Text className="text-[11px] font-medium text-[#64748B]">
+            Order ticket
+          </Text>
+          <Text className="text-[23px] font-bold text-[#0F172A] mt-0.5 tracking-tight">
+            {orderId}
+          </Text>
+        </View>
         <StaffBadge status={order.status} variant="modal" />
       </View>
 
-      {/* Big Order ID */}
-      <Text className="text-[22px] font-bold text-[#0F172A] mt-1 tracking-tight">
-        {orderId}
-      </Text>
-
-      {/* Recipient Section */}
-      <View className="mt-3">
-        <Text className="text-[12px] font-normal text-[#64748B]">
-          Recipient
+      {/* Order Owner Section (Figma 1346:2257-2258) */}
+      <View className="mt-4">
+        <Text className="text-[11px] font-normal text-[#64748B]">
+          Order owner
         </Text>
-        <Text className="text-[15px] font-bold text-[#0F172A] mt-0.5">
+        <Text className="text-[16px] font-semibold text-[#1E293B] mt-0.5">
           {recipientName}
         </Text>
       </View>
 
-      {/* Tracking Number Section */}
-      <View className="mt-3">
-        <Text className="text-[12px] font-normal text-[#64748B]">
+      {/* Tracking Number Section (Figma 1346:2259-2262) */}
+      <View className="mt-4">
+        <Text className="text-[11px] font-normal text-[#64748B]">
           Tracking Number
         </Text>
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={handleCopy}
-          className="bg-[#F1F5F9] rounded-xl px-4 py-3 flex-row items-center justify-between mt-1 active:bg-slate-200"
+          className="bg-[#F1F5F9] rounded-xl px-4 py-3 flex-row items-center justify-between mt-1.5 active:bg-slate-200"
           accessibilityLabel="Copy tracking number"
         >
           <Text className="text-[13px] font-bold text-[#334155] font-mono">
@@ -74,6 +79,6 @@ export const StaffOrderOverviewCard: React.FC<StaffOrderOverviewCardProps> = ({
           </View>
         </TouchableOpacity>
       </View>
-    </View>
+    </OrderCardContainer>
   );
 };

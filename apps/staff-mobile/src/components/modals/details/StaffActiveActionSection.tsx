@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { StaffOrder } from '../../../types';
 import { Camera, Check, CheckCircle, AlertCircle } from '../../common/Icons';
+import { OrderCardContainer } from '../../common/OrderCardContainer';
 
 interface StaffActiveActionSectionProps {
   order: StaffOrder;
@@ -172,7 +173,7 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
   return (
     <View className="space-y-4">
       {/* Card: PROOF OF DELIVERY matching awaiting parcel 2 */}
-      <View className="bg-white border border-[#E2E8F0] rounded-2xl p-5 mb-4 shadow-xs">
+      <OrderCardContainer className="mb-4">
         <View className="flex-row items-center justify-between mb-3">
           <Text className="text-[11px] font-bold text-[#94A3B8] tracking-wider uppercase">
             PROOF OF DELIVERY
@@ -245,7 +246,7 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
             </TouchableOpacity>
           </View>
         )}
-      </View>
+      </OrderCardContainer>
 
       {/* Confirmation Checkbox matching awaiting parcel 2 */}
       <TouchableOpacity

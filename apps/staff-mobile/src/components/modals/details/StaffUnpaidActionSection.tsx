@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { StaffOrder } from '../../../types';
 import { OrderConfirmationCheckbox } from './OrderConfirmationCheckbox';
+import { OrderCardContainer } from '../../common/OrderCardContainer';
 
 export interface StaffUnpaidActionSectionProps {
   order: StaffOrder;
@@ -42,7 +43,7 @@ export const StaffUnpaidActionSection: React.FC<StaffUnpaidActionSectionProps> =
   return (
     <View className="space-y-4">
       {/* Card: AMOUNT RECEIVED (Card_Amount_Received in Figma 1343:1662) */}
-      <View className="bg-white border border-[#E2E8F0] rounded-[20px] p-5 shadow-sm">
+      <OrderCardContainer className="mb-4">
         <Text className="text-[11px] font-bold text-[#64748B] tracking-wider uppercase mb-2.5">
           AMOUNT RECEIVED
         </Text>
@@ -94,7 +95,7 @@ export const StaffUnpaidActionSection: React.FC<StaffUnpaidActionSectionProps> =
         <Text className="text-[12px] font-normal text-[#64748B] mt-2 leading-[18px]">
           Change is only given alongside the order parcel&apos;s receiving.
         </Text>
-      </View>
+      </OrderCardContainer>
 
       {/* Confirmation Checkbox (Confirmation_Box in Figma) */}
       <OrderConfirmationCheckbox

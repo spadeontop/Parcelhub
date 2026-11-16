@@ -1,3 +1,4 @@
+export * from '../../common/OrderCardContainer';
 export * from './OrderDetailsHeader';
 export * from './OrderConfirmationCheckbox';
 export * from './StaffOrderOverviewCard';

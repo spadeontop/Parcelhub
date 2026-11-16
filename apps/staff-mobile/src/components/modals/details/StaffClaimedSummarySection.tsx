@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { StaffOrder } from '../../../types';
 import { Check, X, Plus, Minus } from '../../common/Icons';
+import { OrderCardContainer } from '../../common/OrderCardContainer';
 
 interface StaffClaimedSummarySectionProps {
   order: StaffOrder;
@@ -230,16 +231,7 @@ export const StaffClaimedSummarySection: React.FC<StaffClaimedSummarySectionProp
   return (
     <View className="gap-4">
       {/* Tracking Progress Receipt Card matching Figma Frame 3 */}
-      <View
-        className="bg-white border border-[#F1F5F9] rounded-2xl p-5"
-        style={{
-          shadowColor: '#111827',
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.05,
-          shadowRadius: 8,
-          elevation: 2,
-        }}
-      >
+      <OrderCardContainer className="mb-4">
         <Text className="text-[11px] font-bold text-[#94A3B8] tracking-wider uppercase mb-4">
           TRACKING PROGRESS
         </Text>
@@ -343,7 +335,7 @@ export const StaffClaimedSummarySection: React.FC<StaffClaimedSummarySectionProp
             </Text>
           </View>
         </View>
-      </View>
+      </OrderCardContainer>
 
       {/* Confirmation & Return to Home Secondary Action matching Figma */}
       <View className="items-center pt-1 pb-2 gap-3.5">
