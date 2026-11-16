@@ -49,8 +49,8 @@ export const BrandHeader: React.FC<BrandHeaderProps> = ({
             <BackArrowIcon size={16} color="#374151" />
           </TouchableOpacity>
         ) : showLogo ? (
-          <View className="w-9 h-9 rounded-xl bg-blue-50 items-center justify-center border border-blue-100">
-            <ParcelHubLogoSvg size={24} />
+          <View className="w-9 h-9 items-center justify-center">
+            <ParcelHubLogoSvg size={36} />
           </View>
         ) : null}
 

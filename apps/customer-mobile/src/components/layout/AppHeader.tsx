@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, useWindowDimensions } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { useApp } from '../../context/AppContext';
+import { ParcelHubLogoSvg } from '../common/Icons';
 
 interface AppHeaderProps {
   title: string;
@@ -152,40 +153,16 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
           {showLogo && (
             <View
-              className="rounded-[12px] bg-[rgba(255,255,255,0.16)] items-center justify-center border border-[rgba(255,255,255,0.2)] mr-3"
+              className="mr-3 items-center justify-center"
               style={{
-                width: 44,
-                height: 44,
                 shadowColor: '#000000',
                 shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: 0.05,
+                shadowOpacity: 0.1,
                 shadowRadius: 2,
-                elevation: 1,
+                elevation: 2,
               }}
             >
-              <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-                <Path
-                  d="M21 16V8C20.9993 7.2862 20.6182 6.6269 20 6.27L13 2.27C12.3812 1.91273 11.6188 1.91273 11 2.27L4 6.27C3.38183 6.6269 3.00073 7.2862 3 8V16C3.00073 16.7138 3.38183 17.3731 4 17.73L11 21.73C11.6188 22.0873 12.3812 22.0873 13 21.73L20 17.73C20.6182 17.3731 20.9993 16.7138 21 16V16"
-                  stroke="#ffffff"
-                  strokeWidth={2.2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <Path
-                  d="M3.27 6.96L12 12.01L20.73 6.96"
-                  stroke="#ffffff"
-                  strokeWidth={2.2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <Path
-                  d="M12 22.08V12"
-                  stroke="#ffffff"
-                  strokeWidth={2.2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </Svg>
+              <ParcelHubLogoSvg size={40} />
             </View>
           )}
 
