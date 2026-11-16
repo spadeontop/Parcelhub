@@ -78,10 +78,6 @@ export const LoginScreen: React.FC = () => {
             <AuthBrandHeader
               title="ParcelHub"
               subtitle="Customer Mobile Portal"
-              onHelp={() => {
-                Keyboard.dismiss();
-                navigateTo('faq');
-              }}
             />
 
             {/* Main White Sheet with curved top transition */}
