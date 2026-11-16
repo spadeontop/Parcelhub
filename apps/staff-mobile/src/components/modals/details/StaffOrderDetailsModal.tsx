@@ -82,21 +82,26 @@ export const StaffOrderDetailsModal: React.FC<StaffOrderDetailsModalProps> = ({
 
   const isClaimedReceipt = order.status === 'CLAIMED';
 
-  // Determine Subtitle from Status matching Figma 1343:1662
-  const getSubtitle = () => {
+  // Determine Title & Subtitle from Status matching Figma 1343:1662 & 1346:2288
+  const getHeaderInfo = () => {
     switch (order.status) {
       case 'READY_TO_CLAIM':
-        return 'Ready To Claim';
+        return { title: 'Order Details', subtitle: 'Ready To Claim' };
       case 'PAYMENT_REQUIRED':
-        return 'Unpaid Order';
+        return { title: 'Order Details', subtitle: 'Unpaid Order' };
       case 'AWAITING_PARCEL':
-        return 'Awaiting Parcel';
+        return {
+          title: order.courierPaid ? 'Order Details' : 'Complete details',
+          subtitle: order.courierPaid ? 'Awaiting Parcel' : 'ParcelHub - Staff',
+        };
       case 'CLAIMED':
-        return 'CLAIMED & PAID';
+        return { title: 'Order Details', subtitle: 'CLAIMED & PAID' };
       default:
-        return 'Order Details';
+        return { title: 'Order Details', subtitle: 'Order Details' };
     }
   };
+
+  const { title: headerTitle, subtitle: headerSubtitle } = getHeaderInfo();
 
   return (
     <Modal
@@ -106,10 +111,10 @@ export const StaffOrderDetailsModal: React.FC<StaffOrderDetailsModalProps> = ({
       onRequestClose={onClose}
     >
       <View className="flex-1 bg-black">
-        {/* Top Header matching Figma 1343:1662 */}
+        {/* Top Header matching Figma 1343:1662 & 1346:2288 */}
         <OrderDetailsHeader
-          title="Order Details"
-          subtitle={getSubtitle()}
+          title={headerTitle}
+          subtitle={headerSubtitle}
           onBack={onClose}
         />
 
@@ -124,14 +129,10 @@ export const StaffOrderDetailsModal: React.FC<StaffOrderDetailsModalProps> = ({
             contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
             showsVerticalScrollIndicator={false}
           >
-            {/* Overview Card (matching Figma 1343:1662 & 1346:2288) */}
+            {/* Overview Card (matching Figma 1346:2358) */}
             <StaffOrderOverviewCard
               order={order}
-              showFinancials={
-                order.status === 'AWAITING_PARCEL'
-                  ? !order.courierPaid
-                  : !isClaimedReceipt && order.status !== 'PAYMENT_REQUIRED'
-              }
+              showFinancials={false}
             />
 
             {/* Status-specific Action Section */}

@@ -150,6 +150,14 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
   if (!localCourierPaid) {
     return (
       <View>
+        {/* Payment Summary Card (Figma 1346:2288 / 1346:2348) */}
+        <PaymentSummaryCard
+          price={price}
+          paidAmount={paidAmount}
+          change={change}
+          className="mb-4"
+        />
+
         {/* Checkbox: "I confirm that I received the order" */}
         <OrderConfirmationCheckbox
           checked={isReceivedConfirmed}

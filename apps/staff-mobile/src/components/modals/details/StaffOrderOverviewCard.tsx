@@ -57,10 +57,10 @@ export const StaffOrderOverviewCard: React.FC<StaffOrderOverviewCardProps> = ({
         <StaffBadge status={order.status} variant="modal" />
       </View>
 
-      {/* Order Owner Section (Figma 1346:2257-2258) */}
+      {/* Order Owner Section (Figma 1346:2363) */}
       <View className="mt-4">
         <Text className="text-[11px] font-normal text-[#64748B]">
-          Recipient
+          Order owner
         </Text>
         <Text className="text-[16px] font-semibold text-[#1E293B] mt-0.5">
           {recipientName}
