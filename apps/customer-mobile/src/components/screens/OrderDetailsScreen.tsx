@@ -211,19 +211,94 @@ export const OrderDetailsScreen: React.FC = () => {
     <View className="flex-1 bg-[#2563eb]">
       <StatusBar style="light" />
 
-      {/* Top Header matching Figma node 8:3 */}
-      <AppHeader
-        title="Complete Details"
-        subtitle={headerSubtitle}
-        showBackButton
-        centerTitle
-        onBack={() => navigateTo('home')}
-      />
+      {/* Top Header matching Figma node 8:3 or 1308:177 */}
+      {isFocusedPassView ? (
+        <View
+          style={{
+            backgroundColor: '#2563EB',
+            paddingTop: 36,
+            paddingHorizontal: 20,
+            paddingBottom: 24,
+          }}
+        >
+          <View className="flex-row items-center justify-between relative min-h-[40px]">
+            {/* Go Back Button */}
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={handleExitFocusedPass}
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 10,
+              }}
+              accessibilityLabel="Go Back"
+            >
+              <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+                <Path
+                  d="M15 18L9 12L15 6"
+                  stroke="#FFFFFF"
+                  strokeWidth={2.2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </Svg>
+            </TouchableOpacity>
+
+            {/* Centered Title & Subtitle */}
+            <View className="absolute inset-0 items-center justify-center">
+              <Text className="text-[18px] font-bold text-white text-center">
+                Ready For Release
+              </Text>
+              <Text className="text-[12px] font-normal text-[#DBEAFE] text-center mt-0.5">
+                Pickup Pass
+              </Text>
+            </View>
+
+            {/* Help Button */}
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => navigateTo('faq')}
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 10,
+              }}
+              accessibilityLabel="Help"
+            >
+              <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+                <Path
+                  d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3m.08 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"
+                  stroke="#ffffff"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </Svg>
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : (
+        <AppHeader
+          title="Complete Details"
+          subtitle={headerSubtitle}
+          showBackButton
+          centerTitle
+          onBack={() => navigateTo('home')}
+        />
+      )}
 
       {/* Main Curved Transition Sheet matching Figma node 8:13 */}
       <View className="flex-1 bg-[#f1f5f9] rounded-t-[24px] pt-4 overflow-hidden">
         {isFocusedPassView ? (
-          /* Full-screen Focused Claim Pass (Ready, Expiring Soon, Expired, and Claimed states) */
+          /* Full-screen Focused Claim Pass (Ready, Claimed, and Expired states - Figma 1308:177, 1309:187, 1309:235) */
           <Animated.View
             style={{
               flex: 1,
@@ -234,136 +309,221 @@ export const OrderDetailsScreen: React.FC = () => {
             <ScrollView
               className="flex-1 px-4"
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ paddingBottom: 40 }}
+              contentContainerStyle={{ paddingBottom: 40, paddingTop: 4 }}
             >
-              <View className="items-center py-4">
-                {/* Hero Status Callout Badge */}
-                <View className="flex-row items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 mb-3">
-                  <View className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <Text className="text-xs font-bold text-emerald-700 tracking-wide">
-                    {isClaimed
-                      ? 'PARCEL CLAIMED'
-                      : isReleaseExpired
-                      ? 'RELEASE EXPIRED'
-                      : isExpiringSoon
-                      ? 'EXPIRING SOON'
-                      : 'PASS UNLOCKED'}
-                  </Text>
-                </View>
-
-                <Text className="text-2xl font-black text-gray-900 tracking-tight text-center">
-                  {isClaimed
-                    ? 'Claim Successful!'
-                    : isReleaseExpired
-                    ? 'Release Timed Out'
-                    : 'Ready for Release'}
-                </Text>
-
-                <Text className="text-xs text-gray-500 font-medium text-center mt-1 max-w-[280px]">
-                  {isClaimed
-                    ? 'The hub manager has verified your identity and released the parcel.'
-                    : isReleaseExpired
-                    ? 'Your release window elapsed. Tap refresh to unlock a new 5-minute counter.'
-                    : 'Show this QR pass or Ticket ID to the hub operator at the counter.'}
-                </Text>
-
-                {/* Main QR Card */}
+              <View className="items-center">
+                {/* Main PassCard: White Surface, Rounded 24px, Shadow */}
                 <View
                   style={{
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 4 },
+                    shadowColor: '#215CD4',
+                    shadowOffset: { width: 0, height: 10 },
                     shadowOpacity: 0.08,
-                    shadowRadius: 12,
-                    elevation: 3,
+                    shadowRadius: 30,
+                    elevation: 4,
                   }}
-                  className="w-full max-w-[320px] rounded-3xl bg-white border border-[#f0f1f3] p-6 items-center mt-5 mb-4"
+                  className="w-full rounded-[24px] bg-white border border-[#f1f5f9] p-5 items-center mb-4"
                 >
-                  <View className="items-center mb-3">
-                    <Text className="text-[11px] font-bold text-gray-400 tracking-widest uppercase">
-                      TICKET ID
+                  {/* PassCard Header: Ticket ID */}
+                  <View className="w-full pb-3 border-b border-[#e2e8f0]">
+                    <Text className="text-[11px] font-bold text-[#64748b] tracking-wider uppercase">
+                      TICKET
                     </Text>
-                    <Text className="text-base font-bold font-mono text-[#0f172a] mt-0.5">
+                    <Text className="text-[15px] font-bold text-[#1e293b] mt-0.5">
                       {order.id}
                     </Text>
                   </View>
 
-                  <View
-                    style={{
-                      shadowColor: '#000',
-                      shadowOffset: { width: 0, height: 1 },
-                      shadowOpacity: 0.04,
-                      shadowRadius: 2,
-                      elevation: 1,
-                    }}
-                    className="w-[230px] h-[230px] rounded-2xl bg-white border border-[#f0f1f3] p-4 items-center justify-center relative overflow-hidden"
-                  >
+                  {/* Scannable High-Contrast QR Code Area */}
+                  <View className="w-full items-center justify-center py-2 mt-2">
                     <View
                       style={{
-                        opacity: isReleaseExpired || isClaimed ? 0.1 : 1,
+                        width: 197,
+                        height: 209,
                       }}
+                      className="bg-white rounded-[16px] p-3 items-center justify-center relative overflow-hidden"
                     >
-                      {memoizedQr}
-                    </View>
-
-                    {/* Expired Overlay */}
-                    {isReleaseExpired && (
-                      <View className="absolute inset-0 bg-white/95 items-center justify-center p-4">
-                        <ClockIcon size={40} color="#e11d48" />
-                        <Text className="text-sm font-bold text-rose-600 mt-2 text-center">
-                          Pass Expired
-                        </Text>
-                        <Text className="text-[11px] text-gray-500 text-center mt-1">
-                          Press refresh below to regenerate
-                        </Text>
+                      <View
+                        style={{
+                          opacity: isReleaseExpired || isClaimed ? 0.08 : 1,
+                        }}
+                      >
+                        {memoizedQr}
                       </View>
-                    )}
 
-                    {/* Claimed Overlay */}
-                    {isClaimed && (
-                      <View className="absolute inset-0 bg-white/95 items-center justify-center p-4">
-                        <View className="w-12 h-12 rounded-full bg-emerald-100 items-center justify-center mb-2">
-                          <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-                            <Path
-                              d="M20 6L9 17L4 12"
-                              stroke="#059669"
-                              strokeWidth={3}
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </Svg>
+                      {/* Claimed Overlay Badge - Figma 1309:187 Frame 3 (80x80) */}
+                      {isClaimed && (
+                        <View className="absolute inset-0 items-center justify-center">
+                          <View
+                            style={{
+                              width: 80,
+                              height: 80,
+                              borderRadius: 40,
+                              backgroundColor: '#ECFDF5',
+                            }}
+                            className="items-center justify-center"
+                          >
+                            <View
+                              style={{
+                                width: 57.5,
+                                height: 57.5,
+                                borderRadius: 28.75,
+                                backgroundColor: '#D1FAE5',
+                              }}
+                              className="items-center justify-center"
+                            >
+                              <Svg width={28} height={28} viewBox="0 0 24 24" fill="none">
+                                <Path
+                                  d="M5 13l4 4L19 7"
+                                  stroke="#059669"
+                                  strokeWidth={2.8}
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                />
+                              </Svg>
+                            </View>
+                          </View>
                         </View>
-                        <Text className="text-sm font-bold text-emerald-700 text-center">
-                          Claim Verified
-                        </Text>
-                        <Text className="text-[11px] text-gray-500 text-center mt-0.5">
-                          {order.claimedTime || 'Handover Complete'}
-                        </Text>
-                      </View>
-                    )}
+                      )}
+
+                      {/* Expired Overlay Badge - Figma 1309:235 Frame 3 (80x80) */}
+                      {isReleaseExpired && (
+                        <View className="absolute inset-0 items-center justify-center">
+                          <View
+                            style={{
+                              width: 80,
+                              height: 80,
+                              borderRadius: 40,
+                              backgroundColor: '#FEF2F2',
+                            }}
+                            className="items-center justify-center"
+                          >
+                            <View
+                              style={{
+                                width: 57.5,
+                                height: 57.5,
+                                borderRadius: 28.75,
+                                backgroundColor: '#FEE2E2',
+                              }}
+                              className="items-center justify-center"
+                            >
+                              <Svg width={26} height={26} viewBox="0 0 24 24" fill="none">
+                                <Path
+                                  d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"
+                                  stroke="#DC2626"
+                                  strokeWidth={2}
+                                />
+                                <Path
+                                  d="M12 6v6l4 2"
+                                  stroke="#DC2626"
+                                  strokeWidth={2}
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                />
+                              </Svg>
+                            </View>
+                          </View>
+                        </View>
+                      )}
+                    </View>
                   </View>
 
-                  {/* 5-minute Countdown Timer (Only when release is active) */}
-                  {isReleaseActive && (
-                    <View
-                      className={`mt-4 px-4 py-2 rounded-xl flex-row items-center gap-2 ${
-                        isExpiringSoon
-                          ? 'bg-rose-50 border border-rose-200'
-                          : 'bg-emerald-50 border border-emerald-200'
-                      }`}
-                    >
-                      <ClockIcon size={16} color={isExpiringSoon ? '#e11d48' : '#059669'} />
-                      <Text
-                        className={`text-xs font-mono font-bold ${
-                          isExpiringSoon ? 'text-rose-600 animate-pulse' : 'text-emerald-700'
-                        }`}
-                      >
-                        {timeFormatted} remaining
-                      </Text>
+                  {/* Status / Timer Container */}
+                  <View className="w-full mt-2">
+                    <View className="border border-[rgba(33,92,212,0.1)] rounded-[16px] py-[15px] px-4 items-center justify-center">
+                      {isClaimed ? (
+                        <>
+                          <Text className="text-[11px] font-bold text-[#215cd4] tracking-[1.1px] uppercase">
+                            STATUS
+                          </Text>
+                          <Text className="text-[20px] font-bold text-[#10b981] tracking-[1px] mt-0.5">
+                            Claimed
+                          </Text>
+                        </>
+                      ) : isReleaseExpired ? (
+                        <>
+                          <Text className="text-[11px] font-bold text-[#215cd4] tracking-[1.1px] uppercase">
+                            STATUS
+                          </Text>
+                          <Text className="text-[20px] font-bold text-[#dc2626] tracking-[1px] mt-0.5">
+                            Claim Expired
+                          </Text>
+                        </>
+                      ) : (
+                        <>
+                          <Text className="text-[11px] font-bold text-[#215cd4] tracking-[1.1px] uppercase">
+                            PROCEED TO THE HUB
+                          </Text>
+                          <Text
+                            className={`text-[20px] font-bold tracking-[1px] mt-0.5 ${
+                              isExpiringSoon ? 'text-[#e11d48]' : 'text-[#1e1e1e]'
+                            }`}
+                          >
+                            {timeFormatted}
+                          </Text>
+                        </>
+                      )}
                     </View>
-                  )}
+                  </View>
+
+                  {/* Explanatory Instructions */}
+                  <View className="mt-4 px-3 items-center">
+                    {isClaimed || isReleaseExpired ? (
+                      <View className="items-center">
+                        <Text className="text-[13px] text-[#6b7280] text-center leading-[21px]">
+                          Your order has been successfully claimed
+                        </Text>
+                        <Text className="text-[13px] text-[#6b7280] text-center leading-[21px]">
+                          You can safely exit this page
+                        </Text>
+                      </View>
+                    ) : (
+                      <Text className="text-[13px] text-[#6b7280] text-center leading-[21px] max-w-[280px]">
+                        Please wait by the counter. Show this screen only if requested by staff.
+                      </Text>
+                    )}
+                  </View>
                 </View>
 
-                {/* Refresh Release Window Button (Only if Expired) */}
+                {/* ClaimSuccess_OrderCard (Figma 1308:231, 1309:214, 1309:262) */}
+                <View
+                  style={{
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.04,
+                    shadowRadius: 8,
+                    elevation: 2,
+                  }}
+                  className="w-full rounded-[16px] bg-white border border-[#f1f5f9] p-4 mb-4"
+                >
+                  <Text className="text-[11px] font-bold text-[#64748b] tracking-wider uppercase pb-2.5 border-b border-[#f1f5f9]">
+                    ORDER DETAILS
+                  </Text>
+
+                  <View className="pt-3 gap-3">
+                    {/* Item Row */}
+                    <View className="flex-row items-center justify-between">
+                      <Text className="text-[12px] text-[#64748b]">Item</Text>
+                      <Text
+                        numberOfLines={1}
+                        className="text-[13px] font-bold text-[#1e293b] flex-1 text-right ml-4"
+                      >
+                        {order.product}
+                      </Text>
+                    </View>
+
+                    {/* Cash Change Row */}
+                    <View className="flex-row items-center justify-between pt-0.5">
+                      <Text className="text-[12px] text-[#64748b]">Cash Change</Text>
+                      <View className="bg-[#eff6ff] px-3 py-1 rounded-[8px] items-center justify-center">
+                        <Text className="text-[13px] font-bold text-[#2563eb]">
+                          {order.change || '₱20'}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                </View>
+
+                {/* ReleaseTimeout_Button_Reactivate (Only in Expired state - Figma 1309:290) */}
                 {isReleaseExpired && (
                   <TouchableOpacity
                     activeOpacity={0.8}
@@ -376,51 +536,25 @@ export const OrderDetailsScreen: React.FC = () => {
                       shadowRadius: 10,
                       elevation: 4,
                     }}
-                    className="w-full max-w-[320px] py-3.5 px-6 rounded-2xl bg-[#2563eb] flex-row items-center justify-center gap-2 mb-4"
+                    className="w-full h-[46px] rounded-[12px] bg-[#2563eb] items-center justify-center mb-3"
                   >
                     {isRefreshingRelease ? (
                       <ActivityIndicator size="small" color="#ffffff" />
                     ) : (
-                      <>
-                        <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-                          <Path
-                            d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"
-                            stroke="#ffffff"
-                            strokeWidth={2}
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </Svg>
-                        <Text className="text-white font-bold text-sm tracking-wide">
-                          Unlock New 5-Minute Pass
-                        </Text>
-                      </>
+                      <Text className="text-white font-bold text-[14px] text-center">
+                        Re-activate Release Window
+                      </Text>
                     )}
                   </TouchableOpacity>
                 )}
 
-                {/* Order Summary Card */}
-                <View className="w-full max-w-[320px] rounded-2xl bg-white border border-[#f1f5f9] p-4 gap-3">
-                  <View className="flex-row items-center justify-between">
-                    <Text className="text-xs text-gray-500 font-normal">Item</Text>
-                    <Text className="text-sm font-bold text-[#0f172a]">{order.product}</Text>
-                  </View>
-
-                  <View className="flex-row items-center justify-between pt-1">
-                    <Text className="text-xs text-gray-500 font-normal">Cash Change</Text>
-                    <Text className="text-sm font-bold text-[#2563eb] font-mono">
-                      {order.change || '₱0.00'}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Return to Home Action Button */}
+                {/* Return to Home Action Button (Figma 1308:288, 1309:223, 1309:271) */}
                 <TouchableOpacity
                   activeOpacity={0.7}
                   onPress={handleExitFocusedPass}
-                  className="w-full max-w-[320px] py-3.5 mt-4 items-center justify-center rounded-xl"
+                  className="w-full py-3 items-center justify-center"
                 >
-                  <Text className="text-sm font-semibold text-[#64748b]">
+                  <Text className="text-[14px] font-bold text-[#334155] text-center">
                     Return to Home
                   </Text>
                 </TouchableOpacity>
