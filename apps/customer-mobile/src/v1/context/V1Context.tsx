@@ -14,9 +14,13 @@ import {
   CustomerLoginRes,
   CustomerCreateMpinRes,
   CustomerProfile,
+  CustomerOrderSummary,
+  CustomerListOrdersQueryParams,
   JWTToken,
 } from '../types/api';
 import { authApi } from '../services/authApi';
+import { orderApi } from '../services/orderApi';
+import { customerApi } from '../services/customerApi';
 import { v1Storage } from '../utils/storage';
 
 export type ScreenId =
@@ -66,12 +70,15 @@ export type ToastState = {
 
 export type V1ContextType = {
   readonly activeScreen: ScreenId;
-  readonly navigateTo: (screen: ScreenId) => void;
+  readonly navigateTo: (screen: ScreenId, params?: { orderId?: string }) => void;
   readonly toast: ToastState;
   readonly showToast: (message: string) => void;
   readonly preAuthToken: JWTToken | null;
   readonly authToken: JWTToken | null;
   readonly customer: Partial<CustomerProfile> | null;
+  readonly orders: readonly CustomerOrderSummary[];
+  readonly selectedOrderId: string | null;
+  readonly setSelectedOrderId: (id: string | null) => void;
   readonly registrationDraft: RegistrationDraft;
   readonly updateRegistrationDraft: (partial: Partial<RegistrationDraft>) => void;
   readonly clearRegistrationDraft: () => void;
@@ -79,6 +86,8 @@ export type V1ContextType = {
   readonly loginCustomer: (payload: CustomerLoginReq) => Promise<CustomerLoginRes>;
   readonly createCustomerMpin: (mpin: string) => Promise<CustomerCreateMpinRes>;
   readonly verifyCustomerMpin: (mpin: string) => Promise<void>;
+  readonly refetchOrders: (query?: CustomerListOrdersQueryParams) => Promise<void>;
+  readonly refetchProfile: () => Promise<void>;
 };
 
 const V1Context = createContext<V1ContextType | undefined>(undefined);
@@ -89,6 +98,8 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [preAuthToken, setPreAuthToken] = useState<JWTToken | null>(null);
   const [authToken, setAuthToken] = useState<JWTToken | null>(null);
   const [customer, setCustomer] = useState<Partial<CustomerProfile> | null>(null);
+  const [orders, setOrders] = useState<readonly CustomerOrderSummary[]>([]);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [registrationDraft, setRegistrationDraft] = useState<RegistrationDraft>(
     DEFAULT_REGISTRATION_DRAFT
   );
@@ -107,8 +118,11 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
     }, 3200);
   }, []);
 
-  const navigateTo = useCallback((screen: ScreenId) => {
+  const navigateTo = useCallback((screen: ScreenId, params?: { orderId?: string }) => {
     setActiveScreen(screen);
+    if (params?.orderId) {
+      setSelectedOrderId(params.orderId);
+    }
   }, []);
 
   const updateRegistrationDraft = useCallback(
@@ -122,7 +136,58 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
     setRegistrationDraft(DEFAULT_REGISTRATION_DRAFT);
   }, []);
 
-  // Initialize stored tokens
+  // V1 Profile Refresh with 401 Silent Renewal trigger
+  const refetchProfile = useCallback(async (): Promise<void> => {
+    let token = authToken;
+    if (!token) token = await v1Storage.getAuthToken();
+    if (!token) return;
+
+    try {
+      const res = await customerApi.getProfile(token);
+      if (res?.customer) {
+        setCustomer(res.customer);
+      }
+    } catch (err: any) {
+      // V1 Feature #1: Silent session refresh interceptor on 401
+      if (err?.statusCode === 401) {
+        const refresh = await v1Storage.getRefreshToken();
+        if (refresh) {
+          showToast('Session expired. Enter MPIN to resume.');
+          setActiveScreen('mpin_login');
+        } else {
+          setActiveScreen('login');
+        }
+      }
+    }
+  }, [authToken, showToast]);
+
+  // V1 Orders Fetch with 401 Silent Renewal trigger
+  const refetchOrders = useCallback(
+    async (query?: CustomerListOrdersQueryParams): Promise<void> => {
+      let token = authToken;
+      if (!token) token = await v1Storage.getAuthToken();
+      if (!token) return;
+
+      try {
+        const res = await orderApi.listOrders(token, query);
+        setOrders(res.orders || []);
+      } catch (err: any) {
+        // V1 Feature #1: Silent session refresh interceptor on 401
+        if (err?.statusCode === 401) {
+          const refresh = await v1Storage.getRefreshToken();
+          if (refresh) {
+            showToast('Session expired. Enter MPIN to resume.');
+            setActiveScreen('mpin_login');
+          } else {
+            setActiveScreen('login');
+          }
+        }
+      }
+    },
+    [authToken, showToast]
+  );
+
+  // Initialize stored tokens on mount
   useEffect(() => {
     const initStorage = async () => {
       try {
@@ -132,12 +197,42 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
           v1Storage.getCustomerProfile(),
         ]);
         if (storedPreAuth) setPreAuthToken(storedPreAuth);
-        if (storedAuth) setAuthToken(storedAuth);
         if (storedProfile) setCustomer(storedProfile);
+
+        if (storedAuth) {
+          setAuthToken(storedAuth);
+          setActiveScreen('home');
+        }
       } catch {}
     };
     initStorage();
   }, []);
+
+  // When authToken is set, load fresh profile and orders
+  useEffect(() => {
+    if (authToken) {
+      refetchProfile();
+      refetchOrders();
+    }
+  }, [authToken, refetchProfile, refetchOrders]);
+
+  // Interval polling while viewing HomeScreen
+  useEffect(() => {
+    if (activeScreen !== 'home' || !authToken) return;
+
+    let isFetching = false;
+    const intervalTimer = setInterval(async () => {
+      if (isFetching) return;
+      isFetching = true;
+      try {
+        await refetchOrders();
+      } finally {
+        isFetching = false;
+      }
+    }, 5000);
+
+    return () => clearInterval(intervalTimer);
+  }, [activeScreen, authToken, refetchOrders]);
 
   // V1 Register Customer Action
   const registerCustomer = useCallback(
@@ -267,6 +362,9 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
     preAuthToken,
     authToken,
     customer,
+    orders,
+    selectedOrderId,
+    setSelectedOrderId,
     registrationDraft,
     updateRegistrationDraft,
     clearRegistrationDraft,
@@ -274,6 +372,8 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
     loginCustomer,
     createCustomerMpin,
     verifyCustomerMpin,
+    refetchOrders,
+    refetchProfile,
   };
 
   return <V1Context.Provider value={value}>{children}</V1Context.Provider>;
