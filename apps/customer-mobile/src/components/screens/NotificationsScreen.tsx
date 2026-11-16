@@ -10,6 +10,7 @@ import Svg, { Path } from 'react-native-svg';
 import { StatusBar } from 'expo-status-bar';
 import { useApp } from '../../context/AppContext';
 import { BottomNav } from '../layout/BottomNav';
+import { AppHeader } from '../layout/AppHeader';
 
 export const NotificationsScreen: React.FC = () => {
   const { notifications, markAllNotificationsAsRead, navigateTo } = useApp();
@@ -21,44 +22,11 @@ export const NotificationsScreen: React.FC = () => {
     <View className="flex-1 bg-[#2563eb]">
       <StatusBar style="light" />
 
-      {/* Top Header (Signature Curved Blue Header) */}
-      <View
-        className="bg-[#2563eb] px-5"
-        style={{
-          paddingTop: isCompact ? 14 : 24,
-          paddingBottom: isCompact ? 20 : 28,
-        }}
-      >
-        <View className="flex-row items-center justify-between">
-          {/* Header Title & Subtitle */}
-          <View>
-            <Text className="text-[20px] font-bold text-white tracking-tight leading-[26px]">
-              Notifications
-            </Text>
-            <Text className="text-[11px] font-bold text-[#dbeafe] uppercase tracking-wider mt-1">
-              ACTIVITY UPDATES
-            </Text>
-          </View>
-
-          {/* Help Button */}
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={() => navigateTo('faq')}
-            className="w-9 h-9 rounded-full bg-white/20 items-center justify-center border border-white/20"
-            accessibilityLabel="Help"
-          >
-            <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-              <Path
-                d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3m.08 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"
-                stroke="#ffffff"
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </Svg>
-          </TouchableOpacity>
-        </View>
-      </View>
+      {/* Top Header */}
+      <AppHeader
+        title="Notifications"
+        subtitle="ACTIVITY UPDATES"
+      />
 
       {/* Main Sheet with Curved Transition */}
       <View className="flex-1 bg-[#f8fafc] rounded-t-[32px] pt-4 overflow-hidden">

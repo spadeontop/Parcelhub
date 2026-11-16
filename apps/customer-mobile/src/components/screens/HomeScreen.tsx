@@ -10,6 +10,7 @@ import {
 import Svg, { Path } from 'react-native-svg';
 import { useApp } from '../../context/AppContext';
 import { BottomNav } from '../layout/BottomNav';
+import { AppHeader } from '../layout/AppHeader';
 import { getStatusLabel, getStatusPillStyles } from '../../utils/statusHelpers';
 
 export const HomeScreen: React.FC = () => {
@@ -35,88 +36,13 @@ export const HomeScreen: React.FC = () => {
 
   return (
     <View className="flex-1 bg-[#2563eb]">
-      {/* Top Header (Signature Curved Blue Header) */}
-      <View
-        className="bg-[#2563eb] px-5"
-        style={{
-          paddingTop: isCompact ? 14 : 24,
-          paddingBottom: isCompact ? 20 : 28,
-        }}
-      >
-        <View className="flex-row items-center justify-between">
-          {/* Brand Identity: 44x44 Box Logo + ParcelHub + Hub Subtitle */}
-          <View className="flex-row items-center">
-            {/* 44x44 Isometric 3D Box Logo */}
-            <View
-              className="rounded-[12px] bg-[rgba(255,255,255,0.16)] items-center justify-center border border-[rgba(255,255,255,0.2)] mr-3"
-              style={{
-                width: 44,
-                height: 44,
-                shadowColor: '#000000',
-                shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: 0.05,
-                shadowRadius: 2,
-                elevation: 1,
-              }}
-            >
-              <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-                <Path
-                  d="M21 16V8C20.9993 7.2862 20.6182 6.6269 20 6.27L13 2.27C12.3812 1.91273 11.6188 1.91273 11 2.27L4 6.27C3.38183 6.6269 3.00073 7.2862 3 8V16C3.00073 16.7138 3.38183 17.3731 4 17.73L11 21.73C11.6188 22.0873 12.3812 22.0873 13 21.73L20 17.73C20.6182 17.3731 20.9993 16.7138 21 16V16"
-                  stroke="#ffffff"
-                  strokeWidth={2.2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <Path
-                  d="M3.27 6.96L12 12.01L20.73 6.96"
-                  stroke="#ffffff"
-                  strokeWidth={2.2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <Path
-                  d="M12 22.08V12"
-                  stroke="#ffffff"
-                  strokeWidth={2.2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </Svg>
-            </View>
-
-            {/* Title & Subtitle */}
-            <View>
-              <Text className="text-[18px] font-bold text-white leading-[22px]">
-                ParcelHub
-              </Text>
-              <View className="flex-row items-center gap-1.5 mt-0.5">
-                <View className="w-1.5 h-1.5 rounded-full bg-[#10b981]" />
-                <Text className="text-[11px] font-bold text-[#dbeafe] uppercase tracking-wide">
-                  LILY'S CATERING HUB
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Help Button */}
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={() => navigateTo('faq')}
-            className="w-9 h-9 rounded-full bg-white/10 items-center justify-center border border-white/20"
-            accessibilityLabel="Help"
-          >
-            <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-              <Path
-                d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3m.08 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"
-                stroke="#ffffff"
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </Svg>
-          </TouchableOpacity>
-        </View>
-      </View>
+      {/* Top Header */}
+      <AppHeader
+        title="ParcelHub"
+        subtitle="LILY'S CATERING HUB"
+        showLogo
+        statusDotColor="#10b981"
+      />
 
       {/* Main Sheet with Curved Transition */}
       <View className="flex-1 bg-[#f8fafc] rounded-t-[32px] pt-4">

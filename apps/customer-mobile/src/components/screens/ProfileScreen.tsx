@@ -10,6 +10,7 @@ import Svg, { Path } from 'react-native-svg';
 import { StatusBar } from 'expo-status-bar';
 import { useApp } from '../../context/AppContext';
 import { BottomNav } from '../layout/BottomNav';
+import { AppHeader } from '../layout/AppHeader';
 import { EditContactModal } from '../modals/EditContactModal';
 import { ChangePasswordModal } from '../modals/ChangePasswordModal';
 import { DeleteAccountModal } from '../modals/DeleteAccountModal';
@@ -61,60 +62,14 @@ export const ProfileScreen: React.FC = () => {
     <View className="flex-1 bg-[#2563eb]">
       <StatusBar style="light" />
 
-      {/* Top Header (Signature Blue Header with Centered Title & Glass Buttons) */}
-      <View
-        className="bg-[#2563eb] px-5"
-        style={{
-          paddingTop: isCompact ? 14 : 24,
-          paddingBottom: isCompact ? 20 : 28,
-        }}
-      >
-        <View className="flex-row items-center justify-between">
-          {/* Back Button */}
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={() => navigateTo('home')}
-            className="w-10 h-10 rounded-full bg-white/20 items-center justify-center border border-white/20"
-            accessibilityLabel="Back to Home"
-          >
-            <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-              <Path
-                d="M15 19l-7-7 7-7"
-                stroke="#ffffff"
-                strokeWidth={2.4}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </Svg>
-          </TouchableOpacity>
-
-          {/* Centered Title */}
-          <Text className="text-[18px] font-bold text-white tracking-tight">
-            Account Settings
-          </Text>
-
-          {/* Help Button */}
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={() => navigateTo('faq')}
-            className="w-10 h-10 rounded-full bg-white/20 items-center justify-center border border-white/20"
-            accessibilityLabel="Help"
-          >
-            <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-              <Path
-                d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3m.08 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"
-                stroke="#ffffff"
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </Svg>
-          </TouchableOpacity>
-        </View>
-      </View>
+      {/* Top Header */}
+      <AppHeader
+        title="Account Settings"
+        subtitle="PROFILE & SECURITY"
+      />
 
       {/* Main Sheet with Curved Transition */}
-      <View className="flex-1 bg-[#f8fafc] rounded-t-[28px] pt-5 overflow-hidden">
+      <View className="flex-1 bg-[#f8fafc] rounded-t-[32px] pt-4 overflow-hidden">
         <ScrollView
           showsVerticalScrollIndicator={false}
           className="flex-1 px-4"
