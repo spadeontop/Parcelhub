@@ -1,8 +1,15 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  useWindowDimensions,
+} from 'react-native';
+import Svg, { Path } from 'react-native-svg';
+import { StatusBar } from 'expo-status-bar';
 import { useApp } from '../../context/AppContext';
 import { BottomNav } from '../layout/BottomNav';
-import { BackButton } from '../common/BackButton';
 import { EditContactModal } from '../modals/EditContactModal';
 import { ChangePasswordModal } from '../modals/ChangePasswordModal';
 import { DeleteAccountModal } from '../modals/DeleteAccountModal';
@@ -30,6 +37,8 @@ function getMaskedPhone(phone?: string): string {
 
 export const ProfileScreen: React.FC = () => {
   const { authCustomer, navigateTo } = useApp();
+  const { height } = useWindowDimensions();
+  const isCompact = height < 700;
 
   // Modal display states
   const [isEditContactOpen, setIsEditContactOpen] = useState<boolean>(false);
@@ -40,157 +49,262 @@ export const ProfileScreen: React.FC = () => {
   const maskedEmail = getMaskedEmail(authCustomer?.email);
   const maskedPhone = getMaskedPhone(authCustomer?.phonenumber);
 
-  const firstName = authCustomer?.firstname || '—';
-  const middleInitial = authCustomer?.middleinitial || '—';
-  const lastName = authCustomer?.lastname || '—';
+  const fullName = [
+    authCustomer?.firstname,
+    authCustomer?.middleinitial ? `${authCustomer.middleinitial}.` : null,
+    authCustomer?.lastname,
+  ]
+    .filter(Boolean)
+    .join(' ') || 'John Doe';
 
   return (
-    <View
-      style={{ flex: 1, backgroundColor: '#ffffff' }}
-      className="flex-1 bg-white px-5 pt-3 pb-2"
-    >
-      {/* Back Navigation Bar & Screen Title */}
-      <View className="flex-row items-center justify-between py-2 mb-3">
-        <BackButton
-          onPress={() => navigateTo('home')}
-          accessibilityLabel="Back to Home"
-          className="-ml-1"
-        />
-        <Text className="flex-1 text-center text-lg font-bold text-gray-900 tracking-tight">
-          User Profile
-        </Text>
-        <View className="w-8 h-8" />
-      </View>
+    <View className="flex-1 bg-[#2563eb]">
+      <StatusBar style="light" />
 
-      <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
-        {/* Card 1: Profile overview */}
-        <View className="rounded-2xl border border-gray-200 bg-white p-5 mb-4 shadow-sm">
-          <Text className="text-[15px] font-bold text-gray-900 mb-4">
-            Profile overview
-          </Text>
-
-          {/* First Name & Middle Initial Row */}
-          <View className="flex-row items-start justify-between">
-            <View className="flex-1">
-              <Text className="text-[11px] font-medium text-gray-400 mb-1">
-                First name
-              </Text>
-              <Text className="text-sm font-bold text-gray-900">
-                {firstName}
-              </Text>
-            </View>
-
-            <View className="flex-1">
-              <Text className="text-[11px] font-medium text-gray-400 mb-1">
-                Middle initial
-              </Text>
-              <Text className="text-sm font-bold text-gray-900">
-                {middleInitial}
-              </Text>
-            </View>
-          </View>
-
-          {/* Last Name Row */}
-          <View className="mt-4">
-            <Text className="text-[11px] font-medium text-gray-400 mb-1">
-              Last name
-            </Text>
-            <Text className="text-sm font-bold text-gray-900">
-              {lastName}
-            </Text>
-          </View>
-        </View>
-
-        {/* Card 2: Contact details */}
-        <View className="rounded-2xl border border-gray-200 bg-white p-5 mb-4 shadow-sm">
-          <View className="flex-row items-center justify-between">
-            <Text className="text-[15px] font-bold text-gray-900">
-              Contact details
-            </Text>
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() => setIsEditContactOpen(true)}
-              className="border border-[#215cd4] rounded-full px-3 py-1 items-center justify-center"
-              accessibilityLabel="Edit Details"
-            >
-              <Text className="text-xs font-semibold text-[#215cd4]">
-                Edit Details
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          <Text className="text-xs text-gray-400 mt-1 mb-4 leading-normal">
-            These are the details we use to reach you.
-          </Text>
-
-          <View className="mb-3">
-            <Text className="text-[11px] font-medium text-gray-400 mb-0.5">
-              Email
-            </Text>
-            <Text className="text-sm font-bold text-gray-900">
-              {maskedEmail}
-            </Text>
-          </View>
-
-          <View>
-            <Text className="text-[11px] font-medium text-gray-400 mb-0.5">
-              Phone number
-            </Text>
-            <Text className="text-sm font-bold text-gray-900">
-              {maskedPhone}
-            </Text>
-          </View>
-        </View>
-
-        {/* Card 3: Password */}
-        <View className="rounded-2xl border border-gray-200 bg-white p-5 mb-5 shadow-sm">
-          <View className="flex-row items-center justify-between">
-            <Text className="text-[15px] font-bold text-gray-900">
-              Password
-            </Text>
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() => setIsChangePasswordOpen(true)}
-              className="border border-[#215cd4] rounded-full px-3 py-1 items-center justify-center"
-              accessibilityLabel="Change password"
-            >
-              <Text className="text-xs font-semibold text-[#215cd4]">
-                Change password
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Bottom Action Buttons */}
-        <View className="mt-2 mb-4">
-          {/* Delete Account button */}
+      {/* Top Header (Signature Blue Header with Centered Title & Glass Buttons) */}
+      <View
+        className="bg-[#2563eb] px-5"
+        style={{
+          paddingTop: isCompact ? 14 : 24,
+          paddingBottom: isCompact ? 20 : 28,
+        }}
+      >
+        <View className="flex-row items-center justify-between">
+          {/* Back Button */}
           <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => setIsDeleteAccountOpen(true)}
-            className="w-full h-12 rounded-2xl border border-red-300 bg-white active:bg-red-50 items-center justify-center mb-3 shadow-xs"
-            accessibilityLabel="Delete Account"
+            activeOpacity={0.7}
+            onPress={() => navigateTo('home')}
+            className="w-10 h-10 rounded-full bg-white/20 items-center justify-center border border-white/20"
+            accessibilityLabel="Back to Home"
           >
-            <Text className="text-sm font-semibold text-[#ef4444] tracking-wide">
-              Delete Account
-            </Text>
+            <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+              <Path
+                d="M15 19l-7-7 7-7"
+                stroke="#ffffff"
+                strokeWidth={2.4}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </Svg>
           </TouchableOpacity>
 
-          {/* Sign Out button */}
+          {/* Centered Title */}
+          <Text className="text-[18px] font-bold text-white tracking-tight">
+            Account Settings
+          </Text>
+
+          {/* Help Button */}
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => navigateTo('faq')}
+            className="w-10 h-10 rounded-full bg-white/20 items-center justify-center border border-white/20"
+            accessibilityLabel="Help"
+          >
+            <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+              <Path
+                d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3m.08 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"
+                stroke="#ffffff"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </Svg>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Main Sheet with Curved Transition */}
+      <View className="flex-1 bg-[#f8fafc] rounded-t-[28px] pt-5 overflow-hidden">
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          className="flex-1 px-4"
+          contentContainerStyle={{ paddingBottom: 24 }}
+        >
+          {/* Card 1: CONTACT & DETAILS */}
+          <View
+            className="rounded-[16px] bg-white border border-[#f1f5f9] p-[17px] mb-4"
+            style={{
+              shadowColor: '#000000',
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: 0.05,
+              shadowRadius: 2,
+              elevation: 1,
+            }}
+          >
+            {/* Header with Title and Edit Link */}
+            <View className="flex-row items-center justify-between pb-3 border-b border-[#f1f5f9]">
+              <Text className="text-[12px] font-bold tracking-[0.6px] text-[#64748b] uppercase">
+                CONTACT & DETAILS
+              </Text>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => setIsEditContactOpen(true)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityLabel="Edit Details"
+              >
+                <Text className="text-[12px] font-bold text-[#2563eb]">
+                  Edit
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Full Name Row */}
+            <View className="flex-row items-center justify-between py-3 border-b border-[#f8fafc]">
+              <Text className="text-[12px] text-[#64748b]">
+                Full Name
+              </Text>
+              <Text className="text-[14px] font-bold text-[#1e293b]">
+                {fullName}
+              </Text>
+            </View>
+
+            {/* Email Address Row */}
+            <View className="flex-row items-center justify-between py-3 border-b border-[#f8fafc]">
+              <Text className="text-[12px] text-[#64748b]">
+                Email Address
+              </Text>
+              <Text className="text-[12px] font-bold font-mono text-[#1e293b]">
+                {maskedEmail}
+              </Text>
+            </View>
+
+            {/* Phone Number Row */}
+            <View className="flex-row items-center justify-between py-3">
+              <Text className="text-[12px] text-[#64748b]">
+                Phone Number
+              </Text>
+              <Text className="text-[14px] font-bold text-[#1e293b] tracking-[0.7px]">
+                {maskedPhone}
+              </Text>
+            </View>
+          </View>
+
+          {/* Card 2: SECURITY & LOGIN */}
+          <View
+            className="rounded-[16px] bg-white border border-[#f1f5f9] p-[17px] mb-4"
+            style={{
+              shadowColor: '#000000',
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: 0.05,
+              shadowRadius: 2,
+              elevation: 1,
+            }}
+          >
+            {/* Header */}
+            <View className="pb-3 border-b border-[#f1f5f9]">
+              <Text className="text-[12px] font-bold tracking-[0.6px] text-[#64748b] uppercase">
+                SECURITY & LOGIN
+              </Text>
+            </View>
+
+            {/* Password Row */}
+            <View className="flex-row items-center justify-between py-3.5">
+              <View>
+                <Text className="text-[12px] text-[#64748b]">
+                  Password
+                </Text>
+                <Text className="text-[12px] font-bold text-[#1e293b] tracking-[1.2px] mt-0.5">
+                  ••••••••
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => setIsChangePasswordOpen(true)}
+                className="bg-[#f1f5f9] px-3.5 py-1.5 rounded-[8px]"
+                accessibilityLabel="Change Password"
+              >
+                <Text className="text-[12px] font-bold text-[#334155]">
+                  Change
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Card 3: PREFERENCES */}
+          <View
+            className="rounded-[16px] bg-white border border-[#f1f5f9] p-[17px] mb-4"
+            style={{
+              shadowColor: '#000000',
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: 0.05,
+              shadowRadius: 2,
+              elevation: 1,
+            }}
+          >
+            {/* Header */}
+            <View className="pb-3 border-b border-[#f1f5f9]">
+              <Text className="text-[12px] font-bold tracking-[0.6px] text-[#64748b] uppercase">
+                PREFERENCES
+              </Text>
+            </View>
+
+            {/* Privacy & Data Rights Row */}
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => setIsDeleteAccountOpen(true)}
+              className="flex-row items-center justify-between pt-3 pb-1"
+            >
+              <View className="flex-1 pr-3">
+                <Text className="text-[12px] text-[#334155] font-medium">
+                  Privacy & Data Rights
+                </Text>
+                <Text className="text-[11px] text-[#94a3b8] mt-0.5">
+                  Download data, deactivate or close account
+                </Text>
+              </View>
+
+              <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+                <Path
+                  d="M9 18l6-6-6-6"
+                  stroke="#94a3b8"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </Svg>
+            </TouchableOpacity>
+          </View>
+
+          {/* Sign Out Primary Outline Button */}
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={() => setIsSignOutOpen(true)}
-            className="w-full h-12 rounded-2xl border border-gray-300 bg-white active:bg-gray-50 items-center justify-center shadow-xs"
+            className="w-full bg-white border border-[#cbd5e1] rounded-[12px] py-[13px] px-[17px] flex-row items-center justify-center mb-6"
             accessibilityLabel="Sign Out"
           >
-            <Text className="text-sm font-semibold text-gray-800 tracking-wide">
+            <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+              <Path
+                d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"
+                stroke="#334155"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <Path
+                d="M16 17l5-5-5-5"
+                stroke="#334155"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <Path
+                d="M21 12H9"
+                stroke="#334155"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </Svg>
+            <Text className="text-[14px] font-bold text-[#334155] tracking-[0.35px] ml-2">
               Sign Out
             </Text>
           </TouchableOpacity>
-        </View>
-      </ScrollView>
+        </ScrollView>
 
-      {/* Persistent Bottom Navigation */}
-      <BottomNav activeTab="profile" />
+        {/* Floating Bottom Nav inside the Main Sheet */}
+        <BottomNav activeTab="profile" />
+      </View>
 
       {/* Visual Modals */}
       <EditContactModal
@@ -218,3 +332,5 @@ export const ProfileScreen: React.FC = () => {
     </View>
   );
 };
+
+export default ProfileScreen;

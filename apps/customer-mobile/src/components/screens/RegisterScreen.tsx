@@ -172,32 +172,33 @@ export const RegisterScreen: React.FC = () => {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      className="flex-1 bg-[#2563eb]"
-    >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-        <View className="flex-1 bg-[#2563eb]">
-          {/* Header */}
-          <AuthBrandHeader
-            title="ParcelHub"
-            subtitle={
-              currentStep === 1
-                ? 'Create your account'
-                : 'Almost there — secure your account'
-            }
-            onBack={currentStep === 2 ? () => { Keyboard.dismiss(); setCurrentStep(1); } : handleBackToLogin}
-            onHelp={() => { Keyboard.dismiss(); navigateTo('faq'); }}
-          />
+    <View className="flex-1 bg-[#2563eb]">
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        className="flex-1 bg-[#f8fafc]"
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          <View className="flex-1 bg-[#f8fafc]">
+            {/* Header */}
+            <AuthBrandHeader
+              title="ParcelHub"
+              subtitle={
+                currentStep === 1
+                  ? 'Create your account'
+                  : 'Almost there — secure your account'
+              }
+              onBack={currentStep === 2 ? () => { Keyboard.dismiss(); setCurrentStep(1); } : handleBackToLogin}
+              onHelp={() => { Keyboard.dismiss(); navigateTo('faq'); }}
+            />
 
-          {/* Main non-scrollable sheet */}
-          <View
-            className="flex-1 bg-[#f8fafc] rounded-t-3xl px-4 justify-between"
-            style={{
-              paddingTop: isCompact ? 12 : 16,
-              paddingBottom: isCompact ? 16 : 24,
-            }}
-          >
+            {/* Main non-scrollable sheet */}
+            <View
+              className="flex-1 bg-[#f8fafc] rounded-t-3xl px-4 justify-between"
+              style={{
+                paddingTop: isCompact ? 12 : 16,
+                paddingBottom: isCompact ? 16 : 24,
+              }}
+            >
             {/* Top/Middle Area: Form Card */}
             <View
               className="bg-white rounded-2xl border border-[#e2e8f0]"
@@ -355,7 +356,8 @@ export const RegisterScreen: React.FC = () => {
         </View>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
-  );
+  </View>
+);
 };
 
 export default RegisterScreen;

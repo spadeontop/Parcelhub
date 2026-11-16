@@ -67,30 +67,31 @@ export const LoginScreen: React.FC = () => {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      className="flex-1 bg-[#2563eb]"
-    >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-        <View className="flex-1 bg-[#2563eb]">
-          {/* Top Brand Header (Vector 73.42% bottom, height ~236px) */}
-          <AuthBrandHeader
-            title="ParcelHub"
-            subtitle="Customer Mobile Portal"
-            onHelp={() => {
-              Keyboard.dismiss();
-              navigateTo('faq');
-            }}
-          />
+    <View className="flex-1 bg-[#2563eb]">
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        className="flex-1 bg-white"
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          <View className="flex-1 bg-white">
+            {/* Top Brand Header (Vector 73.42% bottom, height ~236px) */}
+            <AuthBrandHeader
+              title="ParcelHub"
+              subtitle="Customer Mobile Portal"
+              onHelp={() => {
+                Keyboard.dismiss();
+                navigateTo('faq');
+              }}
+            />
 
-          {/* Main White Sheet (Vector: background #FFFFFF, rounded-t-3xl) */}
-          <View
-            className="flex-1 bg-white rounded-t-3xl px-4"
-            style={{
-              paddingTop: isCompact ? 24 : 32,
-              paddingBottom: isCompact ? 20 : 36,
-            }}
-          >
+            {/* Main White Sheet (Vector: background #FFFFFF, rounded-t-3xl) */}
+            <View
+              className="flex-1 bg-white rounded-t-3xl px-4"
+              style={{
+                paddingTop: isCompact ? 24 : 32,
+                paddingBottom: isCompact ? 20 : 36,
+              }}
+            >
             {/* Form Content Area */}
             <View>
               {/* Login Narration Header */}
@@ -177,7 +178,8 @@ export const LoginScreen: React.FC = () => {
         </View>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
-  );
+  </View>
+);
 };
 
 export default LoginScreen;

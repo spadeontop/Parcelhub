@@ -100,58 +100,12 @@ export const TransactionsScreen: React.FC = () => {
       </View>
 
       {/* Main Sheet with Curved Transition */}
-      <View className="flex-1 bg-[#f8fafc] rounded-t-[32px] pt-4">
-        {/* Filter Pills */}
-        <View className="mb-3">
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}
-          >
-            {FILTERS.map((f) => {
-              const isSelected = transactionFilter === f;
-              return (
-                <TouchableOpacity
-                  key={f}
-                  activeOpacity={0.7}
-                  onPress={() => setTransactionFilter(f)}
-                  className={`px-4 py-2 rounded-full ${
-                    isSelected
-                      ? 'bg-[#2563eb]'
-                      : 'bg-white border border-[#e2e8f0]'
-                  }`}
-                  style={
-                    isSelected
-                      ? {
-                          shadowColor: '#2563eb',
-                          shadowOffset: { width: 0, height: 2 },
-                          shadowOpacity: 0.2,
-                          shadowRadius: 4,
-                          elevation: 2,
-                        }
-                      : undefined
-                  }
-                >
-                  <Text
-                    className={`text-xs ${
-                      isSelected
-                        ? 'font-bold text-white'
-                        : 'font-semibold text-[#475569]'
-                    }`}
-                  >
-                    {getFilterLabel(f)}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
-
-        {/* Orders List Container */}
+      <View className="flex-1 bg-[#f8fafc] rounded-t-[32px] pt-4 overflow-hidden">
+        {/* Scrollable Content Container */}
         <ScrollView
           showsVerticalScrollIndicator={false}
-          className="flex-1 px-4"
-          contentContainerStyle={{ paddingBottom: 16 }}
+          className="flex-1"
+          contentContainerStyle={{ paddingBottom: 24 }}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -160,18 +114,55 @@ export const TransactionsScreen: React.FC = () => {
             />
           }
         >
-          {/* Transactions Card Wrapper */}
-          <View
-            className="rounded-[24px] bg-white border border-[#f1f5f9] mb-4 overflow-hidden"
-            style={{
-              shadowColor: '#0f172a',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.05,
-              shadowRadius: 12,
-              elevation: 2,
-            }}
-          >
-            {/* Card Header */}
+          {/* Filter Pills */}
+          <View className="mb-3.5">
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}
+            >
+              {FILTERS.map((f) => {
+                const isSelected = transactionFilter === f;
+                return (
+                  <TouchableOpacity
+                    key={f}
+                    activeOpacity={0.7}
+                    onPress={() => setTransactionFilter(f)}
+                    className={`px-4 py-2 rounded-full ${
+                      isSelected
+                        ? 'bg-[#2563eb]'
+                        : 'bg-white border border-[#e2e8f0]'
+                    }`}
+                    style={
+                      isSelected
+                        ? {
+                            shadowColor: '#2563eb',
+                            shadowOffset: { width: 0, height: 2 },
+                            shadowOpacity: 0.2,
+                            shadowRadius: 4,
+                            elevation: 2,
+                          }
+                        : undefined
+                    }
+                  >
+                    <Text
+                      className={`text-xs ${
+                        isSelected
+                          ? 'font-bold text-white'
+                          : 'font-semibold text-[#475569]'
+                      }`}
+                    >
+                      {getFilterLabel(f)}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+
+          {/* Transactions Container - Full Width */}
+          <View className="w-full bg-white border-t border-b border-[#f1f5f9] mb-4">
+            {/* Header */}
             <View className="flex-row items-center justify-between px-5 pt-4 pb-3.5 border-b border-[#f1f5f9]">
               <Text className="text-[11px] font-bold tracking-wider text-[#64748b] uppercase">
                 ALL TRANSACTIONS

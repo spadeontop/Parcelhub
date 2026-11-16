@@ -59,7 +59,7 @@ export const AuthInput: React.FC<AuthInputProps> = ({
 
   const [isFocused, setIsFocused] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const inputRef = useRef<TextInput>(null);
+  const inputRef = useRef<any>(null);
 
   const stringValue = value !== undefined && value !== null ? String(value) : '';
   const hasValue = stringValue.length > 0;

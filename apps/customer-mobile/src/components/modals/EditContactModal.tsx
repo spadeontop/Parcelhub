@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   Modal,
   KeyboardAvoidingView,
@@ -10,7 +9,9 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
 } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import { useApp } from '../../context/AppContext';
+import { ModalFloatingInput } from '../common/ModalFloatingInput';
 
 interface EditContactModalProps {
   visible: boolean;
@@ -23,11 +24,12 @@ export const EditContactModal: React.FC<EditContactModalProps> = ({
   visible,
   onClose,
   maskedEmail,
-  maskedPhone,
 }) => {
   const { authCustomer, updateAuthCustomer, showToast } = useApp();
 
-  const [email, setEmail] = useState<string>(authCustomer?.email || '');
+  const [firstName, setFirstName] = useState<string>(authCustomer?.firstname || '');
+  const [middleInitial, setMiddleInitial] = useState<string>(authCustomer?.middleinitial || '');
+  const [lastName, setLastName] = useState<string>(authCustomer?.lastname || '');
   const [phoneNumber, setPhoneNumber] = useState<string>(authCustomer?.phonenumber || '');
   const [verificationCode, setVerificationCode] = useState<string>('');
   const [timerSeconds, setTimerSeconds] = useState<number>(299); // 04:59
@@ -37,14 +39,22 @@ export const EditContactModal: React.FC<EditContactModalProps> = ({
   // Sync inputs whenever modal becomes visible
   useEffect(() => {
     if (visible) {
-      setEmail(authCustomer?.email || '');
+      setFirstName(authCustomer?.firstname || '');
+      setMiddleInitial(authCustomer?.middleinitial || '');
+      setLastName(authCustomer?.lastname || '');
       setPhoneNumber(authCustomer?.phonenumber || '');
       setVerificationCode('');
       setTimerSeconds(299);
       setIsTimerRunning(false);
       setCodeSent(false);
     }
-  }, [visible, authCustomer?.email, authCustomer?.phonenumber]);
+  }, [
+    visible,
+    authCustomer?.firstname,
+    authCustomer?.middleinitial,
+    authCustomer?.lastname,
+    authCustomer?.phonenumber,
+  ]);
 
   // Countdown timer for 04:59
   useEffect(() => {
@@ -75,45 +85,48 @@ export const EditContactModal: React.FC<EditContactModalProps> = ({
     setCodeSent(true);
     setTimerSeconds(299);
     setIsTimerRunning(true);
-    showToast(`Verification code sent into email ${maskedEmail}!`);
+    showToast(`Verification code sent to ${maskedEmail}!`);
   };
 
   const handleSaveChanges = () => {
-    if (!email || !email.trim()) {
-      showToast('Please enter an email address.');
+    if (!firstName.trim()) {
+      showToast('Please enter your first name.');
       return;
     }
-    if (!phoneNumber || !phoneNumber.trim()) {
+    if (!lastName.trim()) {
+      showToast('Please enter your last name.');
+      return;
+    }
+    if (!phoneNumber.trim()) {
       showToast('Please enter a phone number.');
       return;
     }
-    if (!verificationCode || verificationCode.trim().length === 0) {
-      showToast('Please enter the 4-digit verification code.');
+    if (!verificationCode.trim()) {
+      showToast('Please enter the verification code.');
       return;
     }
 
-    // If user edited to an unmasked email or phone, persist it
-    const newUpdates: { email?: string; phonenumber?: string } = {};
-    if (email && !email.includes('****')) {
-      newUpdates.email = email;
-    }
+    const newUpdates: {
+      firstname?: string;
+      middleinitial?: string;
+      lastname?: string;
+      phonenumber?: string;
+    } = {
+      firstname: firstName.trim(),
+      middleinitial: middleInitial.trim(),
+      lastname: lastName.trim(),
+    };
+
     if (phoneNumber && !phoneNumber.includes('****')) {
-      newUpdates.phonenumber = phoneNumber;
+      newUpdates.phonenumber = phoneNumber.trim();
     }
 
-    if (Object.keys(newUpdates).length > 0) {
-      updateAuthCustomer(newUpdates);
-    }
-
+    updateAuthCustomer(newUpdates);
     showToast('Contact details saved successfully!');
     onClose();
   };
 
   const handleDiscardChanges = () => {
-    setCodeSent(false);
-    setEmail(maskedEmail);
-    setPhoneNumber(maskedPhone);
-    setVerificationCode('8080');
     onClose();
   };
 
@@ -127,112 +140,176 @@ export const EditContactModal: React.FC<EditContactModalProps> = ({
       onRequestClose={handleDiscardChanges}
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View className="flex-1 bg-black/60 justify-center items-center px-5">
+        <View className="flex-1 bg-black/60 justify-center items-center px-4">
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-            className="w-full max-w-sm"
+            className="w-full max-w-[360px]"
           >
-            <View className="w-full bg-white rounded-2xl p-6 shadow-2xl">
-              {/* Modal Title */}
-              <Text className="text-lg font-bold text-gray-900 tracking-tight">
-                Edit Contact Details
-              </Text>
+            <View
+              className="w-full bg-white rounded-[16px] border border-[#f1f5f9] p-[21px]"
+              style={{
+                shadowColor: '#0f172a',
+                shadowOffset: { width: 0, height: 8 },
+                shadowOpacity: 0.12,
+                shadowRadius: 16,
+                elevation: 8,
+              }}
+            >
+              {/* Header */}
+              <View className="pb-[14px] border-b border-[#f1f5f9]">
+                <View className="flex-row items-start justify-between">
+                  <View className="flex-1 pr-2">
+                    <Text className="text-[16px] font-bold text-[#1e293b] tracking-[-0.4px]">
+                      Edit Contact & Details
+                    </Text>
+                    <Text className="text-[12px] text-[#64748b] mt-1">
+                      Update your contact information below
+                    </Text>
+                  </View>
 
-              {/* Field 1: Email */}
-              <View className="mt-4 rounded-xl border border-gray-300 px-3.5 py-2.5 bg-white">
-                <Text className="text-[11px] font-medium text-gray-400 mb-0.5">
-                  Email
-                </Text>
-                <TextInput
-                  value={email}
-                  onChangeText={setEmail}
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                  className="text-sm font-bold text-gray-900 p-0"
-                  style={{ outlineStyle: 'none' } as any}
-                  placeholderTextColor="#9ca3af"
-                />
-              </View>
-
-              {/* Field 2: Phone number */}
-              <View className="mt-3 rounded-xl border border-gray-300 px-3.5 py-2.5 bg-white">
-                <Text className="text-[11px] font-medium text-gray-400 mb-0.5">
-                  Phone number
-                </Text>
-                <TextInput
-                  value={phoneNumber}
-                  onChangeText={setPhoneNumber}
-                  keyboardType="phone-pad"
-                  className="text-sm font-bold text-gray-900 p-0"
-                  style={{ outlineStyle: 'none' } as any}
-                  placeholderTextColor="#9ca3af"
-                />
-              </View>
-
-              {/* Field 3: Verification Code */}
-              <View className="mt-3 rounded-xl border border-gray-300 px-3.5 py-2.5 bg-white">
-                <Text className="text-[11px] font-medium text-gray-400 mb-0.5">
-                  Verification Code
-                </Text>
-                <View className="flex-row items-center justify-between">
-                  <TextInput
-                    value={verificationCode}
-                    onChangeText={setVerificationCode}
-                    keyboardType="number-pad"
-                    maxLength={6}
-                    className="text-sm font-bold text-gray-900 p-0 flex-1"
-                    style={{ outlineStyle: 'none' } as any}
-                    placeholder="Enter code"
-                    placeholderTextColor="#9ca3af"
-                  />
-                  {isTimerRunning && timerSeconds > 0 ? (
-                    <TouchableOpacity
-                      activeOpacity={0.7}
-                      onPress={handleSendCode}
-                    >
-                      <Text className="text-xs font-semibold text-gray-500">
-                        {formatCountdown(timerSeconds)}
-                      </Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <TouchableOpacity activeOpacity={0.7} onPress={handleSendCode}>
-                      <Text className="text-xs font-bold text-[#215cd4]">
-                        Send Code
-                      </Text>
-                    </TouchableOpacity>
-                  )}
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={handleDiscardChanges}
+                    className="w-7 h-7 rounded-full bg-[#f1f5f9] items-center justify-center -mr-1 -mt-0.5"
+                    accessibilityLabel="Close"
+                  >
+                    <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+                      <Path
+                        d="M18 6L6 18M6 6l12 12"
+                        stroke="#64748b"
+                        strokeWidth={2}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </Svg>
+                  </TouchableOpacity>
                 </View>
               </View>
 
-              {/* Subtext info - only shown upon pressing Send Code */}
-              {codeSent && (
-                <Text className="text-[11px] text-gray-600 text-center mt-3 px-1 leading-relaxed">
-                  A verification code has been sent into email{' '}
-                  <Text className="font-bold text-gray-900">{maskedEmail}</Text>
-                </Text>
-              )}
+              {/* Form Fields */}
+              <View className="pt-[14px] flex-col gap-[12px]">
+                {/* Row 1: First Name & M.I. */}
+                <View className="flex-row items-center gap-[10px]">
+                  {/* First Name */}
+                  <View className="flex-1">
+                    <ModalFloatingInput
+                      label="First name"
+                      value={firstName}
+                      onChangeText={setFirstName}
+                      autoCapitalize="words"
+                    />
+                  </View>
 
-              {/* Action Buttons Row */}
-              <View className="flex-row items-center gap-3 mt-6">
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={handleSaveChanges}
-                  className="flex-1 h-12 rounded-xl bg-[#215cd4] active:bg-[#1a4bb0] items-center justify-center shadow-sm"
-                >
-                  <Text className="text-white text-sm font-semibold tracking-wide">
-                    Save Changes
-                  </Text>
-                </TouchableOpacity>
+                  {/* M.I. */}
+                  <View className="w-[80px]">
+                    <ModalFloatingInput
+                      label="M.I."
+                      value={middleInitial}
+                      onChangeText={setMiddleInitial}
+                      maxLength={2}
+                      autoCapitalize="characters"
+                      style={{ textAlign: 'center' as any }}
+                    />
+                  </View>
+                </View>
 
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={handleDiscardChanges}
-                  className="flex-1 h-12 rounded-xl bg-white border border-gray-300 active:bg-gray-50 items-center justify-center"
-                >
-                  <Text className="text-gray-700 text-sm font-semibold tracking-wide">
-                    Discard Changes
+                {/* Row 2: Last Name */}
+                <ModalFloatingInput
+                  label="Last name"
+                  value={lastName}
+                  onChangeText={setLastName}
+                  autoCapitalize="words"
+                />
+
+                {/* Row 3: Phone number */}
+                <ModalFloatingInput
+                  label="Phone number"
+                  value={phoneNumber}
+                  onChangeText={setPhoneNumber}
+                  keyboardType="phone-pad"
+                />
+
+                {/* Row 4: Verification Code */}
+                <ModalFloatingInput
+                  label="Verification Code"
+                  value={verificationCode}
+                  onChangeText={setVerificationCode}
+                  keyboardType="number-pad"
+                  maxLength={6}
+                  rightElement={
+                    isTimerRunning && timerSeconds > 0 ? (
+                      <TouchableOpacity
+                        activeOpacity={0.7}
+                        onPress={handleSendCode}
+                      >
+                        <Text className="text-[12px] font-bold text-gray-500">
+                          {formatCountdown(timerSeconds)}
+                        </Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <TouchableOpacity
+                        activeOpacity={0.7}
+                        onPress={handleSendCode}
+                      >
+                        <Text className="text-[12px] font-bold text-[#2563eb]">
+                          Send Code
+                        </Text>
+                      </TouchableOpacity>
+                    )
+                  }
+                />
+
+                {/* Row 5: Info Notice Banner */}
+                <View className="bg-[#f8fafc] border border-[#f1f5f9] rounded-[10px] p-[11px] flex-row items-start">
+                  <Svg
+                    width={16}
+                    height={16}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    style={{ marginTop: 1 }}
+                  >
+                    <Path
+                      d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z"
+                      stroke="#64748b"
+                      strokeWidth={1.8}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <Path
+                      d="M12 16V12M12 8H12.01"
+                      stroke="#64748b"
+                      strokeWidth={2}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </Svg>
+                  <Text className="text-[11px] text-[#64748b] leading-[15px] ml-2 flex-1">
+                    A 6-digit verification code will be sent to your email to confirm changes.
                   </Text>
-                </TouchableOpacity>
+                </View>
+
+                {/* Row 6: Modal Actions */}
+                <View className="flex-row items-center gap-[10px] pt-1">
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={handleSaveChanges}
+                    className="flex-1 h-[44px] bg-[#2563eb] rounded-[12px] items-center justify-center active:bg-blue-700"
+                  >
+                    <Text className="text-[14px] font-bold text-white">
+                      Save Changes
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={handleDiscardChanges}
+                    className="flex-1 h-[44px] bg-white border border-[#cbd5e1] rounded-[12px] items-center justify-center active:bg-slate-50"
+                  >
+                    <Text className="text-[14px] font-bold text-[#334155]">
+                      Discard Changes
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
           </KeyboardAvoidingView>
@@ -241,3 +318,5 @@ export const EditContactModal: React.FC<EditContactModalProps> = ({
     </Modal>
   );
 };
+
+export default EditContactModal;
