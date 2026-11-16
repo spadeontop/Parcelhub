@@ -38,6 +38,9 @@ import {
   RotateCcw,
   Plus,
   Minus,
+  Eye,
+  EyeOff,
+  HelpCircle,
 } from 'lucide-react-native';
 
 export {
@@ -79,4 +82,7 @@ export {
   RotateCcw,
   Plus,
   Minus,
+  Eye,
+  EyeOff,
+  HelpCircle,
 };

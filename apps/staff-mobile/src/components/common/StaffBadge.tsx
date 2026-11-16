@@ -8,39 +8,39 @@ interface StaffBadgeProps {
 }
 
 export const StaffBadge: React.FC<StaffBadgeProps> = ({ status, variant = 'card' }) => {
-  let bgColor = 'bg-slate-100';
-  let textColor = 'text-slate-600';
+  let bgColor = 'bg-[#F1F5F9]';
+  let textColor = 'text-[#64748B]';
   let label: string = status;
 
   switch (status) {
-    case 'READY_TO_CLAIM':
-      bgColor = 'bg-blue-50';
-      textColor = 'text-[#215CD4]';
-      label = 'Ready';
-      break;
-    case 'AWAITING_PARCEL':
-      bgColor = 'bg-slate-100';
-      textColor = 'text-slate-700';
-      label = 'Active';
+    case 'PENDING_INITIALIZATION':
+      bgColor = 'bg-[#F1F5F9]';
+      textColor = 'text-[#64748B]';
+      label = 'Pending Initialization';
       break;
     case 'PAYMENT_REQUIRED':
-      bgColor = 'bg-amber-50';
-      textColor = 'text-amber-700';
-      label = 'Unpaid';
+      bgColor = 'bg-[#FFFBEB]';
+      textColor = 'text-[#B45309]';
+      label = 'Payment Required';
+      break;
+    case 'AWAITING_PARCEL':
+      bgColor = 'bg-[#EFF6FF]';
+      textColor = 'text-[#1D4ED8]';
+      label = 'Awaiting Parcel';
+      break;
+    case 'READY_TO_CLAIM':
+      bgColor = 'bg-[#ECFDF5]';
+      textColor = 'text-[#047857]';
+      label = 'Ready to Claim';
       break;
     case 'CLAIMED':
-      bgColor = 'bg-slate-100';
-      textColor = 'text-slate-500';
+      bgColor = 'bg-[#F3E8FF]';
+      textColor = 'text-[#7E22CE]';
       label = 'Claimed';
       break;
-    case 'PENDING_INITIALIZATION':
-      bgColor = 'bg-orange-50';
-      textColor = 'text-orange-700';
-      label = 'Pending';
-      break;
     case 'CANCELLED':
-      bgColor = 'bg-rose-50';
-      textColor = 'text-rose-700';
+      bgColor = 'bg-[#FEF2F2]';
+      textColor = 'text-[#DC2626]';
       label = 'Cancelled';
       break;
   }
@@ -49,13 +49,13 @@ export const StaffBadge: React.FC<StaffBadgeProps> = ({ status, variant = 'card'
 
   return (
     <View
-      className={`flex-row items-center justify-center rounded-full ${bgColor} ${
-        isModal ? 'px-3 py-1' : 'px-2.5 py-0.5'
+      className={`flex-row items-center justify-center rounded-[9px] ${bgColor} ${
+        isModal ? 'px-3 py-1' : 'px-2 py-0.5'
       }`}
     >
       <Text
-        className={`font-semibold tracking-wide ${textColor} ${
-          isModal ? 'text-xs' : 'text-[11px]'
+        className={`font-medium ${textColor} ${
+          isModal ? 'text-xs' : 'text-[9px]'
         }`}
       >
         {label}

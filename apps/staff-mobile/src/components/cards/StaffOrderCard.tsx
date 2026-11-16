@@ -6,81 +6,64 @@ import { StaffBadge } from '../common/StaffBadge';
 interface StaffOrderCardProps {
   order: StaffOrder;
   onPress: (order: StaffOrder) => void;
+  showDivider?: boolean;
 }
 
-export const StaffOrderCard: React.FC<StaffOrderCardProps> = ({ order, onPress }) => {
-  // Compute contextual label on the right side of bottom row
-  const getRightContext = () => {
-    switch (order.status) {
-      case 'READY_TO_CLAIM':
-        if (order.isClaimActive && order.claimRemainingSeconds) {
-          const mins = Math.floor(order.claimRemainingSeconds / 60);
-          const secs = String(order.claimRemainingSeconds % 60).padStart(2, '0');
-          return (
-            <Text className="text-xs font-bold text-[#059669]">
-              Timer: {mins}:{secs}
-            </Text>
-          );
-        }
-        return null;
+export const StaffOrderCard: React.FC<StaffOrderCardProps> = ({
+  order,
+  onPress,
+  showDivider = true,
+}) => {
+  const formattedDate = (() => {
+    const raw = order.timestamp || order.createdAt;
+    if (!raw) return 'October 18, 2026';
+    const d = new Date(raw);
+    if (isNaN(d.getTime())) return 'October 18, 2026';
+    return d.toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  })();
 
-      case 'AWAITING_PARCEL':
-        return (
-          <Text className="text-xs font-medium text-[#D97706]">
-            {order.courierPaid ? 'Parcel Arrived' : `COD: ₱${order.amountToPay.toLocaleString()}`}
-          </Text>
-        );
-
-      case 'PAYMENT_REQUIRED':
-        return (
-          <Text className="text-xs font-bold text-[#D97706]">
-            Due: ₱{order.amountToPay.toLocaleString()}
-          </Text>
-        );
-
-      case 'CLAIMED':
-        return (
-          <Text className="text-xs text-[#64748B]">
-            Claimed
-          </Text>
-        );
-
-      default:
-        return (
-          <Text className="text-xs text-[#64748B]">
-            ₱{order.amountToPay.toLocaleString()}
-          </Text>
-        );
-    }
-  };
+  const orderId = order.id || order.trackingId;
+  const customerName = order.customer || order.productName || 'Customer';
+  const amountStr = `₱${order.amountToPay.toLocaleString()}`;
 
   return (
     <TouchableOpacity
-      activeOpacity={0.75}
+      activeOpacity={0.7}
       onPress={() => onPress(order)}
-      className="bg-white border border-[#E2E8F0] rounded-2xl p-4 mb-3 shadow-xs active:bg-slate-50"
+      className="py-2.5"
     >
-      {/* Top Row: Title & Status Badge */}
+      {/* Top Row: Order ID + Status badge */}
       <View className="flex-row items-center justify-between">
-        <Text
-          className="text-sm font-bold text-[#0F172A] flex-1 mr-2 font-mono"
-          numberOfLines={1}
-        >
-          {order.id}
+        <Text className="text-[10px] font-semibold text-[#2563EB]">
+          {orderId}
         </Text>
-        <StaffBadge status={order.status} variant="card" />
+        <StaffBadge status={order.status} />
       </View>
 
-      {/* Divider */}
-      <View className="h-px bg-[#F1F5F9] my-3" />
+      {/* Middle Row: Customer name */}
+      <Text
+        className="text-[12px] font-semibold text-[#1E293B] leading-[17px] mt-1"
+        numberOfLines={1}
+      >
+        {customerName}
+      </Text>
 
-      {/* Bottom Row: Recipient & Context Info */}
-      <View className="flex-row items-center justify-between">
-        <Text className="text-xs text-[#475569] font-medium" numberOfLines={1}>
-          {order.customer || 'Customer'}
+      {/* Bottom Row: Date + Price */}
+      <View className="flex-row items-center justify-between mt-1">
+        <Text className="text-[10px] font-normal text-[#64748B]">
+          {formattedDate}
         </Text>
-        {getRightContext()}
+        <Text className="text-[11px] font-semibold text-[#334155]">
+          {amountStr}
+        </Text>
       </View>
+
+      {/* Item Divider */}
+      {showDivider && <View className="h-px bg-[#F1F5F9] mt-2.5" />}
     </TouchableOpacity>
   );
 };

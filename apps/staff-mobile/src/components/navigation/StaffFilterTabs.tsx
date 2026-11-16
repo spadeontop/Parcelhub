@@ -10,19 +10,23 @@ interface StaffFilterTabsProps {
 
 export const StaffFilterTabs: React.FC<StaffFilterTabsProps> = ({
   activeTab,
-  badgeCounts,
   onSelectTab,
 }) => {
-  const tabs: { key: StaffTab; label: string; count: number }[] = [
-    { key: 'active', label: 'Active', count: badgeCounts.active },
-    { key: 'ready', label: 'Ready', count: badgeCounts.ready },
-    { key: 'unpaid', label: 'Unpaid', count: badgeCounts.unpaid },
-    { key: 'claimed', label: 'Claimed', count: badgeCounts.claimed },
+  const tabs: { key: StaffTab; label: string }[] = [
+    { key: 'all', label: 'All Orders' },
+    { key: 'ready', label: 'Ready to Claim' },
+    { key: 'active', label: 'Awaiting Parcel' },
+    { key: 'unpaid', label: 'Payment Required' },
+    { key: 'claimed', label: 'Claimed' },
   ];
 
   return (
-    <View className="px-5 my-2">
-      <View className="bg-[#F1F5F9] rounded-xl p-1 flex-row items-center">
+    <View className="py-1.5">
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}
+      >
         {tabs.map((tab) => {
           const isSelected = activeTab === tab.key;
           return (
@@ -30,44 +34,23 @@ export const StaffFilterTabs: React.FC<StaffFilterTabsProps> = ({
               key={tab.key}
               activeOpacity={0.8}
               onPress={() => onSelectTab(tab.key)}
-              className={`flex-1 flex-row items-center justify-center py-2 px-1 rounded-lg ${
-                isSelected ? 'bg-white shadow-xs' : 'bg-transparent'
+              className={`rounded-[14px] px-3.5 py-2 ${
+                isSelected
+                  ? 'bg-[#2563EB] shadow-xs'
+                  : 'bg-white border border-[#E2E8F0]'
               }`}
             >
               <Text
-                className={`text-xs font-semibold ${
-                  isSelected ? 'text-[#0F172A] font-bold' : 'text-[#64748B]'
+                className={`text-[12px] font-bold text-center ${
+                  isSelected ? 'text-white' : 'text-[#475569]'
                 }`}
               >
                 {tab.label}
               </Text>
-
-              {/* Badge Counter matching home.png */}
-              <View
-                className={`ml-1.5 px-1.5 py-0.2 rounded-full min-w-[18px] items-center justify-center ${
-                  isSelected
-                    ? 'bg-[#DBEAFE]'
-                    : tab.key === 'active'
-                    ? 'bg-[#1E1E1E]'
-                    : 'bg-[#E2E8F0]'
-                }`}
-              >
-                <Text
-                  className={`text-[10px] font-bold ${
-                    isSelected
-                      ? 'text-[#215CD4]'
-                      : tab.key === 'active'
-                      ? 'text-white'
-                      : 'text-[#64748B]'
-                  }`}
-                >
-                  {tab.count}
-                </Text>
-              </View>
             </TouchableOpacity>
           );
         })}
-      </View>
+      </ScrollView>
     </View>
   );
 };

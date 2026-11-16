@@ -50,7 +50,7 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isOnline, setIsOnline] = useState<boolean>(true);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [orders, setOrders] = useState<StaffOrder[]>([]);
-  const [activeTab, setActiveTab] = useState<StaffTab>('active');
+  const [activeTab, setActiveTab] = useState<StaffTab>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedOrder, setSelectedOrder] = useState<StaffOrder | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState<boolean>(false);
@@ -79,9 +79,11 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const email = await staffApi.getStoredStaffEmail();
         if (token && email && isMounted) {
           const user: StaffUser = {
-            id: 'STF-001',
+            id: 'STF-1991',
+            name: 'John Doe',
             email,
-            role: 'STAFF',
+            role: 'Staff',
+            hubName: "LILY'S CATERING HUB",
             token,
           };
           setStaffUser(user);
@@ -215,9 +217,11 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const login = async (email: string, password: string) => {
     const res = await staffApi.login(email, password);
     const user: StaffUser = {
-      id: 'STF-001',
+      id: 'STF-1991',
+      name: 'John Doe',
       email,
-      role: 'STAFF',
+      role: 'Staff',
+      hubName: "LILY'S CATERING HUB",
       token: res.authToken,
     };
     setStaffUser(user);
