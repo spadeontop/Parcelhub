@@ -3,6 +3,7 @@ import { eq, or } from "drizzle-orm";
 import { db } from "@/db";
 import { orders } from "@/db/schema";
 import { authenticateStaffRequest } from "@/app/lib/v1/auth";
+import { sendFcmNotification } from "@/app/lib/v1/fcm";
 import { jsonError, jsonSuccess } from "@/app/lib/response";
 import { StaffClaimOrderRes, StatusTimelineEntry } from "@/app/types/v1/api";
 
@@ -97,6 +98,19 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         timestamp: now,
       })
       .where(eq(orders.id, order.id));
+
+    // Non-fatal FCM push to customer
+    sendFcmNotification({
+      userId: order.customerId,
+      title: "Parcel Claimed",
+      body: `Parcel (${order.trackingId || order.productName || "order"}) was successfully claimed. Thank you for using ParcelHub!`,
+      notifId: order.id,
+      data: {
+        orderId: order.id,
+        ticketCode: order.ticketCode,
+        status: "CLAIMED",
+      },
+    }).catch(() => {});
 
     // ---------------------------------------------------------
     // 4. Response:

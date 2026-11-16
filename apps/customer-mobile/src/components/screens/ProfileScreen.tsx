@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   ScrollView,
   useWindowDimensions,
+  Switch,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { StatusBar } from 'expo-status-bar';
@@ -37,7 +38,7 @@ function getMaskedPhone(phone?: string): string {
 }
 
 export const ProfileScreen: React.FC = () => {
-  const { customer, refetchProfile, navigateTo } = useV1();
+  const { customer, refetchProfile, navigateTo, notificationsEnabled, togglePushNotifications } = useV1();
   const { height } = useWindowDimensions();
   const isCompact = height < 700;
 
@@ -197,6 +198,25 @@ export const ProfileScreen: React.FC = () => {
               <Text className="text-[12px] font-bold tracking-[0.6px] text-[#64748b] uppercase">
                 PREFERENCES
               </Text>
+            </View>
+
+            {/* Push Notifications Row */}
+            <View className="flex-row items-center justify-between py-3 border-b border-[#f8fafc]">
+              <View className="flex-1 pr-3">
+                <Text className="text-[12px] text-[#334155] font-medium">
+                  Push Notifications
+                </Text>
+                <Text className="text-[11px] text-[#94a3b8] mt-0.5">
+                  Receive parcel arrivals and claim status updates
+                </Text>
+              </View>
+              <Switch
+                value={notificationsEnabled}
+                onValueChange={() => togglePushNotifications()}
+                trackColor={{ false: '#e2e8f0', true: '#2563eb' }}
+                thumbColor="#ffffff"
+                accessibilityLabel="Toggle Push Notifications"
+              />
             </View>
 
             {/* Privacy & Data Rights Row */}

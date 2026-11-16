@@ -5,6 +5,7 @@ const V1_PRE_AUTH_TOKEN_KEY = 'parcelhub_v1_pre_auth_token';
 const V1_AUTH_TOKEN_KEY = 'parcelhub_v1_auth_token';
 const V1_REFRESH_TOKEN_KEY = 'parcelhub_v1_refresh_token';
 const V1_PROFILE_KEY = 'parcelhub_v1_customer_profile';
+const V1_PUSH_ENABLED_KEY = 'parcelhub_v1_push_notifications_enabled';
 
 export const v1Storage = {
   async getPreAuthToken(): Promise<JWTToken | null> {
@@ -85,6 +86,21 @@ export const v1Storage = {
   async clearCustomerProfile(): Promise<void> {
     try {
       await SecureStore.deleteItemAsync(V1_PROFILE_KEY);
+    } catch {}
+  },
+
+  async getPushNotificationsEnabled(): Promise<boolean> {
+    try {
+      const val = await SecureStore.getItemAsync(V1_PUSH_ENABLED_KEY);
+      return val === null ? true : val === 'true';
+    } catch {
+      return true;
+    }
+  },
+
+  async setPushNotificationsEnabled(enabled: boolean): Promise<void> {
+    try {
+      await SecureStore.setItemAsync(V1_PUSH_ENABLED_KEY, enabled ? 'true' : 'false');
     } catch {}
   },
 

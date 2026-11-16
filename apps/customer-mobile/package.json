@@ -1,11 +1,14 @@
 {
   "name": "customer-mobile",
   "version": "1.0.0",
-  "main": "expo-router/entry",
+  "main": "index.js",
   "dependencies": {
     "@expo/ui": "~58.0.26",
     "@parcelhub/contracts": "file:../../packages/contracts",
+    "@react-native-firebase/app": "^27.1.1",
+    "@react-native-firebase/messaging": "^27.1.1",
     "expo": "~58.0.22",
+    "expo-build-properties": "^58.0.12",
     "expo-clipboard": "~58.0.4",
     "expo-constants": "~58.0.14",
     "expo-device": "~58.0.5",
@@ -41,11 +44,13 @@
   },
   "devDependencies": {
     "@types/react": "~19.3.0",
+    "sharp": "^0.35.5",
     "typescript": "~6.0.3"
   },
   "scripts": {
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
+    "generate-icons": "node ./scripts/generate-icons.js",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
