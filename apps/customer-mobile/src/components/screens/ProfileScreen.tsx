@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { StatusBar } from 'expo-status-bar';
-import { useApp } from '../../context/AppContext';
+import { useV1 } from '../../v1/context/V1Context';
 import { BottomNav } from '../layout/BottomNav';
 import { AppHeader } from '../layout/AppHeader';
 import { EditContactModal } from '../modals/EditContactModal';
@@ -37,9 +37,14 @@ function getMaskedPhone(phone?: string): string {
 }
 
 export const ProfileScreen: React.FC = () => {
-  const { authCustomer, navigateTo } = useApp();
+  const { customer, refetchProfile, navigateTo } = useV1();
   const { height } = useWindowDimensions();
   const isCompact = height < 700;
+
+  // Refetch profile on mount
+  useEffect(() => {
+    refetchProfile().catch(() => {});
+  }, [refetchProfile]);
 
   // Modal display states
   const [isEditContactOpen, setIsEditContactOpen] = useState<boolean>(false);
@@ -47,16 +52,16 @@ export const ProfileScreen: React.FC = () => {
   const [isDeleteAccountOpen, setIsDeleteAccountOpen] = useState<boolean>(false);
   const [isSignOutOpen, setIsSignOutOpen] = useState<boolean>(false);
 
-  const maskedEmail = getMaskedEmail(authCustomer?.email);
-  const maskedPhone = getMaskedPhone(authCustomer?.phonenumber);
+  const maskedEmail = getMaskedEmail(customer?.email);
+  const maskedPhone = getMaskedPhone(customer?.phoneNumber);
 
   const fullName = [
-    authCustomer?.firstname,
-    authCustomer?.middleinitial ? `${authCustomer.middleinitial}.` : null,
-    authCustomer?.lastname,
+    customer?.firstName,
+    customer?.middleInitial ? `${customer.middleInitial}.` : null,
+    customer?.lastName,
   ]
     .filter(Boolean)
-    .join(' ') || 'John Doe';
+    .join(' ') || 'Customer Profile';
 
   return (
     <View className="flex-1 bg-[#2563eb]">

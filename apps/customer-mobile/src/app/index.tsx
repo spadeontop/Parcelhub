@@ -1,6 +1,5 @@
 import React from 'react';
-import { View } from 'react-native';
-import { useApp } from '../context/AppContext';
+import { useV1 } from '../v1/context/V1Context';
 import { HomeScreen } from '../components/screens/HomeScreen';
 import { CreateOrderScreen } from '../components/screens/CreateOrderScreen';
 import { ConfirmOrderScreen } from '../components/screens/ConfirmOrderScreen';
@@ -17,9 +16,11 @@ import { ProfileScreen } from '../components/screens/ProfileScreen';
 import { FaqScreen } from '../components/screens/FaqScreen';
 
 export default function IndexPage() {
-  const { activeScreen } = useApp();
+  const { activeScreen } = useV1();
 
   switch (activeScreen) {
+    case 'register':
+      return <RegisterScreen />;
     case 'home':
       return <HomeScreen />;
     case 'create_order':
@@ -38,8 +39,6 @@ export default function IndexPage() {
       return <NotificationsScreen />;
     case 'login':
       return <LoginScreen />;
-    case 'register':
-      return <RegisterScreen />;
     case 'mpin_login':
       return <MpinLoginScreen />;
     case 'mpin_create':
@@ -49,6 +48,6 @@ export default function IndexPage() {
     case 'faq':
       return <FaqScreen />;
     default:
-      return <HomeScreen />;
+      return <RegisterScreen />;
   }
 }

@@ -2,11 +2,16 @@ import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import Svg, { Path } from 'react-native-svg';
-import { useApp } from '../../context/AppContext';
+import { useV1 } from '../../v1/context/V1Context';
 import { AppHeader } from '../layout/AppHeader';
 
 export const PaymentVerificationScreen: React.FC = () => {
-  const { navigateTo } = useApp();
+  const { navigateTo, refetchOrders } = useV1();
+
+  const handleReturnHome = () => {
+    refetchOrders().catch(() => {});
+    navigateTo('home');
+  };
 
   return (
     <View className="flex-1 bg-[#215cd4]">
@@ -19,7 +24,7 @@ export const PaymentVerificationScreen: React.FC = () => {
         showBackButton
         centerTitle
         backgroundColor="#215cd4"
-        onBack={() => navigateTo('home')}
+        onBack={handleReturnHome}
         onHelp={() => navigateTo('faq')}
       />
 
@@ -114,7 +119,7 @@ export const PaymentVerificationScreen: React.FC = () => {
               </Text>
               <Svg width={18} height={18} viewBox="0 0 17.6 17.6" fill="none">
                 <Path
-                  d="M1.8 0.8H5.8C6.35228 0.8 6.8 1.24772 6.8 1.8V5.8C6.8 6.35228 6.35228 6.8 5.8 6.8H1.8C1.24772 6.8 0.8 6.35228 0.8 5.8V1.8C0.8 1.24772 1.24772 0.8 1.8 0.8Z"
+                  d="M1.8 0.8H5.8C6.35228 0.8 6.8 1.24772 6.8 1.8V5.8C6.35228 6.35228 6.35228 6.8 5.8 6.8H1.8C1.24772 6.8 0.8 6.35228 0.8 5.8V1.8C0.8 1.24772 1.24772 0.8 1.8 0.8Z"
                   stroke="white"
                   strokeWidth={1.6}
                 />
@@ -138,7 +143,7 @@ export const PaymentVerificationScreen: React.FC = () => {
             {/* Return to Home Secondary Action (matching Figma 1320:42) */}
             <TouchableOpacity
               activeOpacity={0.7}
-              onPress={() => navigateTo('home')}
+              onPress={handleReturnHome}
               className="w-full py-3.5 items-center justify-center"
             >
               <Text className="text-[14px] font-medium text-[#64748b] leading-[20px] text-center">
@@ -153,4 +158,3 @@ export const PaymentVerificationScreen: React.FC = () => {
 };
 
 export default PaymentVerificationScreen;
-

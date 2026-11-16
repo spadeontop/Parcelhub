@@ -1,20 +1,115 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
+import * as Clipboard from 'expo-clipboard';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as MediaLibrary from 'expo-media-library';
 import { StatusBar } from 'expo-status-bar';
-import { useApp } from '../../context/AppContext';
+import { useV1 } from '../../v1/context/V1Context';
+import { CustomerOrderDetail } from '../../v1/types/api';
 import { ArrowLeftIcon, DownloadIcon } from '../common/Icons';
 
 export const QrScreen: React.FC = () => {
-  const { getCurrentOrder, copyToClipboard, navigateTo, showToast } = useApp();
-  const order = getCurrentOrder();
+  const {
+    selectedOrderId,
+    selectedOrderTicketCode,
+    orders,
+    fetchOrderDetail,
+    navigateTo,
+    showToast,
+  } = useV1();
+  const [orderDetail, setOrderDetail] = useState<CustomerOrderDetail | null>(null);
+  const [isSavingPass, setIsSavingPass] = useState(false);
+  const qrSvgRef = useRef<any>(null);
 
-  const handleSavePhoto = () => {
-    showToast('Pickup QR pass saved to device photo storage!');
+  const cachedSummary = orders.find(
+    (o) => o.id === selectedOrderId || o.ticketCode === selectedOrderId
+  );
+
+  useEffect(() => {
+    let isMounted = true;
+    if (selectedOrderId) {
+      fetchOrderDetail(selectedOrderId)
+        .then((detail) => {
+          if (isMounted) setOrderDetail(detail);
+        })
+        .catch(() => {
+          // If network fetch fails, fallback to cached summary
+        });
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedOrderId, fetchOrderDetail]);
+
+  const ticketCode =
+    selectedOrderTicketCode || orderDetail?.ticketCode || cachedSummary?.ticketCode;
+  const orderId = orderDetail?.id || cachedSummary?.id || selectedOrderId || '';
+
+  // Encode ticketCode if present (e.g. 941-53N), falling back to UUID order.id
+  const qrValue = ticketCode || orderId || 'PARCELHUB-DEMO';
+  // If ticketCode isn't loaded yet, show '...' rather than flashing the raw UUID
+  const displayTicket = ticketCode || (orderDetail ? orderId : '...');
+
+  const handleSavePhoto = async () => {
+    if (isSavingPass) return;
+
+    if (!qrSvgRef.current || typeof qrSvgRef.current.toDataURL !== 'function') {
+      showToast('QR code is still preparing. Please try again.');
+      return;
+    }
+
+    setIsSavingPass(true);
+    showToast('Saving pickup pass to gallery...');
+
+    try {
+      const permission = await MediaLibrary.requestPermissionsAsync();
+      if (!permission.granted) {
+        showToast('Permission to access photo gallery was denied.');
+        setIsSavingPass(false);
+        return;
+      }
+
+      qrSvgRef.current.toDataURL(async (base64Data: string) => {
+        try {
+          const cleanBase64 = base64Data
+            .replace(/^data:image\/[a-zA-Z0-9.+-]+;base64,/, '')
+            .trim();
+          const filename = `${FileSystem.cacheDirectory}parcelhub_pass_${ticketCode || 'qr'}.png`;
+
+          await FileSystem.writeAsStringAsync(filename, cleanBase64, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+
+          // Save to device photo gallery (supports both modern Asset.create and legacy)
+          if ((MediaLibrary as any).Asset?.create) {
+            await (MediaLibrary as any).Asset.create(filename);
+          } else {
+            const legacy = await import('expo-media-library/legacy');
+            await legacy.saveToLibraryAsync(filename);
+          }
+
+          showToast('Pickup QR pass saved to photo gallery!');
+        } catch (innerErr: any) {
+          showToast(innerErr?.message || 'Failed to save pass to gallery.');
+        } finally {
+          setIsSavingPass(false);
+        }
+      });
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to save pass to gallery.');
+      setIsSavingPass(false);
+    }
   };
 
-  const handleCopyTicket = () => {
-    copyToClipboard(order.id, 'Ticket');
+  const handleCopyTicket = async () => {
+    if (!displayTicket || displayTicket === '---') return;
+    try {
+      await Clipboard.setStringAsync(displayTicket);
+      showToast(`Copied Ticket (${displayTicket}) to clipboard!`);
+    } catch {
+      showToast('Failed to copy ticket to clipboard.');
+    }
   };
 
   return (
@@ -152,7 +247,10 @@ export const QrScreen: React.FC = () => {
                 }}
               >
                 <QRCode
-                  value={order.id || 'PARCELHUB-DEMO'}
+                  getRef={(c) => {
+                    qrSvgRef.current = c;
+                  }}
+                  value={qrValue}
                   size={172}
                   color="#0f172a"
                   backgroundColor="#ffffff"
@@ -201,7 +299,7 @@ export const QrScreen: React.FC = () => {
                   marginTop: 2,
                 }}
               >
-                {order.id}
+                {displayTicket}
               </Text>
             </TouchableOpacity>
 
@@ -228,6 +326,7 @@ export const QrScreen: React.FC = () => {
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={handleSavePhoto}
+              disabled={isSavingPass}
               style={{
                 width: '100%',
                 paddingVertical: 15,
@@ -247,18 +346,24 @@ export const QrScreen: React.FC = () => {
                 elevation: 2,
               }}
             >
-              <DownloadIcon size={16} color="#215CD4" strokeWidth={1.33} />
-              <Text
-                style={{
-                  fontWeight: '600',
-                  fontSize: 14,
-                  lineHeight: 20,
-                  color: '#1E1E1E',
-                  textAlign: 'center',
-                }}
-              >
-                Save Pass to Gallery
-              </Text>
+              {isSavingPass ? (
+                <ActivityIndicator size="small" color="#215CD4" />
+              ) : (
+                <>
+                  <DownloadIcon size={16} color="#215CD4" strokeWidth={1.33} />
+                  <Text
+                    style={{
+                      fontWeight: '600',
+                      fontSize: 14,
+                      lineHeight: 20,
+                      color: '#1E1E1E',
+                      textAlign: 'center',
+                    }}
+                  >
+                    Save Pass to Gallery
+                  </Text>
+                </>
+              )}
             </TouchableOpacity>
 
             {/* Return to Home Navigation Link */}

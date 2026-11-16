@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, useWindowDimensions } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { useApp } from '../../context/AppContext';
+import { useV1 } from '../../v1/context/V1Context';
 import { ParcelHubLogoSvg } from '../common/Icons';
 
 interface AppHeaderProps {
@@ -29,7 +29,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   centerTitle = false,
   backgroundColor,
 }) => {
-  const { navigateTo } = useApp();
+  const { navigateTo } = useV1();
   const { height } = useWindowDimensions();
   const isCompact = height < 700;
 
@@ -71,20 +71,22 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
           {/* Centered Title & Subtitle */}
           <View className="absolute left-0 right-0 top-0 bottom-0 items-center justify-center pointer-events-none">
-            <Text
-              className="font-bold text-white tracking-tight leading-[28px] text-[20px] text-center"
-              numberOfLines={1}
-            >
-              {title}
-            </Text>
+            <View className="flex-row items-center justify-center gap-2">
+              <Text
+                className="font-bold text-white tracking-tight leading-[28px] text-[20px] text-center"
+                numberOfLines={1}
+              >
+                {title}
+              </Text>
+              {statusDotColor && (
+                <View
+                  className="w-2.5 h-2.5 rounded-full"
+                  style={{ backgroundColor: statusDotColor }}
+                />
+              )}
+            </View>
             {subtitle ? (
               <View className="flex-row items-center justify-center gap-1.5 mt-0.5">
-                {statusDotColor && (
-                  <View
-                    className="w-1.5 h-1.5 rounded-full"
-                    style={{ backgroundColor: statusDotColor }}
-                  />
-                )}
                 <Text className="text-[12px] font-medium text-[#dbeafe] text-center">
                   {subtitle}
                 </Text>
@@ -160,29 +162,47 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                 shadowOpacity: 0.1,
                 shadowRadius: 2,
                 elevation: 2,
+                position: 'relative',
               }}
             >
               <ParcelHubLogoSvg size={40} />
+              {statusDotColor && (
+                <View
+                  style={{
+                    position: 'absolute',
+                    bottom: -1,
+                    right: -1,
+                    width: 12,
+                    height: 12,
+                    borderRadius: 6,
+                    backgroundColor: statusDotColor,
+                    borderWidth: 2,
+                    borderColor: backgroundColor || '#2563eb',
+                  }}
+                />
+              )}
             </View>
           )}
 
           <View className="flex-1">
-            <Text
-              className={`font-bold text-white tracking-tight leading-[26px] ${
-                showLogo ? 'text-[18px]' : 'text-[20px]'
-              }`}
-              numberOfLines={1}
-            >
-              {title}
-            </Text>
+            <View className="flex-row items-center gap-2">
+              <Text
+                className={`font-bold text-white tracking-tight leading-[26px] ${
+                  showLogo ? 'text-[18px]' : 'text-[20px]'
+                }`}
+                numberOfLines={1}
+              >
+                {title}
+              </Text>
+              {!showLogo && statusDotColor && (
+                <View
+                  className="w-2.5 h-2.5 rounded-full"
+                  style={{ backgroundColor: statusDotColor }}
+                />
+              )}
+            </View>
             {subtitle && (
               <View className="flex-row items-center gap-1.5 mt-0.5">
-                {statusDotColor && (
-                  <View
-                    className="w-1.5 h-1.5 rounded-full"
-                    style={{ backgroundColor: statusDotColor }}
-                  />
-                )}
                 <Text className="text-[11px] font-bold text-[#dbeafe] uppercase tracking-wider">
                   {subtitle}
                 </Text>
