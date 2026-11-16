@@ -121,7 +121,6 @@ export const MpinLoginScreen: React.FC = () => {
       <AuthBrandHeader
         title="ParcelHub"
         subtitle="Customer Mobile Portal"
-        onHelp={() => navigateTo('faq')}
       />
 
       {/* Main Curved White/Slate Sheet (Vector background: #F8FAFC) */}
