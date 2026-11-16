@@ -9,15 +9,14 @@ import {
   TouchableOpacity,
   useWindowDimensions,
 } from 'react-native';
-import { useApp } from '../../context/AppContext';
+import { useV1 } from '../../v1/context/V1Context';
 import { AuthBrandHeader } from '../layout/AuthBrandHeader';
 import { LoginNarrationHeader } from '../common/LoginNarrationHeader';
 import { AuthInput } from '../common/AuthInput';
 import { AuthButton } from '../common/AuthButton';
-import { clearRetainedRegistrationData } from '../../services/registrationState';
 
 export const LoginScreen: React.FC = () => {
-  const { navigateTo, loginCustomer, clearPendingRegistration, showToast } = useApp();
+  const { navigateTo, loginCustomer, clearRegistrationDraft, showToast } = useV1();
   const { height } = useWindowDimensions();
   const isCompact = height < 700;
 
@@ -33,15 +32,27 @@ export const LoginScreen: React.FC = () => {
     setPasswordError('');
 
     const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      setEmailError('Please enter your email.');
+      return;
+    }
+    if (!password) {
+      setPasswordError('Please enter your password.');
+      return;
+    }
+
     setIsLoading(true);
     try {
       await loginCustomer({ email: trimmedEmail, password });
+      // Clear password from state upon successful login
+      setPassword('');
     } catch (err: any) {
       const rawMessage = err?.message || 'Login failed. Please check your credentials.';
       const status = err?.statusCode;
       const errorType = err?.error;
       const msg = rawMessage.toLowerCase();
 
+      // Backend-authoritative error handling (Rule #9)
       if (status === 404 || errorType === 'Not Found' || msg.includes('not registered')) {
         setEmailError(rawMessage);
       } else if (status === 401 || errorType === 'Unauthorized' || msg.includes('password')) {
@@ -56,8 +67,7 @@ export const LoginScreen: React.FC = () => {
 
   const handleNavigateToRegister = () => {
     Keyboard.dismiss();
-    clearRetainedRegistrationData();
-    clearPendingRegistration();
+    clearRegistrationDraft();
     navigateTo('register');
   };
 
@@ -88,94 +98,94 @@ export const LoginScreen: React.FC = () => {
                 paddingBottom: isCompact ? 20 : 36,
               }}
             >
-            {/* Form Content Area */}
-            <View>
-              {/* Login Narration Header */}
-              <View className="px-1.5">
-                <LoginNarrationHeader
-                  title="Welcome!"
-                  subtitle={'Sign in to track deliveries, manage hub\npickups, and view your QR passes.'}
-                />
-              </View>
-
-              {/* Input Fields */}
+              {/* Form Content Area */}
               <View>
-                {/* Email Input */}
-                <AuthInput
-                  label="Email"
-                  type="email"
-                  showSuccessCheck={false}
-                  value={email}
-                  onChangeText={(val) => {
-                    setEmail(val);
-                    if (emailError) setEmailError('');
-                  }}
-                  error={emailError}
-                  returnKeyType="next"
-                />
-
-                {/* Password Input */}
-                <AuthInput
-                  label="Password"
-                  type="password"
-                  showSuccessCheck={false}
-                  value={password}
-                  onChangeText={(val) => {
-                    setPassword(val);
-                    if (passwordError) setPasswordError('');
-                  }}
-                  error={passwordError}
-                  returnKeyType="done"
-                  onSubmitEditing={handleSubmit}
-                />
-
-                {/* Utility Row: Forgot Password (right-aligned in Figma: right: 8.97%) */}
-                <View className="items-end mt-1 mb-5 px-1">
-                  <TouchableOpacity
-                    activeOpacity={0.7}
-                    onPress={handleForgotPassword}
-                    className="py-1"
-                  >
-                    <Text className="text-[12px] font-bold text-[#2563eb]">
-                      Forgot password?
-                    </Text>
-                  </TouchableOpacity>
+                {/* Login Narration Header */}
+                <View className="px-1.5">
+                  <LoginNarrationHeader
+                    title="Welcome!"
+                    subtitle={'Sign in to track deliveries, manage hub\npickups, and view your QR passes.'}
+                  />
                 </View>
-              </View>
 
-              {/* Actions Area: Sign In Button & Sign Up link placed directly below the input fields */}
-              <View className="gap-3.5 mt-1">
-                <AuthButton
-                  label="Sign In"
-                  variant="primary"
-                  disabled={isLoading}
-                  onPress={handleSubmit}
-                  isLoading={isLoading}
-                />
+                {/* Input Fields */}
+                <View>
+                  {/* Email Input */}
+                  <AuthInput
+                    label="Email"
+                    type="email"
+                    showSuccessCheck={false}
+                    value={email}
+                    onChangeText={(val) => {
+                      setEmail(val);
+                      if (emailError) setEmailError('');
+                    }}
+                    error={emailError}
+                    returnKeyType="next"
+                  />
 
-                {/* Don't have an account? Sign Up row */}
-                <View className="flex-row items-center justify-center py-1">
-                  <Text className="text-[13px] font-normal text-[#64748b]">
-                    Don't have an account?{' '}
-                  </Text>
-                  <TouchableOpacity
-                    activeOpacity={0.7}
-                    onPress={handleNavigateToRegister}
-                    className="py-1"
-                  >
-                    <Text className="text-[13px] font-bold text-[#2563eb]">
-                      Sign Up
+                  {/* Password Input */}
+                  <AuthInput
+                    label="Password"
+                    type="password"
+                    showSuccessCheck={false}
+                    value={password}
+                    onChangeText={(val) => {
+                      setPassword(val);
+                      if (passwordError) setPasswordError('');
+                    }}
+                    error={passwordError}
+                    returnKeyType="done"
+                    onSubmitEditing={handleSubmit}
+                  />
+
+                  {/* Utility Row: Forgot Password (right-aligned in Figma: right: 8.97%) */}
+                  <View className="items-end mt-1 mb-5 px-1">
+                    <TouchableOpacity
+                      activeOpacity={0.7}
+                      onPress={handleForgotPassword}
+                      className="py-1"
+                    >
+                      <Text className="text-[12px] font-bold text-[#2563eb]">
+                        Forgot password?
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* Actions Area: Sign In Button & Sign Up link placed directly below the input fields */}
+                <View className="gap-3.5 mt-1">
+                  <AuthButton
+                    label="Sign In"
+                    variant="primary"
+                    disabled={isLoading}
+                    onPress={handleSubmit}
+                    isLoading={isLoading}
+                  />
+
+                  {/* Don't have an account? Sign Up row */}
+                  <View className="flex-row items-center justify-center py-1">
+                    <Text className="text-[13px] font-normal text-[#64748b]">
+                      Don't have an account?{' '}
                     </Text>
-                  </TouchableOpacity>
+                    <TouchableOpacity
+                      activeOpacity={0.7}
+                      onPress={handleNavigateToRegister}
+                      className="py-1"
+                    >
+                      <Text className="text-[13px] font-bold text-[#2563eb]">
+                        Sign Up
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </View>
             </View>
           </View>
-        </View>
-      </TouchableWithoutFeedback>
-    </KeyboardAvoidingView>
-  </View>
-);
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
+    </View>
+  );
 };
 
 export default LoginScreen;

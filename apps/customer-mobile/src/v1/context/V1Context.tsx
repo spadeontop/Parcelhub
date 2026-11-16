@@ -10,6 +10,8 @@ import React, {
 import {
   CustomerRegisterReq,
   CustomerRegisterRes,
+  CustomerLoginReq,
+  CustomerLoginRes,
   CustomerProfile,
   JWTToken,
 } from '../types/api';
@@ -73,13 +75,14 @@ export type V1ContextType = {
   readonly updateRegistrationDraft: (partial: Partial<RegistrationDraft>) => void;
   readonly clearRegistrationDraft: () => void;
   readonly registerCustomer: (payload: CustomerRegisterReq) => Promise<CustomerRegisterRes>;
+  readonly loginCustomer: (payload: CustomerLoginReq) => Promise<CustomerLoginRes>;
 };
 
 const V1Context = createContext<V1ContextType | undefined>(undefined);
 
 export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // Screen #1 testing default: start on 'register'
-  const [activeScreen, setActiveScreen] = useState<ScreenId>('register');
+  // Default entry screen: 'login'
+  const [activeScreen, setActiveScreen] = useState<ScreenId>('login');
   const [preAuthToken, setPreAuthToken] = useState<JWTToken | null>(null);
   const [authToken, setAuthToken] = useState<JWTToken | null>(null);
   const [customer, setCustomer] = useState<Partial<CustomerProfile> | null>(null);
@@ -154,6 +157,24 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
     [showToast]
   );
 
+  // V1 Login Customer Action
+  const loginCustomer = useCallback(
+    async (payload: CustomerLoginReq): Promise<CustomerLoginRes> => {
+      const res = await authApi.login(payload);
+
+      setPreAuthToken(res.preAuthToken);
+      setCustomer((prev) => ({
+        ...prev,
+        email: payload.email.trim().toLowerCase(),
+      }));
+
+      showToast(res.statusMessage || 'Credentials verified. Please enter your MPIN.');
+      setActiveScreen('mpin_login');
+      return res;
+    },
+    [showToast]
+  );
+
   const value: V1ContextType = {
     activeScreen,
     navigateTo,
@@ -166,6 +187,7 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
     updateRegistrationDraft,
     clearRegistrationDraft,
     registerCustomer,
+    loginCustomer,
   };
 
   return <V1Context.Provider value={value}>{children}</V1Context.Provider>;
