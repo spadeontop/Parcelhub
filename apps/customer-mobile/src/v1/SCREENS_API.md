@@ -296,16 +296,6 @@ This document maps every customer mobile screen in `apps/customer-mobile/src/com
         "durationMinutes": 15
       }
       ```
-  - **Call C (Cancel Order)**:
-    - *Trigger*: User clicks **Cancel Order** (only permitted while order is unpaid).
-    - **Method / Route**: `DELETE /api/v1/customer/orders/{id}`
-    - **Headers**: `Authorization: Bearer <authToken>`
-    - **Response**:
-      ```json
-      {
-        "statusMessage": "Order cancelled successfully"
-      }
-      ```
 
 ---
 
