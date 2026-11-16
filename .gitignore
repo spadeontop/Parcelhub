@@ -1,7 +1,7 @@
 node_modules
 .env
 auth.html
-dist
+dist    
 temp/
 temp/**
 
