@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "327080524436",
+    "project_id": "parcelhub-190b5",
+    "storage_bucket": "parcelhub-190b5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:327080524436:android:3098381945cce3fe099281",
+        "android_client_info": {
+          "package_name": "com.spadeontop.parcelhub"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCB5Iyt4cUUjWqmwoAluYAs5MIc3b04yF4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

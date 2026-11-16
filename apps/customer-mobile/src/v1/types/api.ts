@@ -230,10 +230,27 @@ export type CustomerClaimOrderRes = StandardSuccessResponse & {
 };
 
 // ==========================================
+// 2b. Push Notification Endpoints Types (v1)
+// ==========================================
+
+export type NotificationUploadTokenReq = {
+  readonly fcmToken: string;
+  readonly userId?: string;
+};
+
+export type NotificationUploadTokenRes = StandardSuccessResponse;
+
+export type NotificationDeleteTokenReq = {
+  readonly fcmToken?: string;
+};
+
+export type NotificationDeleteTokenRes = StandardSuccessResponse;
+
+// ==========================================
 // 3. Customer Mobile UI Outward Calling Routes
 // ==========================================
 
-export type HttpMethod = "GET" | "POST" | "PUT";
+export type HttpMethod = "GET" | "POST" | "PUT" | "DELETE";
 
 export type RouteDefinition = readonly [method: HttpMethod, path: string];
 
@@ -276,4 +293,8 @@ export type CustomerApiRoutes =
   | readonly ["GET", `/api/v1/customer/orders/${string}/photo`]
 
   // Screen: OrderDetailsScreen (Unlock Counter Pickup Pass)
-  | readonly ["POST", `/api/v1/customer/orders/${string}/claim`];
+  | readonly ["POST", `/api/v1/customer/orders/${string}/claim`]
+
+  // Push Notifications Registration & Deregistration
+  | readonly ["POST", "/api/v1/notification/upload-token"]
+  | readonly ["DELETE", "/api/v1/notification/token"];

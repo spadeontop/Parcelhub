@@ -28,6 +28,16 @@ import {
 import { authApi } from '../services/authApi';
 import { orderApi } from '../services/orderApi';
 import { customerApi } from '../services/customerApi';
+import { notificationApi } from '../services/notificationApi';
+import {
+  requestNotificationPermission,
+  getFcmDeviceToken,
+  setupFcmForegroundListener,
+  setupFcmNotificationOpenedListener,
+  checkInitialNotification,
+  setupFcmTokenRefreshListener,
+  RemoteFcmMessage,
+} from '../services/fcmService';
 import { v1Storage } from '../utils/storage';
 import { formatOrderDate } from '../utils/date';
 
@@ -148,6 +158,8 @@ export type V1ContextType = {
   readonly closePodModal: () => void;
   readonly notifications: readonly CustomerNotification[];
   readonly markAllNotificationsAsRead: () => void;
+  readonly notificationsEnabled: boolean;
+  readonly togglePushNotifications: () => Promise<void>;
   readonly signOutCustomer: () => Promise<void>;
 };
 
@@ -162,6 +174,7 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [orders, setOrders] = useState<readonly CustomerOrderSummary[]>([]);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [selectedOrderTicketCode, setSelectedOrderTicketCode] = useState<string | null>(null);
+  const [notificationsEnabled, setNotificationsEnabled] = useState<boolean>(true);
   const [registrationDraft, setRegistrationDraft] = useState<RegistrationDraft>(
     DEFAULT_REGISTRATION_DRAFT
   );
@@ -268,13 +281,15 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
   useEffect(() => {
     const initStorage = async () => {
       try {
-        const [storedPreAuth, storedAuth, storedProfile] = await Promise.all([
+        const [storedPreAuth, storedAuth, storedProfile, storedPushPref] = await Promise.all([
           v1Storage.getPreAuthToken(),
           v1Storage.getAuthToken(),
           v1Storage.getCustomerProfile(),
+          v1Storage.getPushNotificationsEnabled(),
         ]);
         if (storedPreAuth) setPreAuthToken(storedPreAuth);
         if (storedProfile) setCustomer(storedProfile);
+        setNotificationsEnabled(storedPushPref);
 
         if (storedAuth) {
           setAuthToken(storedAuth);
@@ -292,6 +307,118 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
       refetchOrders();
     }
   }, [authToken, refetchProfile, refetchOrders]);
+
+  // Push token registration helper
+  const registerDevicePushToken = useCallback(async (tokenToAuth: JWTToken) => {
+    try {
+      const hasPermission = await requestNotificationPermission();
+      if (!hasPermission) {
+        return;
+      }
+      const fcmToken = await getFcmDeviceToken();
+      if (fcmToken) {
+        await notificationApi.uploadToken(fcmToken, tokenToAuth);
+      }
+    } catch (err) {
+      console.warn('[FCM] Push token registration warning:', err);
+    }
+  }, []);
+
+  // When authToken is set and notificationsEnabled is true, register token
+  useEffect(() => {
+    if (authToken && notificationsEnabled) {
+      registerDevicePushToken(authToken);
+    }
+  }, [authToken, notificationsEnabled, registerDevicePushToken]);
+
+  // FCM listeners: foreground message, background notification opened, cold start notification, token refresh
+  useEffect(() => {
+    if (!authToken) return;
+
+    // 1. Foreground message listener
+    const unsubForeground = setupFcmForegroundListener((message: RemoteFcmMessage) => {
+      const title = message.notification?.title || 'Order Update';
+      const body = message.notification?.body || 'Your order status has been updated';
+      showToast(`📦 ${title}: ${body}`);
+      refetchOrders().catch(() => {});
+    });
+
+    // 2. Notification opened while running in background
+    const unsubOpened = setupFcmNotificationOpenedListener((message: RemoteFcmMessage) => {
+      const orderId = message.data?.orderId || message.data?.notifId;
+      const status = message.data?.status;
+      if (orderId) {
+        if (status === 'READY_TO_CLAIM') {
+          navigateTo('qr_screen', { orderId });
+        } else {
+          navigateTo('order_details', { orderId });
+        }
+      } else {
+        navigateTo('notifications');
+      }
+    });
+
+    // 3. Initial notification if opened from cold/killed state
+    checkInitialNotification((message: RemoteFcmMessage) => {
+      const orderId = message.data?.orderId || message.data?.notifId;
+      const status = message.data?.status;
+      if (orderId) {
+        if (status === 'READY_TO_CLAIM') {
+          navigateTo('qr_screen', { orderId });
+        } else {
+          navigateTo('order_details', { orderId });
+        }
+      } else {
+        navigateTo('notifications');
+      }
+    });
+
+    // 4. Token refresh listener
+    const unsubRefresh = setupFcmTokenRefreshListener(async (newToken: string) => {
+      if (authToken && notificationsEnabled) {
+        try {
+          await notificationApi.uploadToken(newToken, authToken);
+        } catch (e) {
+          console.warn('[FCM] Error updating refreshed token:', e);
+        }
+      }
+    });
+
+    return () => {
+      unsubForeground();
+      unsubOpened();
+      unsubRefresh();
+    };
+  }, [authToken, notificationsEnabled, showToast, refetchOrders, navigateTo]);
+
+  // Push notifications toggle handler
+  const togglePushNotifications = useCallback(async () => {
+    const nextVal = !notificationsEnabled;
+    setNotificationsEnabled(nextVal);
+    await v1Storage.setPushNotificationsEnabled(nextVal);
+
+    if (nextVal) {
+      if (authToken) {
+        const hasPerm = await requestNotificationPermission();
+        if (hasPerm) {
+          const token = await getFcmDeviceToken();
+          if (token) {
+            await notificationApi.uploadToken(token, authToken);
+          }
+          showToast('Push notifications enabled');
+        } else {
+          showToast('Notification permission not granted in system settings');
+        }
+      }
+    } else {
+      if (authToken) {
+        try {
+          await notificationApi.deleteToken(authToken);
+        } catch {}
+      }
+      showToast('Push notifications disabled');
+    }
+  }, [notificationsEnabled, authToken, showToast]);
 
   // Interval polling while viewing HomeScreen
   useEffect(() => {
@@ -591,6 +718,13 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
   }, [notifications]);
 
   const signOutCustomer = useCallback(async () => {
+    if (authToken) {
+      try {
+        await notificationApi.deleteToken(authToken);
+      } catch (e) {
+        console.warn('[FCM] Token cleanup warning on signout:', e);
+      }
+    }
     await v1Storage.clearAllTokens();
     setPreAuthToken(null);
     setAuthToken(null);
@@ -602,7 +736,7 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
     clearOrderDraft();
     setActiveScreen('login');
     showToast('Signed out successfully');
-  }, [clearRegistrationDraft, clearOrderDraft, showToast]);
+  }, [authToken, clearRegistrationDraft, clearOrderDraft, showToast]);
 
   const value: V1ContextType = {
     activeScreen,
@@ -638,6 +772,8 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
     closePodModal,
     notifications,
     markAllNotificationsAsRead,
+    notificationsEnabled,
+    togglePushNotifications,
     signOutCustomer,
   };
 

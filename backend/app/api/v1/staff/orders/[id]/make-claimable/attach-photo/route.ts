@@ -3,6 +3,7 @@ import { eq, or } from "drizzle-orm";
 import { db } from "@/db";
 import { orders } from "@/db/schema";
 import { authenticateStaffRequest } from "@/app/lib/v1/auth";
+import { sendFcmNotification } from "@/app/lib/v1/fcm";
 import { validateImageSize } from "@/app/lib/v1/image";
 import { jsonError, jsonSuccess } from "@/app/lib/response";
 import {
@@ -107,6 +108,19 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         timestamp: now,
       })
       .where(eq(orders.id, order.id));
+
+    // Non-fatal FCM push to customer
+    sendFcmNotification({
+      userId: order.customerId,
+      title: "Parcel Ready for Claim",
+      body: `Your parcel (${order.trackingId || order.productName || "parcel"}) has arrived at Lily’s Catering Hub and is ready for pickup!`,
+      notifId: order.id,
+      data: {
+        orderId: order.id,
+        ticketCode: order.ticketCode,
+        status: "READY_TO_CLAIM",
+      },
+    }).catch(() => {});
 
     // ---------------------------------------------------------
     // 4. Response:
