@@ -29,10 +29,6 @@ export const HomeScreen: React.FC = () => {
   const isOrderListEmpty = !orders || orders.length === 0;
   const recentOrders = orders.slice(0, 5);
 
-  const readyCount = orders.filter((o) => o.status === 'READY_TO_CLAIM').length;
-  const inTransitCount = orders.filter((o) => o.status === 'AWAITING_PARCEL').length;
-  const unpaidCount = orders.filter((o) => o.status === 'PAYMENT_REQUIRED').length;
-
   const displayName = customer?.firstName || 'Customer';
   const isBlacklisted = Boolean(customer?.blacklisted);
 
@@ -78,45 +74,6 @@ export const HomeScreen: React.FC = () => {
               paddingBottom: 16,
             }}
           >
-            {/* Status Pills Row */}
-            <View className="flex-row items-center gap-2 mb-3">
-              {/* Ready */}
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() => navigateTo('transactions')}
-                className="flex-row items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-black/5"
-              >
-                <View className="w-2 h-2 rounded-full bg-[#10b981]" />
-                <Text className="text-[11px] font-bold text-[#1e1e1e]">
-                  {readyCount} Ready
-                </Text>
-              </TouchableOpacity>
-
-              {/* In Transit */}
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() => navigateTo('transactions')}
-                className="flex-row items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-black/5"
-              >
-                <View className="w-2 h-2 rounded-full bg-[#2563eb]" />
-                <Text className="text-[11px] font-bold text-[#1e1e1e]">
-                  {inTransitCount} In Transit
-                </Text>
-              </TouchableOpacity>
-
-              {/* Unpaid */}
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() => navigateTo('transactions')}
-                className="flex-row items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-black/5"
-              >
-                <View className="w-2 h-2 rounded-full bg-[#f59e0b]" />
-                <Text className="text-[11px] font-bold text-[#1e1e1e]">
-                  {unpaidCount} Unpaid
-                </Text>
-              </TouchableOpacity>
-            </View>
-
             {/* Greeting & Subtitle */}
             <Text className="text-[22px] font-bold text-[#1e1e1e] tracking-tight">
               Welcome {displayName}!

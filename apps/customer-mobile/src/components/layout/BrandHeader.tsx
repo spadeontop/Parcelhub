@@ -49,23 +49,40 @@ export const BrandHeader: React.FC<BrandHeaderProps> = ({
             <BackArrowIcon size={16} color="#374151" />
           </TouchableOpacity>
         ) : showLogo ? (
-          <View className="w-9 h-9 items-center justify-center">
+          <View className="w-9 h-9 items-center justify-center relative">
             <ParcelHubLogoSvg size={36} />
+            {!hideStatusDot && (
+              <View
+                style={{
+                  position: 'absolute',
+                  bottom: -1,
+                  right: -1,
+                  width: 11,
+                  height: 11,
+                  borderRadius: 5.5,
+                  backgroundColor: hubOpen ? '#10b780' : '#ef4444',
+                  borderWidth: 2,
+                  borderColor: '#ffffff',
+                }}
+              />
+            )}
           </View>
         ) : null}
 
         <View>
-          <Text className="text-xl font-extrabold tracking-tight text-gray-900 leading-none">
-            {title}
-          </Text>
-          <View className="flex-row items-center gap-1.5 mt-1">
-            {!hideStatusDot && (
+          <View className="flex-row items-center gap-1.5">
+            <Text className="text-xl font-extrabold tracking-tight text-gray-900 leading-none">
+              {title}
+            </Text>
+            {!showLogo && !hideStatusDot && (
               <View
                 className={`w-2 h-2 rounded-full ${
                   hubOpen ? 'bg-[#10b780]' : 'bg-[#ef4444]'
                 }`}
               />
             )}
+          </View>
+          <View className="flex-row items-center gap-1.5 mt-1">
             <Text className="text-[10px] font-bold tracking-wider text-gray-500 uppercase">
               {subtitle}
             </Text>
