@@ -1,12 +1,11 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
-import { useApp } from '../../context/AppContext';
+import { useV1 } from '../../v1/context/V1Context';
 import { ParcelHubLogoSvg, ArrowLeftIcon } from '../common/Icons';
 import { NumericKeypad } from '../common/NumericKeypad';
-import { setRetainedRegistrationData } from '../../services/registrationState';
 
 export const MpinCreateScreen: React.FC = () => {
-  const { authCustomer, createCustomerMpin, navigateTo, showToast } = useApp();
+  const { customer, createCustomerMpin, navigateTo, showToast } = useV1();
   const [activeStep, setActiveStep] = useState<1 | 2>(1);
   const [pin1, setPin1] = useState<string>('');
   const [pin2, setPin2] = useState<string>('');
@@ -99,18 +98,14 @@ export const MpinCreateScreen: React.FC = () => {
       await createCustomerMpin(pin1);
     } catch (err: any) {
       const msg = err?.message || 'Failed to create MPIN. Please try again.';
+      const status = err?.statusCode;
+      const errorType = err?.error;
+
       showToast(msg);
 
-      const isDuplicate =
-        err?.statusCode === 409 ||
-        err?.error === 'Conflict' ||
-        msg.toLowerCase().includes('already exists') ||
-        msg.toLowerCase().includes('duplicate') ||
-        msg.toLowerCase().includes('already registered');
-
-      if (isDuplicate) {
-        setRetainedRegistrationData({ emailError: msg });
-        navigateTo('register');
+      // Rule 9: If 401 (session expired) or 409 (MPIN already set), redirect to login
+      if (status === 401 || status === 409 || errorType === 'Unauthorized' || errorType === 'Conflict') {
+        navigateTo('login');
       }
     } finally {
       setIsSubmitting(false);
@@ -135,11 +130,12 @@ export const MpinCreateScreen: React.FC = () => {
       setActiveStep(1);
       setMismatch(false);
     } else {
-      navigateTo('register');
+      // Step 1 Back: Account is already registered in DB, route to login
+      navigateTo('login');
     }
   }, [activeStep, navigateTo]);
 
-  const displayEmail = authCustomer.email || '—';
+  const displayEmail = customer?.email || '—';
 
   const buttonLabel = isSubmitting
     ? 'Activating MPIN...'

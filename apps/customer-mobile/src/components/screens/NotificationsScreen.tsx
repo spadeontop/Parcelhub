@@ -8,12 +8,12 @@ import {
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { StatusBar } from 'expo-status-bar';
-import { useApp } from '../../context/AppContext';
+import { useV1 } from '../../v1/context/V1Context';
 import { BottomNav } from '../layout/BottomNav';
 import { AppHeader } from '../layout/AppHeader';
 
 export const NotificationsScreen: React.FC = () => {
-  const { notifications, markAllNotificationsAsRead, navigateTo } = useApp();
+  const { notifications, markAllNotificationsAsRead, navigateTo } = useV1();
   const unreadCount = notifications.filter((n) => n.unread).length;
   const { height } = useWindowDimensions();
   const isCompact = height < 700;
@@ -35,6 +35,8 @@ export const NotificationsScreen: React.FC = () => {
           className="flex-1 px-4"
           contentContainerStyle={{ paddingBottom: 96 }}
         >
+          {/* WIP: Notifications list derived from customer order activities */}
+
           {/* Notifications Card Wrapper */}
           <View
             className="rounded-[24px] bg-white border border-[#f1f5f9] mb-4 overflow-hidden"

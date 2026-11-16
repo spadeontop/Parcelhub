@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { useApp } from '../../context/AppContext';
+import { useV1 } from '../../v1/context/V1Context';
 import { ScreenId } from '../../types';
 import { BackArrowIcon, ParcelHubLogoSvg, HelpIcon } from '../common/Icons';
 
@@ -27,7 +27,8 @@ export const BrandHeader: React.FC<BrandHeaderProps> = ({
   hideBorder = false,
   hideStatusDot = false,
 }) => {
-  const { hubOpen, navigateTo } = useApp();
+  const { navigateTo } = useV1();
+  const hubOpen = true;
 
   return (
     <View
@@ -49,23 +50,40 @@ export const BrandHeader: React.FC<BrandHeaderProps> = ({
             <BackArrowIcon size={16} color="#374151" />
           </TouchableOpacity>
         ) : showLogo ? (
-          <View className="w-9 h-9 rounded-xl bg-blue-50 items-center justify-center border border-blue-100">
-            <ParcelHubLogoSvg size={24} />
+          <View className="w-9 h-9 items-center justify-center relative">
+            <ParcelHubLogoSvg size={36} />
+            {!hideStatusDot && (
+              <View
+                style={{
+                  position: 'absolute',
+                  bottom: -1,
+                  right: -1,
+                  width: 11,
+                  height: 11,
+                  borderRadius: 5.5,
+                  backgroundColor: hubOpen ? '#10b780' : '#ef4444',
+                  borderWidth: 2,
+                  borderColor: '#ffffff',
+                }}
+              />
+            )}
           </View>
         ) : null}
 
         <View>
-          <Text className="text-xl font-extrabold tracking-tight text-gray-900 leading-none">
-            {title}
-          </Text>
-          <View className="flex-row items-center gap-1.5 mt-1">
-            {!hideStatusDot && (
+          <View className="flex-row items-center gap-1.5">
+            <Text className="text-xl font-extrabold tracking-tight text-gray-900 leading-none">
+              {title}
+            </Text>
+            {!showLogo && !hideStatusDot && (
               <View
                 className={`w-2 h-2 rounded-full ${
                   hubOpen ? 'bg-[#10b780]' : 'bg-[#ef4444]'
                 }`}
               />
             )}
+          </View>
+          <View className="flex-row items-center gap-1.5 mt-1">
             <Text className="text-[10px] font-bold tracking-wider text-gray-500 uppercase">
               {subtitle}
             </Text>

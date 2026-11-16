@@ -8,41 +8,43 @@ import {
   Keyboard,
   useWindowDimensions,
 } from 'react-native';
-import { useApp } from '../../context/AppContext';
+import { useV1 } from '../../v1/context/V1Context';
 import { AuthBrandHeader } from '../layout/AuthBrandHeader';
 import { FormCardHeader } from '../common/FormCardHeader';
 import { AuthInput } from '../common/AuthInput';
 import { AuthButton } from '../common/AuthButton';
-import {
-  getRetainedRegistrationData,
-  setRetainedRegistrationData,
-  clearRetainedRegistrationData,
-} from '../../services/registrationState';
 
 export const RegisterScreen: React.FC = () => {
-  const { navigateTo, registerCustomer, clearPendingRegistration, showToast } = useApp();
+  const {
+    navigateTo,
+    registerCustomer,
+    showToast,
+    registrationDraft,
+    updateRegistrationDraft,
+    clearRegistrationDraft,
+  } = useV1();
+
   const { height } = useWindowDimensions();
   const isCompact = height < 700;
 
-  const retained = getRetainedRegistrationData();
-  const [currentStep, setCurrentStep] = useState<1 | 2>(retained.currentStep);
+  const [currentStep, setCurrentStep] = useState<1 | 2>(registrationDraft.currentStep);
 
-  // Form states matching CustomerRegisterRequest - initialized from retained data
-  const [firstName, setFirstName] = useState(retained.firstName);
-  const [lastName, setLastName] = useState(retained.lastName);
-  const [middleInitial, setMiddleInitial] = useState(retained.middleInitial);
-  const [email, setEmail] = useState(retained.email);
-  const [phone, setPhone] = useState(retained.phone);
-  const [password, setPassword] = useState(retained.password);
-  const [confirmPassword, setConfirmPassword] = useState(retained.confirmPassword);
-  const [emailError, setEmailError] = useState(retained.emailError || '');
+  // Form states matching CustomerRegisterReq - initialized from V1 draft
+  const [firstName, setFirstName] = useState(registrationDraft.firstName);
+  const [lastName, setLastName] = useState(registrationDraft.lastName);
+  const [middleInitial, setMiddleInitial] = useState(registrationDraft.middleInitial);
+  const [email, setEmail] = useState(registrationDraft.email);
+  const [phone, setPhone] = useState(registrationDraft.phone);
+  const [password, setPassword] = useState(registrationDraft.password);
+  const [confirmPassword, setConfirmPassword] = useState(registrationDraft.confirmPassword);
+  const [emailError, setEmailError] = useState(registrationDraft.emailError || '');
   const [passwordError, setPasswordError] = useState('');
   const [confirmPasswordError, setConfirmPasswordError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Retain inputted data and current step
+  // Synchronize form draft changes into V1 context
   useEffect(() => {
-    setRetainedRegistrationData({
+    updateRegistrationDraft({
       currentStep,
       firstName,
       lastName,
@@ -53,7 +55,18 @@ export const RegisterScreen: React.FC = () => {
       confirmPassword,
       emailError,
     });
-  }, [currentStep, firstName, lastName, middleInitial, email, phone, password, confirmPassword, emailError]);
+  }, [
+    currentStep,
+    firstName,
+    lastName,
+    middleInitial,
+    email,
+    phone,
+    password,
+    confirmPassword,
+    emailError,
+    updateRegistrationDraft,
+  ]);
 
   // Validation rules for Step 1
   const isFirstNameValid = firstName.trim().length >= 1;
@@ -89,8 +102,7 @@ export const RegisterScreen: React.FC = () => {
 
   const handleBackToLogin = () => {
     Keyboard.dismiss();
-    clearRetainedRegistrationData();
-    clearPendingRegistration();
+    clearRegistrationDraft();
     setCurrentStep(1);
     setFirstName('');
     setLastName('');
@@ -134,37 +146,29 @@ export const RegisterScreen: React.FC = () => {
       return;
     }
 
-    const normalizedEmail = email.trim().toLowerCase();
-    if (normalizedEmail === 'user@example.com' || normalizedEmail === 'staff@parcelhub.com') {
-      setEmailError('Customer with this email already exists');
-      return;
-    }
-
     setIsLoading(true);
     try {
       await registerCustomer({
-        password,
         email: email.trim(),
+        password,
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         middleInitial: middleInitial.trim() || undefined,
         phoneNumber: phone.trim(),
       });
     } catch (err: any) {
-      const isDuplicate =
-        err?.statusCode === 409 ||
+      // Backend-authoritative error handling (Rule #9)
+      const statusCode = err?.statusCode;
+      const message = err?.message || 'Registration failed';
+      const isConflict =
+        statusCode === 409 ||
         err?.error === 'Conflict' ||
-        (err?.message && (
-          err.message.toLowerCase().includes('already exists') ||
-          err.message.toLowerCase().includes('duplicate') ||
-          err.message.toLowerCase().includes('already registered') ||
-          err.message.toLowerCase().includes('conflict')
-        ));
+        message.toLowerCase().includes('already exists');
 
-      if (isDuplicate) {
-        setEmailError(err?.message || 'Customer with this email already exists');
+      if (isConflict) {
+        setEmailError(message);
       } else {
-        showToast(err?.message || 'Registration failed. Please check your information.');
+        showToast(message);
       }
     } finally {
       setIsLoading(false);
@@ -199,206 +203,209 @@ export const RegisterScreen: React.FC = () => {
                 paddingBottom: isCompact ? 16 : 24,
               }}
             >
-            {/* Top/Middle Area: Form Card */}
-            <View
-              className="bg-white rounded-2xl border border-[#e2e8f0]"
-              style={{
-                paddingHorizontal: 16,
-                paddingVertical: isCompact ? 12 : 16,
-                shadowColor: '#000000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.04,
-                shadowRadius: 8,
-                elevation: 2,
-              }}
-            >
-              {currentStep === 1 ? (
-                /* STEP 1: Personal Details */
-                <View>
-                  <FormCardHeader
-                    step={1}
-                    title="Personal Details"
-                    subtitle="Enter your name for deliveries"
-                  />
+              {/* Top/Middle Area: Form Card */}
+              <View
+                className="bg-white rounded-2xl border border-[#e2e8f0]"
+                style={{
+                  paddingHorizontal: 16,
+                  paddingVertical: isCompact ? 12 : 16,
+                  shadowColor: '#000000',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.04,
+                  shadowRadius: 8,
+                  elevation: 2,
+                }}
+              >
+                {currentStep === 1 ? (
+                  /* STEP 1: Personal Details */
+                  <View>
+                    <FormCardHeader
+                      step={1}
+                      title="Personal Details"
+                      subtitle="Enter your name for deliveries"
+                    />
 
-                  <AuthInput
-                    label="First name"
-                    value={firstName}
-                    onChangeText={setFirstName}
-                    autoCapitalize="words"
-                    returnKeyType="next"
-                    isValid={isFirstNameValid}
-                  />
+                    <AuthInput
+                      label="First name"
+                      value={firstName}
+                      onChangeText={setFirstName}
+                      autoCapitalize="words"
+                      returnKeyType="next"
+                      isValid={isFirstNameValid}
+                    />
 
-                  <AuthInput
-                    label="Last name"
-                    value={lastName}
-                    onChangeText={setLastName}
-                    autoCapitalize="words"
-                    returnKeyType="next"
-                    isValid={isLastNameValid}
-                  />
+                    <AuthInput
+                      label="Last name"
+                      value={lastName}
+                      onChangeText={setLastName}
+                      autoCapitalize="words"
+                      returnKeyType="next"
+                      isValid={isLastNameValid}
+                    />
 
-                  <AuthInput
-                    label="Middle initial (optional)"
-                    value={middleInitial}
-                    onChangeText={setMiddleInitial}
-                    maxLength={4}
-                    autoCapitalize="characters"
-                    returnKeyType="done"
-                    onSubmitEditing={Keyboard.dismiss}
-                  />
-                </View>
-              ) : (
-                /* STEP 2: Account & Security */
-                <View>
-                  <FormCardHeader
-                    step={2}
-                    title="Account & Security"
-                    subtitle="Set up your login credentials and contact info"
-                  />
+                    <AuthInput
+                      label="Middle initial (optional)"
+                      value={middleInitial}
+                      onChangeText={setMiddleInitial}
+                      maxLength={4}
+                      autoCapitalize="characters"
+                      returnKeyType="done"
+                      onSubmitEditing={Keyboard.dismiss}
+                    />
+                  </View>
+                ) : (
+                  /* STEP 2: Account & Security */
+                  <View>
+                    <FormCardHeader
+                      step={2}
+                      title="Account & Security"
+                      subtitle="Set up your login credentials and contact info"
+                    />
 
-                  <AuthInput
-                    label="Email"
-                    type="email"
-                    value={email}
-                    onChangeText={(val) => {
-                      setEmail(val);
-                      if (emailError) setEmailError('');
-                    }}
-                    error={emailError}
-                    returnKeyType="next"
-                  />
+                    <AuthInput
+                      label="Email"
+                      type="email"
+                      value={email}
+                      onChangeText={(val) => {
+                        setEmail(val);
+                        if (emailError) setEmailError('');
+                      }}
+                      error={emailError}
+                      returnKeyType="next"
+                    />
 
-                  <AuthInput
-                    label="Phone number"
-                    type="phone"
-                    value={phone}
-                    onChangeText={setPhone}
-                    returnKeyType="next"
-                  />
+                    <AuthInput
+                      label="Phone number"
+                      type="phone"
+                      value={phone}
+                      onChangeText={setPhone}
+                      returnKeyType="next"
+                    />
 
-                  <AuthInput
-                    label="Password"
-                    value={password}
-                    onChangeText={(val) => {
-                      setPassword(val);
-                      if (passwordError) setPasswordError('');
-                    }}
-                    isPassword
-                    isValid={isPasswordValid}
-                    error={passwordError}
-                    returnKeyType="next"
-                  />
+                    <AuthInput
+                      label="Password"
+                      value={password}
+                      onChangeText={(val) => {
+                        setPassword(val);
+                        if (passwordError) setPasswordError('');
+                      }}
+                      isPassword
+                      isValid={isPasswordValid}
+                      error={passwordError}
+                      returnKeyType="next"
+                    />
 
-                  {/* Password Strength Requirement Indicators (shown while typing password) */}
-                  {password.length > 0 && (
-                    <View className="bg-slate-50 border border-slate-100 rounded-[10px] p-2.5 flex-row flex-wrap gap-x-3 gap-y-1 mb-2">
-                      <Text
-                        className={`text-[10px] font-semibold ${
-                          hasMinLength ? 'text-[#059669]' : 'text-slate-400'
-                        }`}
-                      >
-                        {hasMinLength ? '✓' : '•'} 8+ chars
-                      </Text>
-                      <Text
-                        className={`text-[10px] font-semibold ${
-                          hasUppercase ? 'text-[#059669]' : 'text-slate-400'
-                        }`}
-                      >
-                        {hasUppercase ? '✓' : '•'} Uppercase
-                      </Text>
-                      <Text
-                        className={`text-[10px] font-semibold ${
-                          hasLowercase ? 'text-[#059669]' : 'text-slate-400'
-                        }`}
-                      >
-                        {hasLowercase ? '✓' : '•'} Lowercase
-                      </Text>
-                      <Text
-                        className={`text-[10px] font-semibold ${
-                          hasNumber ? 'text-[#059669]' : 'text-slate-400'
-                        }`}
-                      >
-                        {hasNumber ? '✓' : '•'} Number
-                      </Text>
-                      <Text
-                        className={`text-[10px] font-semibold ${
-                          hasSymbol ? 'text-[#059669]' : 'text-slate-400'
-                        }`}
-                      >
-                        {hasSymbol ? '✓' : '•'} Symbol
-                      </Text>
-                    </View>
-                  )}
+                    {/* Password Strength Requirement Indicators */}
+                    {password.length > 0 && (
+                      <View className="bg-slate-50 border border-slate-100 rounded-[10px] p-2.5 flex-row flex-wrap gap-x-3 gap-y-1 mb-2">
+                        <Text
+                          className={`text-[10px] font-semibold ${
+                            hasMinLength ? 'text-[#059669]' : 'text-slate-400'
+                          }`}
+                        >
+                          {hasMinLength ? '✓' : '•'} 8+ chars
+                        </Text>
+                        <Text
+                          className={`text-[10px] font-semibold ${
+                            hasUppercase ? 'text-[#059669]' : 'text-slate-400'
+                          }`}
+                        >
+                          {hasUppercase ? '✓' : '•'} Uppercase
+                        </Text>
+                        <Text
+                          className={`text-[10px] font-semibold ${
+                            hasLowercase ? 'text-[#059669]' : 'text-slate-400'
+                          }`}
+                        >
+                          {hasLowercase ? '✓' : '•'} Lowercase
+                        </Text>
+                        <Text
+                          className={`text-[10px] font-semibold ${
+                            hasNumber ? 'text-[#059669]' : 'text-slate-400'
+                          }`}
+                        >
+                          {hasNumber ? '✓' : '•'} Number
+                        </Text>
+                        <Text
+                          className={`text-[10px] font-semibold ${
+                            hasSymbol ? 'text-[#059669]' : 'text-slate-400'
+                          }`}
+                        >
+                          {hasSymbol ? '✓' : '•'} Symbol
+                        </Text>
+                      </View>
+                    )}
 
-                  <AuthInput
-                    label="Confirm password"
-                    value={confirmPassword}
-                    onChangeText={(val) => {
-                      setConfirmPassword(val);
-                      if (confirmPasswordError) setConfirmPasswordError('');
-                    }}
-                    isPassword
-                    isValid={isConfirmPasswordValid}
-                    error={confirmPasswordError}
-                    returnKeyType="done"
-                    onSubmitEditing={Keyboard.dismiss}
-                  />
+                    <AuthInput
+                      label="Confirm password"
+                      value={confirmPassword}
+                      onChangeText={(val) => {
+                        setConfirmPassword(val);
+                        if (confirmPasswordError) setConfirmPasswordError('');
+                      }}
+                      isPassword
+                      isValid={isConfirmPasswordValid}
+                      error={confirmPasswordError}
+                      returnKeyType="done"
+                      onSubmitEditing={Keyboard.dismiss}
+                    />
 
-                  <Text
-                    className="font-normal text-[#94a3b8] px-1"
-                    style={{
-                      fontSize: isCompact ? 10 : 11,
-                      marginTop: 2,
-                    }}
-                  >
-                    At least 8 characters with uppercase, lowercase, number & symbol.
-                  </Text>
-                </View>
-              )}
-            </View>
+                    <Text
+                      className="font-normal text-[#94a3b8] px-1"
+                      style={{
+                        fontSize: isCompact ? 10 : 11,
+                        marginTop: 2,
+                      }}
+                    >
+                      At least 8 characters with uppercase, lowercase, number & symbol.
+                    </Text>
+                  </View>
+                )}
+              </View>
 
-            {/* Bottom Pinned Action Buttons */}
-            <View className="gap-2.5">
-              {currentStep === 1 ? (
-                <>
-                  <AuthButton
-                    label="Next"
-                    variant="primary"
-                    disabled={!isStep1Valid}
-                    onPress={handleNextStep}
-                    showArrow
-                  />
-                  <AuthButton
-                    label="Back to login"
-                    variant="secondary"
-                    onPress={handleBackToLogin}
-                  />
-                </>
-              ) : (
-                <>
-                  <AuthButton
-                    label="Register"
-                    variant="primary"
-                    disabled={!isStep2Valid || isLoading}
-                    onPress={handleRegister}
-                    isLoading={isLoading}
-                  />
-                  <AuthButton
-                    label="Back"
-                    variant="secondary"
-                    onPress={() => { Keyboard.dismiss(); setCurrentStep(1); }}
-                  />
-                </>
-              )}
+              {/* Bottom Pinned Action Buttons */}
+              <View className="gap-2.5">
+                {currentStep === 1 ? (
+                  <>
+                    <AuthButton
+                      label="Next"
+                      variant="primary"
+                      disabled={!isStep1Valid}
+                      onPress={handleNextStep}
+                      showArrow
+                    />
+                    <AuthButton
+                      label="Back to login"
+                      variant="secondary"
+                      onPress={handleBackToLogin}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <AuthButton
+                      label="Register"
+                      variant="primary"
+                      disabled={!isStep2Valid || isLoading}
+                      onPress={handleRegister}
+                      isLoading={isLoading}
+                    />
+                    <AuthButton
+                      label="Back"
+                      variant="secondary"
+                      onPress={() => {
+                        Keyboard.dismiss();
+                        setCurrentStep(1);
+                      }}
+                    />
+                  </>
+                )}
+              </View>
             </View>
           </View>
-        </View>
-      </TouchableWithoutFeedback>
-    </KeyboardAvoidingView>
-  </View>
-);
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
+    </View>
+  );
 };
 
 export default RegisterScreen;

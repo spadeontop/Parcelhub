@@ -1,15 +1,15 @@
 import React from 'react';
 import { View, TouchableOpacity, Text } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { useApp } from '../../context/AppContext';
+import { useV1 } from '../../v1/context/V1Context';
 
 interface BottomNavProps {
   activeTab?: 'home' | 'transactions' | 'notifications' | 'profile';
 }
 
 export const BottomNav: React.FC<BottomNavProps> = ({ activeTab = 'home' }) => {
-  const { navigateTo, notifications } = useApp();
-  const unreadCount = notifications.filter((n) => n.unread).length;
+  const { navigateTo } = useV1();
+  const unreadCount = 0;
 
   return (
     <View className="absolute bottom-3 left-4 right-4 pointer-events-box-none">

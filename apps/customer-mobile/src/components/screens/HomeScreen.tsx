@@ -8,31 +8,39 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { useApp } from '../../context/AppContext';
+import { useV1 } from '../../v1/context/V1Context';
+import { formatOrderDate } from '../../v1/utils/date';
 import { BottomNav } from '../layout/BottomNav';
 import { AppHeader } from '../layout/AppHeader';
 import { getStatusLabel, getStatusPillStyles } from '../../utils/statusHelpers';
 
 export const HomeScreen: React.FC = () => {
-  const { hasOrders, orders, navigateTo, refetchOrders, authCustomer } = useApp();
+  const { orders, navigateTo, refetchOrders, refetchProfile, customer, showToast } = useV1();
   const [refreshing, setRefreshing] = useState(false);
   const { height } = useWindowDimensions();
   const isCompact = height < 700;
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await refetchOrders();
+    await Promise.all([refetchOrders(), refetchProfile()]);
     setRefreshing(false);
   };
 
-  const isOrderListEmpty = !hasOrders || orders.length === 0;
+  const isOrderListEmpty = !orders || orders.length === 0;
   const recentOrders = orders.slice(0, 5);
 
-  const readyCount = orders.filter((o) => o.status === 'READY_TO_CLAIM').length;
-  const inTransitCount = orders.filter((o) => o.status === 'AWAITING_PARCEL').length;
-  const unpaidCount = orders.filter((o) => o.status === 'PAYMENT_REQUIRED').length;
+  const displayName = customer?.firstName || 'Customer';
+  const isBlacklisted = Boolean(customer?.blacklisted);
 
-  const displayName = authCustomer?.firstname || 'John';
+  const handleCreateOrder = () => {
+    if (isBlacklisted) {
+      showToast(
+        customer?.blacklistReason || 'Your account is suspended from creating new orders.'
+      );
+      return;
+    }
+    navigateTo('create_order');
+  };
 
   return (
     <View className="flex-1 bg-[#2563eb]">
@@ -66,45 +74,6 @@ export const HomeScreen: React.FC = () => {
               paddingBottom: 16,
             }}
           >
-            {/* Status Pills Row */}
-            <View className="flex-row items-center gap-2 mb-3">
-              {/* Ready */}
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() => navigateTo('transactions')}
-                className="flex-row items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-black/5"
-              >
-                <View className="w-2 h-2 rounded-full bg-[#10b981]" />
-                <Text className="text-[11px] font-bold text-[#1e1e1e]">
-                  {readyCount} Ready
-                </Text>
-              </TouchableOpacity>
-
-              {/* In Transit */}
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() => navigateTo('transactions')}
-                className="flex-row items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-black/5"
-              >
-                <View className="w-2 h-2 rounded-full bg-[#2563eb]" />
-                <Text className="text-[11px] font-bold text-[#1e1e1e]">
-                  {inTransitCount} In Transit
-                </Text>
-              </TouchableOpacity>
-
-              {/* Unpaid */}
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() => navigateTo('transactions')}
-                className="flex-row items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-black/5"
-              >
-                <View className="w-2 h-2 rounded-full bg-[#f59e0b]" />
-                <Text className="text-[11px] font-bold text-[#1e1e1e]">
-                  {unpaidCount} Unpaid
-                </Text>
-              </TouchableOpacity>
-            </View>
-
             {/* Greeting & Subtitle */}
             <Text className="text-[22px] font-bold text-[#1e1e1e] tracking-tight">
               Welcome {displayName}!
@@ -113,11 +82,13 @@ export const HomeScreen: React.FC = () => {
               Create an order or track existing deliveries
             </Text>
 
-            {/* Create Order Button (h: 48px, bg: #2563EB, rounded-xl) */}
+            {/* Create Order Button */}
             <TouchableOpacity
               activeOpacity={0.8}
-              onPress={() => navigateTo('create_order')}
-              className="w-full h-12 rounded-xl bg-[#2563eb] items-center justify-center flex-row"
+              onPress={handleCreateOrder}
+              className={`w-full h-12 rounded-xl bg-[#2563eb] items-center justify-center flex-row ${
+                isBlacklisted ? 'opacity-60' : ''
+              }`}
             >
               <Text className="text-white text-[14px] font-bold">
                 + Create Order
@@ -152,8 +123,10 @@ export const HomeScreen: React.FC = () => {
                 </Text>
                 <TouchableOpacity
                   activeOpacity={0.8}
-                  onPress={() => navigateTo('create_order')}
-                  className="mt-3 px-4 py-2 rounded-xl bg-[#2563eb]"
+                  onPress={handleCreateOrder}
+                  className={`mt-3 px-4 py-2 rounded-xl bg-[#2563eb] ${
+                    isBlacklisted ? 'opacity-60' : ''
+                  }`}
                 >
                   <Text className="text-white text-[12px] font-bold">
                     Create an order
@@ -178,7 +151,12 @@ export const HomeScreen: React.FC = () => {
                     <TouchableOpacity
                       key={order.id}
                       activeOpacity={0.7}
-                      onPress={() => navigateTo('order_details', { orderId: order.id })}
+                      onPress={() =>
+                        navigateTo('order_details', {
+                          orderId: order.id,
+                          ticketCode: order.ticketCode,
+                        })
+                      }
                       className={`py-3 flex-row items-center justify-between ${
                         idx !== 0 ? 'border-t border-[#f3f4f6]' : ''
                       }`}
@@ -190,10 +168,10 @@ export const HomeScreen: React.FC = () => {
                           numberOfLines={1}
                           ellipsizeMode="tail"
                         >
-                          {order.product}
+                          {order.productName}
                         </Text>
                         <Text className="text-[12px] font-normal text-[#6b7280] leading-[16px] mt-0.5">
-                          {order.dateLabel}
+                          {formatOrderDate(order.timestamp)}
                         </Text>
                       </View>
 

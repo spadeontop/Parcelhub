@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, useWindowDimensions } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { useApp } from '../../context/AppContext';
+import { useV1 } from '../../v1/context/V1Context';
+import { ParcelHubLogoSvg } from '../common/Icons';
 
 interface AppHeaderProps {
   title: string;
@@ -28,7 +29,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   centerTitle = false,
   backgroundColor,
 }) => {
-  const { navigateTo } = useApp();
+  const { navigateTo } = useV1();
   const { height } = useWindowDimensions();
   const isCompact = height < 700;
 
@@ -70,20 +71,22 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
           {/* Centered Title & Subtitle */}
           <View className="absolute left-0 right-0 top-0 bottom-0 items-center justify-center pointer-events-none">
-            <Text
-              className="font-bold text-white tracking-tight leading-[28px] text-[20px] text-center"
-              numberOfLines={1}
-            >
-              {title}
-            </Text>
+            <View className="flex-row items-center justify-center gap-2">
+              <Text
+                className="font-bold text-white tracking-tight leading-[28px] text-[20px] text-center"
+                numberOfLines={1}
+              >
+                {title}
+              </Text>
+              {statusDotColor && (
+                <View
+                  className="w-2.5 h-2.5 rounded-full"
+                  style={{ backgroundColor: statusDotColor }}
+                />
+              )}
+            </View>
             {subtitle ? (
               <View className="flex-row items-center justify-center gap-1.5 mt-0.5">
-                {statusDotColor && (
-                  <View
-                    className="w-1.5 h-1.5 rounded-full"
-                    style={{ backgroundColor: statusDotColor }}
-                  />
-                )}
                 <Text className="text-[12px] font-medium text-[#dbeafe] text-center">
                   {subtitle}
                 </Text>
@@ -152,60 +155,54 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
           {showLogo && (
             <View
-              className="rounded-[12px] bg-[rgba(255,255,255,0.16)] items-center justify-center border border-[rgba(255,255,255,0.2)] mr-3"
+              className="mr-3 items-center justify-center"
               style={{
-                width: 44,
-                height: 44,
                 shadowColor: '#000000',
                 shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: 0.05,
+                shadowOpacity: 0.1,
                 shadowRadius: 2,
-                elevation: 1,
+                elevation: 2,
+                position: 'relative',
               }}
             >
-              <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-                <Path
-                  d="M21 16V8C20.9993 7.2862 20.6182 6.6269 20 6.27L13 2.27C12.3812 1.91273 11.6188 1.91273 11 2.27L4 6.27C3.38183 6.6269 3.00073 7.2862 3 8V16C3.00073 16.7138 3.38183 17.3731 4 17.73L11 21.73C11.6188 22.0873 12.3812 22.0873 13 21.73L20 17.73C20.6182 17.3731 20.9993 16.7138 21 16V16"
-                  stroke="#ffffff"
-                  strokeWidth={2.2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
+              <ParcelHubLogoSvg size={40} />
+              {statusDotColor && (
+                <View
+                  style={{
+                    position: 'absolute',
+                    bottom: -1,
+                    right: -1,
+                    width: 12,
+                    height: 12,
+                    borderRadius: 6,
+                    backgroundColor: statusDotColor,
+                    borderWidth: 2,
+                    borderColor: backgroundColor || '#2563eb',
+                  }}
                 />
-                <Path
-                  d="M3.27 6.96L12 12.01L20.73 6.96"
-                  stroke="#ffffff"
-                  strokeWidth={2.2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <Path
-                  d="M12 22.08V12"
-                  stroke="#ffffff"
-                  strokeWidth={2.2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </Svg>
+              )}
             </View>
           )}
 
           <View className="flex-1">
-            <Text
-              className={`font-bold text-white tracking-tight leading-[26px] ${
-                showLogo ? 'text-[18px]' : 'text-[20px]'
-              }`}
-              numberOfLines={1}
-            >
-              {title}
-            </Text>
+            <View className="flex-row items-center gap-2">
+              <Text
+                className={`font-bold text-white tracking-tight leading-[26px] ${
+                  showLogo ? 'text-[18px]' : 'text-[20px]'
+                }`}
+                numberOfLines={1}
+              >
+                {title}
+              </Text>
+              {!showLogo && statusDotColor && (
+                <View
+                  className="w-2.5 h-2.5 rounded-full"
+                  style={{ backgroundColor: statusDotColor }}
+                />
+              )}
+            </View>
             {subtitle && (
               <View className="flex-row items-center gap-1.5 mt-0.5">
-                {statusDotColor && (
-                  <View
-                    className="w-1.5 h-1.5 rounded-full"
-                    style={{ backgroundColor: statusDotColor }}
-                  />
-                )}
                 <Text className="text-[11px] font-bold text-[#dbeafe] uppercase tracking-wider">
                   {subtitle}
                 </Text>

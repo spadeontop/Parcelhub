@@ -5,57 +5,98 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import Svg, { Path } from 'react-native-svg';
-import { useApp } from '../../context/AppContext';
+import { useV1 } from '../../v1/context/V1Context';
 import { AppHeader } from '../layout/AppHeader';
 import { AuthInput } from '../common/AuthInput';
-import { parseCurrency } from '../../services/orderApi';
+import { parseCurrency } from '../../v1/utils/currency';
 
 export const ConfirmOrderScreen: React.FC = () => {
   const {
-    draftOrder,
-    updateDraftOrder,
-    submitDraftOrder,
+    orderDraft,
+    updateOrderDraft,
+    confirmCustomerOrder,
     navigateTo,
     showToast,
-  } = useApp();
+  } = useV1();
 
   const [isConfirmed, setIsConfirmed] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [trackingError, setTrackingError] = useState<string | null>(null);
 
+  const product = orderDraft.productName || '';
+  const recipient = orderDraft.recipientName || '';
+  const totalAmount = orderDraft.totalAmount || '';
+  const trackingId = orderDraft.trackingId || '';
+
   // Amount validation logic
-  const rawAmountNumber = parseCurrency(draftOrder.totalAmount);
-  const isAmountValid = draftOrder.totalAmount.trim().length > 0 && rawAmountNumber > 0 && !isNaN(rawAmountNumber);
-  const isAmountFilled = draftOrder.totalAmount.trim().length > 0;
-  const amountError = isAmountFilled && !isAmountValid ? 'Please enter a valid amount (e.g. 500)' : '';
+  const rawAmountNumber = parseCurrency(totalAmount);
+  const isAmountValid =
+    totalAmount.trim().length > 0 && rawAmountNumber > 0 && !isNaN(rawAmountNumber);
+  const isAmountFilled = totalAmount.trim().length > 0;
+  const amountError =
+    isAmountFilled && !isAmountValid ? 'Please enter a valid amount (e.g. 500)' : '';
 
   // Form validity for submission
-  const isFormValid = isConfirmed && isAmountValid && draftOrder.product.trim().length > 0;
+  const isFormValid =
+    isConfirmed &&
+    isAmountValid &&
+    product.trim().length > 0 &&
+    recipient.trim().length > 0 &&
+    trackingId.trim().length > 0;
 
   const handleSubmit = async () => {
+    if (!orderDraft.orderId) {
+      showToast('No active order to confirm. Please start again.');
+      navigateTo('create_order');
+      return;
+    }
     if (!isConfirmed) {
       showToast('Please check the confirmation box to proceed.');
+      return;
+    }
+    if (!product.trim()) {
+      showToast('Please enter the product name.');
+      return;
+    }
+    if (!recipient.trim()) {
+      showToast("Please enter the receiver's name.");
       return;
     }
     if (!isAmountValid) {
       showToast('Please enter a valid total amount before submitting.');
       return;
     }
+    if (!trackingId.trim()) {
+      showToast('Please enter the tracking ID.');
+      return;
+    }
+
     setTrackingError(null);
     setIsSubmitting(true);
     try {
-      await submitDraftOrder();
+      await confirmCustomerOrder({
+        trackingId: trackingId.trim(),
+        productName: product.trim(),
+        recipientName: recipient.trim(),
+        price: rawAmountNumber,
+      });
     } catch (err: any) {
       if (
+        err?.statusCode === 409 ||
         err?.status === 409 ||
-        err?.errorType === 'DuplicateTrackingId' ||
-        err?.message?.toLowerCase().includes('tracking id') ||
-        err?.message?.toLowerCase().includes('duplicate')
+        err?.error === 'Conflict' ||
+        err?.message?.toLowerCase().includes('duplicate') ||
+        err?.message?.toLowerCase().includes('already registered')
       ) {
-        setTrackingError('This tracking ID is already in use.');
+        setTrackingError(
+          err?.message || 'Tracking number is already registered to a paid active parcel'
+        );
+      } else {
+        showToast(err?.message || 'Failed to submit order.');
       }
     } finally {
       setIsSubmitting(false);
@@ -104,24 +145,24 @@ export const ConfirmOrderScreen: React.FC = () => {
               {/* 1. Product Field */}
               <AuthInput
                 label="Product"
-                value={draftOrder.product}
-                onChangeText={(text) => updateDraftOrder({ product: text })}
+                value={product}
+                onChangeText={(text) => updateOrderDraft({ productName: text })}
                 showSuccessCheck={false}
               />
 
               {/* 2. Receiver's Name Field */}
               <AuthInput
                 label="Receiver's Name"
-                value={draftOrder.recipient}
-                onChangeText={(text) => updateDraftOrder({ recipient: text })}
+                value={recipient}
+                onChangeText={(text) => updateOrderDraft({ recipientName: text })}
                 showSuccessCheck={false}
               />
 
               {/* 3. Total Amount Field with Validation */}
               <AuthInput
                 label="Total Amount"
-                value={draftOrder.totalAmount}
-                onChangeText={(text) => updateDraftOrder({ totalAmount: text })}
+                value={totalAmount}
+                onChangeText={(text) => updateOrderDraft({ totalAmount: text })}
                 keyboardType="numeric"
                 error={amountError}
                 isValid={isAmountValid}
@@ -131,11 +172,11 @@ export const ConfirmOrderScreen: React.FC = () => {
               {/* 4. Tracking ID Field */}
               <AuthInput
                 label="Tracking ID"
-                value={draftOrder.trackingId}
+                value={trackingId}
                 error={trackingError || undefined}
                 onChangeText={(text) => {
                   if (trackingError) setTrackingError(null);
-                  updateDraftOrder({ trackingId: text });
+                  updateOrderDraft({ trackingId: text });
                 }}
                 autoCapitalize="characters"
                 showSuccessCheck={false}
@@ -155,24 +196,34 @@ export const ConfirmOrderScreen: React.FC = () => {
             }}
           >
             {/* Receipt Thumbnail / Document Icon Box */}
-            <View className="w-16 h-16 rounded-[14px] bg-[#f8fafc] border border-[#e2e8f0] items-center justify-center mr-3.5 shrink-0">
-              <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-                <Path
-                  d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
-                  stroke="#64748b"
-                  strokeWidth={1.8}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
+            <View className="w-16 h-16 rounded-[14px] bg-[#f8fafc] border border-[#e2e8f0] items-center justify-center mr-3.5 shrink-0 overflow-hidden">
+              {orderDraft.previewUri || orderDraft.imageUrl ? (
+                <Image
+                  source={{ uri: (orderDraft.previewUri || orderDraft.imageUrl) as string }}
+                  style={{ width: '100%', height: '100%' }}
+                  resizeMode="cover"
                 />
-                <Path
-                  d="M14 2v6h6M16 13H8M16 17H8M10 9H8"
-                  stroke="#64748b"
-                  strokeWidth={1.8}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </Svg>
-              <Text className="text-[9px] font-bold text-[#64748b] mt-0.5">Receipt</Text>
+              ) : (
+                <>
+                  <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+                    <Path
+                      d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                      stroke="#64748b"
+                      strokeWidth={1.8}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <Path
+                      d="M14 2v6h6M16 13H8M16 17H8M10 9H8"
+                      stroke="#64748b"
+                      strokeWidth={1.8}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </Svg>
+                  <Text className="text-[9px] font-bold text-[#64748b] mt-0.5">Receipt</Text>
+                </>
+              )}
             </View>
 
             {/* Receipt Details & Status */}
