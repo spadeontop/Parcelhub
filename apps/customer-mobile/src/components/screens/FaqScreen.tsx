@@ -1,9 +1,9 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, TextInput, ScrollView, Animated } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import Svg, { Path } from 'react-native-svg';
 import { useApp } from '../../context/AppContext';
-import { BottomNav } from '../layout/BottomNav';
-import { BackButton } from '../common/BackButton';
+import { AppHeader } from '../layout/AppHeader';
 
 export interface FaqItem {
   id: string;
@@ -11,184 +11,53 @@ export interface FaqItem {
   answer: string;
 }
 
-export interface PolicyItem {
-  id: string;
-  title: string;
-  answer: string;
-}
-
 const FAQS_DATA: FaqItem[] = [
   {
     id: 'faq-1',
-    question: 'How does ParcelHub COD Escrow work?',
+    question: 'I placed an order. What do I do next?',
     answer:
-      'When ordering online (Shopee, Lazada, TikTok), you deposit your COD cash advance at Lily’s Catering Hub beforehand. When the courier arrives, counter staff pays on your behalf and safely secures your package in the hub until you pick it up.',
+      'Check your confirmation email for your order details. You can follow its progress in My orders. We’ll let you know when it’s ready for the next step.',
   },
   {
     id: 'faq-2',
-    question: 'What if my cash deposit is more than the parcel price?',
+    question: 'Where can I track my order?',
     answer:
-      'Any extra deposit is tracked automatically in your account ledger. When you pick up your package at Lily’s Catering Hub, our counter staff returns your exact change in cash together with your parcel.',
+      'You can track your package progress in real-time under the My Orders or Transactions tab. When it arrives at Lily’s Catering Hub, the status will update to Ready for Release.',
   },
   {
     id: 'faq-3',
-    question: 'How do I claim my parcel once it arrives?',
+    question: 'Can I change or cancel my order?',
     answer:
-      'Once your order shows "Ready to Claim", visit Lily’s Catering Hub. Tap "Initiate Claim" in the app to open your pickup window, and present your QR code or pickup key (e.g. PH-402-5544) to counter staff to complete the handoff.',
+      'You can cancel or update an order as long as the counter staff has not yet accepted or finalized courier payment. Open your Order Details to check current cancellation options.',
   },
   {
     id: 'faq-4',
-    question: 'Why is there a 5-minute timer after starting a claim?',
+    question: 'What if there’s a problem with my order?',
     answer:
-      'The 5-minute timer ensures you are physically present at the counter before your parcel is unlocked from storage. If the timer runs out before staff completes the handoff, you can easily tap to renew it right at the counter.',
+      'Open your order and choose Get help. Tell us what happened and include a photo if it helps, so our support team can review it.',
   },
   {
     id: 'faq-5',
-    question: 'What is my 4-digit MPIN and what is it used for?',
+    question: 'How do refunds work?',
     answer:
-      'Your MPIN is a personal 4-digit security code created during registration. It is used to quickly and securely log into your account on your device without having to type your password every time.',
+      'If your parcel is rejected or cancelled before counter payment, your deposit is safely held for withdrawal or credited immediately. You can collect your cash at Lily’s Catering Hub counter.',
   },
   {
     id: 'faq-6',
-    question: 'How do I submit an order from Shopee or Lazada?',
+    question: 'How can I contact support?',
     answer:
-      'Tap "+ Create Order" on the home screen and upload a screenshot of your shopping receipt. ParcelHub reads the price, COD fee, and tracking number for you to review and confirm.',
-  },
-  {
-    id: 'faq-7',
-    question: 'How do I check if my package was received undamaged?',
-    answer:
-      'Staff photographs every package and inspects the shipping label as soon as the courier arrives. You can view this Proof of Delivery photo directly in your Order Details before claiming.',
-  },
-];
-
-const POLICIES_DATA: PolicyItem[] = [
-  {
-    id: 'policy-1',
-    title: 'Exact Courier Payment Rule',
-    answer:
-      'The amount paid to the courier matches the exact price on your order receipt. Any excess cash deposit is safely kept and returned to you as change when you pick up your parcel.',
-  },
-  {
-    id: 'policy-2',
-    title: 'Cash On Delivery (COD) Ready',
-    answer:
-      'Cash is deposited at Lily’s Catering Hub counter in advance so our staff can receive and pay for your delivery the moment the courier arrives, preventing missed deliveries.',
-  },
-  {
-    id: 'policy-3',
-    title: 'Safe Cash Custody',
-    answer:
-      'Your exact cash deposit is safely locked in our counter cash register, and any change due is handed over in cash alongside your package upon pickup.',
-  },
-  {
-    id: 'policy-4',
-    title: 'Pickup Key & QR Verification',
-    answer:
-      'Parcels are only released at the counter when you initiate claim in your app and present your unique Alphanumeric Pickup Key (e.g. PH-402-5544) or QR code. The counter terminal stays locked until claim is initiated.',
-  },
-  {
-    id: 'policy-5',
-    title: 'Proof of Delivery (Photo Inspection)',
-    answer:
-      'Staff verifies the shipping label and captures a clear package photo before courier payment is finalized. You can view this proof in your app before claiming.',
-  },
-  {
-    id: 'policy-6',
-    title: '5-Day Free Counter Storage',
-    answer:
-      'Parcels are safely kept in our secure counter shelves for up to 5 days after delivery. You will receive helpful pickup reminders before storage expires.',
+      'You can reach our support team directly via the app help options or visit our staff counter at Lily’s Catering Hub (Yati, Liloan) Monday through Saturday from 8:00 AM to 6:00 PM.',
   },
 ];
 
 export interface FaqScreenProps {
   onBack?: () => void;
-  initialTab?: 'faq' | 'policies';
 }
 
-interface AccordionCardProps {
-  title: string;
-  answer: string;
-  isOpen: boolean;
-  onToggle: () => void;
-}
-
-const AccordionCard: React.FC<AccordionCardProps> = ({
-  title,
-  answer,
-  isOpen,
-  onToggle,
-}) => {
-  const rotateAnim = useRef(new Animated.Value(isOpen ? 1 : 0)).current;
-
-  useEffect(() => {
-    Animated.timing(rotateAnim, {
-      toValue: isOpen ? 1 : 0,
-      duration: 200,
-      useNativeDriver: true,
-    }).start();
-  }, [isOpen, rotateAnim]);
-
-  const rotate = rotateAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '90deg'],
-  });
-
-  return (
-    <TouchableOpacity
-      activeOpacity={0.7}
-      onPress={onToggle}
-      accessibilityRole="button"
-      accessibilityState={{ expanded: isOpen }}
-      className="p-3.5 rounded-2xl border"
-      style={
-        isOpen
-          ? {
-              borderColor: '#dbe5f9',
-              backgroundColor: '#ffffff',
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 1 },
-              shadowOpacity: 0.05,
-              shadowRadius: 2,
-              elevation: 1,
-            }
-          : {
-              backgroundColor: '#f8f8f8',
-              borderColor: '#e5e7eb',
-            }
-      }
-    >
-      <View className="flex-row items-center justify-between gap-3">
-        <Text className="flex-1 text-[13.5px] font-bold text-gray-900 leading-snug">
-          {title}
-        </Text>
-        <Animated.View style={{ transform: [{ rotate }] }}>
-          <Text
-            className={`text-base font-bold shrink-0 ${
-              isOpen ? 'text-[#215cd4]' : 'text-gray-400'
-            }`}
-          >
-            &gt;
-          </Text>
-        </Animated.View>
-      </View>
-      {isOpen && (
-        <View className="mt-2.5 pt-2.5 border-t border-gray-200">
-          <Text className="text-[12.5px] text-gray-600 leading-relaxed">
-            {answer}
-          </Text>
-        </View>
-      )}
-    </TouchableOpacity>
-  );
-};
-
-export const FaqScreen: React.FC<FaqScreenProps> = ({ onBack, initialTab = 'faq' }) => {
+export const FaqScreen: React.FC<FaqScreenProps> = ({ onBack }) => {
   const { navigateTo } = useApp();
-  const [activeTab, setActiveTab] = useState<'faq' | 'policies'>(initialTab);
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [expandedFaqId, setExpandedFaqId] = useState<string | null>('faq-1');
-  const [expandedPolicyId, setExpandedPolicyId] = useState<string | null>('policy-1');
+  // Default: all dropdowns closed
+  const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({});
 
   const handleBack = () => {
     if (onBack) {
@@ -198,207 +67,158 @@ export const FaqScreen: React.FC<FaqScreenProps> = ({ onBack, initialTab = 'faq'
     }
   };
 
-  // Filter FAQs based on query
-  const filteredFaqs = useMemo(() => {
-    const q = searchQuery.toLowerCase().trim();
-    if (!q) return FAQS_DATA;
-    return FAQS_DATA.filter(
-      (item) => item.question.toLowerCase().includes(q) || item.answer.toLowerCase().includes(q)
-    );
-  }, [searchQuery]);
-
-  // Filter Policies based on query
-  const filteredPolicies = useMemo(() => {
-    const q = searchQuery.toLowerCase().trim();
-    if (!q) return POLICIES_DATA;
-    return POLICIES_DATA.filter(
-      (p) => p.title.toLowerCase().includes(q) || p.answer.toLowerCase().includes(q)
-    );
-  }, [searchQuery]);
-
   const toggleFaq = (id: string) => {
-    setExpandedFaqId((prev) => (prev === id ? null : id));
-  };
-
-  const togglePolicy = (id: string) => {
-    setExpandedPolicyId((prev) => (prev === id ? null : id));
+    setExpandedIds((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#ffffff' }} className="flex-1 bg-white px-5 pt-3 pb-2">
-      {/* Top Header */}
-      <View className="pb-3 border-b border-gray-100">
-        <View className="flex-row items-center justify-between">
-          <View className="flex-row items-center gap-3">
-            <BackButton
-              onPress={handleBack}
-              accessibilityLabel="Back to Home"
-              className="-ml-1"
-            />
-            <View>
-              <Text className="text-lg font-bold text-gray-900 leading-tight">Help & FAQs</Text>
-              <View className="flex-row items-center gap-1.5 mt-0.5">
-                <View className="w-1.5 h-1.5 rounded-full bg-[#10b780]" />
-                <Text className="text-[10px] font-semibold tracking-wider text-gray-500 uppercase">
-                  Lily's Catering Hub
-                </Text>
-              </View>
-            </View>
-          </View>
-        </View>
+    <View style={{ flex: 1, backgroundColor: '#2563eb' }} className="flex-1 bg-[#2563eb]">
+      <StatusBar style="light" />
 
-        {/* Search Input */}
-        <View className="mt-3.5 relative justify-center">
-          <View pointerEvents="none" className="absolute left-3.5 z-10">
-            <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-              <Path
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                stroke="#9ca3af"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </Svg>
-          </View>
-          <TextInput
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholder="Search questions or policies..."
-            placeholderTextColor="#9ca3af"
-            autoCapitalize="none"
-            autoCorrect={false}
-            returnKeyType="search"
-            className="w-full h-10 pl-9 pr-9 bg-[#f8f9fc] border border-gray-200 rounded-xl text-[13px] text-gray-900"
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() => setSearchQuery('')}
-              accessibilityRole="button"
-              accessibilityLabel="Clear search"
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              className="absolute right-3 z-10 p-1"
-            >
-              <Text className="text-gray-400 text-xs font-bold">✕</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+      {/* Header component from Complete Details (AppHeader) */}
+      <AppHeader
+        title="Frequently Asked Questions"
+        subtitle="Help Center & Answers"
+        showBackButton
+        centerTitle
+        onBack={handleBack}
+      />
 
-        {/* Segmented Control */}
-        <View className="flex-row p-1 bg-[#f0f3f8] rounded-2xl mt-3">
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => setActiveTab('faq')}
-            accessibilityRole="button"
-            accessibilityLabel="Frequently Asked"
-            className="flex-1 py-2 items-center justify-center rounded-xl"
-            style={activeTab === 'faq' ? { backgroundColor: '#ffffff', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 1 } : undefined}
-          >
-            <Text
-              className={`text-xs ${
-                activeTab === 'faq' ? 'font-bold text-[#215cd4]' : 'font-semibold text-gray-600'
-              }`}
-            >
-              Frequently Asked
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => setActiveTab('policies')}
-            accessibilityRole="button"
-            accessibilityLabel="Counter Policies"
-            className="flex-1 py-2 items-center justify-center rounded-xl"
-            style={activeTab === 'policies' ? { backgroundColor: '#ffffff', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 1 } : undefined}
-          >
-            <Text
-              className={`text-xs ${
-                activeTab === 'policies' ? 'font-bold text-[#215cd4]' : 'font-semibold text-gray-600'
-              }`}
-            >
-              Counter Policies
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Main Content Area */}
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
-        className="flex-1 py-3"
-        contentContainerStyle={{ paddingBottom: 16 }}
+      {/* FAQ Cards Sheet matching Figma node 1309:314 */}
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: '#f1f5f9',
+          borderTopLeftRadius: 24,
+          borderTopRightRadius: 24,
+          overflow: 'hidden',
+        }}
       >
-        {activeTab === 'faq' ? (
-          /* ==================== FAQ ACCORDION TAB ==================== */
-          <View className="gap-2.5">
-            {filteredFaqs.length === 0 ? (
-              <View className="items-center py-10 px-4">
-                <Text className="text-sm font-semibold text-gray-700">No matching questions</Text>
-                <Text className="text-xs text-gray-500 mt-1">Try searching with simpler terms or keywords.</Text>
-                <TouchableOpacity
-                  activeOpacity={0.7}
-                  onPress={() => setSearchQuery('')}
-                  className="mt-3"
-                >
-                  <Text className="text-xs text-[#215cd4] font-semibold">Clear search</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              filteredFaqs.map((faq) => (
-                <AccordionCard
-                  key={faq.id}
-                  title={faq.question}
-                  answer={faq.answer}
-                  isOpen={expandedFaqId === faq.id}
-                  onToggle={() => toggleFaq(faq.id)}
-                />
-              ))
-            )}
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{
+            paddingTop: 24,
+            paddingHorizontal: 16,
+            paddingBottom: 32,
+            gap: 14,
+          }}
+        >
+          {/* FAQ introduction */}
+          <View style={{ gap: 4, width: '100%' }}>
+            <Text
+              style={{
+                fontWeight: '700',
+                fontSize: 22,
+                lineHeight: 28,
+                color: '#24364b',
+              }}
+            >
+              How can we help?
+            </Text>
+            <Text
+              style={{
+                fontWeight: '400',
+                fontSize: 14,
+                lineHeight: 20,
+                color: '#64748b',
+              }}
+            >
+              Answers to your order questions.
+            </Text>
           </View>
-        ) : (
-          /* ==================== POLICIES TAB ==================== */
-          <View className="gap-2.5">
-            {filteredPolicies.length === 0 ? (
-              <View className="items-center py-10 px-4">
-                <Text className="text-sm font-semibold text-gray-700">No matching counter policies</Text>
-                <Text className="text-xs text-gray-500 mt-1">Try another search keyword.</Text>
-                <TouchableOpacity
-                  activeOpacity={0.7}
-                  onPress={() => setSearchQuery('')}
-                  className="mt-3"
+
+          {/* Accordion FAQ Cards List */}
+          {FAQS_DATA.map((faq) => {
+            const isOpen = Boolean(expandedIds[faq.id]);
+            return (
+              <TouchableOpacity
+                key={faq.id}
+                activeOpacity={0.8}
+                onPress={() => toggleFaq(faq.id)}
+                style={{
+                  backgroundColor: '#ffffff',
+                  borderRadius: 16,
+                  padding: 18,
+                  gap: isOpen ? 14 : 0,
+                  shadowColor: '#215cd4',
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.04,
+                  shadowRadius: 12,
+                  elevation: 1,
+                }}
+              >
+                {/* Question Row */}
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'between',
+                    gap: 12,
+                    width: '100%',
+                  }}
                 >
-                  <Text className="text-xs text-[#215cd4] font-semibold">Clear search</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              filteredPolicies.map((policy) => (
-                <AccordionCard
-                  key={policy.id}
-                  title={policy.title}
-                  answer={policy.answer}
-                  isOpen={expandedPolicyId === policy.id}
-                  onToggle={() => togglePolicy(policy.id)}
-                />
-              ))
-            )}
-          </View>
-        )}
+                  <Text
+                    style={{
+                      flex: 1,
+                      fontWeight: '700',
+                      fontSize: 15,
+                      lineHeight: 21,
+                      color: isOpen ? '#215cd4' : '#24364b',
+                    }}
+                  >
+                    {faq.question}
+                  </Text>
+                  {/* Chevron Icon (Up for collapse, Down for expand) */}
+                  <View style={{ width: 20, height: 20, alignItems: 'center', justifyContent: 'center' }}>
+                    {isOpen ? (
+                      <Svg width={20} height={20} viewBox="0 0 20 20" fill="none">
+                        <Path
+                          d="M5 12.5L10 7.5L15 12.5"
+                          stroke="#215CD4"
+                          strokeWidth={1.8}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </Svg>
+                    ) : (
+                      <Svg width={20} height={20} viewBox="0 0 20 20" fill="none">
+                        <Path
+                          d="M5 7.5L10 12.5L15 7.5"
+                          stroke="#64748B"
+                          strokeWidth={1.8}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </Svg>
+                    )}
+                  </View>
+                </View>
 
-        {/* Counter Info Footer */}
-        <View className="mt-6 pt-4 border-t border-gray-100 items-center">
-          <Text className="text-xs font-semibold text-gray-700">Still have questions?</Text>
-          <Text className="text-[11px] text-gray-500 mt-1 text-center">
-            Visit Lily’s Catering Hub counter at Yati, Liloan or ask our on-duty staff.
-          </Text>
-          <Text className="text-[10px] text-gray-400 font-mono mt-1">
-            Open Mon - Sat • 8:00 AM - 6:00 PM
-          </Text>
-        </View>
-      </ScrollView>
-
-      {/* Bottom Nav */}
-      <BottomNav />
+                {/* Expanded Answer Content */}
+                {isOpen && (
+                  <>
+                    {/* Answer divider */}
+                    <View style={{ height: 1, backgroundColor: '#e7edf4', width: '100%' }} />
+                    <Text
+                      style={{
+                        fontWeight: '400',
+                        fontSize: 14,
+                        lineHeight: 21,
+                        color: '#64748b',
+                      }}
+                    >
+                      {faq.answer}
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
     </View>
   );
 };
