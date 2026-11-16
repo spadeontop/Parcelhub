@@ -35,16 +35,7 @@ export const NotificationsScreen: React.FC = () => {
           className="flex-1 px-4"
           contentContainerStyle={{ paddingBottom: 96 }}
         >
-          {/* Work in progress standoff note */}
-          <View className="mb-3 px-3 py-2 bg-blue-50 border border-blue-200 rounded-xl flex-row items-center justify-between">
-            <View className="flex-row items-center gap-2">
-              <View className="w-2 h-2 rounded-full bg-blue-600" />
-              <Text className="text-[11px] font-semibold text-blue-900">
-                Work in progress • Activity preview standoff
-              </Text>
-            </View>
-            <Text className="text-[10px] text-blue-600 font-medium">v1 preview</Text>
-          </View>
+          {/* WIP: Notifications list derived from customer order activities */}
 
           {/* Notifications Card Wrapper */}
           <View

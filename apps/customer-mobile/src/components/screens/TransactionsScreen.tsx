@@ -174,7 +174,12 @@ export const TransactionsScreen: React.FC = () => {
                   <TouchableOpacity
                     key={order.id}
                     activeOpacity={0.7}
-                    onPress={() => navigateTo('order_details', { orderId: order.id })}
+                    onPress={() =>
+                      navigateTo('order_details', {
+                        orderId: order.id,
+                        ticketCode: order.ticketCode,
+                      })
+                    }
                     className={`flex-row items-center justify-between ${
                       !isLast ? 'border-b border-[#f1f5f9]' : ''
                     }`}

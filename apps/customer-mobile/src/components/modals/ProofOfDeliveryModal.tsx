@@ -106,7 +106,7 @@ export const ProofOfDeliveryModal: React.FC = () => {
               <View className="py-8 items-center justify-center">
                 <View className="w-20 h-16 rounded-lg bg-amber-100 border-2 border-amber-300 items-center justify-center mb-2">
                   <Text className="text-[10px] font-mono font-bold text-amber-900">
-                    📦 POUCH
+                    POUCH
                   </Text>
                 </View>
                 <Text className="text-xs font-mono text-[#10b780] font-bold">

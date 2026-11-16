@@ -194,7 +194,12 @@ export const HomeScreen: React.FC = () => {
                     <TouchableOpacity
                       key={order.id}
                       activeOpacity={0.7}
-                      onPress={() => navigateTo('order_details', { orderId: order.id })}
+                      onPress={() =>
+                        navigateTo('order_details', {
+                          orderId: order.id,
+                          ticketCode: order.ticketCode,
+                        })
+                      }
                       className={`py-3 flex-row items-center justify-between ${
                         idx !== 0 ? 'border-t border-[#f3f4f6]' : ''
                       }`}

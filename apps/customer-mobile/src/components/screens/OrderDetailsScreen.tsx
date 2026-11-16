@@ -21,6 +21,7 @@ import { getStatusLabel } from '../../utils/statusHelpers';
 export const OrderDetailsScreen: React.FC = () => {
   const {
     selectedOrderId,
+    selectedOrderTicketCode,
     orders,
     customer,
     fetchOrderDetail,
@@ -47,7 +48,11 @@ export const OrderDetailsScreen: React.FC = () => {
   );
 
   const orderId = orderDetail?.id || cachedSummary?.id || selectedOrderId || '';
-  const ticketCode = orderDetail?.ticketCode || cachedSummary?.ticketCode || '';
+  const ticketCode =
+    selectedOrderTicketCode ||
+    orderDetail?.ticketCode ||
+    cachedSummary?.ticketCode ||
+    '';
   const status = orderDetail?.status || cachedSummary?.status || 'PENDING_INITIALIZATION';
   const productName = orderDetail?.productName || cachedSummary?.productName || 'Order Item';
   const recipientName =
@@ -140,7 +145,11 @@ export const OrderDetailsScreen: React.FC = () => {
     (isServerClaimActive || isClaimSessionActive) && !isPassDismissed;
 
   const isReleaseExpired =
-    (status === 'READY_TO_CLAIM' || isFocusedPassView) && remainingSecs === 0 && !isClaimed;
+    (status === 'READY_TO_CLAIM' || isFocusedPassView) &&
+    remainingSecs === 0 &&
+    !isClaimed &&
+    !isInitiatingClaim &&
+    !isRefreshingRelease;
   const isReleaseActive = isFocusedPassView && !isClaimed && !isReleaseExpired;
   const isExpiringSoon = isReleaseActive && remainingSecs <= 60;
 
@@ -193,11 +202,11 @@ export const OrderDetailsScreen: React.FC = () => {
     setIsClaimLocked(true);
     setIsInitiatingClaim(true);
     try {
-      setIsPassDismissed(false);
-      setIsClaimSessionActive(true);
       const claimRes = await claimCustomerOrder(orderId);
       const initialSeconds = (claimRes.durationMinutes || 5) * 60;
       setRemainingSecs(initialSeconds);
+      setIsPassDismissed(false);
+      setIsClaimSessionActive(true);
       // Fetch fresh order
       const fresh = await fetchOrderDetail(orderId);
       setOrderDetail(fresh);
@@ -213,11 +222,11 @@ export const OrderDetailsScreen: React.FC = () => {
     if (isRefreshingRelease || !orderId) return;
     setIsRefreshingRelease(true);
     try {
-      setIsPassDismissed(false);
-      setIsClaimSessionActive(true);
       const claimRes = await claimCustomerOrder(orderId);
       const initialSeconds = (claimRes.durationMinutes || 5) * 60;
       setRemainingSecs(initialSeconds);
+      setIsPassDismissed(false);
+      setIsClaimSessionActive(true);
       const fresh = await fetchOrderDetail(orderId);
       setOrderDetail(fresh);
     } catch (err: any) {
@@ -453,7 +462,7 @@ export const OrderDetailsScreen: React.FC = () => {
                       TICKET
                     </Text>
                     <Text className="text-[15px] font-bold text-[#1e293b] mt-0.5">
-                      {ticketCode || orderId}
+                      {ticketCode || (orderDetail ? orderId : '...')}
                     </Text>
                   </View>
 
@@ -1157,6 +1166,63 @@ export const OrderDetailsScreen: React.FC = () => {
           </ScrollView>
         )}
       </View>
+
+      {/* Full-Screen Loading Overlay for Claim Initiation / Refresh */}
+      {(isInitiatingClaim || isRefreshingRelease) && (
+        <View
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.75)',
+            zIndex: 9999,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: '#ffffff',
+              borderRadius: 20,
+              padding: 24,
+              alignItems: 'center',
+              marginHorizontal: 32,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.15,
+              shadowRadius: 12,
+              elevation: 5,
+              width: 260,
+            }}
+          >
+            <ActivityIndicator size="large" color="#2563eb" />
+            <Text
+              style={{
+                fontSize: 16,
+                fontWeight: '700',
+                color: '#1e293b',
+                marginTop: 16,
+                textAlign: 'center',
+              }}
+            >
+              {isRefreshingRelease ? 'Refreshing Pass...' : 'Preparing Pickup Pass...'}
+            </Text>
+            <Text
+              style={{
+                fontSize: 12,
+                fontWeight: '500',
+                color: '#64748b',
+                marginTop: 6,
+                textAlign: 'center',
+              }}
+            >
+              Securing claim release timer...
+            </Text>
+          </View>
+        </View>
+      )}
     </View>
   );
 };

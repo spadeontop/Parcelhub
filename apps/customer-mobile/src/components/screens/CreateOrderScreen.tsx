@@ -20,7 +20,8 @@ export const CreateOrderScreen: React.FC = () => {
   const [isInitializing, setIsInitializing] = useState(false);
   const [isPicking, setIsPicking] = useState(false);
 
-  const hasUploadedReceipt = Boolean(orderDraft.imageUrl);
+  const previewSourceUri = orderDraft.previewUri || orderDraft.imageUrl || null;
+  const hasUploadedReceipt = Boolean(previewSourceUri);
 
   const handleUploadPress = async () => {
     if (isInitializing || isPicking) return;
@@ -47,7 +48,10 @@ export const CreateOrderScreen: React.FC = () => {
           asset.width,
           asset.height
         );
-        updateOrderDraft({ imageUrl: compressed.base64 });
+        updateOrderDraft({
+          imageUrl: compressed.base64,
+          previewUri: compressed.uri,
+        });
         showToast('Receipt attached successfully!');
       }
     } catch (err: any) {
@@ -131,15 +135,15 @@ export const CreateOrderScreen: React.FC = () => {
               onPress={handleUploadPress}
               disabled={isInitializing || isPicking}
               className={`bg-[#f8fafc] border-[1.5px] border-dashed border-[#cbd5e1] rounded-[20px] items-center justify-center px-4 overflow-hidden ${
-                hasUploadedReceipt && orderDraft.imageUrl ? 'py-4' : 'py-12'
+                hasUploadedReceipt && previewSourceUri ? 'py-4' : 'py-12'
               }`}
             >
-              {hasUploadedReceipt && orderDraft.imageUrl ? (
+              {hasUploadedReceipt && previewSourceUri ? (
                 <View className="w-full items-center">
                   {/* Attached Image Preview */}
                   <View className="w-full h-[220px] rounded-[14px] overflow-hidden bg-slate-100 items-center justify-center mb-3 border border-[#e2e8f0]">
                     <Image
-                      source={{ uri: orderDraft.imageUrl }}
+                      source={{ uri: previewSourceUri }}
                       style={{ width: '100%', height: '100%' }}
                       resizeMode="contain"
                     />

@@ -84,6 +84,7 @@ export type OrderDraft = {
   readonly orderId?: OrderId | null;
   readonly ticketCode?: string | null;
   readonly imageUrl?: string | null;
+  readonly previewUri?: string | null;
   readonly trackingId?: string;
   readonly productName?: string;
   readonly recipientName?: string;
@@ -95,6 +96,7 @@ const DEFAULT_ORDER_DRAFT: OrderDraft = {
   orderId: null,
   ticketCode: null,
   imageUrl: null,
+  previewUri: null,
   trackingId: '',
   productName: '',
   recipientName: '',
@@ -109,7 +111,10 @@ export type ToastState = {
 
 export type V1ContextType = {
   readonly activeScreen: ScreenId;
-  readonly navigateTo: (screen: ScreenId, params?: { orderId?: string }) => void;
+  readonly navigateTo: (
+    screen: ScreenId,
+    params?: { orderId?: string | null; ticketCode?: string | null }
+  ) => void;
   readonly toast: ToastState;
   readonly showToast: (message: string) => void;
   readonly preAuthToken: JWTToken | null;
@@ -118,6 +123,8 @@ export type V1ContextType = {
   readonly orders: readonly CustomerOrderSummary[];
   readonly selectedOrderId: string | null;
   readonly setSelectedOrderId: (id: string | null) => void;
+  readonly selectedOrderTicketCode: string | null;
+  readonly setSelectedOrderTicketCode: (code: string | null) => void;
   readonly registrationDraft: RegistrationDraft;
   readonly updateRegistrationDraft: (partial: Partial<RegistrationDraft>) => void;
   readonly clearRegistrationDraft: () => void;
@@ -154,6 +161,7 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [customer, setCustomer] = useState<Partial<CustomerProfile> | null>(null);
   const [orders, setOrders] = useState<readonly CustomerOrderSummary[]>([]);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [selectedOrderTicketCode, setSelectedOrderTicketCode] = useState<string | null>(null);
   const [registrationDraft, setRegistrationDraft] = useState<RegistrationDraft>(
     DEFAULT_REGISTRATION_DRAFT
   );
@@ -173,12 +181,18 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
     }, 3200);
   }, []);
 
-  const navigateTo = useCallback((screen: ScreenId, params?: { orderId?: string }) => {
-    setActiveScreen(screen);
-    if (params?.orderId) {
-      setSelectedOrderId(params.orderId);
-    }
-  }, []);
+  const navigateTo = useCallback(
+    (screen: ScreenId, params?: { orderId?: string | null; ticketCode?: string | null }) => {
+      setActiveScreen(screen);
+      if (params?.orderId !== undefined) {
+        setSelectedOrderId(params.orderId);
+      }
+      if (params?.ticketCode !== undefined) {
+        setSelectedOrderTicketCode(params.ticketCode);
+      }
+    },
+    []
+  );
 
   const updateRegistrationDraft = useCallback(
     (partial: Partial<RegistrationDraft>) => {
@@ -442,11 +456,12 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
         recipientName: defaultRecipient,
       });
 
+      setSelectedOrderTicketCode(res.ticketCode);
       showToast(res.statusMessage || 'Order initialized');
       setActiveScreen('confirm_order');
       return res;
     },
-    [authToken, customer, showToast, updateOrderDraft]
+    [authToken, customer, showToast, updateOrderDraft, setSelectedOrderTicketCode]
   );
 
   const confirmCustomerOrder = useCallback(
@@ -458,6 +473,7 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
       }
 
       const orderId = orderDraft.orderId;
+      const ticketCode = orderDraft.ticketCode;
       if (!orderId) {
         showToast('No active order to confirm. Please start again.');
         setActiveScreen('create_order');
@@ -467,6 +483,9 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
       try {
         const res = await orderApi.confirmOrder(token, orderId, orderData);
         setSelectedOrderId(orderId);
+        if (ticketCode) {
+          setSelectedOrderTicketCode(ticketCode);
+        }
         showToast(res.statusMessage || 'Order details confirmed');
         clearOrderDraft();
         setActiveScreen('payment_verification');
@@ -479,6 +498,9 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
         ) {
           showToast(err?.message || 'This order was already confirmed.');
           setSelectedOrderId(orderId);
+          if (ticketCode) {
+            setSelectedOrderTicketCode(ticketCode);
+          }
           clearOrderDraft();
           setActiveScreen('payment_verification');
         }
@@ -488,10 +510,12 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
     [
       authToken,
       orderDraft.orderId,
+      orderDraft.ticketCode,
       showToast,
       clearOrderDraft,
       setActiveScreen,
       setSelectedOrderId,
+      setSelectedOrderTicketCode,
     ]
   );
 
@@ -535,7 +559,7 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
       let title = 'Order Update';
       let body = `${o.productName || 'Your order'} status is now ${o.status}.`;
       if (o.status === 'READY_TO_CLAIM') {
-        title = 'Parcel Ready for Claim! 📦';
+        title = 'Parcel Ready for Claim';
         body = `${o.productName || 'Your parcel'} has arrived at Lily’s Catering Hub and is ready for pickup.`;
       } else if (o.status === 'AWAITING_PARCEL') {
         title = 'Payment Verified';
@@ -573,6 +597,7 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
     setCustomer(null);
     setOrders([]);
     setSelectedOrderId(null);
+    setSelectedOrderTicketCode(null);
     clearRegistrationDraft();
     clearOrderDraft();
     setActiveScreen('login');
@@ -590,6 +615,8 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
     orders,
     selectedOrderId,
     setSelectedOrderId,
+    selectedOrderTicketCode,
+    setSelectedOrderTicketCode,
     registrationDraft,
     updateRegistrationDraft,
     clearRegistrationDraft,

@@ -197,9 +197,9 @@ export const ConfirmOrderScreen: React.FC = () => {
           >
             {/* Receipt Thumbnail / Document Icon Box */}
             <View className="w-16 h-16 rounded-[14px] bg-[#f8fafc] border border-[#e2e8f0] items-center justify-center mr-3.5 shrink-0 overflow-hidden">
-              {orderDraft.imageUrl ? (
+              {orderDraft.previewUri || orderDraft.imageUrl ? (
                 <Image
-                  source={{ uri: orderDraft.imageUrl }}
+                  source={{ uri: (orderDraft.previewUri || orderDraft.imageUrl) as string }}
                   style={{ width: '100%', height: '100%' }}
                   resizeMode="cover"
                 />
