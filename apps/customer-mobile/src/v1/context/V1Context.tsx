@@ -12,6 +12,7 @@ import {
   CustomerRegisterRes,
   CustomerLoginReq,
   CustomerLoginRes,
+  CustomerCreateMpinRes,
   CustomerProfile,
   JWTToken,
 } from '../types/api';
@@ -76,6 +77,7 @@ export type V1ContextType = {
   readonly clearRegistrationDraft: () => void;
   readonly registerCustomer: (payload: CustomerRegisterReq) => Promise<CustomerRegisterRes>;
   readonly loginCustomer: (payload: CustomerLoginReq) => Promise<CustomerLoginRes>;
+  readonly createCustomerMpin: (mpin: string) => Promise<CustomerCreateMpinRes>;
 };
 
 const V1Context = createContext<V1ContextType | undefined>(undefined);
@@ -175,6 +177,39 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
     [showToast]
   );
 
+  // V1 Create MPIN Action
+  const createCustomerMpin = useCallback(
+    async (mpin: string): Promise<CustomerCreateMpinRes> => {
+      let activePreAuth = preAuthToken;
+      if (!activePreAuth) {
+        activePreAuth = await v1Storage.getPreAuthToken();
+      }
+
+      if (!activePreAuth) {
+        showToast('Session expired. Please log in again.');
+        setActiveScreen('login');
+        throw new Error('Pre-auth token missing. Please log in again.');
+      }
+
+      const res = await authApi.createMpin({
+        preAuthToken: activePreAuth,
+        mpin: mpin as any,
+      });
+
+      setAuthToken(res.authToken);
+      if (res.customer) {
+        setCustomer(res.customer);
+      }
+      setPreAuthToken(null);
+      clearRegistrationDraft();
+
+      showToast(res.statusMessage || 'MPIN created successfully!');
+      setActiveScreen('home');
+      return res;
+    },
+    [preAuthToken, showToast, clearRegistrationDraft]
+  );
+
   const value: V1ContextType = {
     activeScreen,
     navigateTo,
@@ -188,6 +223,7 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
     clearRegistrationDraft,
     registerCustomer,
     loginCustomer,
+    createCustomerMpin,
   };
 
   return <V1Context.Provider value={value}>{children}</V1Context.Provider>;

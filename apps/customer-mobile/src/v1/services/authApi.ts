@@ -5,6 +5,8 @@ import {
   CustomerRegisterRes,
   CustomerLoginReq,
   CustomerLoginRes,
+  CustomerCreateMpinReq,
+  CustomerCreateMpinRes,
 } from '../types/api';
 
 export const authApi = {
@@ -48,6 +50,33 @@ export const authApi = {
     if (res?.preAuthToken) {
       await v1Storage.setPreAuthToken(res.preAuthToken);
     }
+
+    return res;
+  },
+
+  /**
+   * POST /api/v1/customer/create-mpin
+   * Sets up initial 4-digit MPIN, returns authToken, refreshToken, and profile
+   */
+  async createMpin(payload: CustomerCreateMpinReq): Promise<CustomerCreateMpinRes> {
+    const res = await v1Fetch<CustomerCreateMpinRes>('/api/v1/customer/create-mpin', {
+      method: 'POST',
+      body: JSON.stringify({
+        preAuthToken: payload.preAuthToken,
+        mpin: payload.mpin,
+      }),
+    });
+
+    if (res?.authToken) {
+      await v1Storage.setAuthToken(res.authToken);
+    }
+    if (res?.refreshToken) {
+      await v1Storage.setRefreshToken(res.refreshToken);
+    }
+    if (res?.customer) {
+      await v1Storage.setCustomerProfile(res.customer);
+    }
+    await v1Storage.clearPreAuthToken();
 
     return res;
   },
