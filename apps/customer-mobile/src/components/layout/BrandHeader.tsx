@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { useApp } from '../../context/AppContext';
+import { useV1 } from '../../v1/context/V1Context';
 import { ScreenId } from '../../types';
 import { BackArrowIcon, ParcelHubLogoSvg, HelpIcon } from '../common/Icons';
 
@@ -27,7 +27,8 @@ export const BrandHeader: React.FC<BrandHeaderProps> = ({
   hideBorder = false,
   hideStatusDot = false,
 }) => {
-  const { hubOpen, navigateTo } = useApp();
+  const { navigateTo } = useV1();
+  const hubOpen = true;
 
   return (
     <View
