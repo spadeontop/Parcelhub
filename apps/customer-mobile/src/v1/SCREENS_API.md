@@ -181,54 +181,54 @@ This document maps every customer mobile screen in `apps/customer-mobile/src/com
 
 ## 6. CreateOrderScreen (`create_order`)
 - **File**: `apps/customer-mobile/src/components/screens/CreateOrderScreen.tsx`
-- **UI Purpose**: Dropzone card to pick a receipt screenshot (Shopee, Lazada, TikTok) or choose sample receipt.
+- **UI Purpose**: Dropzone card to pick a receipt screenshot or enter image URL/link (debugging state / sample receipt).
 - **Independent API Call**:
-  - *API Dependency*: None directly on this screen. It validates and stages `draftOrder.receiptUri` into local state and navigates user to `ConfirmOrderScreen`.
+  - *Trigger*: User inputs receipt image or link and taps **Next**.
+  - *Logic*: Tapping **Next** directly triggers `POST /api/v1/customer/orders/initialize`. The backend returns `orderId` and `ticketCode`, which are appended to the draft/order state and carried forward to `ConfirmOrderScreen`.
+  - **Method / Route**: `POST /api/v1/customer/orders/initialize`
+  - **Headers**: `Authorization: Bearer <authToken>`, `Content-Type: application/json`
+  - **Request Body**:
+    ```json
+    {
+      "imageUrl": "data:image/webp;base64,... (or image URL / link)"
+    }
+    ```
+  - **Response**:
+    ```json
+    {
+      "statusMessage": "Order initialized",
+      "orderId": "ORD-1234",
+      "ticketCode": "TK-8899"
+    }
+    ```
 
 ---
 
 ## 7. ConfirmOrderScreen (`confirm_order`)
 - **File**: `apps/customer-mobile/src/components/screens/ConfirmOrderScreen.tsx`
-- **UI Purpose**: Form where customer reviews and inputs product name, recipient name, COD price, and tracking ID before dispatching.
-- **Independent API Calls**:
+- **UI Purpose**: Form where customer reviews and sets complete parcel details (product name, recipient name, COD price, tracking ID) associated with the initialized `orderId` and `ticketCode`.
+- **Independent API Call**:
   - *Trigger*: User checks confirmation checkbox and clicks **Confirm & Submit**.
-  - **Call 1 (Initialize Order with Image)**:
-    - **Method / Route**: `POST /api/v1/customer/orders/initialize`
-    - **Headers**: `Authorization: Bearer <authToken>`, `Content-Type: application/json`
-    - **Request Body**:
-      ```json
-      {
-        "imageUrl": "data:image/webp;base64,..."
+  - *Logic*: With the `orderId` already initialized from the previous screen, this screen independently dispatches the one-shot `PUT /api/v1/customer/orders/{id}` to complete the order details and transition status from `PENDING_INITIALIZATION` to `PAYMENT_REQUIRED`.
+  - **Method / Route**: `PUT /api/v1/customer/orders/{orderId}`
+  - **Headers**: `Authorization: Bearer <authToken>`, `Content-Type: application/json`
+  - **Request Body**:
+    ```json
+    {
+      "order": {
+        "trackingId": "SPX987654321",
+        "productName": "Wireless Mouse",
+        "recipientName": "John Doe",
+        "price": 450
       }
-      ```
-    - **Response**:
-      ```json
-      {
-        "statusMessage": "Order initialized",
-        "orderId": "ORD-1234",
-        "ticketCode": "TK-8899"
-      }
-      ```
-  - **Call 2 (Finalize Order Details)**:
-    - **Method / Route**: `PUT /api/v1/customer/orders/{orderId}`
-    - **Headers**: `Authorization: Bearer <authToken>`, `Content-Type: application/json`
-    - **Request Body**:
-      ```json
-      {
-        "order": {
-          "trackingId": "SPX987654321",
-          "productName": "Wireless Mouse",
-          "recipientName": "John Doe",
-          "price": 450
-        }
-      }
-      ```
-    - **Response**:
-      ```json
-      {
-        "statusMessage": "Order details confirmed"
-      }
-      ```
+    }
+    ```
+  - **Response**:
+    ```json
+    {
+      "statusMessage": "Order details confirmed"
+    }
+    ```
 
 ---
 
