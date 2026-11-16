@@ -69,11 +69,11 @@ export const ProfileScreen: React.FC = () => {
       />
 
       {/* Main Sheet with Curved Transition */}
-      <View className="flex-1 bg-[#f8fafc] rounded-t-[32px] pt-4 overflow-hidden">
+      <View className="flex-1 bg-[#f8fafc] rounded-t-[32px] pt-4 overflow-hidden relative">
         <ScrollView
           showsVerticalScrollIndicator={false}
           className="flex-1 px-4"
-          contentContainerStyle={{ paddingBottom: 24 }}
+          contentContainerStyle={{ paddingBottom: 96 }}
         >
           {/* Card 1: CONTACT & DETAILS */}
           <View

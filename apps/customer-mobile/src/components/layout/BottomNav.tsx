@@ -12,16 +12,17 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab = 'home' }) => {
   const unreadCount = notifications.filter((n) => n.unread).length;
 
   return (
-    <View
-      className="bg-white border border-[#f1f5f9] flex-row items-center justify-between px-[17px] py-[10px] rounded-[24px] mx-4 mb-3"
-      style={{
-        shadowColor: '#000000',
-        shadowOffset: { width: 0, height: 12 },
-        shadowOpacity: 0.12,
-        shadowRadius: 24,
-        elevation: 8,
-      }}
-    >
+    <View className="absolute bottom-3 left-4 right-4 pointer-events-box-none">
+      <View
+        className="bg-white border border-[#f1f5f9] flex-row items-center justify-between px-[17px] py-[10px] rounded-full"
+        style={{
+          shadowColor: '#000000',
+          shadowOffset: { width: 0, height: 12 },
+          shadowOpacity: 0.12,
+          shadowRadius: 24,
+          elevation: 8,
+        }}
+      >
       {/* 1. Home */}
       <View className="flex-1 items-center">
         <TouchableOpacity
@@ -163,6 +164,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab = 'home' }) => {
           </Text>
         </TouchableOpacity>
       </View>
+    </View>
     </View>
   );
 };
