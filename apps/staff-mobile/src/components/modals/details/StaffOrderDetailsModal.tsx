@@ -124,10 +124,14 @@ export const StaffOrderDetailsModal: React.FC<StaffOrderDetailsModalProps> = ({
             contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
             showsVerticalScrollIndicator={false}
           >
-            {/* Overview Card (matching Figma 1343:1662 Card_Order_Overview) */}
+            {/* Overview Card (matching Figma 1343:1662 & 1346:2288) */}
             <StaffOrderOverviewCard
               order={order}
-              showFinancials={!isClaimedReceipt && order.status !== 'PAYMENT_REQUIRED'}
+              showFinancials={
+                order.status === 'AWAITING_PARCEL'
+                  ? !order.courierPaid
+                  : !isClaimedReceipt && order.status !== 'PAYMENT_REQUIRED'
+              }
             />
 
             {/* Status-specific Action Section */}

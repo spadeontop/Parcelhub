@@ -7,8 +7,15 @@ import {
   Image,
 } from 'react-native';
 import { StaffOrder } from '../../../types';
-import { Camera, Check, CheckCircle, AlertCircle } from '../../common/Icons';
+import {
+  Camera,
+  Check,
+  X,
+  Upload,
+} from '../../common/Icons';
 import { OrderCardContainer } from '../../common/OrderCardContainer';
+import { OrderConfirmationCheckbox } from './OrderConfirmationCheckbox';
+import { PaymentSummaryCard } from './PaymentSummaryCard';
 
 interface StaffActiveActionSectionProps {
   order: StaffOrder;
@@ -19,6 +26,15 @@ interface StaffActiveActionSectionProps {
   onReturnHome: () => void;
 }
 
+const sampleWaybill = require('../../../../assets/parcelhub/sample_parcel_waybill.png');
+
+/**
+ * Action Section for AWAITING_PARCEL status strictly conforming to Figma nodes:
+ * 1. 1346:2288 — Step 1: Courier payment & order receipt confirmation
+ * 2. 1338:639  — Step 2: Empty state when photo is to be attached
+ * 3. 1346:1883 — Step 2: Photo verified state
+ * 4. 1346:2329 — Step 2: Photo invalid state
+ */
 export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> = ({
   order,
   isPayingCourier,
@@ -27,127 +43,139 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
   onAttachPhoto,
   onReturnHome,
 }) => {
-  // Step 1: Courier Payment state. If order.courierPaid is already true, staff can proceed to Step 2 (Photo Upload).
-  // Otherwise, staff must complete Step 1 (Awaiting Parcel 1: Confirm payment to courier).
-  const isCourierPaid = Boolean(order.courierPaid);
+  // Step 1: Courier Paid state
+  const [localCourierPaid, setLocalCourierPaid] = useState<boolean>(
+    Boolean(order.courierPaid)
+  );
 
-  // Step 1 checkbox state (Awaiting Parcel 1: "I confirm that I received the order")
+  // Step 1 Confirmation Checkbox
   const [isReceivedConfirmed, setIsReceivedConfirmed] = useState<boolean>(false);
   const [isStep1Locked, setIsStep1Locked] = useState<boolean>(false);
   const [isPayingStep1, setIsPayingStep1] = useState<boolean>(false);
 
-  // Step 2: Photo Upload state (Awaiting Parcel 2)
+  // Step 2: Photo Upload state
   const [hasPhoto, setHasPhoto] = useState<boolean>(Boolean(order.proofImageUrl));
   const [photoValidationState, setPhotoValidationState] = useState<'VALID' | 'INVALID'>('VALID');
   const [isPhotoConfirmed, setIsPhotoConfirmed] = useState<boolean>(false);
   const [isStep2Locked, setIsStep2Locked] = useState<boolean>(false);
   const [isFinalSubmitting, setIsFinalSubmitting] = useState<boolean>(false);
 
-  const sampleWaybill = require('../../../../assets/parcelhub/sample_parcel_waybill.png');
-
   useEffect(() => {
+    setLocalCourierPaid(Boolean(order.courierPaid));
     setIsReceivedConfirmed(false);
     setIsStep1Locked(false);
+    setHasPhoto(Boolean(order.proofImageUrl));
+    setPhotoValidationState('VALID');
     setIsPhotoConfirmed(false);
     setIsStep2Locked(false);
-  }, [order.id]);
+  }, [order.id, order.courierPaid, order.proofImageUrl]);
 
-  // Handle Step 1: Pay Courier & Confirm Received (POST /api/staff/orders/{id}/make-claimable/pay)
+  const price = typeof order.amountToPay === 'number' ? order.amountToPay : 480;
+  const paidAmount =
+    typeof order.amountReceived === 'number'
+      ? order.amountReceived
+      : Math.max(500, price);
+  const change =
+    typeof order.change === 'number'
+      ? order.change
+      : Math.max(0, paidAmount - price);
+
+  // -------------------------------------------------------------
+  // Step 1 Handlers (Figma 1346:2288)
+  // -------------------------------------------------------------
+  const canPayCourier = isReceivedConfirmed && !isPayingStep1 && !isPayingCourier && !isStep1Locked;
+
   const handlePayCourierStep = async () => {
-    if (!isReceivedConfirmed || isPayingStep1 || isPayingCourier || isStep1Locked) return;
+    if (!canPayCourier) return;
     setIsStep1Locked(true);
     setIsPayingStep1(true);
     try {
       await onPayCourier(order.id);
+      setLocalCourierPaid(true);
     } catch {
-      // Error handled in context toast
+      setIsStep1Locked(false);
     } finally {
       setIsPayingStep1(false);
     }
   };
 
-  // Step 2 handlers
+  // -------------------------------------------------------------
+  // Step 2 Handlers (Figma 1338:639, 1346:1883, 1346:2329)
+  // -------------------------------------------------------------
   const handleTakePhoto = () => {
     setHasPhoto(true);
     setPhotoValidationState('VALID');
+    setIsPhotoConfirmed(false);
   };
 
   const handleRetake = () => {
     setHasPhoto(false);
+    setPhotoValidationState('VALID');
     setIsPhotoConfirmed(false);
     setIsStep2Locked(false);
   };
 
   const toggleValidationState = () => {
-    setPhotoValidationState((prev) => (prev === 'VALID' ? 'INVALID' : 'VALID'));
+    setPhotoValidationState((prev) => {
+      const next = prev === 'VALID' ? 'INVALID' : 'VALID';
+      if (next === 'INVALID') {
+        setIsPhotoConfirmed(false);
+      }
+      return next;
+    });
   };
 
-  const isStep2Valid = hasPhoto && photoValidationState === 'VALID' && isPhotoConfirmed;
+  const isStep2Valid = hasPhoto && photoValidationState === 'VALID';
+  const canSubmitFinal =
+    isStep2Valid && isPhotoConfirmed && !isFinalSubmitting && !isAttachingPhoto && !isStep2Locked;
 
-  // Handle Step 2: Attach Photo & Complete (POST /api/staff/orders/{id}/make-claimable/attach-photo)
   const handleFinalClaimAndPaid = async () => {
-    if (!isStep2Valid || isFinalSubmitting || isAttachingPhoto || isStep2Locked) return;
+    if (!canSubmitFinal) return;
     setIsStep2Locked(true);
     setIsFinalSubmitting(true);
     try {
       await onAttachPhoto(order.id, 'mock://ai-verified-parcel-proof.jpg');
       onReturnHome();
     } catch {
-      // Error handled in context toast
+      setIsStep2Locked(false);
     } finally {
       setIsFinalSubmitting(false);
     }
   };
 
-  // -------------------------------------------------------------
-  // STEP 1 UI: Awaiting Parcel 1 (Courier Payment Required First)
-  // -------------------------------------------------------------
-  if (!isCourierPaid) {
-    const canPay = isReceivedConfirmed && !isPayingStep1 && !isPayingCourier;
-
+  // =========================================================================
+  // STEP 1 UI: Awaiting Parcel (Figma node 1346:2288)
+  // Courier payment required first
+  // =========================================================================
+  if (!localCourierPaid) {
     return (
-      <View className="space-y-4">
-        {/* Confirmation Checkbox matching awaiting parcel 1/image.png */}
-        <TouchableOpacity
-          activeOpacity={isStep1Locked || isPayingStep1 || isPayingCourier ? 1 : 0.8}
-          disabled={isStep1Locked || isPayingStep1 || isPayingCourier}
-          onPress={() => {
+      <View>
+        {/* Checkbox: "I confirm that I received the order" */}
+        <OrderConfirmationCheckbox
+          checked={isReceivedConfirmed}
+          onToggle={() => {
             if (!isStep1Locked && !isPayingStep1 && !isPayingCourier) {
               setIsReceivedConfirmed((prev) => !prev);
             }
           }}
-          className="flex-row items-start gap-3 px-1 mb-5"
-        >
-          <View
-            className={`w-5 h-5 rounded-md items-center justify-center mt-0.5 ${
-              isReceivedConfirmed ? 'bg-[#215CD4]' : 'bg-white border-2 border-[#CBD5E1]'
-            } ${isStep1Locked ? 'opacity-90' : ''}`}
-          >
-            {isReceivedConfirmed && <Check size={14} color="#FFFFFF" strokeWidth={3} />}
-          </View>
-          <View className="flex-1">
-            <Text className="text-xs font-bold text-[#0F172A]">
-              I confirm that I received the order
-            </Text>
-            <Text className="text-[11px] text-[#64748B] mt-0.5 leading-relaxed">
-              Only initiate claim & paid when you already paid the courier exact amount and received the parcel.
-            </Text>
-          </View>
-        </TouchableOpacity>
+          disabled={isStep1Locked || isPayingStep1 || isPayingCourier}
+          title="I confirm that I received the order"
+          subtitle="Only confirm after paying the courier the exact amount and receiving the parcel."
+        />
 
-        {/* Primary Claim Button (Triggers POST /make-claimable/pay) */}
+        {/* Primary Action Button: Solid Black "Order Claimed & Paid" */}
         <TouchableOpacity
           activeOpacity={0.85}
           onPress={handlePayCourierStep}
-          disabled={!canPay || isStep1Locked}
-          className={`w-full py-4 rounded-xl items-center justify-center shadow-md mb-2 ${
-            canPay && !isStep1Locked ? 'bg-[#215CD4] active:bg-[#1d4ed8]' : 'bg-[#94A3B8]'
+          disabled={!canPayCourier}
+          className={`w-full h-[48px] rounded-xl items-center justify-center mb-2 shadow-sm ${
+            canPayCourier ? 'bg-black active:bg-neutral-800' : 'bg-[#94A3B8]'
           }`}
         >
           {isPayingStep1 || isPayingCourier ? (
             <ActivityIndicator size="small" color="#FFFFFF" />
           ) : (
-            <Text className="text-white font-bold text-sm">
+            <Text className="text-white font-bold text-[14px] tracking-wide">
               Order Claimed & Paid
             </Text>
           )}
@@ -157,9 +185,9 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={onReturnHome}
-          className="w-full py-3 items-center justify-center"
+          className="w-full py-2.5 items-center justify-center mt-1"
         >
-          <Text className="text-xs font-semibold text-[#475569]">
+          <Text className="text-[13px] font-bold text-[#475569]">
             Return to Home
           </Text>
         </TouchableOpacity>
@@ -167,128 +195,173 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
     );
   }
 
-  // -------------------------------------------------------------------------
-  // STEP 2 UI: Awaiting Parcel 2 (Courier Paid -> Upload Proof of Delivery)
-  // -------------------------------------------------------------------------
+  // =========================================================================
+  // STEP 2 UI: Attach Photo (Figma nodes 1338:639, 1346:1883, 1346:2329)
+  // Payment Summary Card + Proof of Delivery Card (Empty, Verified, or Invalid)
+  // =========================================================================
   return (
-    <View className="space-y-4">
-      {/* Card: PROOF OF DELIVERY matching awaiting parcel 2 */}
+    <View>
+      {/* Payment Summary Card (Figma 1338:639) */}
+      <PaymentSummaryCard
+        price={price}
+        paidAmount={paidAmount}
+        change={change}
+        className="mb-4"
+      />
+
+      {/* Proof of Delivery Card Container */}
       <OrderCardContainer className="mb-4">
-        <View className="flex-row items-center justify-between mb-3">
-          <Text className="text-[11px] font-bold text-[#94A3B8] tracking-wider uppercase">
-            PROOF OF DELIVERY
+        {/* Header Row: Title on Left, Badge or Retake on Right */}
+        <View className="flex-row items-center justify-between">
+          <Text className="text-[13px] font-bold text-[#1E293B] uppercase tracking-wide">
+            Proof of delivery
           </Text>
 
-          {hasPhoto && (
+          {!hasPhoto ? (
+            /* "Required" Badge (Figma 1338:639) */
+            <View className="bg-[#F1F5F9] rounded-[10px] px-2.5 py-0.5">
+              <Text className="text-[9.5px] font-semibold text-[#475569]">
+                Required
+              </Text>
+            </View>
+          ) : (
+            /* "Retake" Button (Figma 1346:1883 & 1346:2329) */
             <TouchableOpacity
+              activeOpacity={0.7}
               onPress={handleRetake}
-              className="flex-row items-center gap-1 active:opacity-75"
+              className="flex-row items-center gap-1.5 py-0.5"
             >
-              <Camera size={13} color="#215CD4" />
-              <Text className="text-xs font-bold text-[#215CD4]">Retake</Text>
+              <Camera size={14} color="#2563EB" />
+              <Text className="text-[12.5px] font-bold text-[#2563EB]">
+                Retake
+              </Text>
             </TouchableOpacity>
           )}
         </View>
 
         {!hasPhoto ? (
-          /* Empty / Take Photo State (matching awaiting parcel 2/image2.png) */
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={handleTakePhoto}
-            className="border-2 border-dashed border-[#CBD5E1] rounded-2xl py-10 items-center justify-center bg-[#F8FAFC] active:bg-slate-100"
-          >
-            <View className="w-12 h-12 rounded-full bg-white border border-[#E2E8F0] items-center justify-center mb-2 shadow-xs">
-              <Camera size={22} color="#64748B" />
-            </View>
-            <Text className="text-sm font-bold text-[#0F172A]">Take Photo</Text>
-            <Text className="text-xs text-[#64748B] mt-0.5 font-medium">
-              Press to take a photo
+          /* ------------------------------------------------------------- */
+          /* Empty Photo State (Figma 1338:639)                            */
+          /* ------------------------------------------------------------- */
+          <>
+            <Text className="text-[11px] font-normal text-[#64748B] mt-1 mb-4">
+              A parcel photo is required to confirm receipt.
             </Text>
-          </TouchableOpacity>
-        ) : (
-          /* Photo Attached State (matching image3.png & image4.png) */
-          <View className="relative rounded-2xl overflow-hidden border border-[#E2E8F0] bg-slate-100">
-            <Image
-              source={sampleWaybill}
-              style={{ width: '100%', height: 210 }}
-              resizeMode="cover"
-            />
 
-            {/* Floating AI Verification Badge */}
-            <View className="absolute top-3 left-3">
-              {photoValidationState === 'VALID' ? (
-                /* Valid AI Verified Badge (image3.png) */
-                <View className="flex-row items-center gap-1.5 bg-[#059669] px-3 py-1.5 rounded-full shadow-md">
-                  <CheckCircle size={14} color="#FFFFFF" strokeWidth={2.5} />
-                  <Text className="text-white text-[11px] font-bold">
-                    AI Verified: Clear & Valid Parcel
-                  </Text>
-                </View>
-              ) : (
-                /* Invalid Image Badge (image4.png) */
-                <View className="flex-row items-center gap-1.5 bg-[#FFE4E6] border border-[#FDA4AF] px-3 py-1.5 rounded-full shadow-md">
-                  <AlertCircle size={14} color="#BE123C" strokeWidth={2.5} />
-                  <Text className="text-[#BE123C] text-[11px] font-bold">
-                    Invalid Image: Blurry, No Waybill, No Parcel
-                  </Text>
-                </View>
-              )}
-            </View>
-
-            {/* Verification State Switcher for test/demo */}
             <TouchableOpacity
-              onPress={toggleValidationState}
-              className="absolute bottom-2 right-2 bg-slate-900/80 px-2.5 py-1 rounded-lg border border-slate-700/60"
+              activeOpacity={0.8}
+              onPress={handleTakePhoto}
+              className="bg-[#F8FAFC] border border-[#CBD5E1] border-dashed rounded-[12px] py-7 items-center justify-center active:bg-slate-100"
             >
-              <Text className="text-[10px] font-bold text-slate-200">
-                Switch State: {photoValidationState === 'VALID' ? 'Valid (Click for Invalid)' : 'Invalid (Click for Valid)'}
+              <View className="relative w-12 h-12 items-center justify-center mb-1">
+                <View className="w-12 h-12 rounded-full bg-white border border-[#E2E8F0] items-center justify-center shadow-xs">
+                  <Camera size={22} color="#64748B" />
+                </View>
+                <View className="absolute bottom-0 right-0 w-4 h-4 rounded-full bg-[#2563EB] items-center justify-center">
+                  <Upload size={9} color="#FFFFFF" strokeWidth={2.5} />
+                </View>
+              </View>
+
+              <Text className="text-[13px] font-semibold text-[#2563EB] mt-1.5">
+                Take Photo
+              </Text>
+              <Text className="text-[11px] font-normal text-[#64748B] mt-0.5">
+                Tap to take a clear photo
               </Text>
             </TouchableOpacity>
-          </View>
+          </>
+        ) : (
+          /* ------------------------------------------------------------- */
+          /* Photo Attached State: Verified (1346:1883) or Invalid (1346:2329) */
+          /* ------------------------------------------------------------- */
+          <>
+            {/* Verification Status Pill Badge (Interactive test switcher on click) */}
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={toggleValidationState}
+              className={`rounded-[6px] px-2.5 py-1 flex-row items-center gap-1.5 self-start mt-2.5 mb-3.5 border ${
+                photoValidationState === 'VALID'
+                  ? 'bg-[#ECFDF3] border-[#ABEFC6]'
+                  : 'bg-[#FEF3F2] border-[#FECDCA]'
+              }`}
+            >
+              <View
+                className={`w-3.5 h-3.5 rounded-full items-center justify-center ${
+                  photoValidationState === 'VALID' ? 'bg-[#067647]' : 'bg-[#B42318]'
+                }`}
+              >
+                {photoValidationState === 'VALID' ? (
+                  <Check size={9} color="#FFFFFF" strokeWidth={3} />
+                ) : (
+                  <X size={9} color="#FFFFFF" strokeWidth={3} />
+                )}
+              </View>
+              <Text
+                className={`text-[12px] font-semibold ${
+                  photoValidationState === 'VALID'
+                    ? 'text-[#067647]'
+                    : 'text-[#B42318]'
+                }`}
+              >
+                {photoValidationState === 'VALID' ? 'Photo verified' : 'Invalid photo'}
+              </Text>
+            </TouchableOpacity>
+
+            {/* Photo Preview Container with "Parcel Waybill Photo" Mockup */}
+            <View className="bg-[#F8FAFC] rounded-[12px] p-4 items-center justify-center border border-[#F1F5F9]">
+              <View className="bg-white rounded-lg p-3 shadow-xs items-center justify-center w-full max-w-[220px]">
+                <Image
+                  source={sampleWaybill}
+                  style={{ width: 170, height: 110, borderRadius: 6 }}
+                  resizeMode="cover"
+                />
+                <Text className="text-[10px] font-bold text-[#64748B] text-center mt-2.5">
+                  Parcel Waybill Photo
+                </Text>
+              </View>
+            </View>
+
+            {/* Test Simulation Switcher Pill */}
+            <TouchableOpacity
+              onPress={toggleValidationState}
+              className="mt-2.5 self-center py-1 px-3 rounded-full bg-slate-100 border border-slate-200"
+            >
+              <Text className="text-[10px] font-semibold text-slate-500">
+                Tap to toggle: {photoValidationState === 'VALID' ? 'Switch to Invalid State' : 'Switch to Valid State'}
+              </Text>
+            </TouchableOpacity>
+          </>
         )}
       </OrderCardContainer>
 
-      {/* Confirmation Checkbox matching awaiting parcel 2 */}
-      <TouchableOpacity
-        activeOpacity={isStep2Locked || isFinalSubmitting || isAttachingPhoto ? 1 : 0.8}
-        disabled={isStep2Locked || isFinalSubmitting || isAttachingPhoto}
-        onPress={() => {
-          if (!isStep2Locked && !isFinalSubmitting && !isAttachingPhoto) {
+      {/* Checkbox: "I confirm that I attached a valid photo" */}
+      <OrderConfirmationCheckbox
+        checked={isPhotoConfirmed}
+        onToggle={() => {
+          if (!isStep2Locked && !isFinalSubmitting && !isAttachingPhoto && isStep2Valid) {
             setIsPhotoConfirmed((prev) => !prev);
           }
         }}
-        className="flex-row items-start gap-3 px-1 mb-5"
-      >
-        <View
-          className={`w-5 h-5 rounded-md items-center justify-center mt-0.5 ${
-            isPhotoConfirmed ? 'bg-[#215CD4]' : 'bg-white border-2 border-[#CBD5E1]'
-          } ${isStep2Locked ? 'opacity-90' : ''}`}
-        >
-          {isPhotoConfirmed && <Check size={14} color="#FFFFFF" strokeWidth={3} />}
-        </View>
-        <View className="flex-1">
-          <Text className="text-xs font-bold text-[#0F172A]">
-            I confirm that I attached valid photo
-          </Text>
-          <Text className="text-[11px] text-[#64748B] mt-0.5 leading-relaxed">
-            Only initiate claim & paid when you already paid the courier exact amount and received the parcel.
-          </Text>
-        </View>
-      </TouchableOpacity>
+        disabled={
+          !isStep2Valid || isStep2Locked || isFinalSubmitting || isAttachingPhoto
+        }
+        title="I confirm that I attached a valid photo"
+        subtitle="Only confirm after paying the courier the exact amount and receiving the parcel."
+      />
 
-      {/* Primary Action Button (Triggers POST /make-claimable/attach-photo) */}
+      {/* Primary Action Button: "Order Claimed & Paid" */}
       <TouchableOpacity
         activeOpacity={0.85}
         onPress={handleFinalClaimAndPaid}
-        disabled={!isStep2Valid || isFinalSubmitting || isAttachingPhoto || isStep2Locked}
-        className={`w-full py-4 rounded-xl items-center justify-center shadow-md mb-2 ${
-          isStep2Valid && !isFinalSubmitting && !isAttachingPhoto && !isStep2Locked ? 'bg-[#215CD4] active:bg-[#1d4ed8]' : 'bg-[#94A3B8]'
+        disabled={!canSubmitFinal}
+        className={`w-full h-[48px] rounded-xl items-center justify-center mb-2 shadow-sm ${
+          canSubmitFinal ? 'bg-black active:bg-neutral-800' : 'bg-[#94A3B8]'
         }`}
       >
         {isFinalSubmitting || isAttachingPhoto ? (
           <ActivityIndicator size="small" color="#FFFFFF" />
         ) : (
-          <Text className="text-white font-bold text-sm">
+          <Text className="text-white font-bold text-[14px] tracking-wide">
             Order Claimed & Paid
           </Text>
         )}
@@ -298,9 +371,9 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
       <TouchableOpacity
         activeOpacity={0.7}
         onPress={onReturnHome}
-        className="w-full py-3 items-center justify-center"
+        className="w-full py-2.5 items-center justify-center mt-1"
       >
-        <Text className="text-xs font-semibold text-[#475569]">
+        <Text className="text-[13px] font-bold text-[#475569]">
           Return to Home
         </Text>
       </TouchableOpacity>

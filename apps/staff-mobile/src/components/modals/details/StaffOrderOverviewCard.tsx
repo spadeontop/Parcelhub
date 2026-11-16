@@ -12,11 +12,12 @@ export interface StaffOrderOverviewCardProps {
 }
 
 /**
- * Order Overview Card strictly conforming to Figma node 1346:2252.
+ * Order Overview Card strictly conforming to Figma node 1346:2252 and 1346:2288.
  * Uses OrderCardContainer for zero-border, rounded-16px, soft-shadow aesthetics.
  */
 export const StaffOrderOverviewCard: React.FC<StaffOrderOverviewCardProps> = ({
   order,
+  showFinancials = false,
 }) => {
   const [copied, setCopied] = useState<boolean>(false);
 
@@ -30,6 +31,16 @@ export const StaffOrderOverviewCard: React.FC<StaffOrderOverviewCardProps> = ({
   const orderId = order.id || order.trackingId;
   const recipientName = order.customer || order.productName || 'John Doe';
   const trackingNumber = order.trackingId || 'PH2696153368792H';
+
+  const price = typeof order.amountToPay === 'number' ? order.amountToPay : 480;
+  const paidAmount =
+    typeof order.amountReceived === 'number'
+      ? order.amountReceived
+      : Math.max(500, price);
+  const change =
+    typeof order.change === 'number'
+      ? order.change
+      : Math.max(0, paidAmount - price);
 
   return (
     <OrderCardContainer className="mb-4">
@@ -49,7 +60,7 @@ export const StaffOrderOverviewCard: React.FC<StaffOrderOverviewCardProps> = ({
       {/* Order Owner Section (Figma 1346:2257-2258) */}
       <View className="mt-4">
         <Text className="text-[11px] font-normal text-[#64748B]">
-          Order owner
+          Recipient
         </Text>
         <Text className="text-[16px] font-semibold text-[#1E293B] mt-0.5">
           {recipientName}
@@ -79,6 +90,33 @@ export const StaffOrderOverviewCard: React.FC<StaffOrderOverviewCardProps> = ({
           </View>
         </TouchableOpacity>
       </View>
+
+      {/* Financials Section when showFinancials is true (Figma 1346:2288) */}
+      {showFinancials && (
+        <>
+          <View className="h-px bg-[#F1F5F9] my-4" />
+          <View className="flex-row items-center justify-between">
+            <View className="flex-1">
+              <Text className="text-[11px] font-normal text-[#64748B]">Price</Text>
+              <Text className="text-[17px] font-bold text-[#0F172A] mt-0.5">
+                ₱{price.toLocaleString()}
+              </Text>
+            </View>
+            <View className="flex-1 items-center">
+              <Text className="text-[11px] font-normal text-[#64748B]">Paid Amount</Text>
+              <Text className="text-[17px] font-bold text-[#0F172A] mt-0.5">
+                ₱{paidAmount.toLocaleString()}
+              </Text>
+            </View>
+            <View className="flex-1 items-end">
+              <Text className="text-[11px] font-normal text-[#64748B]">Change</Text>
+              <Text className="text-[17px] font-bold text-[#2563EB] mt-0.5">
+                ₱{change.toLocaleString()}
+              </Text>
+            </View>
+          </View>
+        </>
+      )}
     </OrderCardContainer>
   );
 };

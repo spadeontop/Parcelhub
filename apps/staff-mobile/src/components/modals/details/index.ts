@@ -1,6 +1,7 @@
 export * from '../../common/OrderCardContainer';
 export * from './OrderDetailsHeader';
 export * from './OrderConfirmationCheckbox';
+export * from './PaymentSummaryCard';
 export * from './StaffOrderOverviewCard';
 export * from './StaffUnpaidActionSection';
 export * from './StaffReadyActionSection';

@@ -41,6 +41,8 @@ import {
   Eye,
   EyeOff,
   HelpCircle,
+  ArrowUp,
+  Upload,
 } from 'lucide-react-native';
 
 export {
@@ -85,4 +87,6 @@ export {
   Eye,
   EyeOff,
   HelpCircle,
+  ArrowUp,
+  Upload,
 };
