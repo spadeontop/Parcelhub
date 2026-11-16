@@ -4,6 +4,8 @@ auth.html
 dist    
 temp/
 temp/**
+pgdata/**
+backend/pgdata/
 
 !packages/contracts/dist/
 !packages/contracts/dist/**
