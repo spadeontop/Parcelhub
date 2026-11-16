@@ -256,12 +256,13 @@ export const StaffTerminalScreen: React.FC = () => {
         onClose={closeOrderDetails}
       />
 
-      {/* Manual Scanner / Lookup Modal */}
+      {/* Full-screen QR Scanner Modal (Figma node 1355:3) */}
       <StaffManualLookupModal
         isOpen={isLookupOpen}
         orders={orders}
         onClose={() => setIsLookupOpen(false)}
         onSelectOrder={openOrderDetails}
+        onOpenAccount={() => setIsDeskInfoOpen(true)}
         onNotFound={(query) =>
           showToast(`No order found matching "${query}"`, 'error')
         }
