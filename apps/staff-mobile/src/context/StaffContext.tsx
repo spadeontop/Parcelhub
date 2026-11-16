@@ -50,7 +50,7 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isOnline, setIsOnline] = useState<boolean>(true);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [orders, setOrders] = useState<StaffOrder[]>([]);
-  const [activeTab, setActiveTab] = useState<StaffTab>('active');
+  const [activeTab, setActiveTab] = useState<StaffTab>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedOrder, setSelectedOrder] = useState<StaffOrder | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState<boolean>(false);
@@ -79,9 +79,11 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const email = await staffApi.getStoredStaffEmail();
         if (token && email && isMounted) {
           const user: StaffUser = {
-            id: 'STF-001',
+            id: 'STF-1991',
+            name: 'John Doe',
             email,
-            role: 'STAFF',
+            role: 'Staff',
+            hubName: "LILY'S CATERING HUB",
             token,
           };
           setStaffUser(user);
@@ -163,23 +165,14 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return () => clearInterval(interval);
   }, [staffUser, fetchOrders]);
 
-  // Helper to determine if an unpaid order was placed within the last 5 minutes
-  const isRecentUnpaid = useCallback((order: StaffOrder) => {
-    if (order.status !== 'PAYMENT_REQUIRED') return false;
-    if (!order.timestamp) return true;
-    const time = new Date(order.timestamp).getTime();
-    if (isNaN(time)) return true;
-    const diffMinutes = (Date.now() - time) / (1000 * 60);
-    return diffMinutes <= 5;
-  }, []);
-
   // Compute Badge Counts for Tabs
   const badgeCounts: StaffBadgeCounts = useMemo(() => ({
+    all: orders.length,
     active: orders.filter((o) => o.status === 'AWAITING_PARCEL').length,
     ready: orders.filter((o) => o.status === 'READY_TO_CLAIM').length,
-    unpaid: orders.filter((o) => isRecentUnpaid(o)).length,
+    unpaid: orders.filter((o) => o.status === 'PAYMENT_REQUIRED').length,
     claimed: orders.filter((o) => o.status === 'CLAIMED').length,
-  }), [orders, isRecentUnpaid]);
+  }), [orders]);
 
   // Filter orders by active tab
   const tabOrders = useMemo(() => {
@@ -189,13 +182,13 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       case 'ready':
         return orders.filter((o) => o.status === 'READY_TO_CLAIM');
       case 'unpaid':
-        return orders.filter((o) => isRecentUnpaid(o));
+        return orders.filter((o) => o.status === 'PAYMENT_REQUIRED');
       case 'claimed':
         return orders.filter((o) => o.status === 'CLAIMED');
       default:
         return orders;
     }
-  }, [orders, activeTab, isRecentUnpaid]);
+  }, [orders, activeTab]);
 
   // Filter orders by search query
   const filteredOrders = useMemo(() => {
@@ -215,9 +208,11 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const login = async (email: string, password: string) => {
     const res = await staffApi.login(email, password);
     const user: StaffUser = {
-      id: 'STF-001',
+      id: 'STF-1991',
+      name: 'John Doe',
       email,
-      role: 'STAFF',
+      role: 'Staff',
+      hubName: "LILY'S CATERING HUB",
       token: res.authToken,
     };
     setStaffUser(user);

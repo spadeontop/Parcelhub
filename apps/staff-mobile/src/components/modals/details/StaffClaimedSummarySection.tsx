@@ -12,6 +12,8 @@ import {
 } from 'react-native';
 import { StaffOrder } from '../../../types';
 import { Check, X, Plus, Minus } from '../../common/Icons';
+import { OrderCardContainer } from '../../common/OrderCardContainer';
+import { PaymentSummaryCard } from './PaymentSummaryCard';
 
 interface StaffClaimedSummarySectionProps {
   order: StaffOrder;
@@ -20,28 +22,18 @@ interface StaffClaimedSummarySectionProps {
 
 const sampleWaybill = require('../../../../assets/parcelhub/sample_parcel_waybill.png');
 
-const formatDateTime = (iso?: string): string => {
-  if (!iso) return '—';
+const formatDateMonth = (iso?: string, fallback = '17 Oct'): string => {
+  if (!iso) return fallback;
   const d = new Date(iso);
-  if (isNaN(d.getTime())) return '—';
-  return d.toLocaleString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true,
-  });
+  if (isNaN(d.getTime())) return fallback;
+  return d.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
 };
 
-const formatTimeOnly = (iso?: string): string => {
-  if (!iso) return '—';
+const formatTimeShort = (iso?: string, fallback = '12:00'): string => {
+  if (!iso) return fallback;
   const d = new Date(iso);
-  if (isNaN(d.getTime())) return '—';
-  return d.toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true,
-  });
+  if (isNaN(d.getTime())) return fallback;
+  return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
 };
 
 export const StaffClaimedSummarySection: React.FC<StaffClaimedSummarySectionProps> = ({
@@ -227,95 +219,113 @@ export const StaffClaimedSummarySection: React.FC<StaffClaimedSummarySectionProp
         order.proofImageUrl.startsWith('file://'))
   );
 
+  const price = typeof order.amountToPay === 'number' ? order.amountToPay : 480;
+  const paidAmount =
+    typeof order.amountReceived === 'number'
+      ? order.amountReceived
+      : Math.max(500, price);
+  const change =
+    typeof order.change === 'number'
+      ? order.change
+      : Math.max(0, paidAmount - price);
+
   return (
-    <View className="gap-4">
-      {/* Tracking Progress Receipt Card matching Figma Frame 3 */}
-      <View
-        className="bg-white border border-[#F1F5F9] rounded-2xl p-5"
-        style={{
-          shadowColor: '#111827',
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.05,
-          shadowRadius: 8,
-          elevation: 2,
-        }}
-      >
-        <Text className="text-[11px] font-bold text-[#94A3B8] tracking-wider uppercase mb-4">
+    <View>
+      {/* Payment Summary Card matching Figma 1346:2136 */}
+      <PaymentSummaryCard
+        price={price}
+        paidAmount={paidAmount}
+        change={change}
+        className="mb-4"
+      />
+
+      {/* Tracking Progress Receipt Card matching Figma 1346:2136 */}
+      <OrderCardContainer className="mb-4">
+        <Text className="text-[11px] font-bold text-[#64748B] tracking-wider uppercase mb-4">
           TRACKING PROGRESS
         </Text>
 
         {/* Step 1: Order Placed */}
-        <View className="flex-row">
-          <View className="w-6 items-center mr-3">
-            <View className="w-5 h-5 rounded-full bg-white border-[1.5px] border-[#94A3B8] items-center justify-center">
-              <Check size={11} color="#94A3B8" strokeWidth={2.5} />
-            </View>
-            <View className="w-[2px] flex-1 bg-[#E2E8F0]" />
+        <View className="flex-row items-start">
+          <View className="w-14 items-end mr-3 pt-0.5">
+            <Text className="text-[11.5px] font-bold text-[#64748B] text-right">
+              {formatDateMonth(placedTimestamp, '17 Oct')}
+            </Text>
+            <Text className="text-[10px] text-[#64748B] text-right mt-0.5">
+              {formatTimeShort(placedTimestamp, '16:32')}
+            </Text>
           </View>
-          <View className="flex-1 pb-5">
-            <View className="flex-row items-center justify-between gap-2">
-              <Text className="text-xs font-bold text-[#1E293B] leading-[15px]">
-                Order Placed
-              </Text>
-              <Text className="text-[10.5px] text-[#94A3B8] leading-[13px] text-right">
-                {formatDateTime(placedTimestamp)}
-              </Text>
+          <View className="w-5 items-center mr-3">
+            <View className="w-4 h-4 rounded-full border-2 border-[#94A3B8] items-center justify-center bg-white mt-1">
+              <View className="w-1.5 h-1.5 rounded-full bg-[#94A3B8]" />
             </View>
-            <Text className="text-[11px] text-[#64748B] leading-[14px] mt-0.5">
-              Order by the user from the app
+            <View className="w-[1.5px] h-10 bg-[#E2E8F0] my-1" />
+          </View>
+          <View className="flex-1 pb-4">
+            <Text className="text-[13px] font-bold text-[#0F172A] leading-tight">
+              Order Placed
+            </Text>
+            <Text className="text-[11px] font-normal text-[#64748B] mt-0.5 leading-[15px]">
+              Order submitted via customer app
             </Text>
           </View>
         </View>
 
         {/* Step 2: Awaiting Parcel */}
-        <View className="flex-row">
-          <View className="w-6 items-center mr-3">
-            <View className="w-5 h-5 rounded-full bg-white border-[1.5px] border-[#94A3B8] items-center justify-center">
-              <Check size={11} color="#94A3B8" strokeWidth={2.5} />
-            </View>
-            <View className="w-[2px] flex-1 bg-[#E2E8F0]" />
+        <View className="flex-row items-start">
+          <View className="w-14 items-end mr-3 pt-0.5">
+            <Text className="text-[11.5px] font-bold text-[#64748B] text-right">
+              {formatDateMonth(awaitingTimestamp, '17 Oct')}
+            </Text>
+            <Text className="text-[10px] text-[#64748B] text-right mt-0.5">
+              {formatTimeShort(awaitingTimestamp, '18:32')}
+            </Text>
           </View>
-          <View className="flex-1 pb-5">
-            <View className="flex-row items-center justify-between gap-2">
-              <Text className="text-xs font-bold text-[#1E293B] leading-[15px]">
-                Awaiting Parcel
-              </Text>
-              <Text className="text-[10.5px] text-[#94A3B8] leading-[13px] text-right">
-                {formatTimeOnly(awaitingTimestamp)}
-              </Text>
+          <View className="w-5 items-center mr-3">
+            <View className="w-4 h-4 rounded-full border-2 border-[#94A3B8] items-center justify-center bg-white mt-1">
+              <View className="w-1.5 h-1.5 rounded-full bg-[#94A3B8]" />
             </View>
-            <Text className="text-[11px] text-[#64748B] leading-[14px] mt-0.5">
-              The hub received the item
+            <View className="w-[1.5px] h-10 bg-[#E2E8F0] my-1" />
+          </View>
+          <View className="flex-1 pb-4">
+            <Text className="text-[13px] font-bold text-[#0F172A] leading-tight">
+              Awaiting Parcel
+            </Text>
+            <Text className="text-[11px] font-normal text-[#64748B] mt-0.5 leading-[15px]">
+              Hub awaiting courier drop-off
             </Text>
           </View>
         </View>
 
         {/* Step 3: Ready to Claim */}
-        <View className="flex-row">
-          <View className="w-6 items-center mr-3">
-            <View className="w-5 h-5 rounded-full bg-white border-[1.5px] border-[#94A3B8] items-center justify-center">
-              <Check size={11} color="#94A3B8" strokeWidth={2.5} />
-            </View>
-            <View className="w-[2px] flex-1 bg-[#E2E8F0]" />
+        <View className="flex-row items-start">
+          <View className="w-14 items-end mr-3 pt-0.5">
+            <Text className="text-[11.5px] font-bold text-[#64748B] text-right">
+              {formatDateMonth(readyTimestamp, '17 Oct')}
+            </Text>
+            <Text className="text-[10px] text-[#64748B] text-right mt-0.5">
+              {formatTimeShort(readyTimestamp, '22:32')}
+            </Text>
           </View>
-          <View className="flex-1 pb-5">
-            <View className="flex-row items-center justify-between gap-2">
-              <Text className="text-xs font-bold text-[#1E293B] leading-[15px]">
-                Ready to Claim
-              </Text>
-              <Text className="text-[10.5px] text-[#94A3B8] leading-[13px] text-right">
-                {formatTimeOnly(readyTimestamp)}
-              </Text>
+          <View className="w-5 items-center mr-3">
+            <View className="w-4 h-4 rounded-full border-2 border-[#94A3B8] items-center justify-center bg-white mt-1">
+              <View className="w-1.5 h-1.5 rounded-full bg-[#94A3B8]" />
             </View>
-            <Text className="text-[11px] text-[#64748B] leading-[14px] mt-0.5">
-              Stored in bin, notified recipient
+            <View className="w-[1.5px] h-12 bg-[#15803D] my-1" />
+          </View>
+          <View className="flex-1 pb-4">
+            <Text className="text-[13px] font-bold text-[#0F172A] leading-tight">
+              Ready to Claim
+            </Text>
+            <Text className="text-[11px] font-normal text-[#64748B] mt-0.5 leading-[15px]">
+              Parcel logged at hub for pickup
             </Text>
             <TouchableOpacity
               activeOpacity={0.7}
               onPress={() => setIsPodModalOpen(true)}
-              className="mt-1.5 self-start"
+              className="mt-1 self-start"
             >
-              <Text className="text-[10.5px] font-bold text-[#215CD4] leading-[13px]">
+              <Text className="text-[11px] font-bold text-[#2563EB]">
                 View Proof of Delivery
               </Text>
             </TouchableOpacity>
@@ -323,40 +333,43 @@ export const StaffClaimedSummarySection: React.FC<StaffClaimedSummarySectionProp
         </View>
 
         {/* Step 4: Parcel Claimed */}
-        <View className="flex-row">
-          <View className="w-6 items-center mr-3">
-            <View className="w-[22px] h-[22px] rounded-full bg-[#94A3B8] border-[1.5px] border-[#94A3B8] items-center justify-center">
-              <Check size={12} color="#FFFFFF" strokeWidth={2.8} />
+        <View className="flex-row items-start">
+          <View className="w-14 items-end mr-3 pt-0.5">
+            <Text className="text-[11.5px] font-bold text-[#15803D] text-right">
+              {formatDateMonth(claimedTimestamp, '18 Oct')}
+            </Text>
+            <Text className="text-[10px] text-[#15803D] text-right mt-0.5">
+              {formatTimeShort(claimedTimestamp, '08:11')}
+            </Text>
+          </View>
+          <View className="w-5 items-center mr-3">
+            <View className="w-4 h-4 rounded-full bg-[#15803D] items-center justify-center mt-1">
+              <Check size={10} color="#FFFFFF" strokeWidth={3} />
             </View>
           </View>
           <View className="flex-1">
-            <View className="flex-row items-center justify-between gap-2">
-              <Text className="text-xs font-bold text-[#0F172A] leading-[15px]">
-                Parcel Claimed
-              </Text>
-              <Text className="text-[10.5px] font-bold text-[#94A3B8] leading-[13px] text-right">
-                {formatTimeOnly(claimedTimestamp)}
-              </Text>
-            </View>
-            <Text className="text-[11px] text-[#64748B] leading-[14px] mt-0.5">
-              Handover verified. Cash returned.
+            <Text className="text-[13px] font-bold text-[#0F172A] leading-tight">
+              Parcel Claimed
+            </Text>
+            <Text className="text-[11px] font-bold text-[#15803D] mt-0.5 leading-[15px]">
+              Parcel successfully claimed by recipient
             </Text>
           </View>
         </View>
-      </View>
+      </OrderCardContainer>
 
-      {/* Confirmation & Return to Home Secondary Action matching Figma */}
-      <View className="items-center pt-1 pb-2 gap-3.5">
-        <Text className="text-[11.5px] text-[#64748B] text-center leading-[14px] px-2">
-          This transaction has been settled and archived.
+      {/* Summary Note & Return to Home Button (consistent with other states) */}
+      <View className="items-center pt-1 pb-4">
+        <Text className="text-[11.5px] text-[#64748B] text-center mb-3">
+          Order completed and logged in hub records.
         </Text>
 
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={onReturnHome}
-          className="py-2 px-6 items-center justify-center"
+          className="w-full py-2.5 items-center justify-center"
         >
-          <Text className="text-xs font-semibold text-[#475569] text-center leading-4">
+          <Text className="text-[13px] font-bold text-[#475569]">
             Return to Home
           </Text>
         </TouchableOpacity>

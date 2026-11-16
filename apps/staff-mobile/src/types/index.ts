@@ -6,9 +6,10 @@ export type OrderStatus =
   | 'CLAIMED'
   | 'CANCELLED';
 
-export type StaffTab = 'active' | 'ready' | 'unpaid' | 'claimed';
+export type StaffTab = 'all' | 'ready' | 'active' | 'unpaid' | 'claimed';
 
 export interface StaffBadgeCounts {
+  all?: number;
   active: number;
   ready: number;
   unpaid: number;
@@ -17,8 +18,10 @@ export interface StaffBadgeCounts {
 
 export interface StaffUser {
   id: string;
+  name?: string;
   email: string;
-  role: 'STAFF';
+  role: 'STAFF' | string;
+  hubName?: string;
   token: string;
 }
 
