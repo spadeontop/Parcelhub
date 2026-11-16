@@ -9,6 +9,7 @@ import {
   Easing,
   Alert,
   StyleSheet,
+  Dimensions,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { StaffOrder } from '../../types';
@@ -70,12 +71,11 @@ const QrScanSymbol: React.FC<{ size?: number }> = ({ size = 48 }) => (
   </Svg>
 );
 
+const SCREEN_HEIGHT = Dimensions.get('window').height || 800;
+
 /**
  * Inline Content Sheet QR Scanner conforming to Figma node 1355:3
  * "ParcelHub — Scan QR code"
- *
- * Renders directly inside the main sheet container so the header stays
- * 100% stationary with zero jump/re-render, and the laser line sweeps smoothly.
  */
 export const StaffScanQrModal: React.FC<StaffScanQrModalProps> = ({
   isOpen,
@@ -89,22 +89,27 @@ export const StaffScanQrModal: React.FC<StaffScanQrModalProps> = ({
   const [rendered, setRendered] = useState<boolean>(isOpen);
 
   const scanLineAnim = useRef(new Animated.Value(0)).current;
-  const sheetSlideAnim = useRef(new Animated.Value(600)).current;
+  const sheetSlideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const scanLoopRef = useRef<Animated.CompositeAnimation | null>(null);
+  const isClosingRef = useRef<boolean>(false);
 
+  // Synchronize opening & closing animations with native driver
   useEffect(() => {
     if (isOpen) {
+      isClosingRef.current = false;
       setRendered(true);
-      sheetSlideAnim.setValue(600);
+      sheetSlideAnim.setValue(SCREEN_HEIGHT);
       Animated.timing(sheetSlideAnim, {
         toValue: 0,
-        duration: 320,
+        duration: 280,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }).start();
-    } else if (rendered) {
+    } else if (rendered && !isClosingRef.current) {
+      // Parent forced close (e.g. back navigation or external state change)
       Animated.timing(sheetSlideAnim, {
-        toValue: 600,
-        duration: 240,
+        toValue: SCREEN_HEIGHT,
+        duration: 200,
         easing: Easing.in(Easing.cubic),
         useNativeDriver: true,
       }).start(() => {
@@ -113,21 +118,41 @@ export const StaffScanQrModal: React.FC<StaffScanQrModalProps> = ({
     }
   }, [isOpen]);
 
+  // Clean, buttery close transition without frame drops or re-render freezes
   const handleClose = () => {
+    if (isClosingRef.current) return;
+    isClosingRef.current = true;
+
+    // Immediately stop laser loop to free up GPU/thread resources
+    if (scanLoopRef.current) {
+      scanLoopRef.current.stop();
+      scanLoopRef.current = null;
+    }
+
     Animated.timing(sheetSlideAnim, {
-      toValue: 600,
-      duration: 240,
+      toValue: SCREEN_HEIGHT,
+      duration: 220,
       easing: Easing.in(Easing.cubic),
       useNativeDriver: true,
-    }).start(() => {
-      onClose();
+    }).start(({ finished }) => {
+      if (finished) {
+        setRendered(false);
+        onClose();
+      }
     });
   };
 
-  // Smooth, continuous laser beam scan line (1.8s sweep)
+  // Laser beam loop: runs only while open and automatically cleans up
   useEffect(() => {
-    if (!isOpen) return;
-    const animation = Animated.loop(
+    if (!isOpen) {
+      if (scanLoopRef.current) {
+        scanLoopRef.current.stop();
+        scanLoopRef.current = null;
+      }
+      return;
+    }
+
+    scanLoopRef.current = Animated.loop(
       Animated.sequence([
         Animated.timing(scanLineAnim, {
           toValue: 1,
@@ -143,8 +168,14 @@ export const StaffScanQrModal: React.FC<StaffScanQrModalProps> = ({
         }),
       ])
     );
-    animation.start();
-    return () => animation.stop();
+    scanLoopRef.current.start();
+
+    return () => {
+      if (scanLoopRef.current) {
+        scanLoopRef.current.stop();
+        scanLoopRef.current = null;
+      }
+    };
   }, [isOpen]);
 
   const translateY = scanLineAnim.interpolate({
@@ -186,6 +217,7 @@ export const StaffScanQrModal: React.FC<StaffScanQrModalProps> = ({
 
   return (
     <Animated.View
+      pointerEvents={isOpen ? 'auto' : 'none'}
       style={[
         StyleSheet.absoluteFill,
         {
@@ -208,6 +240,7 @@ export const StaffScanQrModal: React.FC<StaffScanQrModalProps> = ({
             activeOpacity={0.7}
             onPress={handleClose}
             accessibilityLabel="Back to orders"
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             className="w-[44px] h-[44px] rounded-[14px] bg-white border border-[#E2E8F0] items-center justify-center shadow-xs active:bg-slate-50"
           >
             <ArrowLeft size={22} color="#0F172A" />
@@ -266,7 +299,7 @@ export const StaffScanQrModal: React.FC<StaffScanQrModalProps> = ({
 
           {/* Bottom Camera Note (Figma 1355:43) */}
           <Text className="text-[11px] font-normal text-[#CBD5E1] text-center">
-            Scanning starts when a code is in view
+                Scanning starts when a code is in view
           </Text>
         </View>
 
