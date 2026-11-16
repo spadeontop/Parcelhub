@@ -35,8 +35,8 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: 4. Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - name: 4. Accept Android SDK Licenses
+        run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
       - name: 5. Install Customer Mobile Dependencies
         run: npm --prefix apps/customer-mobile ci
@@ -44,14 +44,16 @@ jobs:
       - name: 6. Prebuild Native Android Project
         working-directory: apps/customer-mobile
         env:
-          EXPO_PUBLIC_API_URL: https://parcelhub-spade.vercel.app
+          EXPO_PUBLIC_API_URL: ${{ github.event.inputs.environment || 'https://parcelhub-spade.vercel.app' }}
         run: npx expo prebuild --platform android --clean
 
       - name: 7. Build Standalone Release APK via Gradle
         working-directory: apps/customer-mobile/android
         env:
-          EXPO_PUBLIC_API_URL: https://parcelhub-spade.vercel.app
-        run: ./gradlew assembleRelease --no-daemon
+          EXPO_PUBLIC_API_URL: ${{ github.event.inputs.environment || 'https://parcelhub-spade.vercel.app' }}
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleRelease --no-daemon
 
       - name: 8. Rename APK for Clarity
         run: |
