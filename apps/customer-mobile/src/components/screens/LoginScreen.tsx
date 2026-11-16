@@ -70,11 +70,11 @@ export const LoginScreen: React.FC = () => {
     <View className="flex-1 bg-[#2563eb]">
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        className="flex-1 bg-white"
+        className="flex-1 bg-[#2563eb]"
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-          <View className="flex-1 bg-white">
-            {/* Top Brand Header (Vector 73.42% bottom, height ~236px) */}
+          <View className="flex-1 bg-[#2563eb]">
+            {/* Top Brand Header */}
             <AuthBrandHeader
               title="ParcelHub"
               subtitle="Customer Mobile Portal"
@@ -84,9 +84,9 @@ export const LoginScreen: React.FC = () => {
               }}
             />
 
-            {/* Main White Sheet (Vector: background #FFFFFF, rounded-t-3xl) */}
+            {/* Main White Sheet with curved top transition */}
             <View
-              className="flex-1 bg-white rounded-t-3xl px-4"
+              className="flex-1 bg-white rounded-t-[28px] px-4"
               style={{
                 paddingTop: isCompact ? 24 : 32,
                 paddingBottom: isCompact ? 20 : 36,

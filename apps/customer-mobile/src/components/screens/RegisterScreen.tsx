@@ -175,10 +175,10 @@ export const RegisterScreen: React.FC = () => {
     <View className="flex-1 bg-[#2563eb]">
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        className="flex-1 bg-[#f8fafc]"
+        className="flex-1 bg-[#2563eb]"
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-          <View className="flex-1 bg-[#f8fafc]">
+          <View className="flex-1 bg-[#2563eb]">
             {/* Header */}
             <AuthBrandHeader
               title="ParcelHub"
@@ -191,9 +191,9 @@ export const RegisterScreen: React.FC = () => {
               onHelp={() => { Keyboard.dismiss(); navigateTo('faq'); }}
             />
 
-            {/* Main non-scrollable sheet */}
+            {/* Main non-scrollable sheet with curved top transition */}
             <View
-              className="flex-1 bg-[#f8fafc] rounded-t-3xl px-4 justify-between"
+              className="flex-1 bg-[#f8fafc] rounded-t-[28px] px-4 justify-between"
               style={{
                 paddingTop: isCompact ? 12 : 16,
                 paddingBottom: isCompact ? 16 : 24,
