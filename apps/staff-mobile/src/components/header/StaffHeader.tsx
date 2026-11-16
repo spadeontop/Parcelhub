@@ -17,11 +17,18 @@ export const StaffHeader: React.FC<StaffHeaderProps> = ({ onOpenAccount }) => {
 
   return (
     <View
-      style={{ minHeight: 80 }}
+      style={{ minHeight: 80, zIndex: 20 }}
       className="bg-black px-5 pt-5 pb-7 flex-row items-center justify-between"
     >
-      {/* Brand Identity: Logo + Hub Name */}
-      <View className="flex-row items-center gap-2.5">
+      {/* Brand Identity & Hub Name (Clickable to open staff terminal / desk details) */}
+      <TouchableOpacity
+        onPress={onOpenAccount}
+        activeOpacity={0.8}
+        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        className="flex-row items-center gap-2.5 flex-1 mr-2"
+        accessibilityRole="button"
+        accessibilityLabel={`ParcelHub ${hubName}. Open hub details`}
+      >
         <ParcelHubLogo size={36} />
         <View>
           <Text className="text-[18px] font-bold text-white tracking-tight leading-5">
@@ -31,12 +38,13 @@ export const StaffHeader: React.FC<StaffHeaderProps> = ({ onOpenAccount }) => {
             {hubName}
           </Text>
         </View>
-      </View>
+      </TouchableOpacity>
 
-      {/* Staff account — signed in button */}
+      {/* Staff account — signed in name button (Clickable to open staff account menu) */}
       <TouchableOpacity
         onPress={onOpenAccount}
         activeOpacity={0.8}
+        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         className="bg-[#151A23] border border-[#303846] rounded-[12px] px-3 py-1.5 flex-row items-center gap-2"
         accessibilityRole="button"
         accessibilityLabel={`Signed in as ${staffName}, ${staffId}. Open account menu`}

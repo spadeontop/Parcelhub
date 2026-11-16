@@ -74,6 +74,9 @@ const QrScanSymbol: React.FC<{ size?: number }> = ({ size = 48 }) => (
 /**
  * Full-screen QR Scanning modal strictly conforming to Figma node 1355:3
  * "ParcelHub — Scan QR code"
+ *
+ * NOTE: The header stays stationary at the top and the backdrop fades in,
+ * while ONLY the curved content sheet slides up smoothly from below.
  */
 export const StaffScanQrModal: React.FC<StaffScanQrModalProps> = ({
   isOpen,
@@ -86,6 +89,31 @@ export const StaffScanQrModal: React.FC<StaffScanQrModalProps> = ({
   const [isManualSearchVisible, setIsManualSearchVisible] = useState<boolean>(false);
   const [lookupText, setLookupText] = useState<string>('');
   const scanLineAnim = useRef(new Animated.Value(0)).current;
+  const sheetSlideAnim = useRef(new Animated.Value(600)).current;
+
+  // Slide only the content sheet up from below when opening
+  useEffect(() => {
+    if (isOpen) {
+      sheetSlideAnim.setValue(600);
+      Animated.timing(sheetSlideAnim, {
+        toValue: 0,
+        duration: 280,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [isOpen]);
+
+  const handleClose = () => {
+    Animated.timing(sheetSlideAnim, {
+      toValue: 600,
+      duration: 220,
+      easing: Easing.in(Easing.cubic),
+      useNativeDriver: true,
+    }).start(() => {
+      onClose();
+    });
+  };
 
   // Animate the laser scan line vertically across the viewfinder
   useEffect(() => {
@@ -94,13 +122,13 @@ export const StaffScanQrModal: React.FC<StaffScanQrModalProps> = ({
       Animated.sequence([
         Animated.timing(scanLineAnim, {
           toValue: 1,
-          duration: 2200,
+          duration: 220,
           easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
         Animated.timing(scanLineAnim, {
           toValue: 0,
-          duration: 2200,
+          duration: 220,
           easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
@@ -127,7 +155,7 @@ export const StaffScanQrModal: React.FC<StaffScanQrModalProps> = ({
 
     if (matched) {
       onSelectOrder(matched);
-      onClose();
+      handleClose();
       setLookupText('');
       setIsManualSearchVisible(false);
     } else {
@@ -137,10 +165,9 @@ export const StaffScanQrModal: React.FC<StaffScanQrModalProps> = ({
 
   const handleSimulatedScan = () => {
     if (orders.length > 0) {
-      // Pick first or random active order for simulated scan
       const target = orders[0];
       onSelectOrder(target);
-      onClose();
+      handleClose();
     } else {
       Alert.alert('No Orders Available', 'Queue is currently empty.');
     }
@@ -149,17 +176,22 @@ export const StaffScanQrModal: React.FC<StaffScanQrModalProps> = ({
   return (
     <Modal
       visible={isOpen}
-      animationType="slide"
-      transparent={false}
-      onRequestClose={onClose}
+      animationType="fade"
+      transparent
+      onRequestClose={handleClose}
+      statusBarTranslucent
     >
       <View className="flex-1 bg-black">
-        {/* Top Header matching Figma 1355:4 / StaffHeader */}
-        <StaffHeader onOpenAccount={onOpenAccount || onClose} />
+        {/* Stationary Top Header — Locked at the top, does NOT slide from bottom! */}
+        <StaffHeader onOpenAccount={onOpenAccount || handleClose} />
 
-        {/* Curved Content Sheet matching Figma 1355:5 */}
-        <View
-          style={{ borderTopLeftRadius: 28, borderTopRightRadius: 28 }}
+        {/* Curved Content Sheet — Only this sheet slides up from the bottom! */}
+        <Animated.View
+          style={{
+            borderTopLeftRadius: 28,
+            borderTopRightRadius: 28,
+            transform: [{ translateY: sheetSlideAnim }],
+          }}
           className="flex-1 bg-[#F8FAFC] overflow-hidden"
         >
           <ScrollView
@@ -171,7 +203,7 @@ export const StaffScanQrModal: React.FC<StaffScanQrModalProps> = ({
             <View className="flex-row items-center mb-5">
               <TouchableOpacity
                 activeOpacity={0.7}
-                onPress={onClose}
+                onPress={handleClose}
                 accessibilityLabel="Back to orders"
                 className="w-[44px] h-[44px] rounded-[14px] bg-white border border-[#E2E8F0] items-center justify-center shadow-xs active:bg-slate-50"
               >
@@ -324,7 +356,7 @@ export const StaffScanQrModal: React.FC<StaffScanQrModalProps> = ({
                           key={o.id}
                           onPress={() => {
                             onSelectOrder(o);
-                            onClose();
+                            handleClose();
                           }}
                           className="bg-[#F1F5F9] px-2.5 py-1.5 rounded-lg border border-[#E2E8F0] active:bg-slate-200"
                         >
@@ -339,7 +371,7 @@ export const StaffScanQrModal: React.FC<StaffScanQrModalProps> = ({
               </View>
             )}
           </ScrollView>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );

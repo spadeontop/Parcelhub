@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   Modal,
   View,
@@ -6,8 +6,7 @@ import {
   TouchableOpacity,
   Pressable,
   Animated,
-  Dimensions,
-  StyleSheet,
+  Easing,
 } from 'react-native';
 import { X } from '../common/Icons';
 import { useStaff } from '../../context/StaffContext';
@@ -22,59 +21,28 @@ export const StaffAccountModal: React.FC<StaffAccountModalProps> = ({
   onClose,
 }) => {
   const { staffUser, logout } = useStaff();
-  const screenHeight = Dimensions.get('window').height;
+  const slideAnim = useRef(new Animated.Value(450)).current;
 
-  // Animation drivers
-  const backdropOpacity = useRef(new Animated.Value(0)).current;
-  const sheetTranslateY = useRef(new Animated.Value(screenHeight)).current;
-  const [modalVisible, setModalVisible] = useState(isOpen);
-
+  // Animate sheet sliding up from bottom; backdrop fades in natively via animationType="fade"
   useEffect(() => {
     if (isOpen) {
-      setModalVisible(true);
-      Animated.parallel([
-        Animated.timing(backdropOpacity, {
-          toValue: 1,
-          duration: 220,
-          useNativeDriver: true,
-        }),
-        Animated.timing(sheetTranslateY, {
-          toValue: 0,
-          duration: 280,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      Animated.parallel([
-        Animated.timing(backdropOpacity, {
-          toValue: 0,
-          duration: 180,
-          useNativeDriver: true,
-        }),
-        Animated.timing(sheetTranslateY, {
-          toValue: screenHeight,
-          duration: 220,
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
-        setModalVisible(false);
-      });
+      slideAnim.setValue(450);
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 260,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
     }
-  }, [isOpen, screenHeight, backdropOpacity, sheetTranslateY]);
+  }, [isOpen]);
 
   const handleClose = () => {
-    Animated.parallel([
-      Animated.timing(backdropOpacity, {
-        toValue: 0,
-        duration: 180,
-        useNativeDriver: true,
-      }),
-      Animated.timing(sheetTranslateY, {
-        toValue: screenHeight,
-        duration: 220,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
+    Animated.timing(slideAnim, {
+      toValue: 450,
+      duration: 200,
+      easing: Easing.in(Easing.cubic),
+      useNativeDriver: true,
+    }).start(() => {
       onClose();
     });
   };
@@ -84,8 +52,6 @@ export const StaffAccountModal: React.FC<StaffAccountModalProps> = ({
     await logout();
   };
 
-  if (!modalVisible) return null;
-
   const staffName = staffUser?.name || 'John Doe';
   const staffId = staffUser?.id || 'STF-1991';
   const staffRole = staffUser?.role || 'Staff';
@@ -93,39 +59,26 @@ export const StaffAccountModal: React.FC<StaffAccountModalProps> = ({
 
   return (
     <Modal
-      visible={modalVisible}
+      visible={isOpen}
       transparent
-      animationType="none"
+      animationType="fade"
       onRequestClose={handleClose}
       statusBarTranslucent
     >
-      <View style={StyleSheet.absoluteFill} className="justify-end">
-        {/* Stationary Dark Backdrop (Fades in/out smoothly without sliding!) */}
-        <Animated.View
-          style={[
-            StyleSheet.absoluteFill,
-            {
-              backgroundColor: 'rgba(4, 7, 13, 0.58)',
-              opacity: backdropOpacity,
-            },
-          ]}
-        >
-          <Pressable
-            style={StyleSheet.absoluteFill}
-            onPress={handleClose}
-            accessibilityLabel="Dismiss account modal"
-          />
-        </Animated.View>
+      <View className="flex-1 justify-end bg-black/60">
+        <Pressable
+          className="flex-1"
+          onPress={handleClose}
+          accessibilityLabel="Dismiss account modal"
+        />
 
-        {/* Staff Account Sheet (Slides up from below) */}
+        {/* Staff Account Sheet: ONLY the white sheet slides up from the bottom! */}
         <Animated.View
-          style={[
-            {
-              borderTopLeftRadius: 24,
-              borderTopRightRadius: 24,
-              transform: [{ translateY: sheetTranslateY }],
-            },
-          ]}
+          style={{
+            borderTopLeftRadius: 24,
+            borderTopRightRadius: 24,
+            transform: [{ translateY: slideAnim }],
+          }}
           className="bg-white pt-3 pb-9 px-6 shadow-2xl"
         >
           {/* Sheet Handle */}
@@ -145,6 +98,7 @@ export const StaffAccountModal: React.FC<StaffAccountModalProps> = ({
             <TouchableOpacity
               onPress={handleClose}
               activeOpacity={0.7}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               className="w-10 h-10 rounded-full bg-[#F1F5F9] items-center justify-center active:bg-slate-200"
               accessibilityLabel="Close staff account"
             >
