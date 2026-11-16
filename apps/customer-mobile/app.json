@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "customer-mobile",
+    "name": "Parcelhub",
     "slug": "customer-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/parcelhub/icon.png",
     "scheme": "customermobile",
     "userInterfaceStyle": "automatic",
     "ios": {
@@ -14,10 +14,10 @@
       "package": "com.spadeontop.parcelhub",
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#1E1E1E",
+        "foregroundImage": "./assets/parcelhub/android-icon-foreground.png",
+        "backgroundImage": "./assets/parcelhub/android-icon-background.png",
+        "monochromeImage": "./assets/parcelhub/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false
     },
@@ -30,7 +30,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
+          "backgroundColor": "#1E1E1E",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
