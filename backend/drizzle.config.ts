@@ -13,6 +13,7 @@ export default defineConfig({
   dialect: "postgresql",
   schema: "./db/schema.ts",
   out: "./db/migrations",
+  schemaFilter: ["public"],
   dbCredentials: process.env.DATABASE_URL
     ? { url: process.env.DATABASE_URL }
     : { url: "./pgdata" },

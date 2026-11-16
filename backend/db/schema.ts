@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   boolean,
   doublePrecision,
+  index,
   jsonb,
   pgTable,
   text,
@@ -117,13 +118,19 @@ export const orderScreenshots = pgTable("order_screenshots", {
     .notNull(),
 });
 
-export const fcmTokens = pgTable("fcm_tokens", {
-  token: text("token").primaryKey(),
-  userId: text("user_id"),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
+export const fcmTokens = pgTable(
+  "fcm_tokens",
+  {
+    token: text("token").primaryKey(),
+    userId: text("user_id"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("fcm_tokens_user_id_idx").on(table.userId),
+  ]
+);
 
 export const appConfig = pgTable("app_config", {
   key: text("key").primaryKey(), // e.g. "ocrConfig"
@@ -144,3 +151,6 @@ export type NewOrderRow = typeof orders.$inferInsert;
 
 export type OrderScreenshotRow = typeof orderScreenshots.$inferSelect;
 export type NewOrderScreenshotRow = typeof orderScreenshots.$inferInsert;
+
+export type FcmTokenRow = typeof fcmTokens.$inferSelect;
+export type NewFcmTokenRow = typeof fcmTokens.$inferInsert;

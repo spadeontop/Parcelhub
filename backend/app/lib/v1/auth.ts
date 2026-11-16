@@ -6,6 +6,7 @@ import {
   V1TokenPayload,
   verifyStaffToken,
   V1StaffTokenPayload,
+  verifyV1Token,
 } from "./jwt";
 
 export interface AuthenticatedCustomerResult {
@@ -153,5 +154,59 @@ export async function checkCustomerBlacklisted(
   return {
     isBlacklisted: !!customer.blacklisted,
     reason: customer.blacklistReason,
+  };
+}
+
+export interface AnyV1Session {
+  userId: string;
+  role: "CUSTOMER" | "STAFF" | "ADMIN";
+}
+
+/**
+ * Authenticates either a Customer, Staff, or Admin JWT Bearer token.
+ */
+export async function authenticateAnyV1User(
+  request: Request
+): Promise<{ session: AnyV1Session | null; error?: string; status: number }> {
+  const authHeader = request.headers.get("Authorization");
+  if (!authHeader) {
+    return { session: null, error: "Missing Authorization Bearer token", status: 401 };
+  }
+
+  const parts = authHeader.split(" ");
+  if (parts.length !== 2 || parts[0].toLowerCase() !== "bearer") {
+    return { session: null, error: "Invalid Authorization header format", status: 401 };
+  }
+
+  const token = parts[1];
+
+  // 1. Try Customer/Admin token
+  const customerAuth = await verifyV1Token(token, "AUTH");
+  if (customerAuth.payload && !customerAuth.payload.isPreAuth) {
+    return {
+      session: {
+        userId: customerAuth.payload.userId,
+        role: customerAuth.payload.role,
+      },
+      status: 200,
+    };
+  }
+
+  // 2. Try Staff token
+  const staffAuth = await verifyStaffToken(token, "AUTH");
+  if (staffAuth.payload) {
+    return {
+      session: {
+        userId: staffAuth.payload.userId,
+        role: staffAuth.payload.role,
+      },
+      status: 200,
+    };
+  }
+
+  return {
+    session: null,
+    error: customerAuth.error || staffAuth.error || "Invalid or expired token",
+    status: 401,
   };
 }
