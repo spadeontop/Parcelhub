@@ -1,14 +1,19 @@
 import React from 'react';
+import { Platform, TurboModuleRegistry, NativeModules } from 'react-native';
 import { registerRootComponent } from 'expo';
 import { ExpoRoot } from 'expo-router';
-import Constants, { ExecutionEnvironment } from 'expo-constants';
 
-// Only initialize native FCM background handler if NOT running in Expo Go
-const isExpoGo =
-  Constants.appOwnership === 'expo' ||
-  Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+// Only initialize native FCM background handler if the native module is actually compiled in the binary
+const isFirebaseAvailable =
+  Platform.OS !== 'web' &&
+  Boolean(
+    TurboModuleRegistry.get?.('NativeRNFBTurboApp') ||
+    TurboModuleRegistry.get?.('NativeRNFBTurboMessaging') ||
+    NativeModules?.RNFBAppModule ||
+    NativeModules?.NativeRNFBTurboApp
+  );
 
-if (!isExpoGo) {
+if (isFirebaseAvailable) {
   try {
     const { getMessaging, setBackgroundMessageHandler } = require('@react-native-firebase/messaging');
     const messaging = getMessaging();

@@ -1,5 +1,4 @@
-import { Platform, PermissionsAndroid } from 'react-native';
-import Constants, { ExecutionEnvironment } from 'expo-constants';
+import { Platform, PermissionsAndroid, TurboModuleRegistry, NativeModules } from 'react-native';
 
 export interface RemoteFcmMessage {
   messageId?: string;
@@ -10,18 +9,42 @@ export interface RemoteFcmMessage {
   data?: Record<string, string>;
 }
 
-// In Expo Go, native Firebase modules are not compiled into the client binary.
-// When running in Expo Go or Web, native calls are bypassed gracefully so UI and app logic work without crashing.
-const isExpoGo =
-  Constants.appOwnership === 'expo' ||
-  Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+/**
+ * Checks whether native Firebase modules are compiled into the current binary.
+ * In Expo Go, this returns false so all native calls degrade gracefully with zero errors.
+ * In standalone APK / EAS builds, this returns true and executes full native FCM v1 messaging.
+ */
+function isFirebaseNativeAvailable(): boolean {
+  if (Platform.OS === 'web') return false;
+
+  try {
+    const hasTurboApp = Boolean(TurboModuleRegistry.get?.('NativeRNFBTurboApp'));
+    const hasTurboMessaging = Boolean(TurboModuleRegistry.get?.('NativeRNFBTurboMessaging'));
+    const hasLegacyApp = Boolean(
+      (NativeModules as any)?.RNFBAppModule || (NativeModules as any)?.NativeRNFBTurboApp
+    );
+
+    return hasTurboApp || hasTurboMessaging || hasLegacyApp;
+  } catch {
+    return false;
+  }
+}
+
+let cachedNativeMessaging: any = undefined;
 
 function getNativeMessagingModule(): any | null {
-  if (Platform.OS === 'web' || isExpoGo) return null;
+  if (!isFirebaseNativeAvailable()) return null;
+
+  if (cachedNativeMessaging !== undefined) {
+    return cachedNativeMessaging;
+  }
+
   try {
-    return require('@react-native-firebase/messaging');
+    cachedNativeMessaging = require('@react-native-firebase/messaging');
+    return cachedNativeMessaging;
   } catch (err) {
     console.warn('[FCM] Native messaging module not found:', err);
+    cachedNativeMessaging = null;
     return null;
   }
 }
@@ -31,8 +54,6 @@ function getNativeMessagingModule(): any | null {
  * Follows Android 13+ POST_NOTIFICATIONS runtime permission requirement.
  */
 export async function requestNotificationPermission(): Promise<boolean> {
-  if (Platform.OS === 'web' || isExpoGo) return false;
-
   const fb = getNativeMessagingModule();
   if (!fb) return false;
 
@@ -65,8 +86,6 @@ export async function requestNotificationPermission(): Promise<boolean> {
  * Fetches the current native FCM registration token using the Modular API.
  */
 export async function getFcmDeviceToken(): Promise<string | null> {
-  if (Platform.OS === 'web' || isExpoGo) return null;
-
   const fb = getNativeMessagingModule();
   if (!fb) return null;
 
@@ -86,8 +105,6 @@ export async function getFcmDeviceToken(): Promise<string | null> {
 export function setupFcmForegroundListener(
   onMessageReceived: (message: RemoteFcmMessage) => void
 ): () => void {
-  if (Platform.OS === 'web' || isExpoGo) return () => {};
-
   const fb = getNativeMessagingModule();
   if (!fb) return () => {};
 
@@ -109,8 +126,6 @@ export function setupFcmForegroundListener(
 export function setupFcmNotificationOpenedListener(
   onNotificationOpened: (message: RemoteFcmMessage) => void
 ): () => void {
-  if (Platform.OS === 'web' || isExpoGo) return () => {};
-
   const fb = getNativeMessagingModule();
   if (!fb) return () => {};
 
@@ -132,8 +147,6 @@ export function setupFcmNotificationOpenedListener(
 export async function checkInitialNotification(
   onNotificationOpened: (message: RemoteFcmMessage) => void
 ): Promise<void> {
-  if (Platform.OS === 'web' || isExpoGo) return;
-
   const fb = getNativeMessagingModule();
   if (!fb) return;
 
@@ -154,8 +167,6 @@ export async function checkInitialNotification(
 export function setupFcmTokenRefreshListener(
   onNewToken: (token: string) => void
 ): () => void {
-  if (Platform.OS === 'web' || isExpoGo) return () => {};
-
   const fb = getNativeMessagingModule();
   if (!fb) return () => {};
 
