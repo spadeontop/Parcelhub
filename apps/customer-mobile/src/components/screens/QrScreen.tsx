@@ -214,8 +214,6 @@ export const QrScreen: React.FC = () => {
       savedTimerRef.current = setTimeout(() => {
         setIsPassSaved(false);
       }, 3000);
-
-      showToast('Pickup QR pass saved to photo gallery!');
     } catch (err: any) {
       showToast(err?.message || 'Failed to save pass to gallery.');
     } finally {
