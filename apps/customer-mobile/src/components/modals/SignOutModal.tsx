@@ -44,7 +44,7 @@ export const SignOutModal: React.FC<SignOutModalProps> = ({
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={handleConfirmSignOut}
-              className="flex-1 h-12 rounded-xl bg-[#215cd4] active:bg-[#1a4bb0] items-center justify-center shadow-sm"
+              className="flex-1 h-12 rounded-xl bg-[#215cd4] items-center justify-center shadow-sm"
             >
               <Text className="text-white text-sm font-semibold tracking-wide">
                 Confirm
@@ -54,7 +54,7 @@ export const SignOutModal: React.FC<SignOutModalProps> = ({
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={onClose}
-              className="flex-1 h-12 rounded-xl bg-white border border-gray-300 active:bg-gray-50 items-center justify-center"
+              className="flex-1 h-12 rounded-xl bg-white border border-gray-300 items-center justify-center"
             >
               <Text className="text-gray-700 text-sm font-semibold tracking-wide">
                 Cancel

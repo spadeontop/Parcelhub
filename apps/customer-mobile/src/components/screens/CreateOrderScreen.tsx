@@ -207,16 +207,20 @@ export const CreateOrderScreen: React.FC = () => {
             activeOpacity={0.8}
             onPress={handleNext}
             disabled={isNextDisabled}
-            className={`w-full h-[52px] rounded-[16px] bg-[#2563eb] items-center justify-center flex-row shadow-sm mt-2 ${
-              isNextDisabled ? "opacity-50" : ""
+            className={`w-full h-[52px] rounded-[16px] items-center justify-center flex-row mt-2 ${
+              isNextDisabled ? 'bg-[#93c5fd]' : 'bg-[#2563eb]'
             }`}
-            style={{
-              shadowColor: "#2563eb",
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.25,
-              shadowRadius: 10,
-              elevation: 4,
-            }}
+            style={
+              !isNextDisabled
+                ? {
+                    shadowColor: '#2563eb',
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.25,
+                    shadowRadius: 10,
+                    elevation: 4,
+                  }
+                : undefined
+            }
           >
             {isInitializing ? (
               <View className="flex-row items-center gap-2">
@@ -226,7 +230,11 @@ export const CreateOrderScreen: React.FC = () => {
                 </Text>
               </View>
             ) : (
-              <Text className="text-white font-bold text-[15px] tracking-wide">
+              <Text
+                className={`font-bold text-[15px] tracking-wide ${
+                  isNextDisabled ? 'text-white/80' : 'text-white'
+                }`}
+              >
                 Next
               </Text>
             )}

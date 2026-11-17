@@ -326,7 +326,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                   <TouchableOpacity
                     activeOpacity={0.8}
                     onPress={handleSaveChanges}
-                    className="flex-1 h-[44px] bg-[#2563eb] rounded-[12px] items-center justify-center active:bg-blue-700"
+                    className="flex-1 h-[44px] bg-[#2563eb] rounded-[12px] items-center justify-center"
                   >
                     <Text className="text-[14px] font-bold text-white">
                       Save Changes
@@ -336,7 +336,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                   <TouchableOpacity
                     activeOpacity={0.8}
                     onPress={handleDiscardChanges}
-                    className="flex-1 h-[44px] bg-white border border-[#cbd5e1] rounded-[12px] items-center justify-center active:bg-slate-50"
+                    className="flex-1 h-[44px] bg-white border border-[#cbd5e1] rounded-[12px] items-center justify-center"
                   >
                     <Text className="text-[14px] font-bold text-[#334155]">
                       Discard Changes
