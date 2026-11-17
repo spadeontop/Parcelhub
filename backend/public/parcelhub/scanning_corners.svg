@@ -1,0 +1,10 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="240" height="224" viewBox="0 0 240 224" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Scanning corners" clip-path="url(#clip0_0_13)">
+<path id="Vector" d="M1 33V17C1 6.33333 6.33333 1 17 1H33M207 1H223C233.667 1 239 6.33333 239 17V33M239 191V207C239 217.667 233.667 223 223 223H207M33 223H17C6.33333 223 1 217.667 1 207V191" stroke-width="3" stroke-linecap="round" stroke="#60A5FA"/>
+</g>
+<defs>
+<clipPath id="clip0_0_13">
+<rect width="240" height="224" fill="white"/>
+</clipPath>
+</defs>
+</svg>
