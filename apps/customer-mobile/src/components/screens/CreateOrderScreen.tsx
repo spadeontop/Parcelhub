@@ -130,6 +130,12 @@ export const CreateOrderScreen: React.FC = () => {
               <Text className="text-[12px] font-bold text-[#64748b] tracking-wider uppercase">
                 SCREENSHOT OF RECEIPT
               </Text>
+              {hasUploadedReceipt && (
+                <View className="flex-row items-center gap-1 bg-[#ecfdf5] px-2 py-0.5 rounded-full">
+                  <View className="w-1.5 h-1.5 rounded-full bg-[#10b981]" />
+                  <Text className="text-[10px] font-bold text-[#059669]">Attached</Text>
+                </View>
+              )}
             </View>
 
             {/* Upload Dropzone */}
@@ -144,10 +150,10 @@ export const CreateOrderScreen: React.FC = () => {
               {hasUploadedReceipt && previewSourceUri ? (
                 <View className="w-full items-center">
                   {/* Attached Image Preview */}
-                  <View className="w-full h-[320px] rounded-[14px] overflow-hidden bg-black size items-center justify-center mb-3 border border-[#e2e8f0]">
+                  <View className="w-full h-[320px] rounded-[14px] overflow-hidden bg-slate-50 items-center justify-center mb-3 border border-[#e2e8f0]">
                     <Image
                       source={{ uri: previewSourceUri }}
-                      style={{ width: "150%", height: "150%" }}
+                      style={{ width: "100%", height: "100%" }}
                       resizeMode="contain"
                     />
                   </View>
