@@ -9,6 +9,7 @@ export const NotificationsModal: React.FC = () => {
     closeNotificationsModal,
     notifications,
     markAllNotificationsAsRead,
+    navigateTo,
   } = useApp();
 
   if (!isNotificationsModalOpen) return null;
@@ -51,8 +52,15 @@ export const NotificationsModal: React.FC = () => {
 
           <ScrollView className="mt-4" showsVerticalScrollIndicator={false}>
             {notifications.map((item) => (
-              <View
+              <TouchableOpacity
                 key={item.id}
+                activeOpacity={0.7}
+                onPress={() => {
+                  closeNotificationsModal();
+                  if (item.orderId) {
+                    navigateTo('order_details', { orderId: item.orderId });
+                  }
+                }}
                 className={`p-3 rounded-2xl border mb-2 ${
                   item.unread
                     ? 'bg-blue-50/70 border-blue-100'
@@ -66,7 +74,7 @@ export const NotificationsModal: React.FC = () => {
                 <Text className="text-xs text-gray-600 mt-1 leading-relaxed">
                   {item.body}
                 </Text>
-              </View>
+              </TouchableOpacity>
             ))}
           </ScrollView>
 

@@ -43,7 +43,7 @@ function RootAppContent() {
       <NotificationsModal />
 
       {/* Global Animated Toast Notification Pill */}
-      <Toast isOpen={activeToast.show} message={activeToast.message} />
+      <Toast isOpen={activeToast.show} message={activeToast.message} onPress={activeToast.onPress} />
     </SafeAreaView>
   );
 }

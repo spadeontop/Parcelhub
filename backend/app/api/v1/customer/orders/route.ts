@@ -82,6 +82,7 @@ export async function GET(request: NextRequest) {
       productName: row.productName,
       status: row.status,
       timestamp: row.timestamp.toISOString(),
+      amountReceived: row.amountReceived,
       isClaimActive:
         row.claimRequested &&
         row.claimExpiresAt !== null &&

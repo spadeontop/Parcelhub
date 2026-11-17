@@ -131,8 +131,14 @@ export const NotificationsScreen: React.FC = () => {
               notifications.map((item, idx) => {
                 const isLast = idx === notifications.length - 1;
                 return (
-                  <View
+                  <TouchableOpacity
                     key={item.id}
+                    activeOpacity={0.7}
+                    onPress={() => {
+                      if (item.orderId) {
+                        navigateTo('order_details', { orderId: item.orderId });
+                      }
+                    }}
                     className={`px-5 py-4 ${!isLast ? 'border-b border-[#f1f5f9]' : ''} ${
                       item.unread ? 'bg-[#f8faff]' : 'bg-white'
                     }`}
@@ -159,7 +165,7 @@ export const NotificationsScreen: React.FC = () => {
                         {item.time}
                       </Text>
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 );
               })
             )}

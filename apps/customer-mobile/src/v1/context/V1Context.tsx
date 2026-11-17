@@ -118,6 +118,7 @@ const DEFAULT_ORDER_DRAFT: OrderDraft = {
 export type ToastState = {
   readonly show: boolean;
   readonly message: string;
+  readonly onPress?: () => void;
 };
 
 export type V1ContextType = {
@@ -127,7 +128,7 @@ export type V1ContextType = {
     params?: { orderId?: string | null; ticketCode?: string | null }
   ) => void;
   readonly toast: ToastState;
-  readonly showToast: (message: string) => void;
+  readonly showToast: (message: string, onPress?: () => void) => void;
   readonly preAuthToken: JWTToken | null;
   readonly authToken: JWTToken | null;
   readonly customer: Partial<CustomerProfile> | null;
@@ -202,13 +203,13 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [toast, setToast] = useState<ToastState>({ show: false, message: '' });
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const showToast = useCallback((message: string) => {
+  const showToast = useCallback((message: string, onPress?: () => void) => {
     if (toastTimerRef.current) {
       clearTimeout(toastTimerRef.current);
     }
-    setToast({ show: true, message });
+    setToast({ show: true, message, onPress });
     toastTimerRef.current = setTimeout(() => {
-      setToast({ show: false, message: '' });
+      setToast({ show: false, message: '', onPress: undefined });
     }, 3200);
   }, []);
 
@@ -412,20 +413,32 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const unsubForeground = setupFcmForegroundListener((message: RemoteFcmMessage) => {
       const title = message.notification?.title || 'Order Update';
       const body = message.notification?.body || 'Your order status has been updated';
-      showToast(`📦 ${title}: ${body}`);
+      const orderId = message.data?.orderId || message.data?.notifId;
+      const ticketCode = message.data?.ticketCode;
       refetchOrders().catch(() => {});
+      showToast(
+        `📦 ${title}: ${body}`,
+        orderId || ticketCode
+          ? () =>
+              navigateTo('order_details', {
+                orderId: orderId || null,
+                ticketCode: ticketCode || null,
+              })
+          : undefined
+      );
     });
 
     // 2. Notification opened while running in background
     const unsubOpened = setupFcmNotificationOpenedListener((message: RemoteFcmMessage) => {
       const orderId = message.data?.orderId || message.data?.notifId;
-      const status = message.data?.status;
-      if (orderId) {
-        if (status === 'READY_TO_CLAIM') {
-          navigateTo('qr_screen', { orderId });
-        } else {
-          navigateTo('order_details', { orderId });
-        }
+      const ticketCode = message.data?.ticketCode;
+      refetchOrders().catch(() => {});
+      if (orderId || ticketCode) {
+        // Direct both PAYMENT_VERIFIED and READY_TO_CLAIM (and other order notifications) to complete details
+        navigateTo('order_details', {
+          orderId: orderId || null,
+          ticketCode: ticketCode || null,
+        });
       } else {
         navigateTo('notifications');
       }
@@ -434,13 +447,14 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
     // 3. Initial notification if opened from cold/killed state
     checkInitialNotification((message: RemoteFcmMessage) => {
       const orderId = message.data?.orderId || message.data?.notifId;
-      const status = message.data?.status;
-      if (orderId) {
-        if (status === 'READY_TO_CLAIM') {
-          navigateTo('qr_screen', { orderId });
-        } else {
-          navigateTo('order_details', { orderId });
-        }
+      const ticketCode = message.data?.ticketCode;
+      refetchOrders().catch(() => {});
+      if (orderId || ticketCode) {
+        // Direct both PAYMENT_VERIFIED and READY_TO_CLAIM (and other order notifications) to complete details
+        navigateTo('order_details', {
+          orderId: orderId || null,
+          ticketCode: ticketCode || null,
+        });
       } else {
         navigateTo('notifications');
       }
@@ -796,7 +810,14 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
         body = `${o.productName || 'Your parcel'} has arrived at Lily’s Catering Hub and is ready for pickup.`;
       } else if (o.status === 'AWAITING_PARCEL') {
         title = 'Payment Verified';
-        body = `Payment received for ${o.productName || 'your parcel'}. Now awaiting courier arrival.`;
+        const formattedAmount =
+          o.amountReceived != null
+            ? ` of ₱${Number(o.amountReceived).toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}`
+            : '';
+        body = `Payment${formattedAmount} received for ${o.productName || 'your parcel'}. Now awaiting courier arrival.`;
       } else if (o.status === 'PAYMENT_REQUIRED') {
         title = 'Order Created';
         body = `Order initialized for ${o.productName || 'item'}. Please complete payment at Lily’s Catering Hub.`;

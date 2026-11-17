@@ -1,12 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, Animated } from 'react-native';
+import { View, Text, Animated, TouchableOpacity } from 'react-native';
 
 export interface ToastProps {
   message?: string;
   isOpen?: boolean;
+  onPress?: () => void;
 }
 
-export const Toast: React.FC<ToastProps> = ({ message, isOpen = false }) => {
+export const Toast: React.FC<ToastProps> = ({ message, isOpen = false, onPress }) => {
   const [shouldRender, setShouldRender] = useState(isOpen);
   const translateY = useRef(new Animated.Value(24)).current;
   const opacity = useRef(new Animated.Value(0)).current;
@@ -50,7 +51,7 @@ export const Toast: React.FC<ToastProps> = ({ message, isOpen = false }) => {
 
   return (
     <Animated.View
-      pointerEvents="none"
+      pointerEvents={onPress ? 'box-none' : 'none'}
       style={{
         position: 'absolute',
         bottom: 36,
@@ -63,7 +64,10 @@ export const Toast: React.FC<ToastProps> = ({ message, isOpen = false }) => {
         opacity,
       }}
     >
-      <View
+      <TouchableOpacity
+        activeOpacity={onPress ? 0.8 : 1}
+        disabled={!onPress}
+        onPress={onPress}
         style={{
           backgroundColor: 'rgba(15, 23, 42, 0.95)',
           paddingVertical: 12,
@@ -102,7 +106,7 @@ export const Toast: React.FC<ToastProps> = ({ message, isOpen = false }) => {
         >
           {message}
         </Text>
-      </View>
+      </TouchableOpacity>
     </Animated.View>
   );
 };
