@@ -20,6 +20,14 @@ export class V1ApiError extends Error {
   }
 }
 
+export type UnauthorizedHandler = (error: V1ApiError, endpoint: string) => void | Promise<void>;
+
+let unauthorizedHandler: UnauthorizedHandler | null = null;
+
+export function setUnauthorizedHandler(handler: UnauthorizedHandler | null): void {
+  unauthorizedHandler = handler;
+}
+
 type V1FetchOptions = RequestInit & {
   readonly token?: string | null;
   readonly baseUrl?: string;
@@ -90,5 +98,15 @@ export async function v1Fetch<T>(
   const errorType = errorEnvelope?.error || 'ApiError';
   const statusCode = errorEnvelope?.statusCode || response.status;
 
-  throw new V1ApiError(message, statusCode, errorType, false);
+  const apiError = new V1ApiError(message, statusCode, errorType, false);
+
+  if (statusCode === 401 && options.token && unauthorizedHandler) {
+    try {
+      unauthorizedHandler(apiError, endpoint);
+    } catch (e) {
+      console.warn('[apiClient] Error executing unauthorized handler:', e);
+    }
+  }
+
+  throw apiError;
 }
