@@ -134,7 +134,7 @@ export const OrderDetailsScreen: React.FC = () => {
     () => (
       <QRCode
         value={qrIdentifier}
-        size={210}
+        size={172}
         color="#0f172a"
         backgroundColor="#ffffff"
       />
@@ -487,13 +487,26 @@ export const OrderDetailsScreen: React.FC = () => {
                   </View>
 
                   {/* Scannable High-Contrast QR Code Area */}
-                  <View className="w-full items-center justify-center py-2 mt-2">
+                  <View
+                    style={{
+                      paddingVertical: 8,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '100%',
+                    }}
+                  >
                     <View
                       style={{
                         width: 197,
                         height: 209,
+                        backgroundColor: '#FFFFFF',
+                        borderRadius: 16,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: 12,
+                        position: 'relative',
+                        overflow: 'hidden',
                       }}
-                      className="bg-white rounded-[16px] p-3 items-center justify-center relative overflow-hidden"
                     >
                       <View
                         style={{
