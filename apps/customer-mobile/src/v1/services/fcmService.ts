@@ -1,13 +1,5 @@
 import { Platform, PermissionsAndroid } from 'react-native';
-import {
-  getMessaging,
-  getToken,
-  requestPermission,
-  onMessage,
-  onNotificationOpenedApp,
-  getInitialNotification,
-  onTokenRefresh,
-} from '@react-native-firebase/messaging';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 
 export interface RemoteFcmMessage {
   messageId?: string;
@@ -18,12 +10,31 @@ export interface RemoteFcmMessage {
   data?: Record<string, string>;
 }
 
+// In Expo Go, native Firebase modules are not compiled into the client binary.
+// When running in Expo Go or Web, native calls are bypassed gracefully so UI and app logic work without crashing.
+const isExpoGo =
+  Constants.appOwnership === 'expo' ||
+  Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+
+function getNativeMessagingModule(): any | null {
+  if (Platform.OS === 'web' || isExpoGo) return null;
+  try {
+    return require('@react-native-firebase/messaging');
+  } catch (err) {
+    console.warn('[FCM] Native messaging module not found:', err);
+    return null;
+  }
+}
+
 /**
  * Checks and requests notification permissions.
  * Follows Android 13+ POST_NOTIFICATIONS runtime permission requirement.
  */
 export async function requestNotificationPermission(): Promise<boolean> {
-  if (Platform.OS === 'web') return false;
+  if (Platform.OS === 'web' || isExpoGo) return false;
+
+  const fb = getNativeMessagingModule();
+  if (!fb) return false;
 
   try {
     // 1. Android 13+ (API 33+) runtime permission
@@ -37,8 +48,8 @@ export async function requestNotificationPermission(): Promise<boolean> {
     }
 
     // 2. Firebase Cloud Messaging permission
-    const messaging = getMessaging();
-    const authStatus = await requestPermission(messaging);
+    const messaging = fb.getMessaging();
+    const authStatus = await fb.requestPermission(messaging);
     const enabled =
       authStatus === 1 || // AuthorizationStatus.AUTHORIZED
       authStatus === 2; // AuthorizationStatus.PROVISIONAL
@@ -54,11 +65,14 @@ export async function requestNotificationPermission(): Promise<boolean> {
  * Fetches the current native FCM registration token using the Modular API.
  */
 export async function getFcmDeviceToken(): Promise<string | null> {
-  if (Platform.OS === 'web') return null;
+  if (Platform.OS === 'web' || isExpoGo) return null;
+
+  const fb = getNativeMessagingModule();
+  if (!fb) return null;
 
   try {
-    const messaging = getMessaging();
-    const token = await getToken(messaging);
+    const messaging = fb.getMessaging();
+    const token = await fb.getToken(messaging);
     return token || null;
   } catch (err) {
     console.warn('[FCM] Error getting device token:', err);
@@ -72,14 +86,17 @@ export async function getFcmDeviceToken(): Promise<string | null> {
 export function setupFcmForegroundListener(
   onMessageReceived: (message: RemoteFcmMessage) => void
 ): () => void {
-  if (Platform.OS === 'web') return () => {};
+  if (Platform.OS === 'web' || isExpoGo) return () => {};
+
+  const fb = getNativeMessagingModule();
+  if (!fb) return () => {};
 
   try {
-    const messaging = getMessaging();
-    const unsubscribe = onMessage(messaging, async (remoteMessage) => {
+    const messaging = fb.getMessaging();
+    const unsubscribe = fb.onMessage(messaging, async (remoteMessage: any) => {
       onMessageReceived(remoteMessage as RemoteFcmMessage);
     });
-    return unsubscribe;
+    return typeof unsubscribe === 'function' ? unsubscribe : () => {};
   } catch (err) {
     console.warn('[FCM] Error setting up foreground listener:', err);
     return () => {};
@@ -92,14 +109,17 @@ export function setupFcmForegroundListener(
 export function setupFcmNotificationOpenedListener(
   onNotificationOpened: (message: RemoteFcmMessage) => void
 ): () => void {
-  if (Platform.OS === 'web') return () => {};
+  if (Platform.OS === 'web' || isExpoGo) return () => {};
+
+  const fb = getNativeMessagingModule();
+  if (!fb) return () => {};
 
   try {
-    const messaging = getMessaging();
-    const unsubscribe = onNotificationOpenedApp(messaging, (remoteMessage) => {
+    const messaging = fb.getMessaging();
+    const unsubscribe = fb.onNotificationOpenedApp(messaging, (remoteMessage: any) => {
       onNotificationOpened(remoteMessage as RemoteFcmMessage);
     });
-    return unsubscribe;
+    return typeof unsubscribe === 'function' ? unsubscribe : () => {};
   } catch (err) {
     console.warn('[FCM] Error setting up notification opened listener:', err);
     return () => {};
@@ -112,11 +132,14 @@ export function setupFcmNotificationOpenedListener(
 export async function checkInitialNotification(
   onNotificationOpened: (message: RemoteFcmMessage) => void
 ): Promise<void> {
-  if (Platform.OS === 'web') return;
+  if (Platform.OS === 'web' || isExpoGo) return;
+
+  const fb = getNativeMessagingModule();
+  if (!fb) return;
 
   try {
-    const messaging = getMessaging();
-    const initialMessage = await getInitialNotification(messaging);
+    const messaging = fb.getMessaging();
+    const initialMessage = await fb.getInitialNotification(messaging);
     if (initialMessage) {
       onNotificationOpened(initialMessage as RemoteFcmMessage);
     }
@@ -131,14 +154,17 @@ export async function checkInitialNotification(
 export function setupFcmTokenRefreshListener(
   onNewToken: (token: string) => void
 ): () => void {
-  if (Platform.OS === 'web') return () => {};
+  if (Platform.OS === 'web' || isExpoGo) return () => {};
+
+  const fb = getNativeMessagingModule();
+  if (!fb) return () => {};
 
   try {
-    const messaging = getMessaging();
-    const unsubscribe = onTokenRefresh(messaging, (newToken) => {
+    const messaging = fb.getMessaging();
+    const unsubscribe = fb.onTokenRefresh(messaging, (newToken: string) => {
       onNewToken(newToken);
     });
-    return unsubscribe;
+    return typeof unsubscribe === 'function' ? unsubscribe : () => {};
   } catch (err) {
     console.warn('[FCM] Error setting up token refresh listener:', err);
     return () => {};

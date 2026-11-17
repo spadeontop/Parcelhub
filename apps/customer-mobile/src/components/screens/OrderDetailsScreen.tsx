@@ -20,6 +20,7 @@ import { getStatusLabel } from '../../utils/statusHelpers';
 
 export const OrderDetailsScreen: React.FC = () => {
   const {
+    activeScreen,
     selectedOrderId,
     selectedOrderTicketCode,
     orders,
@@ -112,12 +113,18 @@ export const OrderDetailsScreen: React.FC = () => {
     return () => clearInterval(timer);
   }, [remainingSecs > 0]);
 
+  // Reset dismissed state whenever opening order details screen or switching orders
+  useEffect(() => {
+    if (activeScreen === 'order_details') {
+      setIsPassDismissed(false);
+    }
+  }, [activeScreen, selectedOrderId]);
+
   // Reset confirmation checkbox whenever the viewed order changes
   useEffect(() => {
     setClaimConfirmed(false);
     setIsClaimLocked(false);
     setIsInitiatingClaim(false);
-    setIsPassDismissed(false);
     setIsClaimSessionActive(false);
   }, [selectedOrderId]);
 
@@ -141,6 +148,8 @@ export const OrderDetailsScreen: React.FC = () => {
 
   const isClaimed = status === 'CLAIMED';
   const isServerClaimActive = Boolean(orderDetail?.isClaimActive) && remainingSecs > 0;
+  const isReleaseWindowActive =
+    (isServerClaimActive || isClaimSessionActive) && remainingSecs > 0 && !isClaimed;
   const isFocusedPassView =
     (isServerClaimActive || isClaimSessionActive) && !isPassDismissed;
 
@@ -179,18 +188,21 @@ export const OrderDetailsScreen: React.FC = () => {
     }
   }, [isFocusedPassView]);
 
-  // Handle hardware back on Android: dismiss the pass and return to Complete Details
+  // Handle hardware back on Android: dismiss the pass and return to Complete Details,
+  // or return to home if already on Complete Details
   useEffect(() => {
-    if (!isFocusedPassView) return;
-
     const onBackPress = () => {
-      handleCloseFocusedPass();
+      if (isFocusedPassView) {
+        handleCloseFocusedPass();
+        return true;
+      }
+      navigateTo('home');
       return true;
     };
 
     const backSubscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
     return () => backSubscription.remove();
-  }, [isFocusedPassView]);
+  }, [isFocusedPassView, navigateTo]);
 
   const handleInitiateClaim = async () => {
     if (!claimConfirmed) {
@@ -236,11 +248,14 @@ export const OrderDetailsScreen: React.FC = () => {
     }
   };
 
+  // Re-open the focused pass view from Complete Details
+  const handleOpenPassFromDetails = () => {
+    setIsPassDismissed(false);
+    setIsClaimSessionActive(true);
+  };
+
   // Close the focused pass view and remain on Complete Details
   const handleCloseFocusedPass = () => {
-    setClaimConfirmed(false);
-    setIsClaimLocked(false);
-    setIsInitiatingClaim(false);
     setIsPassDismissed(true);
     setIsClaimSessionActive(false);
   };
@@ -368,6 +383,7 @@ export const OrderDetailsScreen: React.FC = () => {
                 justifyContent: 'center',
                 zIndex: 10,
               }}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               accessibilityLabel="Go Back"
             >
               <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
@@ -382,7 +398,10 @@ export const OrderDetailsScreen: React.FC = () => {
             </TouchableOpacity>
 
             {/* Centered Title & Subtitle */}
-            <View className="absolute inset-0 items-center justify-center">
+            <View
+              className="absolute inset-0 items-center justify-center pointer-events-none"
+              pointerEvents="none"
+            >
               <Text className="text-[18px] font-bold text-white text-center">
                 Ready For Release
               </Text>
@@ -404,6 +423,7 @@ export const OrderDetailsScreen: React.FC = () => {
                 justifyContent: 'center',
                 zIndex: 10,
               }}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               accessibilityLabel="Help"
             >
               <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
@@ -1055,10 +1075,10 @@ export const OrderDetailsScreen: React.FC = () => {
                   <View className="gap-3">
                     {/* Confirmation Checkbox */}
                     <TouchableOpacity
-                      activeOpacity={isClaimLocked || isInitiatingClaim ? 1 : 0.8}
-                      disabled={isClaimLocked || isInitiatingClaim}
+                      activeOpacity={isClaimLocked || isInitiatingClaim || isReleaseWindowActive ? 1 : 0.8}
+                      disabled={isClaimLocked || isInitiatingClaim || isReleaseWindowActive}
                       onPress={() => {
-                        if (!isClaimLocked && !isInitiatingClaim) {
+                        if (!isClaimLocked && !isInitiatingClaim && !isReleaseWindowActive) {
                           setClaimConfirmed(!claimConfirmed);
                         }
                       }}
@@ -1066,12 +1086,12 @@ export const OrderDetailsScreen: React.FC = () => {
                     >
                       <View
                         className={`w-[22px] h-[22px] rounded-[4px] items-center justify-center mt-0.5 border ${
-                          claimConfirmed
+                          isReleaseWindowActive || claimConfirmed
                             ? 'bg-[#215cd4] border-[#215cd4]'
                             : 'border-[#cbd5e1] bg-white'
                         }`}
                       >
-                        {claimConfirmed && (
+                        {(isReleaseWindowActive || claimConfirmed) && (
                           <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
                             <Path
                               d="M20 6L9 17L4 12"
@@ -1102,20 +1122,22 @@ export const OrderDetailsScreen: React.FC = () => {
                       </View>
                     )}
 
-                    {/* Primary Claim Button */}
+                    {/* Primary Claim / Continue Button */}
                     <TouchableOpacity
                       activeOpacity={0.8}
-                      onPress={handleInitiateClaim}
-                      disabled={!claimConfirmed || isInitiatingClaim}
+                      onPress={isReleaseWindowActive ? handleOpenPassFromDetails : handleInitiateClaim}
+                      disabled={isReleaseWindowActive ? false : (!claimConfirmed || isInitiatingClaim)}
                       className={`w-full h-[48px] rounded-[12px] items-center justify-center ${
-                        !claimConfirmed
+                        isReleaseWindowActive
+                          ? 'bg-[#215cd4]'
+                          : !claimConfirmed
                           ? 'bg-[#cbd5e1]'
                           : isInitiatingClaim
                           ? 'bg-[#215cd4] opacity-85'
                           : 'bg-[#215cd4]'
                       }`}
                       style={
-                        claimConfirmed
+                        isReleaseWindowActive || claimConfirmed
                           ? {
                               shadowColor: '#215cd4',
                               shadowOffset: { width: 0, height: 8 },
@@ -1128,6 +1150,10 @@ export const OrderDetailsScreen: React.FC = () => {
                     >
                       {isInitiatingClaim ? (
                         <ActivityIndicator size="small" color="#ffffff" />
+                      ) : isReleaseWindowActive ? (
+                        <Text className="font-bold text-[14px] tracking-[0.35px] text-center text-white">
+                          {`Continue (${timeFormatted})`}
+                        </Text>
                       ) : (
                         <Text
                           className={`font-bold text-[14px] tracking-[0.35px] text-center ${

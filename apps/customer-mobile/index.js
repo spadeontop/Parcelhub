@@ -1,17 +1,23 @@
 import React from 'react';
 import { registerRootComponent } from 'expo';
 import { ExpoRoot } from 'expo-router';
-import { getMessaging, setBackgroundMessageHandler } from '@react-native-firebase/messaging';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 
-// Top-level background message handler for headless Android tasks
-try {
-  const messaging = getMessaging();
-  setBackgroundMessageHandler(messaging, async (remoteMessage) => {
-    console.log('[FCM Background] Headless message received:', remoteMessage);
-  });
-} catch (e) {
-  // Graceful catch for web or environments where native messaging is not loaded
-  console.warn('[FCM Background] Native messaging init:', e?.message || e);
+// Only initialize native FCM background handler if NOT running in Expo Go
+const isExpoGo =
+  Constants.appOwnership === 'expo' ||
+  Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+
+if (!isExpoGo) {
+  try {
+    const { getMessaging, setBackgroundMessageHandler } = require('@react-native-firebase/messaging');
+    const messaging = getMessaging();
+    setBackgroundMessageHandler(messaging, async (remoteMessage) => {
+      console.log('[FCM Background] Headless message received:', remoteMessage);
+    });
+  } catch (e) {
+    console.warn('[FCM Background] Native messaging init:', e?.message || e);
+  }
 }
 
 export function App() {

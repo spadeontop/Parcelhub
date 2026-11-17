@@ -15,14 +15,14 @@ import { AppHeader } from '../layout/AppHeader';
 import { getStatusLabel, getStatusPillStyles } from '../../utils/statusHelpers';
 
 export const HomeScreen: React.FC = () => {
-  const { orders, navigateTo, refetchOrders, refetchProfile, customer, showToast } = useV1();
+  const { orders, navigateTo, fetchHomeData, customer, showToast } = useV1();
   const [refreshing, setRefreshing] = useState(false);
   const { height } = useWindowDimensions();
   const isCompact = height < 700;
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([refetchOrders(), refetchProfile()]);
+    await fetchHomeData();
     setRefreshing(false);
   };
 
