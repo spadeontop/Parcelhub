@@ -201,18 +201,25 @@ async function runNotificationV1Tests() {
     assert.strictEqual(noTokenResult.reason, "NO_ACTIVE_DEVICE_TOKEN");
     console.log("   ✅ Correctly handles user with no registered device token");
 
-    // 6b. Dry-run mode for existing user (when FCM_ENABLED=false or no keys)
+    // 6b. Dry-run / resilient mode for existing user
     assert.strictEqual(typeof isFcmConfigured(), "boolean");
-    const dryRunResult = await sendFcmNotification({
+    const testResult = await sendFcmNotification({
       userId: testCustomerId,
       title: "Parcel Ready",
       body: "Your parcel is ready for pickup!",
       notifId: "ORD-999",
       data: { orderId: "ORD-999" },
     });
-    // In local dev without keys, it returns success: true with dry-run reason
-    assert.strictEqual(dryRunResult.success, true);
-    console.log("   ✅ Dry-run dispatch succeeded without throwing exceptions");
+    if (!isFcmConfigured()) {
+      // In local dev without keys, it returns success: true with dry-run reason
+      assert.strictEqual(testResult.success, true);
+      assert.strictEqual(testResult.reason, "FCM_DISABLED_DRY_RUN");
+      console.log("   ✅ Dry-run dispatch succeeded without throwing exceptions");
+    } else {
+      // With live credentials and a simulated test token, Firebase non-fatally returns failure without crashing
+      assert.strictEqual(typeof testResult.success, "boolean");
+      console.log("   ✅ Live FCM dispatch handled test token gracefully without throwing");
+    }
 
     // -------------------------------------------------------------
     // Test 7: DELETE /api/v1/notification/token (Logout Deregistration)

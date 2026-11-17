@@ -157,19 +157,30 @@ export async function sendFcmNotification(
       };
     }
 
-    // 4. Construct payload with in-place replacement support
+    // 4. Construct payload with high priority, default sound, channelId, and in-place replacement support
+    const stringifiedData: Record<string, string> = {
+      title,
+      body,
+      ...(data || {}),
+      ...(notifId ? { notifId } : {}),
+    };
+
     const message: Message = {
       token: record.token,
       notification: {
         title,
         body,
       },
-      data: {
-        ...(data || {}),
-        ...(notifId ? { notifId } : {}),
-      },
+      data: stringifiedData,
       android: {
+        priority: "high",
         notification: {
+          channelId: "default",
+          sound: "default",
+          defaultSound: true,
+          defaultVibrateTimings: true,
+          priority: "high",
+          visibility: "public",
           // Android: "tag" replaces any existing notification with the same tag in the notification tray
           ...(notifId ? { tag: notifId } : {}),
         },
@@ -178,8 +189,15 @@ export async function sendFcmNotification(
       },
       apns: {
         headers: {
+          "apns-priority": "10",
+          "apns-push-type": "alert",
           // iOS: "apns-collapse-id" replaces any existing banner with the same ID in Notification Center
           ...(notifId ? { "apns-collapse-id": notifId } : {}),
+        },
+        payload: {
+          aps: {
+            sound: "default",
+          },
         },
       },
     };
