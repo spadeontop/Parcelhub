@@ -133,16 +133,22 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       })
       .where(eq(orders.id, order.id));
 
+    const formattedAmount = `₱${body.amountReceived.toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+
     // Non-fatal FCM push to customer
     sendFcmNotification({
       userId: order.customerId,
       title: "Payment Verified",
-      body: `Payment received for ${order.trackingId || order.productName || "your parcel"}. Now awaiting courier arrival.`,
+      body: `Payment of ${formattedAmount} received for ${order.trackingId || order.productName || "your parcel"}. Now awaiting courier arrival.`,
       notifId: order.id,
       data: {
         orderId: order.id,
         ticketCode: order.ticketCode,
         status: "AWAITING_PARCEL",
+        amountReceived: formattedAmount,
       },
     }).catch(() => {});
 

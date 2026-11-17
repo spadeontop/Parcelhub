@@ -221,6 +221,7 @@ export interface DraftOrder {
 export interface ToastState {
   show: boolean;
   message: string;
+  onPress?: () => void;
 }
 
 export interface AuthCustomer {
@@ -233,6 +234,7 @@ export interface AuthCustomer {
 
 export interface NotificationItem {
   id: number;
+  orderId?: string;
   title: string;
   body: string;
   time: string;

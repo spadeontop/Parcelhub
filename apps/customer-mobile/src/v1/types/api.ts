@@ -139,6 +139,7 @@ export type CustomerOrderSummary = {
   readonly productName: string;
   readonly status: OrderStatus;
   readonly timestamp: ISO8601Timestamp;
+  readonly amountReceived?: number | null;
   readonly isClaimActive?: boolean;
 };
 
