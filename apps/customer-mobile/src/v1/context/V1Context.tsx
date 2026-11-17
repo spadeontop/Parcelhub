@@ -29,6 +29,7 @@ import { authApi } from '../services/authApi';
 import { orderApi } from '../services/orderApi';
 import { customerApi } from '../services/customerApi';
 import { notificationApi } from '../services/notificationApi';
+import { setUnauthorizedHandler } from '../services/apiClient';
 import {
   requestNotificationPermission,
   getFcmDeviceToken,
@@ -161,6 +162,7 @@ export type V1ContextType = {
   readonly notificationsEnabled: boolean;
   readonly togglePushNotifications: () => Promise<void>;
   readonly signOutCustomer: () => Promise<void>;
+  readonly handleSessionExpired: () => Promise<void>;
 };
 
 const V1Context = createContext<V1ContextType | undefined>(undefined);
@@ -180,6 +182,22 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
   );
   const [orderDraft, setOrderDraft] = useState<OrderDraft>(DEFAULT_ORDER_DRAFT);
 
+  // Expiry mutex and screen tracker refs
+  const isHandlingExpiryRef = useRef(false);
+  const activeScreenRef = useRef<ScreenId>('login');
+  activeScreenRef.current = activeScreen;
+  const selectedOrderIdRef = useRef<string | null>(null);
+  selectedOrderIdRef.current = selectedOrderId;
+  const selectedOrderTicketCodeRef = useRef<string | null>(null);
+  selectedOrderTicketCodeRef.current = selectedOrderTicketCode;
+
+  // Stored return target to resume after MPIN unlock
+  const returnTargetRef = useRef<{
+    screen: ScreenId;
+    orderId?: string | null;
+    ticketCode?: string | null;
+  } | null>(null);
+
   // Toast notification state
   const [toast, setToast] = useState<ToastState>({ show: false, message: '' });
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -196,6 +214,9 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
 
   const navigateTo = useCallback(
     (screen: ScreenId, params?: { orderId?: string | null; ticketCode?: string | null }) => {
+      if (screen === 'login' || screen === 'register') {
+        returnTargetRef.current = null;
+      }
       setActiveScreen(screen);
       if (params?.orderId !== undefined) {
         setSelectedOrderId(params.orderId);
@@ -226,11 +247,74 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
     setOrderDraft(DEFAULT_ORDER_DRAFT);
   }, []);
 
+  // Centralized Session Expiry Handler
+  const handleSessionExpired = useCallback(async (): Promise<void> => {
+    if (isHandlingExpiryRef.current) return;
+    isHandlingExpiryRef.current = true;
+
+    try {
+      const currentScreen = activeScreenRef.current;
+      // Preserve current post-auth screen to resume after MPIN verification
+      if (
+        currentScreen !== 'login' &&
+        currentScreen !== 'register' &&
+        currentScreen !== 'mpin_login' &&
+        currentScreen !== 'mpin_create'
+      ) {
+        returnTargetRef.current = {
+          screen: currentScreen,
+          orderId: selectedOrderIdRef.current,
+          ticketCode: selectedOrderTicketCodeRef.current,
+        };
+      }
+
+      const refresh = await v1Storage.getRefreshToken();
+      if (refresh) {
+        // Invalidate expired auth token in storage & memory
+        await v1Storage.clearAuthToken();
+        setAuthToken(null);
+
+        showToast('Session expired. Enter MPIN to resume.');
+        setActiveScreen('mpin_login');
+      } else {
+        // No refresh token available: clear all credentials and redirect to login
+        await v1Storage.clearAllTokens();
+        setPreAuthToken(null);
+        setAuthToken(null);
+        setCustomer(null);
+        setOrders([]);
+        setSelectedOrderId(null);
+        setSelectedOrderTicketCode(null);
+        returnTargetRef.current = null;
+
+        showToast('Session expired. Please log in again.');
+        setActiveScreen('login');
+      }
+    } finally {
+      setTimeout(() => {
+        isHandlingExpiryRef.current = false;
+      }, 1500);
+    }
+  }, [showToast]);
+
+  // Register centralized unauthorized interceptor with apiClient
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      handleSessionExpired();
+    });
+    return () => {
+      setUnauthorizedHandler(null);
+    };
+  }, [handleSessionExpired]);
+
   // V1 Profile Refresh with 401 Silent Renewal trigger
   const refetchProfile = useCallback(async (): Promise<void> => {
     let token = authToken;
     if (!token) token = await v1Storage.getAuthToken();
-    if (!token) return;
+    if (!token) {
+      await handleSessionExpired();
+      return;
+    }
 
     try {
       const res = await customerApi.getProfile(token);
@@ -238,43 +322,32 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
         setCustomer(res.customer);
       }
     } catch (err: any) {
-      // V1 Feature #1: Silent session refresh interceptor on 401
       if (err?.statusCode === 401) {
-        const refresh = await v1Storage.getRefreshToken();
-        if (refresh) {
-          showToast('Session expired. Enter MPIN to resume.');
-          setActiveScreen('mpin_login');
-        } else {
-          setActiveScreen('login');
-        }
+        await handleSessionExpired();
       }
     }
-  }, [authToken, showToast]);
+  }, [authToken, handleSessionExpired]);
 
   // V1 Orders Fetch with 401 Silent Renewal trigger
   const refetchOrders = useCallback(
     async (query?: CustomerListOrdersQueryParams): Promise<void> => {
       let token = authToken;
       if (!token) token = await v1Storage.getAuthToken();
-      if (!token) return;
+      if (!token) {
+        await handleSessionExpired();
+        return;
+      }
 
       try {
         const res = await orderApi.listOrders(token, query);
         setOrders(res.orders || []);
       } catch (err: any) {
-        // V1 Feature #1: Silent session refresh interceptor on 401
         if (err?.statusCode === 401) {
-          const refresh = await v1Storage.getRefreshToken();
-          if (refresh) {
-            showToast('Session expired. Enter MPIN to resume.');
-            setActiveScreen('mpin_login');
-          } else {
-            setActiveScreen('login');
-          }
+          await handleSessionExpired();
         }
       }
     },
-    [authToken, showToast]
+    [authToken, handleSessionExpired]
   );
 
   // Initialize stored tokens on mount
@@ -539,23 +612,53 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
       // Mode B: Silent session unlock with refreshToken
       const storedRefresh = await v1Storage.getRefreshToken();
       if (storedRefresh) {
-        const res = await authApi.refreshToken({
-          refreshToken: storedRefresh,
-          mpin: mpin as any,
-        });
+        try {
+          const res = await authApi.refreshToken({
+            refreshToken: storedRefresh,
+            mpin: mpin as any,
+          });
 
-        setAuthToken(res.authToken);
-        showToast(res.statusMessage || 'Session renewed');
-        setActiveScreen('home');
-        return;
+          setAuthToken(res.authToken);
+          showToast(res.statusMessage || 'Session renewed');
+
+          // Resume previously active screen if available
+          if (returnTargetRef.current) {
+            const target = returnTargetRef.current;
+            returnTargetRef.current = null;
+            navigateTo(target.screen, {
+              orderId: target.orderId,
+              ticketCode: target.ticketCode,
+            });
+          } else {
+            setActiveScreen('home');
+          }
+          return;
+        } catch (err: any) {
+          const status = err?.statusCode || err?.status;
+          const msg = err?.message || '';
+
+          // If Incorrect MPIN (HTTP 401 with 'incorrect'), rethrow to let MpinLoginScreen display error
+          if (status === 401 && msg.toLowerCase().includes('incorrect')) {
+            throw err;
+          }
+
+          // If refreshToken itself is expired/invalid (HTTP 401/403), wipe stored credentials
+          if (status === 401 || status === 403) {
+            await v1Storage.clearAllTokens();
+            setAuthToken(null);
+            setPreAuthToken(null);
+            setCustomer(null);
+            returnTargetRef.current = null;
+          }
+          throw err;
+        }
       }
 
       // Neither token available -> redirect to login
-      showToast('Session expired. Please log in again.');
-      setActiveScreen('login');
+      await handleSessionExpired();
       throw new Error('Please log in again');
     },
-    [preAuthToken, showToast]
+    [preAuthToken, showToast, navigateTo, handleSessionExpired]
   );
 
   // V1 Initialize Order Action (V1 Feature #5 Decoupled Order Creation)
@@ -564,8 +667,7 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
       let token = authToken;
       if (!token) token = await v1Storage.getAuthToken();
       if (!token) {
-        showToast('Session expired. Please log in again.');
-        setActiveScreen('login');
+        await handleSessionExpired();
         throw new Error('Please log in again');
       }
 
@@ -588,14 +690,15 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
       setActiveScreen('confirm_order');
       return res;
     },
-    [authToken, customer, showToast, updateOrderDraft, setSelectedOrderTicketCode]
+    [authToken, customer, showToast, updateOrderDraft, setSelectedOrderTicketCode, handleSessionExpired]
   );
 
   const confirmCustomerOrder = useCallback(
     async (orderData: CustomerUpdateOrderReq['order']): Promise<CustomerUpdateOrderRes> => {
-      const token = authToken || (await v1Storage.getAuthToken());
+      let token = authToken;
+      if (!token) token = await v1Storage.getAuthToken();
       if (!token) {
-        setActiveScreen('login');
+        await handleSessionExpired();
         throw new Error('Please log in again');
       }
 
@@ -643,20 +746,22 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
       setActiveScreen,
       setSelectedOrderId,
       setSelectedOrderTicketCode,
+      handleSessionExpired,
     ]
   );
 
   const fetchOrderDetail = useCallback(
     async (orderId: string): Promise<CustomerOrderDetail> => {
-      const token = authToken || (await v1Storage.getAuthToken());
+      let token = authToken;
+      if (!token) token = await v1Storage.getAuthToken();
       if (!token) {
-        setActiveScreen('login');
+        await handleSessionExpired();
         throw new Error('Please log in again');
       }
       const res = await orderApi.getOrder(token, orderId);
       return res.order;
     },
-    [authToken, setActiveScreen]
+    [authToken, handleSessionExpired]
   );
 
   const [isPodModalOpen, setIsPodModalOpen] = useState<boolean>(false);
@@ -665,16 +770,17 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
 
   const claimCustomerOrder = useCallback(
     async (orderId: string): Promise<CustomerClaimOrderRes> => {
-      const token = authToken || (await v1Storage.getAuthToken());
+      let token = authToken;
+      if (!token) token = await v1Storage.getAuthToken();
       if (!token) {
-        setActiveScreen('login');
+        await handleSessionExpired();
         throw new Error('Please log in again');
       }
       const res = await orderApi.claimOrder(token, orderId);
       showToast(res.statusMessage || 'Order claim initiated');
       return res;
     },
-    [authToken, setActiveScreen, showToast]
+    [authToken, showToast, handleSessionExpired]
   );
 
   const [readNotificationIds, setReadNotificationIds] = useState<ReadonlySet<string>>(
@@ -732,6 +838,7 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
     setOrders([]);
     setSelectedOrderId(null);
     setSelectedOrderTicketCode(null);
+    returnTargetRef.current = null;
     clearRegistrationDraft();
     clearOrderDraft();
     setActiveScreen('login');
@@ -775,6 +882,7 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
     notificationsEnabled,
     togglePushNotifications,
     signOutCustomer,
+    handleSessionExpired,
   };
 
   return <V1Context.Provider value={value}>{children}</V1Context.Provider>;
