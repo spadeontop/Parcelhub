@@ -19,7 +19,7 @@ export const OrderDetailsHeader: React.FC<OrderDetailsHeaderProps> = ({
       <TouchableOpacity
         onPress={onBack}
         activeOpacity={0.7}
-        className="w-10 h-10 rounded-full bg-white/10 items-center justify-center active:bg-white/20"
+        className="w-10 h-10 rounded-full bg-white/10 items-center justify-center"
         accessibilityRole="button"
         accessibilityLabel="Go back to Home"
       >

@@ -18,7 +18,7 @@ export const StaffNotesSection: React.FC<StaffNotesSectionProps> = ({ initialNot
   };
 
   return (
-    <View className="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-4 mb-3 space-y-2.5">
+    <View className="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-4 mb-3 gap-2.5">
       <View className="flex-row items-center justify-between">
         <View className="flex-row items-center gap-1.5">
           <AlertCircle size={14} color="#f59e0b" />
@@ -49,7 +49,8 @@ export const StaffNotesSection: React.FC<StaffNotesSectionProps> = ({ initialNot
       {notes !== initialNotes && (
         <TouchableOpacity
           onPress={handleSave}
-          className="bg-slate-700 active:bg-slate-600 py-1.5 rounded-lg items-center self-end px-3"
+          activeOpacity={0.8}
+          className="bg-slate-700 py-1.5 rounded-lg items-center self-end px-3"
         >
           <Text className="text-xs font-semibold text-white">Save Note</Text>
         </TouchableOpacity>

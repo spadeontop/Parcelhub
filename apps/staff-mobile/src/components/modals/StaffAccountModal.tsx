@@ -99,7 +99,7 @@ export const StaffAccountModal: React.FC<StaffAccountModalProps> = ({
               onPress={handleClose}
               activeOpacity={0.7}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              className="w-10 h-10 rounded-full bg-[#F1F5F9] items-center justify-center active:bg-slate-200"
+              className="w-10 h-10 rounded-full bg-[#F1F5F9] items-center justify-center"
               accessibilityLabel="Close staff account"
             >
               <X size={18} color="#475569" />
@@ -152,7 +152,7 @@ export const StaffAccountModal: React.FC<StaffAccountModalProps> = ({
           <TouchableOpacity
             onPress={handleSignOut}
             activeOpacity={0.8}
-            className="w-full bg-[#FEF2F2] border border-[#FECACA] rounded-[12px] h-[48px] items-center justify-center mt-5 active:bg-rose-100"
+            className="w-full bg-[#FEF2F2] border border-[#FECACA] rounded-[12px] h-[48px] items-center justify-center mt-5"
           >
             <Text className="text-[14px] font-semibold text-[#B91C1C]">
               Log out

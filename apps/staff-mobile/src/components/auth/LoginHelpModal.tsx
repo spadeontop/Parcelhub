@@ -29,14 +29,15 @@ export const LoginHelpModal: React.FC<LoginHelpModalProps> = ({ isOpen, onClose 
             </View>
             <TouchableOpacity
               onPress={onClose}
-              className="w-8 h-8 rounded-full bg-slate-100 items-center justify-center active:bg-slate-200"
+              activeOpacity={0.7}
+              className="w-8 h-8 rounded-full bg-slate-100 items-center justify-center"
             >
               <X size={16} color="#64748B" />
             </TouchableOpacity>
           </View>
 
           {/* Body Content */}
-          <View className="py-4 space-y-3.5">
+          <View className="py-4 gap-3.5">
             <View className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100">
               <Text className="text-xs font-bold text-slate-800 mb-1">
                 Authorized Access Only
@@ -46,14 +47,14 @@ export const LoginHelpModal: React.FC<LoginHelpModalProps> = ({ isOpen, onClose 
               </Text>
             </View>
 
-            <View className="space-y-1">
+            <View className="gap-1">
               <Text className="text-xs font-semibold text-slate-700">Need Login Credentials?</Text>
               <Text className="text-xs text-slate-500 leading-relaxed">
                 If you have not been issued your Staff ID or password, please contact your Hub Operations Manager or Dispatch Lead.
               </Text>
             </View>
 
-            <View className="space-y-1">
+            <View className="gap-1">
               <Text className="text-xs font-semibold text-slate-700">IT & Dispatch Desk</Text>
               <Text className="text-xs text-slate-500 leading-relaxed">
                 Phone: +63 (2) 8888-HUB{'\n'}
@@ -65,7 +66,8 @@ export const LoginHelpModal: React.FC<LoginHelpModalProps> = ({ isOpen, onClose 
           {/* Close Action */}
           <TouchableOpacity
             onPress={onClose}
-            className="w-full bg-slate-900 active:bg-black py-3 rounded-xl items-center justify-center mt-2"
+            activeOpacity={0.8}
+            className="w-full bg-slate-900 py-3 rounded-xl items-center justify-center mt-2"
           >
             <Text className="text-white text-sm font-bold">Got it</Text>
           </TouchableOpacity>

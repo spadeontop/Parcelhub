@@ -81,7 +81,7 @@ export const StaffBottomNav: React.FC<StaffBottomNavProps> = ({
         <TouchableOpacity
           activeOpacity={0.85}
           onPress={onOpenScan}
-          className="w-13 h-13 rounded-full bg-[#215CD4] items-center justify-center shadow-lg active:bg-[#1d4ed8]"
+          className="w-13 h-13 rounded-full bg-[#215CD4] items-center justify-center"
           style={{
             width: 50,
             height: 50,

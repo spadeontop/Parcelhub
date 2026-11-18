@@ -118,12 +118,16 @@ export const staffApi = {
     await storage.deleteItem(STAFF_EMAIL_KEY);
   },
 
-  async login(email: string, password: string): Promise<StaffLoginResponse> {
+  async login(usernameOrEmail: string, password: string): Promise<StaffLoginResponse> {
     try {
-      const res = await fetch(`${ENV.API_BASE_URL}/api/staff/login`, {
+      const normalizedUsername = usernameOrEmail.trim().includes('@')
+        ? usernameOrEmail.trim().split('@')[0].toLowerCase()
+        : usernameOrEmail.trim().toLowerCase();
+
+      const res = await fetch(`${ENV.API_BASE_URL}/api/v1/staff/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ username: normalizedUsername, password }),
       });
 
       const data = await res.json().catch(() => null);
@@ -137,7 +141,7 @@ export const staffApi = {
       if (data.refreshToken) {
         await this.setStoredRefreshToken(data.refreshToken);
       }
-      await this.setStoredStaffEmail(email);
+      await this.setStoredStaffEmail(normalizedUsername);
 
       return data as StaffLoginResponse;
     } catch (err: any) {
@@ -163,7 +167,7 @@ export const staffApi = {
     const qs = queryParams.toString() ? `?${queryParams.toString()}` : '';
 
     try {
-      const res = await fetch(`${ENV.API_BASE_URL}/api/staff/orders${qs}`, {
+      const res = await fetch(`${ENV.API_BASE_URL}/api/v1/staff/orders${qs}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -184,6 +188,7 @@ export const staffApi = {
       const rawOrders: any[] = data?.orders || [];
       return rawOrders.map((o) => ({
         id: o.id || o.orderId,
+        ticketCode: o.ticketCode || null,
         trackingId: o.trackingId || '',
         customer: o.customer || o.recipientName || 'Unknown Customer',
         productName: o.productName || o.product || 'Standard Parcel',
@@ -217,6 +222,36 @@ export const staffApi = {
     }
   },
 
+  async getOrderPhoto(
+    orderId: string,
+    type: 'proof' | 'screenshot' | 'all' = 'proof',
+    explicitToken?: string
+  ): Promise<{ imageUrl: string | null; proofImageUrl: string | null }> {
+    const token = explicitToken || (await this.getStoredAuthToken());
+    if (!token) return { imageUrl: null, proofImageUrl: null };
+
+    try {
+      const res = await fetch(
+        `${ENV.API_BASE_URL}/api/v1/staff/orders/${encodeURIComponent(orderId)}/photo?type=${type}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      if (!res.ok) return { imageUrl: null, proofImageUrl: null };
+      const data = await res.json().catch(() => null);
+      return {
+        imageUrl: data?.imageUrl || null,
+        proofImageUrl: data?.proofImageUrl || null,
+      };
+    } catch {
+      return { imageUrl: null, proofImageUrl: null };
+    }
+  },
+
   async getOrder(orderId: string, explicitToken?: string): Promise<StaffOrder> {
     const token = explicitToken || (await this.getStoredAuthToken());
     if (!token) {
@@ -224,7 +259,7 @@ export const staffApi = {
     }
 
     try {
-      const res = await fetch(`${ENV.API_BASE_URL}/api/staff/orders/${encodeURIComponent(orderId)}`, {
+      const res = await fetch(`${ENV.API_BASE_URL}/api/v1/staff/orders/${encodeURIComponent(orderId)}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -243,12 +278,24 @@ export const staffApi = {
       }
 
       const o = data as StaffOrderDetailResponse;
+
+      // In v1, photo is served via /photo endpoint to optimize payload
+      let proofImageUrl = o.proofImageUrl;
+      if (!proofImageUrl) {
+        try {
+          const photoData = await this.getOrderPhoto(orderId, 'proof', token);
+          proofImageUrl = photoData.proofImageUrl || photoData.imageUrl || undefined;
+        } catch {}
+      }
+
       return {
         id: o.orderId || orderId,
+        ticketCode: o.ticketCode || null,
         trackingId: o.trackingId,
         customer: o.customer,
         amountToPay: o.amountToPay,
-        change: 0,
+        amountReceived: typeof o.amountReceived === 'number' ? o.amountReceived : undefined,
+        change: o.change || 0,
         timestamp: o.timestamp,
         status: o.status,
         statusMessage: o.statusMessage,
@@ -261,7 +308,7 @@ export const staffApi = {
         claimedAt: o.claimedAt,
         createdAt: o.createdAt || (o.statusTimeline && o.statusTimeline[0]?.timestamp) || o.timestamp,
         statusTimeline: o.statusTimeline,
-        proofImageUrl: o.proofImageUrl,
+        proofImageUrl,
       };
     } catch (err: any) {
       if (err instanceof StaffApiError) throw err;
@@ -276,7 +323,7 @@ export const staffApi = {
     }
 
     try {
-      const res = await fetch(`${ENV.API_BASE_URL}/api/staff/orders/${encodeURIComponent(orderId)}/activate`, {
+      const res = await fetch(`${ENV.API_BASE_URL}/api/v1/staff/orders/${encodeURIComponent(orderId)}/activate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -309,7 +356,7 @@ export const staffApi = {
     }
 
     try {
-      const res = await fetch(`${ENV.API_BASE_URL}/api/staff/orders/${encodeURIComponent(orderId)}/make-claimable/pay`, {
+      const res = await fetch(`${ENV.API_BASE_URL}/api/v1/staff/orders/${encodeURIComponent(orderId)}/make-claimable/pay`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -342,7 +389,7 @@ export const staffApi = {
     }
 
     try {
-      const res = await fetch(`${ENV.API_BASE_URL}/api/staff/orders/${encodeURIComponent(orderId)}/make-claimable/attach-photo`, {
+      const res = await fetch(`${ENV.API_BASE_URL}/api/v1/staff/orders/${encodeURIComponent(orderId)}/make-claimable/attach-photo`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -375,7 +422,7 @@ export const staffApi = {
     }
 
     try {
-      const res = await fetch(`${ENV.API_BASE_URL}/api/staff/orders/${encodeURIComponent(orderId)}/claim`, {
+      const res = await fetch(`${ENV.API_BASE_URL}/api/v1/staff/orders/${encodeURIComponent(orderId)}/claim`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

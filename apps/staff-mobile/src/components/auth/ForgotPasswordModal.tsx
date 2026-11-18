@@ -29,14 +29,15 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen
             </View>
             <TouchableOpacity
               onPress={onClose}
-              className="w-8 h-8 rounded-full bg-slate-100 items-center justify-center active:bg-slate-200"
+              activeOpacity={0.7}
+              className="w-8 h-8 rounded-full bg-slate-100 items-center justify-center"
             >
               <X size={16} color="#64748B" />
             </TouchableOpacity>
           </View>
 
           {/* Details */}
-          <View className="py-4 space-y-3">
+          <View className="py-4 gap-3">
             <Text className="text-xs text-slate-600 leading-relaxed">
               For security compliance, staff accounts cannot be self-reset from the mobile terminal.
             </Text>
@@ -54,7 +55,8 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen
           {/* Dismiss button */}
           <TouchableOpacity
             onPress={onClose}
-            className="w-full bg-[#2563EB] active:bg-blue-700 py-3 rounded-xl items-center justify-center mt-2"
+            activeOpacity={0.8}
+            className="w-full bg-[#2563EB] py-3 rounded-xl items-center justify-center mt-2"
           >
             <Text className="text-white text-sm font-bold">Understood</Text>
           </TouchableOpacity>

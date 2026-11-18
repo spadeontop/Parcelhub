@@ -219,11 +219,11 @@ export const StaffClaimedSummarySection: React.FC<StaffClaimedSummarySectionProp
         order.proofImageUrl.startsWith('file://'))
   );
 
-  const price = typeof order.amountToPay === 'number' ? order.amountToPay : 480;
+  const price = typeof order.amountToPay === 'number' ? order.amountToPay : 0;
   const paidAmount =
     typeof order.amountReceived === 'number'
       ? order.amountReceived
-      : Math.max(500, price);
+      : price;
   const change =
     typeof order.change === 'number'
       ? order.change

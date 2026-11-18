@@ -17,8 +17,12 @@ export const StaffUnpaidActionSection: React.FC<StaffUnpaidActionSectionProps> =
   onActivate,
   onReturnHome,
 }) => {
-  const fee = typeof order.amountToPay === 'number' ? order.amountToPay : 300;
-  const [cashText, setCashText] = useState<string>('1000');
+  const fee = typeof order.amountToPay === 'number' ? order.amountToPay : 0;
+  const [cashText, setCashText] = useState<string>(
+    typeof order.amountReceived === 'number' && order.amountReceived > 0
+      ? String(order.amountReceived)
+      : ''
+  );
   const [isConfirmed, setIsConfirmed] = useState<boolean>(false);
   const [isLocked, setIsLocked] = useState<boolean>(false);
   const [isInputFocused, setIsInputFocused] = useState<boolean>(false);
@@ -26,13 +30,16 @@ export const StaffUnpaidActionSection: React.FC<StaffUnpaidActionSectionProps> =
   useEffect(() => {
     setIsConfirmed(false);
     setIsLocked(false);
-    // Initialize default or clean cash text
-    setCashText(fee > 0 ? String(Math.max(1000, fee)) : '1000');
-  }, [order.id, fee]);
+    setCashText(
+      typeof order.amountReceived === 'number' && order.amountReceived > 0
+        ? String(order.amountReceived)
+        : ''
+    );
+  }, [order.id, order.amountReceived]);
 
   const cashNum = parseFloat(cashText) || 0;
-  const change = Math.max(0, cashNum - fee);
-  const isSufficient = cashNum >= fee;
+  const change = cashNum > 0 ? Math.max(0, cashNum - fee) : 0;
+  const isSufficient = fee > 0 ? cashNum >= fee : cashNum > 0;
   const canActivate = isConfirmed && isSufficient && !isSubmitting;
 
   const handleSubmit = async () => {
@@ -42,7 +49,7 @@ export const StaffUnpaidActionSection: React.FC<StaffUnpaidActionSectionProps> =
   };
 
   return (
-    <View className="space-y-4">
+    <View className="gap-4">
       {/* Card: AMOUNT RECEIVED (Card_Amount_Received in Figma 1343:1662) */}
       <OrderCardContainer className="mb-4">
         <Text className="text-[11px] font-bold text-[#64748B] tracking-wider uppercase mb-2.5">
@@ -114,7 +121,11 @@ export const StaffUnpaidActionSection: React.FC<StaffUnpaidActionSectionProps> =
             setIsConfirmed((prev) => !prev);
           }
         }}
-        title={`I confirm that I received exactly ₱${cashNum.toLocaleString()}`}
+        title={
+          cashNum > 0
+            ? `I confirm that I received exactly ₱${cashNum.toLocaleString()}`
+            : 'I confirm that I received the payment'
+        }
         subtitle="Only activate the order if you received the exact or more compared to the specified amount."
         disabled={isLocked || isSubmitting || !isSufficient}
       />
@@ -126,9 +137,16 @@ export const StaffUnpaidActionSection: React.FC<StaffUnpaidActionSectionProps> =
           activeOpacity={0.85}
           onPress={handleSubmit}
           disabled={!canActivate}
-          className={`w-full h-[48px] rounded-xl items-center justify-center shadow-sm ${
-            canActivate ? 'bg-black active:bg-neutral-800' : 'bg-[#94A3B8]'
+          className={`w-full h-[48px] rounded-xl items-center justify-center ${
+            canActivate ? 'bg-black' : 'bg-[#94A3B8]'
           }`}
+          style={{
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.05,
+            shadowRadius: 2,
+            elevation: 1,
+          }}
         >
           {isSubmitting ? (
             <ActivityIndicator size="small" color="#FFFFFF" />
