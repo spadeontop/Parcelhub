@@ -19,6 +19,9 @@ interface StaffContextType {
   isRefreshing: boolean;
   orders: StaffOrder[];
   filteredOrders: StaffOrder[];
+  totalCount: number;
+  currentPage: number;
+  setCurrentPage: React.Dispatch<React.SetStateAction<number>>;
   activeTab: StaffTab;
   setActiveTab: (tab: StaffTab) => void;
   searchQuery: string;
@@ -69,6 +72,9 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isOnline, setIsOnline] = useState<boolean>(true);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [orders, setOrders] = useState<StaffOrder[]>([]);
+  const [totalCount, setTotalCount] = useState<number>(0);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const ITEMS_PER_PAGE = 20;
   const [activeTab, setActiveTab] = useState<StaffTab>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedOrder, setSelectedOrder] = useState<StaffOrder | null>(null);
@@ -142,15 +148,23 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       // Strictly limit to 20 results per requirement
       const limit = 20;
+      const offset = (currentPage - 1) * ITEMS_PER_PAGE;
       const effectiveTab = targetTab ?? activeTabRef.current;
       // Search is always global (no status filter). When browsing a tab, scope by its status.
       const status = searchParam ? undefined : getStatusForTab(effectiveTab);
-      const data = await staffApi.getOrders(status, limit, token, searchParam);
+      const { orders: data, pagination } = await staffApi.getOrders(
+        status,
+        limit,
+        offset,
+        token,
+        searchParam
+      );
 
       // Discard stale responses if a newer fetch request was dispatched
       if (currentReqId !== fetchRequestId.current) {
         return;
       }
+      setTotalCount(pagination.totalCount);
       setOrders((prev) => {
         // Merge notes and local claimedAt from local memory if existing
         const notesMap = new Map<string, string>();
@@ -177,11 +191,11 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const fresh = data.find((o) => o.id === prevSelected.id);
         return fresh
           ? {
-              ...fresh,
-              notes: prevSelected.notes,
-              claimedAt: prevSelected.claimedAt || fresh.claimedAt,
-              createdAt: fresh.createdAt || prevSelected.createdAt,
-            }
+            ...fresh,
+            notes: prevSelected.notes,
+            claimedAt: prevSelected.claimedAt || fresh.claimedAt,
+            createdAt: fresh.createdAt || prevSelected.createdAt,
+          }
           : prevSelected;
       });
     } catch (err: any) {
@@ -205,7 +219,7 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setIsRefreshing(false);
       }
     }
-  }, [showToast]);
+  }, [showToast, currentPage]);
 
   const isSwitchingTabRef = useRef(false);
 
@@ -347,19 +361,19 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setSelectedOrder((prev) =>
           prev && prev.id === order.id
             ? {
-                ...prev,
-                ...detail,
-                amountReceived: detail.amountReceived ?? prev.amountReceived,
-                change: detail.change || prev.change,
-                notes: prev.notes,
-                claimedAt: prev.claimedAt || detail.claimedAt,
-                createdAt: detail.createdAt || prev.createdAt,
-                statusTimeline: detail.statusTimeline || prev.statusTimeline,
-              }
+              ...prev,
+              ...detail,
+              amountReceived: detail.amountReceived ?? prev.amountReceived,
+              change: detail.change || prev.change,
+              notes: prev.notes,
+              claimedAt: prev.claimedAt || detail.claimedAt,
+              createdAt: detail.createdAt || prev.createdAt,
+              statusTimeline: detail.statusTimeline || prev.statusTimeline,
+            }
             : prev
         );
       }
-    } catch {}
+    } catch { }
   };
 
   const closeOrderDetails = () => {
@@ -394,28 +408,28 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       prev.map((o) =>
         o.id === orderId
           ? {
-              ...o,
-              status: 'CLAIMED',
-              isClaimActive: false,
-              claimRemainingSeconds: 0,
-              timestamp: claimedAt,
-              claimedAt,
-              createdAt: o.createdAt || o.statusTimeline?.[0]?.timestamp || o.timestamp,
-            }
+            ...o,
+            status: 'CLAIMED',
+            isClaimActive: false,
+            claimRemainingSeconds: 0,
+            timestamp: claimedAt,
+            claimedAt,
+            createdAt: o.createdAt || o.statusTimeline?.[0]?.timestamp || o.timestamp,
+          }
           : o
       )
     );
     setSelectedOrder((prev) =>
       prev && prev.id === orderId
         ? {
-            ...prev,
-            status: 'CLAIMED',
-            isClaimActive: false,
-            claimRemainingSeconds: 0,
-            timestamp: claimedAt,
-            claimedAt,
-            createdAt: prev.createdAt || prev.statusTimeline?.[0]?.timestamp || prev.timestamp,
-          }
+          ...prev,
+          status: 'CLAIMED',
+          isClaimActive: false,
+          claimRemainingSeconds: 0,
+          timestamp: claimedAt,
+          claimedAt,
+          createdAt: prev.createdAt || prev.statusTimeline?.[0]?.timestamp || prev.timestamp,
+        }
         : prev
     );
     showToast(`Order ${orderId} handed over and marked Claimed!`, 'success');
@@ -443,6 +457,9 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         isRefreshing,
         orders,
         filteredOrders,
+        totalCount,
+        currentPage,
+        setCurrentPage,
         activeTab,
         setActiveTab: handleSelectTab,
         searchQuery,

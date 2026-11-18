@@ -27,14 +27,14 @@ export const StaffOrderCard: React.FC<StaffOrderCardProps> = ({
     });
   })();
 
-  const orderId = order.id || order.trackingId;
+  const orderTicket = order.ticketCode || order.id || order.trackingId;
   const customerName = order.customer || 'Customer';
   const amountStr = `₱${order.amountToPay.toLocaleString()}`;
 
   // Check if claim is active/initiated by customer
   const isClaimInitiated = Boolean(
     order.isClaimActive ||
-      (order.claimRemainingSeconds !== undefined && order.claimRemainingSeconds > 0)
+    (order.claimRemainingSeconds !== undefined && order.claimRemainingSeconds > 0)
   );
 
   const [remainingSecs, setRemainingSecs] = useState<number>(
@@ -97,7 +97,7 @@ export const StaffOrderCard: React.FC<StaffOrderCardProps> = ({
       {/* Top Row: Order ID + Status badge */}
       <View className="flex-row items-center justify-between">
         <Text className="text-[10px] font-semibold text-[#2563EB]">
-          {orderId}
+          {orderTicket}
         </Text>
         <StaffBadge status={order.status} />
       </View>

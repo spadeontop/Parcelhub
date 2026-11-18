@@ -28,7 +28,7 @@ export const StaffOrderOverviewCard: React.FC<StaffOrderOverviewCardProps> = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const orderId = order.id || order.trackingId;
+  const orderTicket = order.ticketCode || order.trackingId || order.id;
   const recipientName = order.customer || 'Customer';
   const trackingNumber = order.trackingId || 'PH2696153368792H';
 
@@ -51,7 +51,7 @@ export const StaffOrderOverviewCard: React.FC<StaffOrderOverviewCardProps> = ({
             Order ticket
           </Text>
           <Text className="text-[23px] font-bold text-[#0F172A] mt-0.5 tracking-tight">
-            {orderId}
+            {orderTicket}
           </Text>
         </View>
         <StaffBadge status={order.status} variant="modal" />
