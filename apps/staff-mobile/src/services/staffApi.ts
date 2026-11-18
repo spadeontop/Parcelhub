@@ -197,7 +197,6 @@ export const staffApi = {
         ticketCode: o.ticketCode || null,
         trackingId: o.trackingId || '',
         customer: o.customer || o.recipientName || 'Unknown Customer',
-        productName: o.productName || o.product || 'Standard Parcel',
         amountToPay: typeof o.amountToPay === 'number' ? o.amountToPay : (o.price || 0),
         amountReceived: o.amountReceived,
         change: o.change || 0,

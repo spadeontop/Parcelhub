@@ -285,7 +285,6 @@ export type StaffOrderSummary = {
   readonly ticketCode?: string | null;
   readonly trackingId: string | null;
   readonly customer: string;
-  readonly productName?: string;
   readonly amountToPay: number;
   readonly amountReceived: number;
   readonly change: number;

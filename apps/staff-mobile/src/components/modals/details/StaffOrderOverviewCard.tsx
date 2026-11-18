@@ -29,7 +29,7 @@ export const StaffOrderOverviewCard: React.FC<StaffOrderOverviewCardProps> = ({
   };
 
   const orderId = order.id || order.trackingId;
-  const recipientName = order.customer || order.productName || 'John Doe';
+  const recipientName = order.customer || 'Customer';
   const trackingNumber = order.trackingId || 'PH2696153368792H';
 
   const price = typeof order.amountToPay === 'number' ? order.amountToPay : 0;

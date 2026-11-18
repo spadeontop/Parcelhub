@@ -105,8 +105,8 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     if (!quiet) setIsRefreshing(true);
     try {
-      // Query up to 50 results when searching so all matching tickets display in one view
-      const limit = searchParam ? 50 : undefined;
+      // Strictly limit to 20 results per requirement
+      const limit = 20;
       const data = await staffApi.getOrders(undefined, limit, token, searchParam);
       setOrders((prev) => {
         // Merge notes and local claimedAt from local memory if existing
@@ -220,12 +220,13 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const filteredOrders = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return tabOrders;
-    return tabOrders.filter((o) => {
-      const track = o.trackingId.toLowerCase();
+    // When actively searching, search across all retrieved orders rather than restricting to active tab
+    return orders.filter((o) => {
+      const track = (o.trackingId || '').toLowerCase();
       const ticket = (o.ticketCode || '').toLowerCase();
-      return track.includes(q) || (ticket.length > 0 && ticket.includes(q));
+      return (track.length > 0 && track.includes(q)) || (ticket.length > 0 && ticket.includes(q));
     });
-  }, [tabOrders, searchQuery]);
+  }, [orders, tabOrders, searchQuery]);
 
   // Authentication actions
   const login = async (usernameOrEmail: string, password: string) => {
@@ -270,7 +271,6 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 ...detail,
                 amountReceived: detail.amountReceived ?? prev.amountReceived,
                 change: detail.change || prev.change,
-                productName: prev.productName || detail.productName,
                 notes: prev.notes,
                 claimedAt: prev.claimedAt || detail.claimedAt,
                 createdAt: detail.createdAt || prev.createdAt,

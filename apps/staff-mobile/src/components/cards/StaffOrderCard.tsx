@@ -28,7 +28,7 @@ export const StaffOrderCard: React.FC<StaffOrderCardProps> = ({
   })();
 
   const orderId = order.id || order.trackingId;
-  const customerName = order.customer || order.productName || 'Customer';
+  const customerName = order.customer || 'Customer';
   const amountStr = `₱${order.amountToPay.toLocaleString()}`;
 
   // Check if claim is active/initiated by customer

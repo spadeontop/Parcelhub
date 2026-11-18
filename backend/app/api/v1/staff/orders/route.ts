@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
     const statusFilter = rawStatus as OrderStatus | null;
     const searchFilter = rawSearch && rawSearch.length > 0 ? rawSearch : null;
 
-    const { limit, offset } = parsePagination(searchParams, 20, 100);
+    const { limit, offset } = parsePagination(searchParams, 20, 20);
 
     // Build filter expressions strictly scoped to status and (trackingId OR ticketCode)
     const conditions = [];
@@ -106,7 +106,6 @@ export async function GET(request: NextRequest) {
         id: orders.id,
         ticketCode: orders.ticketCode,
         trackingId: orders.trackingId,
-        productName: orders.productName,
         recipientName: orders.recipientName,
         price: orders.price,
         amountReceived: orders.amountReceived,
@@ -181,7 +180,6 @@ export async function GET(request: NextRequest) {
         ticketCode: o.ticketCode,
         trackingId: o.trackingId,
         customer: o.recipientName,
-        productName: o.productName || "Standard Parcel",
         amountToPay: o.price,
         amountReceived: o.amountReceived || 0,
         change: o.change || 0,
