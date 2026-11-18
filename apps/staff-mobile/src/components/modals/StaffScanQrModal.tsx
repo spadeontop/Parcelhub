@@ -190,7 +190,15 @@ export const StaffScanQrModal: React.FC<StaffScanQrModalProps> = ({
     const matched = orders.find((o) => {
       const id = o.id.toLowerCase();
       const track = o.trackingId.toLowerCase();
-      return id === q || track === q || id.includes(q) || track.includes(q);
+      const ticket = (o.ticketCode || '').toLowerCase();
+      return (
+        id === q ||
+        track === q ||
+        ticket === q ||
+        id.includes(q) ||
+        track.includes(q) ||
+        (ticket.length > 0 && ticket.includes(q))
+      );
     });
 
     if (matched) {

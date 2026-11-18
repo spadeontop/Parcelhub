@@ -19,6 +19,7 @@ export interface StaffBadgeCounts {
 export interface StaffUser {
   id: string;
   name?: string;
+  username?: string;
   email: string;
   role: 'STAFF' | string;
   hubName?: string;
@@ -32,6 +33,7 @@ export interface StatusTimelineEntry {
 
 export interface StaffOrder {
   id: string;
+  ticketCode?: string | null;
   trackingId: string;
   customer: string;
   productName?: string;
@@ -74,9 +76,13 @@ export interface StaffOrdersResponse {
 
 export interface StaffOrderDetailResponse {
   orderId: string;
+  ticketCode?: string | null;
   trackingId: string;
   customer: string;
+  productName?: string;
   amountToPay: number;
+  amountReceived?: number | null;
+  change?: number;
   timestamp: string;
   status: OrderStatus;
   statusMessage: string;
@@ -90,6 +96,12 @@ export interface StaffOrderDetailResponse {
   createdAt?: string;
   statusTimeline?: StatusTimelineEntry[];
   proofImageUrl?: string;
+}
+
+export interface StaffGetOrderPhotoResponse {
+  orderId: string;
+  imageUrl: string | null;
+  proofImageUrl: string | null;
 }
 
 export interface StaffActivateOrderResponse {

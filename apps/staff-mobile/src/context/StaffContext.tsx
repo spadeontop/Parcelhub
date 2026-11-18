@@ -79,10 +79,11 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const email = await staffApi.getStoredStaffEmail();
         if (token && email && isMounted) {
           const user: StaffUser = {
-            id: 'STF-1991',
-            name: 'John Doe',
+            id: 'STF-001',
+            name: 'Jane Smith',
+            username: email,
             email,
-            role: 'Staff',
+            role: 'STAFF',
             hubName: "LILY'S CATERING HUB",
             token,
           };
@@ -197,26 +198,31 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return tabOrders.filter((o) => {
       const id = o.id.toLowerCase();
       const track = o.trackingId.toLowerCase();
+      const ticket = (o.ticketCode || '').toLowerCase();
       const cust = o.customer.toLowerCase();
       const prod = (o.productName || '').toLowerCase();
       const notes = (o.notes || '').toLowerCase();
-      return id.includes(q) || track.includes(q) || cust.includes(q) || prod.includes(q) || notes.includes(q);
+      return id.includes(q) || track.includes(q) || ticket.includes(q) || cust.includes(q) || prod.includes(q) || notes.includes(q);
     });
   }, [tabOrders, searchQuery]);
 
   // Authentication actions
-  const login = async (email: string, password: string) => {
-    const res = await staffApi.login(email, password);
+  const login = async (usernameOrEmail: string, password: string) => {
+    const res = await staffApi.login(usernameOrEmail, password);
+    const normalizedUsername = usernameOrEmail.trim().includes('@')
+      ? usernameOrEmail.trim().split('@')[0].toLowerCase()
+      : usernameOrEmail.trim().toLowerCase();
     const user: StaffUser = {
-      id: 'STF-1991',
-      name: 'John Doe',
-      email,
-      role: 'Staff',
+      id: 'STF-001',
+      name: 'Jane Smith',
+      username: normalizedUsername,
+      email: normalizedUsername,
+      role: 'STAFF',
       hubName: "LILY'S CATERING HUB",
       token: res.authToken,
     };
     setStaffUser(user);
-    showToast(`Signed in as ${email}`, 'success');
+    showToast(`Signed in as ${normalizedUsername}`, 'success');
     await fetchOrders(false, res.authToken);
   };
 
