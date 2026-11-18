@@ -141,7 +141,7 @@ export const ConfirmOrderScreen: React.FC = () => {
             </View>
 
             {/* Floating AuthInput components with reactive animation & states */}
-            <View className="space-y-1">
+            <View className="gap-1">
               {/* 1. Product Field */}
               <AuthInput
                 label="Product"
@@ -296,10 +296,8 @@ export const ConfirmOrderScreen: React.FC = () => {
             activeOpacity={isFormValid && !isSubmitting ? 0.8 : 1}
             disabled={!isFormValid || isSubmitting}
             onPress={handleSubmit}
-            className={`w-full h-[52px] rounded-[16px] items-center justify-center flex-row shadow-sm ${
-              isFormValid && !isSubmitting
-                ? 'bg-[#2563eb]'
-                : 'bg-[#cbd5e1]'
+            className={`w-full h-[52px] rounded-[16px] items-center justify-center flex-row ${
+              isFormValid && !isSubmitting ? 'bg-[#2563eb]' : 'bg-[#93c5fd]'
             }`}
             style={
               isFormValid && !isSubmitting
@@ -318,7 +316,7 @@ export const ConfirmOrderScreen: React.FC = () => {
             ) : (
               <Text
                 className={`font-bold text-[14px] tracking-wide ${
-                  isFormValid && !isSubmitting ? 'text-white' : 'text-[#64748b]'
+                  isFormValid && !isSubmitting ? 'text-white' : 'text-white/80'
                 }`}
               >
                 Submit Order &amp; Proceed to Payment

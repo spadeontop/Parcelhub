@@ -662,14 +662,20 @@ export const OrderDetailsScreen: React.FC = () => {
                     activeOpacity={0.8}
                     onPress={handleRefreshRelease}
                     disabled={isRefreshingRelease}
-                    style={{
-                      shadowColor: '#2563eb',
-                      shadowOffset: { width: 0, height: 4 },
-                      shadowOpacity: 0.25,
-                      shadowRadius: 10,
-                      elevation: 4,
-                    }}
-                    className="w-full h-[46px] rounded-[12px] bg-[#2563eb] items-center justify-center mb-3"
+                    style={
+                      !isRefreshingRelease
+                        ? {
+                            shadowColor: '#2563eb',
+                            shadowOffset: { width: 0, height: 4 },
+                            shadowOpacity: 0.25,
+                            shadowRadius: 10,
+                            elevation: 4,
+                          }
+                        : undefined
+                    }
+                    className={`w-full h-[46px] rounded-[12px] items-center justify-center mb-3 ${
+                      isRefreshingRelease ? 'bg-[#93c5fd]' : 'bg-[#2563eb]'
+                    }`}
                   >
                     {isRefreshingRelease ? (
                       <ActivityIndicator size="small" color="#ffffff" />
@@ -716,7 +722,7 @@ export const OrderDetailsScreen: React.FC = () => {
                 ORDER OVERVIEW
               </Text>
 
-              <View className="space-y-2.5">
+              <View className="gap-2.5">
                 {/* 1. Product */}
                 <View className="flex-row items-center justify-between py-[2px]">
                   <Text className="text-[14px] text-[#64748b] font-normal">Product</Text>
@@ -1109,7 +1115,7 @@ export const OrderDetailsScreen: React.FC = () => {
                       disabled={!claimConfirmed || isInitiatingClaim}
                       className={`w-full h-[48px] rounded-[12px] items-center justify-center ${
                         !claimConfirmed
-                          ? 'bg-[#cbd5e1]'
+                          ? 'bg-[#93c5fd]'
                           : isInitiatingClaim
                           ? 'bg-[#215cd4] opacity-85'
                           : 'bg-[#215cd4]'
@@ -1131,7 +1137,7 @@ export const OrderDetailsScreen: React.FC = () => {
                       ) : (
                         <Text
                           className={`font-bold text-[14px] tracking-[0.35px] text-center ${
-                            claimConfirmed ? 'text-white' : 'text-[#64748b]'
+                            claimConfirmed ? 'text-white' : 'text-white/80'
                           }`}
                         >
                           Initiate Claim
@@ -1144,8 +1150,8 @@ export const OrderDetailsScreen: React.FC = () => {
                     <Text className="text-[12px] text-[#64748b] text-center">
                       Only initiate claim when you’re physically claiming at the hub
                     </Text>
-                    <View className="w-full h-[48px] rounded-[12px] bg-[#94a3b8] opacity-75 items-center justify-center">
-                      <Text className="text-white font-semibold text-[14px]">
+                    <View className="w-full h-[48px] rounded-[12px] bg-[#93c5fd] items-center justify-center">
+                      <Text className="text-white/80 font-semibold text-[14px]">
                         Cannot initiate claim when the hub is closed
                       </Text>
                     </View>

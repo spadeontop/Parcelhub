@@ -320,14 +320,23 @@ export const MpinCreateScreen: React.FC = () => {
             disabled={isButtonDisabled}
             onPress={handleButtonClick}
             className={`w-full h-11 rounded-lg items-center justify-center ${
-              isButtonDisabled
-                ? 'bg-gray-200'
-                : 'bg-[#215cd4] active:bg-[#194cb5] shadow-xs'
+              isButtonDisabled ? 'bg-[#93c5fd]' : 'bg-[#215cd4]'
             }`}
+            style={
+              !isButtonDisabled
+                ? {
+                    shadowColor: '#215cd4',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.15,
+                    shadowRadius: 4,
+                    elevation: 2,
+                  }
+                : undefined
+            }
           >
             <Text
               className={`font-semibold text-[14.5px] ${
-                isButtonDisabled ? 'text-gray-400' : 'text-white'
+                isButtonDisabled ? 'text-white/80' : 'text-white'
               }`}
             >
               {buttonLabel}
