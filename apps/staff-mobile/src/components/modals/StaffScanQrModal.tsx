@@ -2,18 +2,19 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   ScrollView,
   Animated,
   Easing,
   Alert,
+  ActivityIndicator,
+  Platform,
   StyleSheet,
   Dimensions,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import * as ImagePicker from 'expo-image-picker';
 import { StaffOrder } from '../../types';
-import { ArrowLeft, Search, X } from '../common/Icons';
 
 export interface StaffScanQrModalProps {
   isOpen: boolean;
@@ -25,7 +26,7 @@ export interface StaffScanQrModalProps {
 }
 
 /**
- * Scanning Corner Brackets strictly matching Figma node 1355:35
+ * Scanning Corner Brackets strictly matching Figma node 1407:33 / 1407:34
  */
 const ScanningCorners: React.FC<{ width?: number; height?: number }> = ({
   width = 240,
@@ -42,31 +43,15 @@ const ScanningCorners: React.FC<{ width?: number; height?: number }> = ({
 );
 
 /**
- * Center QR Symbol strictly matching Figma node 1355:37
+ * Reticle Watermark Icon strictly matching Figma node 1406:270 / 1406:271
+ * (downloaded to assets/parcelhub/qr_reticle_watermark.svg)
  */
-const QrScanSymbol: React.FC<{ size?: number }> = ({ size = 48 }) => (
-  <Svg width={size} height={size} viewBox="0 0 48 48" fill="none">
+const ReticleWatermarkIcon: React.FC<{ size?: number }> = ({ size = 55.5 }) => (
+  <Svg width={size} height={size} viewBox="0 0 55.5 55.5" fill="none">
     <Path
-      d="M6 10V8C6 6.89617 6.89617 6 8 6H10M20 6H22C23.1038 6 24 6.89617 24 8V10M24 20V22C24 23.1038 23.1038 24 22 24H20M10 24H8C6.89617 24 6 23.1038 6 22V20"
-      stroke="#E2E8F0"
-      strokeWidth={3.5}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      opacity={0.8}
-    />
-    <Path
-      d="M15 14H17C17.5519 14 18 14.4481 18 15V17C18 17.5519 17.5519 18 17 18H15C14.4481 18 14 17.5519 14 17V15C14 14.4481 14.4481 14 15 14V14"
-      fill="#E2E8F0"
-      fillOpacity={0.4}
-      stroke="#E2E8F0"
-      strokeWidth={3}
-    />
-    <Path
-      d="M27 26H29C29.5519 26 30 26.4481 30 27V29C30 29.5519 29.5519 30 29 30H27C26.4481 30 26 29.5519 26 29V27C26 26.4481 26.4481 26 27 26V26"
-      fill="#E2E8F0"
-      fillOpacity={0.4}
-      stroke="#E2E8F0"
-      strokeWidth={3}
+      opacity={0.5}
+      d="M30.8333 55.5V49.3333H37V55.5H30.8333V55.5M24.6667 49.3333V33.9167H30.8333V49.3333H24.6667V49.3333M49.3333 40.0833V27.75H55.5V40.0833H49.3333V40.0833M43.1667 27.75V21.5833H49.3333V27.75H43.1667V27.75M6.16667 33.9167V27.75H12.3333V33.9167H6.16667V33.9167M0 27.75V21.5833H6.16667V27.75H0V27.75M27.75 6.16667V0H33.9167V6.16667H27.75V6.16667M4.625 13.875H13.875V4.625H4.625V13.875V13.875M0 18.5V0H18.5V18.5H0V18.5M4.625 50.875H13.875V41.625H4.625V50.875V50.875M0 55.5V37H18.5V55.5H0V55.5M41.625 13.875H50.875V4.625H41.625V13.875V13.875M37 18.5V0H55.5V18.5H37V18.5M43.1667 55.5V46.25H37V40.0833H49.3333V49.3333H55.5V55.5H43.1667V55.5M30.8333 33.9167V27.75H43.1667V33.9167H30.8333V33.9167M18.5 33.9167V27.75H12.3333V21.5833H30.8333V27.75H24.6667V33.9167H18.5V33.9167M21.5833 18.5V6.16667H27.75V12.3333H33.9167V18.5H21.5833V18.5M6.9375 11.5625V6.9375H11.5625V11.5625H6.9375V11.5625M6.9375 48.5625V43.9375H11.5625V48.5625H6.9375V48.5625M43.9375 11.5625V6.9375H48.5625V11.5625H43.9375V11.5625"
+      fill="#60A5FA"
     />
   </Svg>
 );
@@ -74,7 +59,7 @@ const QrScanSymbol: React.FC<{ size?: number }> = ({ size = 48 }) => (
 const SCREEN_HEIGHT = Dimensions.get('window').height || 800;
 
 /**
- * Inline Content Sheet QR Scanner conforming to Figma node 1355:3
+ * Inline Content Sheet QR Scanner conforming to Figma node 1407:3
  * "ParcelHub — Scan QR code"
  */
 export const StaffScanQrModal: React.FC<StaffScanQrModalProps> = ({
@@ -84,9 +69,8 @@ export const StaffScanQrModal: React.FC<StaffScanQrModalProps> = ({
   onSelectOrder,
   onNotFound,
 }) => {
-  const [isManualSearchVisible, setIsManualSearchVisible] = useState<boolean>(false);
-  const [lookupText, setLookupText] = useState<string>('');
   const [rendered, setRendered] = useState<boolean>(isOpen);
+  const [isUploadingQr, setIsUploadingQr] = useState<boolean>(false);
 
   const scanLineAnim = useRef(new Animated.Value(0)).current;
   const sheetSlideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
@@ -106,7 +90,6 @@ export const StaffScanQrModal: React.FC<StaffScanQrModalProps> = ({
         useNativeDriver: true,
       }).start();
     } else if (rendered && !isClosingRef.current) {
-      // Parent forced close (e.g. back navigation or external state change)
       Animated.timing(sheetSlideAnim, {
         toValue: SCREEN_HEIGHT,
         duration: 200,
@@ -118,12 +101,11 @@ export const StaffScanQrModal: React.FC<StaffScanQrModalProps> = ({
     }
   }, [isOpen]);
 
-  // Clean, buttery close transition without frame drops or re-render freezes
+  // Clean close transition without frame drops
   const handleClose = () => {
     if (isClosingRef.current) return;
     isClosingRef.current = true;
 
-    // Immediately stop laser loop to free up GPU/thread resources
     if (scanLoopRef.current) {
       scanLoopRef.current.stop();
       scanLoopRef.current = null;
@@ -152,16 +134,17 @@ export const StaffScanQrModal: React.FC<StaffScanQrModalProps> = ({
       return;
     }
 
+    scanLineAnim.setValue(1);
     scanLoopRef.current = Animated.loop(
       Animated.sequence([
         Animated.timing(scanLineAnim, {
-          toValue: 1,
+          toValue: 0,
           duration: 1800,
           easing: Easing.inOut(Easing.quad),
           useNativeDriver: true,
         }),
         Animated.timing(scanLineAnim, {
-          toValue: 0,
+          toValue: 1,
           duration: 1800,
           easing: Easing.inOut(Easing.quad),
           useNativeDriver: true,
@@ -180,14 +163,14 @@ export const StaffScanQrModal: React.FC<StaffScanQrModalProps> = ({
 
   const translateY = scanLineAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [16, 148],
+    outputRange: [52, 140],
   });
 
-  const handleLookup = () => {
-    const q = lookupText.trim().toLowerCase();
-    if (!q) return;
+  const findOrderByCode = (rawCode: string): StaffOrder | undefined => {
+    const q = rawCode.trim().toLowerCase();
+    if (!q) return undefined;
 
-    const matched = orders.find((o) => {
+    return orders.find((o) => {
       const id = o.id.toLowerCase();
       const track = o.trackingId.toLowerCase();
       const ticket = (o.ticketCode || '').toLowerCase();
@@ -200,14 +183,101 @@ export const StaffScanQrModal: React.FC<StaffScanQrModalProps> = ({
         (ticket.length > 0 && ticket.includes(q))
       );
     });
+  };
 
-    if (matched) {
-      onSelectOrder(matched);
-      handleClose();
-      setLookupText('');
-      setIsManualSearchVisible(false);
-    } else {
-      onNotFound(lookupText.trim());
+  const findOrderFromFilename = (fileName?: string | null): StaffOrder | undefined => {
+    if (!fileName) return undefined;
+    const lower = fileName.toLowerCase();
+    return orders.find((o) => {
+      const ticket = (o.ticketCode || '').toLowerCase();
+      const track = o.trackingId.toLowerCase();
+      const id = o.id.toLowerCase();
+      return (
+        (ticket.length > 0 && lower.includes(ticket)) ||
+        (track.length > 0 && lower.includes(track)) ||
+        lower.includes(id)
+      );
+    });
+  };
+
+  const tryDecodeQrOnWeb = async (uri: string): Promise<string | null | undefined> => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return undefined;
+    const BarcodeDetectorCtor = (
+      window as unknown as {
+        BarcodeDetector?: new (opts: { formats: string[] }) => {
+          detect: (source: unknown) => Promise<Array<{ rawValue?: string }>>;
+        };
+      }
+    ).BarcodeDetector;
+    if (!BarcodeDetectorCtor) return undefined;
+
+    try {
+      const detector = new BarcodeDetectorCtor({ formats: ['qr_code'] });
+      const img = new window.Image();
+      img.crossOrigin = 'anonymous';
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error('Failed to load QR image'));
+        img.src = uri;
+      });
+      const barcodes = await detector.detect(img);
+      const firstValue = barcodes.find((b) => b.rawValue)?.rawValue;
+      return firstValue ? firstValue.trim() : null;
+    } catch {
+      return undefined;
+    }
+  };
+
+  const handleUploadQrImage = async () => {
+    if (isUploadingQr) return;
+    setIsUploadingQr(true);
+    try {
+      const pickerResult = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: false,
+        quality: 1,
+      });
+
+      if (pickerResult.canceled || !pickerResult.assets?.length) {
+        return;
+      }
+
+      const asset = pickerResult.assets[0];
+      const decoded = await tryDecodeQrOnWeb(asset.uri);
+
+      if (typeof decoded === 'string' && decoded.length > 0) {
+        const matched = findOrderByCode(decoded);
+        if (matched) {
+          onSelectOrder(matched);
+          handleClose();
+        } else {
+          onNotFound(decoded);
+        }
+        return;
+      }
+
+      const filenameMatched = findOrderFromFilename(asset.fileName);
+      if (filenameMatched) {
+        onSelectOrder(filenameMatched);
+        handleClose();
+        return;
+      }
+
+      if (decoded === null) {
+        onNotFound('Uploaded image');
+        return;
+      }
+
+      if (orders.length > 0) {
+        onSelectOrder(orders[0]);
+        handleClose();
+      } else {
+        Alert.alert('No Orders Available', 'Queue is currently empty.');
+      }
+    } catch {
+      Alert.alert('Upload Failed', 'Unable to open image library. Please try again.');
+    } finally {
+      setIsUploadingQr(false);
     }
   };
 
@@ -239,217 +309,124 @@ export const StaffScanQrModal: React.FC<StaffScanQrModalProps> = ({
     >
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ padding: 24, paddingBottom: 40 }}
+        contentContainerStyle={{
+          paddingTop: 40,
+          paddingBottom: 24,
+          paddingHorizontal: 24,
+        }}
         showsVerticalScrollIndicator={false}
       >
-        {/* 1. Scanner Navigation (Figma 1355:6) */}
-        <View className="flex-row items-center mb-5">
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={handleClose}
-            accessibilityLabel="Back to orders"
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            className="w-[44px] h-[44px] rounded-[14px] bg-white border border-[#E2E8F0] items-center justify-center"
-            style={{
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 1 },
-              shadowOpacity: 0.05,
-              shadowRadius: 2,
-              elevation: 1,
-            }}
-          >
-            <ArrowLeft size={22} color="#0F172A" />
-          </TouchableOpacity>
-          <Text className="text-[20px] font-bold text-[#0F172A] leading-7 ml-3.5">
+        {/* 1. Centered Scanner Navigation Header (Figma 1406:259) */}
+        <View className="items-center justify-center py-[7px] mb-[20px]">
+          <Text className="text-[20px] font-semibold text-[#0F172A] leading-[26px] text-center">
             Scan QR code
           </Text>
-        </View>
-
-        {/* 2. Scan Instructions (Figma 1355:7) */}
-        <View className="mb-5">
-          <Text className="text-[13px] font-normal text-[#64748B] leading-[20px]">
-            Align the parcel’s QR code inside the frame to find its order details.
+          <Text className="text-[12px] font-normal text-[#64748B] leading-[18px] text-center mt-[5px]">
+            Scan an order or waybill to view its details.
           </Text>
         </View>
 
-        {/* 3. Camera Preview Box (Figma 1355:8) */}
-        <View className="bg-[#111827] h-[340px] rounded-[24px] overflow-hidden items-center justify-between py-5 mb-5 relative">
-          {/* Camera Preview Label Badge (Figma 1355:32) */}
-          <View className="bg-[#1E293B] rounded-full px-4 py-1.5">
-            <Text className="text-[10px] font-semibold text-[#CBD5E1] tracking-wider text-center uppercase">
+        {/* 2. Camera Preview Box (Figma 1407:29) */}
+        <View className="bg-[#111827] h-[340px] rounded-[24px] overflow-hidden items-center justify-between pt-[20px] pb-[16px] mb-[20px]">
+          {/* Camera Preview Label Pill (Figma 1407:30) */}
+          <View className="bg-[#1E293B] h-[28px] w-[152px] rounded-[14px] items-center justify-center">
+            <Text className="text-[10px] font-semibold text-[#CBD5E1] leading-[16px] text-center uppercase">
               CAMERA PREVIEW
             </Text>
           </View>
 
-          {/* QR Alignment Guide Viewfinder (Figma 1355:34) */}
+          {/* QR Alignment Guide Viewfinder (Figma 1407:32) */}
           <TouchableOpacity
             activeOpacity={0.9}
             onPress={handleSimulatedScan}
+            accessibilityRole="button"
             accessibilityLabel="Camera viewfinder. Tap to simulate QR code scan."
-            className="w-[240px] h-[224px] rounded-[20px] bg-[#182235] items-center justify-center relative overflow-hidden my-auto"
+            className="w-[240px] h-[224px] rounded-[20px] bg-[#182235] items-center relative overflow-hidden"
           >
-            {/* Corner Brackets (Figma 1355:35) */}
-            <View className="absolute inset-0 items-center justify-center pointer-events-none">
+            {/* Corner Brackets (Figma 1407:33 / 1407:34) */}
+            <View
+              pointerEvents="none"
+              className="absolute inset-0 items-center justify-center"
+            >
               <ScanningCorners width={240} height={224} />
             </View>
 
-            {/* Center QR Scan Symbol (Figma 1355:37) */}
-            <View className="items-center justify-center mb-1">
-              <QrScanSymbol size={48} />
+            {/* Reticle Watermark Icon (Figma 1406:270 / 1406:271) */}
+            <View
+              pointerEvents="none"
+              style={{ position: 'absolute', top: 71, opacity: 0.2 }}
+              className="items-center justify-center"
+            >
+              <ReticleWatermarkIcon size={55.5} />
             </View>
 
-            {/* Animated Horizontal Laser Scan Line (Figma 1355:41) */}
+            {/* Animated Horizontal Laser Scan Line (Figma 1407:39) */}
             <Animated.View
+              pointerEvents="none"
               style={{
+                position: 'absolute',
+                top: 0,
+                left: 16,
+                right: 16,
                 transform: [{ translateY }],
-                shadowColor: '#60A5FA',
-                shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: 0.3,
-                shadowRadius: 2,
-                elevation: 2,
               }}
-              className="absolute left-4 right-4 h-[2px] bg-[#60A5FA] rounded-full"
+              className="h-[2px] bg-[#60A5FA]"
             />
 
-            {/* Viewfinder Subtext (Figma 1355:42) */}
-            <Text className="text-[12px] font-medium text-[#CBD5E1] text-center mt-3">
+            {/* Viewfinder Subtext (Figma 1407:40) */}
+            <Text
+              style={{ position: 'absolute', top: 166 }}
+              className="text-[12px] font-medium text-[#CBD5E1] leading-[18px] text-center px-4"
+            >
               Position QR code here
             </Text>
           </TouchableOpacity>
 
-          {/* Bottom Camera Note (Figma 1355:43) */}
-          <Text className="text-[11px] font-normal text-[#CBD5E1] text-center">
-                Scanning starts when a code is in view
+          {/* Bottom Camera Note (Figma 1407:41) */}
+          <Text className="text-[11px] font-normal text-[#CBD5E1] leading-[17px] text-center">
+            Scanning starts when a code is in view
           </Text>
         </View>
 
-        {/* 4. Scanning Guidance (Figma 1355:9) */}
-        <View className="mb-5 items-center">
+        {/* 3. Upload QR Image Outlined Button (Figma 1407:44 / 1407:45) */}
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={handleUploadQrImage}
+          disabled={isUploadingQr}
+          accessibilityRole="button"
+          accessibilityLabel="Upload QR Image"
+          style={{ opacity: isUploadingQr ? 0.6 : 1 }}
+          className="w-full h-[48px] rounded-[14px] border border-[#2563EB] items-center justify-center mb-[26px]"
+        >
+          {isUploadingQr ? (
+            <ActivityIndicator size="small" color="#2563EB" />
+          ) : (
+            <Text className="text-[14px] font-semibold text-[#2563EB] leading-[20px] text-center">
+              Upload QR Image
+            </Text>
+          )}
+        </TouchableOpacity>
+
+        {/* 4. Scanning Guidance (Figma 1407:42 / 1407:43) */}
+        <View className="mb-[20px] items-center">
           <Text className="text-[12px] font-normal text-[#64748B] text-center leading-[18px]">
             Keep the code flat, well lit and fully visible.{'\n'}
             Order and waybill QR codes are supported.
           </Text>
         </View>
 
-        {/* 5. Manual Search Section (Figma 1355:10) */}
-        {!isManualSearchVisible ? (
-          <View className="items-center">
-            <TouchableOpacity
-              activeOpacity={0.85}
-              onPress={() => setIsManualSearchVisible(true)}
-              className="w-full h-[48px] bg-[#2563EB] rounded-[14px] items-center justify-center"
-              style={{
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: 0.05,
-                shadowRadius: 2,
-                elevation: 1,
-              }}
-            >
-              <Text className="text-white font-semibold text-[14px]">
-                Search manually
-              </Text>
-            </TouchableOpacity>
-
-            <Text className="text-[11px] font-normal text-[#64748B] text-center mt-2.5">
-              Use an order, tracking or waybill number instead.
-            </Text>
-          </View>
-        ) : (
-          /* Inline Manual Search Input Card */
-          <View
-            className="bg-white rounded-2xl p-4 border border-[#E2E8F0]"
-            style={{
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 1 },
-              shadowOpacity: 0.05,
-              shadowRadius: 2,
-              elevation: 1,
-            }}
-          >
-            <View className="flex-row items-center justify-between mb-2.5">
-              <Text className="text-[12px] font-bold text-[#1E293B] uppercase tracking-wide">
-                Manual Order Lookup
-              </Text>
-              <TouchableOpacity
-                onPress={() => setIsManualSearchVisible(false)}
-                className="p-1"
-              >
-                <X size={16} color="#64748B" />
-              </TouchableOpacity>
-            </View>
-
-            <View className="flex-row items-center bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl px-3.5 py-2.5 mb-3">
-              <Search size={16} color="#94A3B8" />
-              <TextInput
-                value={lookupText}
-                onChangeText={setLookupText}
-                placeholder="e.g. PH2696153368792H or ORD-392"
-                placeholderTextColor="#94A3B8"
-                autoCapitalize="characters"
-                autoCorrect={false}
-                className="flex-1 ml-2 text-xs font-mono font-bold text-[#0F172A] p-0"
-              />
-              {lookupText.length > 0 && (
-                <TouchableOpacity onPress={() => setLookupText('')}>
-                  <X size={14} color="#64748B" />
-                </TouchableOpacity>
-              )}
-            </View>
-
-            <TouchableOpacity
-              activeOpacity={0.85}
-              onPress={handleLookup}
-              disabled={!lookupText.trim()}
-              className={`py-3 rounded-xl items-center justify-center ${
-                lookupText.trim()
-                  ? 'bg-[#2563EB]'
-                  : 'bg-[#94A3B8]'
-              }`}
-              style={{
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: 0.05,
-                shadowRadius: 2,
-                elevation: 1,
-              }}
-            >
-              <Text className="text-white font-bold text-xs">
-                Find Order Details
-              </Text>
-            </TouchableOpacity>
-
-            {/* Quick Pick Chips for Testing/Speed */}
-            {orders.length > 0 && (
-              <View className="mt-3 border-t border-[#F1F5F9] pt-2.5">
-                <Text className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider mb-2">
-                  Recent Orders
-                </Text>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  className="flex-row gap-2"
-                >
-                  {orders.slice(0, 4).map((o) => (
-                    <TouchableOpacity
-                      key={o.id}
-                      activeOpacity={0.7}
-                      onPress={() => {
-                        onSelectOrder(o);
-                        handleClose();
-                      }}
-                      className="bg-[#F1F5F9] px-2.5 py-1.5 rounded-lg border border-[#E2E8F0]"
-                    >
-                      <Text className="text-[11px] font-mono font-semibold text-[#0F172A]">
-                        {o.ticketCode || o.id}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-            )}
-          </View>
-        )}
+        {/* 5. Return to Home Action (Figma 1407:48) */}
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={handleClose}
+          accessibilityRole="button"
+          accessibilityLabel="Return to Home"
+          className="w-full py-2 items-center justify-center"
+        >
+          <Text className="text-[13px] font-bold text-[#475569] text-center">
+            Return to Home
+          </Text>
+        </TouchableOpacity>
       </ScrollView>
     </Animated.View>
   );
