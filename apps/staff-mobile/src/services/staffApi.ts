@@ -154,7 +154,20 @@ export const staffApi = {
     }
   },
 
-  async getOrders(status?: OrderStatus, limit?: number, explicitToken?: string): Promise<StaffOrder[]> {
+  async getOrders(
+    status?: OrderStatus,
+    limit?: number,
+    offset?: number,
+    explicitToken?: string
+  ): Promise<{
+    orders: StaffOrder[];
+    pagination: {
+      totalCount: number;
+      limit: number;
+      offset: number;
+      hasMore: boolean;
+    };
+  }> {
     const token = explicitToken || (await this.getStoredAuthToken());
     if (!token) {
       throw new StaffApiError('Missing staff authorization token. Please sign in.', 401);
@@ -162,7 +175,8 @@ export const staffApi = {
 
     const queryParams = new URLSearchParams();
     if (status) queryParams.append('status', status);
-    if (limit) queryParams.append('limit', limit.toString());
+    if (limit !== undefined) queryParams.append('limit', limit.toString());
+    if (offset !== undefined) queryParams.append('offset', offset.toString());
 
     const qs = queryParams.toString() ? `?${queryParams.toString()}` : '';
 
@@ -186,7 +200,7 @@ export const staffApi = {
       }
 
       const rawOrders: any[] = data?.orders || [];
-      return rawOrders.map((o) => ({
+      const mappedOrders: StaffOrder[] = rawOrders.map((o) => ({
         id: o.id || o.orderId,
         ticketCode: o.ticketCode || null,
         trackingId: o.trackingId || '',
@@ -212,6 +226,16 @@ export const staffApi = {
         proofImageUrl: o.proofImageUrl || o.imageUrl,
         notes: o.notes,
       }));
+
+      return {
+        orders: mappedOrders,
+        pagination: {
+          totalCount: data?.pagination?.totalCount ?? mappedOrders.length,
+          limit: data?.pagination?.limit ?? limit ?? 20,
+          offset: data?.pagination?.offset ?? offset ?? 0,
+          hasMore: Boolean(data?.pagination?.hasMore),
+        },
+      };
     } catch (err: any) {
       if (err instanceof StaffApiError) throw err;
       throw new StaffApiError(

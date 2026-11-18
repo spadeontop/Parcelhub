@@ -20,6 +20,9 @@ export const StaffTerminalScreen: React.FC = () => {
   const {
     orders,
     filteredOrders,
+    totalCount,
+    currentPage,
+    setCurrentPage,
     activeTab,
     setActiveTab,
     searchQuery,
@@ -38,23 +41,20 @@ export const StaffTerminalScreen: React.FC = () => {
     showToast,
   } = useStaff();
 
-  // 20 items per page
+  // 20 items per page (server-side paginated)
   const ITEMS_PER_PAGE = 20;
-  const [currentPage, setCurrentPage] = useState<number>(1);
 
   // Reset to page 1 whenever active tab or search query changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [activeTab, searchQuery]);
+  }, [activeTab, searchQuery, setCurrentPage]);
 
-  const totalItems = filteredOrders.length;
+  const isClientFiltered = activeTab !== 'all' || searchQuery.trim().length > 0;
+  const totalItems = isClientFiltered ? filteredOrders.length : totalCount;
   const totalPages = Math.max(1, Math.ceil(totalItems / ITEMS_PER_PAGE));
 
-  // Current page records slice
-  const pagedOrders = useMemo(() => {
-    const start = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredOrders.slice(start, start + ITEMS_PER_PAGE);
-  }, [filteredOrders, currentPage]);
+  // Current page records (already sliced by server)
+  const pagedOrders = filteredOrders;
 
   // Accurate record range indicators
   const startRecord = totalItems === 0 ? 0 : (currentPage - 1) * ITEMS_PER_PAGE + 1;
