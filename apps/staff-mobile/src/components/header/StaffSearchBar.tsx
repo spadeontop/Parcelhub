@@ -45,7 +45,14 @@ export const StaffSearchBar: React.FC<StaffSearchBarProps> = ({
       <TouchableOpacity
         onPress={onOpenLookup}
         activeOpacity={0.85}
-        className="bg-[#0F172A] active:bg-slate-800 w-[40px] h-[40px] rounded-[16px] items-center justify-center shadow-sm"
+        className="bg-[#0F172A] w-[40px] h-[40px] rounded-[16px] items-center justify-center"
+        style={{
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.05,
+          shadowRadius: 2,
+          elevation: 1,
+        }}
         accessibilityRole="button"
         accessibilityLabel="Scan QR or enter waybill lookup"
       >

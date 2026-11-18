@@ -78,11 +78,11 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
     setIsStep2Locked(false);
   }, [order.id, order.courierPaid, order.proofImageUrl]);
 
-  const price = typeof order.amountToPay === 'number' ? order.amountToPay : 480;
+  const price = typeof order.amountToPay === 'number' ? order.amountToPay : 0;
   const paidAmount =
     typeof order.amountReceived === 'number'
       ? order.amountReceived
-      : Math.max(500, price);
+      : price;
   const change =
     typeof order.change === 'number'
       ? order.change
@@ -234,9 +234,16 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
           activeOpacity={0.85}
           onPress={handlePayCourierStep}
           disabled={!canPayCourier}
-          className={`w-full h-[48px] rounded-xl items-center justify-center mb-2 shadow-sm ${
-            canPayCourier ? 'bg-black active:bg-neutral-800' : 'bg-[#94A3B8]'
+          className={`w-full h-[48px] rounded-xl items-center justify-center mb-2 ${
+            canPayCourier ? 'bg-black' : 'bg-[#94A3B8]'
           }`}
+          style={{
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.05,
+            shadowRadius: 2,
+            elevation: 1,
+          }}
         >
           {isPayingStep1 || isPayingCourier ? (
             <ActivityIndicator size="small" color="#FFFFFF" />
@@ -318,7 +325,7 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
               activeOpacity={0.8}
               onPress={handleTakePhoto}
               disabled={isCompressing}
-              className="bg-[#F8FAFC] border border-[#CBD5E1] border-dashed rounded-[12px] py-7 items-center justify-center active:bg-slate-100"
+              className="bg-[#F8FAFC] border border-[#CBD5E1] border-dashed rounded-[12px] py-7 items-center justify-center"
             >
               {isCompressing ? (
                 <View className="items-center justify-center py-2">
@@ -420,9 +427,16 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
         activeOpacity={0.85}
         onPress={handleFinalClaimAndPaid}
         disabled={!canSubmitFinal}
-        className={`w-full h-[48px] rounded-xl items-center justify-center mb-2 shadow-sm ${
-          canSubmitFinal ? 'bg-black active:bg-neutral-800' : 'bg-[#94A3B8]'
+        className={`w-full h-[48px] rounded-xl items-center justify-center mb-2 ${
+          canSubmitFinal ? 'bg-black' : 'bg-[#94A3B8]'
         }`}
+        style={{
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.05,
+          shadowRadius: 2,
+          elevation: 1,
+        }}
       >
         {isFinalSubmitting || isAttachingPhoto ? (
           <ActivityIndicator size="small" color="#FFFFFF" />

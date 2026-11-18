@@ -32,11 +32,11 @@ export const StaffOrderOverviewCard: React.FC<StaffOrderOverviewCardProps> = ({
   const recipientName = order.customer || order.productName || 'John Doe';
   const trackingNumber = order.trackingId || 'PH2696153368792H';
 
-  const price = typeof order.amountToPay === 'number' ? order.amountToPay : 480;
+  const price = typeof order.amountToPay === 'number' ? order.amountToPay : 0;
   const paidAmount =
     typeof order.amountReceived === 'number'
       ? order.amountReceived
-      : Math.max(500, price);
+      : price;
   const change =
     typeof order.change === 'number'
       ? order.change
@@ -75,7 +75,7 @@ export const StaffOrderOverviewCard: React.FC<StaffOrderOverviewCardProps> = ({
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={handleCopy}
-          className="bg-[#F1F5F9] rounded-xl px-4 py-3 flex-row items-center justify-between mt-1.5 active:bg-slate-200"
+          className="bg-[#F1F5F9] rounded-xl px-4 py-3 flex-row items-center justify-between mt-1.5"
           accessibilityLabel="Copy tracking number"
         >
           <Text className="text-[13px] font-bold text-[#334155] font-mono">

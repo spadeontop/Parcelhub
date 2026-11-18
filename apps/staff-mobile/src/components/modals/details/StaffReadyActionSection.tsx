@@ -63,11 +63,11 @@ export const StaffReadyActionSection: React.FC<StaffReadyActionSectionProps> = (
   const isTimerExpired = isInitiated && secondsRemaining <= 0;
   const canRelease = isInitiated && isConfirmed && secondsRemaining > 0 && !isReleasing;
 
-  const price = typeof order.amountToPay === 'number' ? order.amountToPay : 480;
+  const price = typeof order.amountToPay === 'number' ? order.amountToPay : 0;
   const paidAmount =
     typeof order.amountReceived === 'number'
       ? order.amountReceived
-      : Math.max(500, price);
+      : price;
   const change =
     typeof order.change === 'number'
       ? order.change
@@ -151,11 +151,18 @@ export const StaffReadyActionSection: React.FC<StaffReadyActionSectionProps> = (
         activeOpacity={0.85}
         onPress={handleRelease}
         disabled={!canRelease || isReleasing || isLocked}
-        className={`w-full h-[48px] rounded-xl items-center justify-center mb-2 shadow-sm ${
+        className={`w-full h-[48px] rounded-xl items-center justify-center mb-2 ${
           canRelease && !isReleasing && !isLocked
-            ? 'bg-black active:bg-neutral-800'
+            ? 'bg-black'
             : 'bg-[#94A3B8]'
         }`}
+        style={{
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.05,
+          shadowRadius: 2,
+          elevation: 1,
+        }}
       >
         {isReleasing ? (
           <ActivityIndicator size="small" color="#FFFFFF" />

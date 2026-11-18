@@ -241,7 +241,14 @@ export const StaffScanQrModal: React.FC<StaffScanQrModalProps> = ({
             onPress={handleClose}
             accessibilityLabel="Back to orders"
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            className="w-[44px] h-[44px] rounded-[14px] bg-white border border-[#E2E8F0] items-center justify-center shadow-xs active:bg-slate-50"
+            className="w-[44px] h-[44px] rounded-[14px] bg-white border border-[#E2E8F0] items-center justify-center"
+            style={{
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: 0.05,
+              shadowRadius: 2,
+              elevation: 1,
+            }}
           >
             <ArrowLeft size={22} color="#0F172A" />
           </TouchableOpacity>
@@ -287,8 +294,13 @@ export const StaffScanQrModal: React.FC<StaffScanQrModalProps> = ({
             <Animated.View
               style={{
                 transform: [{ translateY }],
+                shadowColor: '#60A5FA',
+                shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: 0.3,
+                shadowRadius: 2,
+                elevation: 2,
               }}
-              className="absolute left-4 right-4 h-[2px] bg-[#60A5FA] rounded-full shadow-sm"
+              className="absolute left-4 right-4 h-[2px] bg-[#60A5FA] rounded-full"
             />
 
             {/* Viewfinder Subtext (Figma 1355:42) */}
@@ -317,7 +329,14 @@ export const StaffScanQrModal: React.FC<StaffScanQrModalProps> = ({
             <TouchableOpacity
               activeOpacity={0.85}
               onPress={() => setIsManualSearchVisible(true)}
-              className="w-full h-[48px] bg-[#2563EB] rounded-[14px] items-center justify-center shadow-xs active:bg-blue-700"
+              className="w-full h-[48px] bg-[#2563EB] rounded-[14px] items-center justify-center"
+              style={{
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: 0.05,
+                shadowRadius: 2,
+                elevation: 1,
+              }}
             >
               <Text className="text-white font-semibold text-[14px]">
                 Search manually
@@ -330,7 +349,16 @@ export const StaffScanQrModal: React.FC<StaffScanQrModalProps> = ({
           </View>
         ) : (
           /* Inline Manual Search Input Card */
-          <View className="bg-white rounded-2xl p-4 shadow-sm border border-[#E2E8F0]">
+          <View
+            className="bg-white rounded-2xl p-4 border border-[#E2E8F0]"
+            style={{
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: 0.05,
+              shadowRadius: 2,
+              elevation: 1,
+            }}
+          >
             <View className="flex-row items-center justify-between mb-2.5">
               <Text className="text-[12px] font-bold text-[#1E293B] uppercase tracking-wide">
                 Manual Order Lookup
@@ -365,11 +393,18 @@ export const StaffScanQrModal: React.FC<StaffScanQrModalProps> = ({
               activeOpacity={0.85}
               onPress={handleLookup}
               disabled={!lookupText.trim()}
-              className={`py-3 rounded-xl items-center justify-center shadow-xs ${
+              className={`py-3 rounded-xl items-center justify-center ${
                 lookupText.trim()
-                  ? 'bg-[#2563EB] active:bg-blue-700'
+                  ? 'bg-[#2563EB]'
                   : 'bg-[#94A3B8]'
               }`}
+              style={{
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: 0.05,
+                shadowRadius: 2,
+                elevation: 1,
+              }}
             >
               <Text className="text-white font-bold text-xs">
                 Find Order Details
@@ -390,11 +425,12 @@ export const StaffScanQrModal: React.FC<StaffScanQrModalProps> = ({
                   {orders.slice(0, 4).map((o) => (
                     <TouchableOpacity
                       key={o.id}
+                      activeOpacity={0.7}
                       onPress={() => {
                         onSelectOrder(o);
                         handleClose();
                       }}
-                      className="bg-[#F1F5F9] px-2.5 py-1.5 rounded-lg border border-[#E2E8F0] active:bg-slate-200"
+                      className="bg-[#F1F5F9] px-2.5 py-1.5 rounded-lg border border-[#E2E8F0]"
                     >
                       <Text className="text-[11px] font-mono font-semibold text-[#0F172A]">
                         {o.id}

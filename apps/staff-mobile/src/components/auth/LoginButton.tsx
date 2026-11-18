@@ -35,23 +35,23 @@ export const LoginButton: React.FC<LoginButtonProps> = ({
     switch (variant) {
       case 'secondary':
         return {
-          container: 'bg-slate-100 active:bg-slate-200 border border-slate-200',
+          container: 'bg-slate-100 border border-slate-200',
           text: 'text-slate-700',
         };
       case 'outline':
         return {
-          container: 'bg-transparent active:bg-slate-50 border border-slate-300',
+          container: 'bg-transparent border border-slate-300',
           text: 'text-slate-800',
         };
       case 'ghost':
         return {
-          container: 'bg-transparent active:bg-slate-100',
+          container: 'bg-transparent',
           text: 'text-blue-600',
         };
       case 'primary':
       default:
         return {
-          container: 'bg-black active:bg-neutral-800',
+          container: 'bg-black',
           text: 'text-white',
         };
     }

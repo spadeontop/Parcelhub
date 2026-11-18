@@ -25,7 +25,16 @@ export const StaffDeskInfoModal: React.FC<StaffDeskInfoModalProps> = ({ isOpen, 
       onRequestClose={onClose}
     >
       <View className="flex-1 bg-black/50 justify-center px-5">
-        <View className="bg-white rounded-3xl p-6 shadow-xl border border-[#E2E8F0] space-y-4">
+        <View
+          className="bg-white rounded-3xl p-6 border border-[#E2E8F0] gap-4"
+          style={{
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 10 },
+            shadowOpacity: 0.15,
+            shadowRadius: 20,
+            elevation: 10,
+          }}
+        >
           <View className="flex-row items-center justify-between mb-2">
             <View className="flex-row items-center gap-2">
               <View className="w-8 h-8 rounded-full bg-[#DBEAFE] items-center justify-center">
@@ -44,7 +53,7 @@ export const StaffDeskInfoModal: React.FC<StaffDeskInfoModalProps> = ({ isOpen, 
           </View>
 
           {/* Details list */}
-          <View className="bg-[#F8FAFC] rounded-2xl p-4 border border-[#E2E8F0] space-y-2.5">
+          <View className="bg-[#F8FAFC] rounded-2xl p-4 border border-[#E2E8F0] gap-2.5">
             <View className="flex-row justify-between items-center py-1 border-b border-slate-200/60">
               <Text className="text-xs text-[#64748B] font-medium">Terminal Station</Text>
               <Text className="text-xs font-mono font-bold text-[#0F172A]">Counter Desk #01</Text>
@@ -74,7 +83,7 @@ export const StaffDeskInfoModal: React.FC<StaffDeskInfoModalProps> = ({ isOpen, 
           <TouchableOpacity
             activeOpacity={0.85}
             onPress={handleSignOut}
-            className="w-full bg-rose-50 border border-rose-200 py-3.5 rounded-xl flex-row items-center justify-center gap-2 active:bg-rose-100"
+            className="w-full bg-rose-50 border border-rose-200 py-3.5 rounded-xl flex-row items-center justify-center gap-2"
           >
             <LogOut size={16} color="#e11d48" />
             <Text className="text-xs font-bold text-rose-700">
