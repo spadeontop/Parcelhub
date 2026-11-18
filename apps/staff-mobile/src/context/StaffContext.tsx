@@ -17,6 +17,9 @@ interface StaffContextType {
   isRefreshing: boolean;
   orders: StaffOrder[];
   filteredOrders: StaffOrder[];
+  totalCount: number;
+  currentPage: number;
+  setCurrentPage: React.Dispatch<React.SetStateAction<number>>;
   activeTab: StaffTab;
   setActiveTab: (tab: StaffTab) => void;
   searchQuery: string;
@@ -50,6 +53,9 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isOnline, setIsOnline] = useState<boolean>(true);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [orders, setOrders] = useState<StaffOrder[]>([]);
+  const [totalCount, setTotalCount] = useState<number>(0);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const ITEMS_PER_PAGE = 20;
   const [activeTab, setActiveTab] = useState<StaffTab>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedOrder, setSelectedOrder] = useState<StaffOrder | null>(null);
@@ -105,7 +111,14 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     if (!quiet) setIsRefreshing(true);
     try {
-      const data = await staffApi.getOrders(undefined, undefined, token);
+      const offset = (currentPage - 1) * ITEMS_PER_PAGE;
+      const { orders: data, pagination } = await staffApi.getOrders(
+        undefined,
+        ITEMS_PER_PAGE,
+        offset,
+        token
+      );
+      setTotalCount(pagination.totalCount);
       setOrders((prev) => {
         // Merge notes and local claimedAt from local memory if existing
         const notesMap = new Map<string, string>();
@@ -152,7 +165,7 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } finally {
       if (!quiet) setIsRefreshing(false);
     }
-  }, [showToast]);
+  }, [showToast, currentPage]);
 
   // Polling every 4 seconds when authenticated
   useEffect(() => {
@@ -341,6 +354,9 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         isRefreshing,
         orders,
         filteredOrders,
+        totalCount,
+        currentPage,
+        setCurrentPage,
         activeTab,
         setActiveTab,
         searchQuery,
