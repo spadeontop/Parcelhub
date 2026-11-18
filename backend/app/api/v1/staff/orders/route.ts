@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { desc, eq, count, inArray } from "drizzle-orm";
+import { desc, eq, count, inArray, and, or, ilike } from "drizzle-orm";
 import { db } from "@/db";
 import { orders, staff, OrderRow } from "@/db/schema";
 import { authenticateStaffRequest } from "@/app/lib/v1/auth";
@@ -54,10 +54,11 @@ export async function GET(request: NextRequest) {
 
     // ---------------------------------------------------------
     // 2. Request Validation:
-    //    Parse query params (status, limit, offset)
+    //    Parse query params (status, search, limit, offset)
     // ---------------------------------------------------------
     const { searchParams } = new URL(request.url);
     const rawStatus = searchParams.get("status");
+    const rawSearch = searchParams.get("search")?.trim();
 
     if (rawStatus && !VALID_ORDER_STATUSES.includes(rawStatus as OrderStatus)) {
       return jsonError(
@@ -66,8 +67,24 @@ export async function GET(request: NextRequest) {
       );
     }
     const statusFilter = rawStatus as OrderStatus | null;
+    const searchFilter = rawSearch && rawSearch.length > 0 ? rawSearch : null;
 
-    const { limit, offset } = parsePagination(searchParams, 20, 100);
+    const { limit, offset } = parsePagination(searchParams, 20, 20);
+
+    // Build filter expressions strictly scoped to status and (trackingId OR ticketCode)
+    const conditions = [];
+    if (statusFilter) {
+      conditions.push(eq(orders.status, statusFilter));
+    }
+    if (searchFilter) {
+      conditions.push(
+        or(
+          ilike(orders.trackingId, `%${searchFilter}%`),
+          ilike(orders.ticketCode, `%${searchFilter}%`)
+        )
+      );
+    }
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
     // ---------------------------------------------------------
     // 3. Business Logic:
@@ -79,8 +96,8 @@ export async function GET(request: NextRequest) {
       .select({ count: count() })
       .from(orders);
 
-    const totalCountResult = statusFilter
-      ? await countQuery.where(eq(orders.status, statusFilter))
+    const totalCountResult = whereClause
+      ? await countQuery.where(whereClause)
       : await countQuery;
     const totalCount = Number(totalCountResult[0]?.count || 0);
 
@@ -89,7 +106,6 @@ export async function GET(request: NextRequest) {
         id: orders.id,
         ticketCode: orders.ticketCode,
         trackingId: orders.trackingId,
-        productName: orders.productName,
         recipientName: orders.recipientName,
         price: orders.price,
         amountReceived: orders.amountReceived,
@@ -108,9 +124,9 @@ export async function GET(request: NextRequest) {
       })
       .from(orders);
 
-    const dbOrders = statusFilter
+    const dbOrders = whereClause
       ? await ordersQuery
-          .where(eq(orders.status, statusFilter))
+          .where(whereClause)
           .orderBy(desc(orders.timestamp))
           .limit(limit)
           .offset(offset)

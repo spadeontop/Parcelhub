@@ -303,6 +303,7 @@ export type StaffOrderSummary = {
 
 export type StaffListOrdersQueryParams = {
   readonly status?: OrderStatus;
+  readonly search?: string;
   readonly limit?: number;
   readonly offset?: number;
 };

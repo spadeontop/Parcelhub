@@ -48,7 +48,7 @@ export const ENV = {
   API_BASE_URL: getDetectedApiUrl(),
   DEFAULT_STAFF_EMAIL: 'staff',
   DEFAULT_STAFF_USERNAME: 'staff',
-  DEFAULT_STAFF_PASSWORD: 'string',
+  DEFAULT_STAFF_PASSWORD: 'password',
   POLLING_INTERVAL_MS: 4000,
   HANDOFF_CUTOFF_TIME_MINS: 5,
 };

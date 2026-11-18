@@ -23,7 +23,7 @@ export const StaffSearchBar: React.FC<StaffSearchBarProps> = ({
         <TextInput
           value={searchQuery}
           onChangeText={onSearchChange}
-          placeholder="order , tracking, waybill..."
+          placeholder="Search tracking or ticket code..."
           placeholderTextColor="#94A3B8"
           autoCapitalize="none"
           autoCorrect={false}

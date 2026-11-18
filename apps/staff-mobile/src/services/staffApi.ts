@@ -154,7 +154,21 @@ export const staffApi = {
     }
   },
 
-  async getOrders(status?: OrderStatus, limit?: number, explicitToken?: string): Promise<StaffOrder[]> {
+  async getOrders(
+    status?: OrderStatus,
+    limit?: number,
+    offset?: number,
+    explicitToken?: string,
+    search?: string
+  ): Promise<{
+    orders: StaffOrder[];
+    pagination: {
+      totalCount: number;
+      limit: number;
+      offset: number;
+      hasMore: boolean;
+    };
+  }> {
     const token = explicitToken || (await this.getStoredAuthToken());
     if (!token) {
       throw new StaffApiError('Missing staff authorization token. Please sign in.', 401);
@@ -162,7 +176,9 @@ export const staffApi = {
 
     const queryParams = new URLSearchParams();
     if (status) queryParams.append('status', status);
-    if (limit) queryParams.append('limit', limit.toString());
+    if (limit !== undefined) queryParams.append('limit', limit.toString());
+    if (offset !== undefined) queryParams.append('offset', offset.toString());
+    if (search && search.trim()) queryParams.append('search', search.trim());
 
     const qs = queryParams.toString() ? `?${queryParams.toString()}` : '';
 
@@ -186,12 +202,11 @@ export const staffApi = {
       }
 
       const rawOrders: any[] = data?.orders || [];
-      return rawOrders.map((o) => ({
+      const mappedOrders: StaffOrder[] = rawOrders.map((o) => ({
         id: o.id || o.orderId,
         ticketCode: o.ticketCode || null,
         trackingId: o.trackingId || '',
         customer: o.customer || o.recipientName || 'Unknown Customer',
-        productName: o.productName || o.product || 'Standard Parcel',
         amountToPay: typeof o.amountToPay === 'number' ? o.amountToPay : (o.price || 0),
         amountReceived: o.amountReceived,
         change: o.change || 0,
@@ -212,6 +227,16 @@ export const staffApi = {
         proofImageUrl: o.proofImageUrl || o.imageUrl,
         notes: o.notes,
       }));
+
+      return {
+        orders: mappedOrders,
+        pagination: {
+          totalCount: data?.pagination?.totalCount ?? mappedOrders.length,
+          limit: data?.pagination?.limit ?? limit ?? 20,
+          offset: data?.pagination?.offset ?? offset ?? 0,
+          hasMore: Boolean(data?.pagination?.hasMore),
+        },
+      };
     } catch (err: any) {
       if (err instanceof StaffApiError) throw err;
       throw new StaffApiError(

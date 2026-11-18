@@ -28,13 +28,13 @@ export const StaffOrderCard: React.FC<StaffOrderCardProps> = ({
   })();
 
   const orderTicket = order.ticketCode || order.id || order.trackingId;
-  const customerName = order.customer || order.productName || 'Customer';
+  const customerName = order.customer || 'Customer';
   const amountStr = `₱${order.amountToPay.toLocaleString()}`;
 
   // Check if claim is active/initiated by customer
   const isClaimInitiated = Boolean(
     order.isClaimActive ||
-      (order.claimRemainingSeconds !== undefined && order.claimRemainingSeconds > 0)
+    (order.claimRemainingSeconds !== undefined && order.claimRemainingSeconds > 0)
   );
 
   const [remainingSecs, setRemainingSecs] = useState<number>(
