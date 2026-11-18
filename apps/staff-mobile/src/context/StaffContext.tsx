@@ -218,13 +218,16 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [fetchOrders]);
 
-  // Handle search typing: immediately switches tab to 'all' on first keystroke
+  // Handle search typing: immediately switches tab to 'all' on first keystroke and activates loading state
   const handleSearchChange = useCallback((text: string) => {
     setSearchQuery(text);
     searchQueryRef.current = text;
-    if (text.trim().length > 0 && activeTabRef.current !== 'all') {
-      setActiveTab('all');
-      activeTabRef.current = 'all';
+    if (text.trim().length > 0) {
+      setIsLoadingOrders(true);
+      if (activeTabRef.current !== 'all') {
+        setActiveTab('all');
+        activeTabRef.current = 'all';
+      }
     }
   }, []);
 
@@ -256,6 +259,9 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       return;
     }
 
+    // Keep loading active while waiting for user to stop typing and request to complete
+    setIsLoadingOrders(true);
+
     const timer = setTimeout(() => {
       fetchOrders(false, staffUser.token, q);
     }, 500);
@@ -272,25 +278,8 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     claimed: orders.filter((o) => o.status === 'CLAIMED').length,
   }), [orders]);
 
-  // Filter orders strictly by trackingId or ticketCode (excluding internal id) when searching
-  const filteredOrders = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    // If not searching, orders is already authoritative and filtered by backend for the active tab
-    if (!q) return orders;
-    const cleanQ = q.replace(/[\s-_]/g, '');
-
-    return orders.filter((o) => {
-      const track = (o.trackingId || '').toLowerCase();
-      const ticket = (o.ticketCode || '').toLowerCase();
-      const cleanTrack = track.replace(/[\s-_]/g, '');
-      const cleanTicket = ticket.replace(/[\s-_]/g, '');
-
-      return (
-        (track.length > 0 && (track.includes(q) || cleanTrack.includes(cleanQ))) ||
-        (ticket.length > 0 && (ticket.includes(q) || cleanTicket.includes(cleanQ)))
-      );
-    });
-  }, [orders, searchQuery]);
+  // Backend is the single authoritative source of truth: no premature client-side filtering
+  const filteredOrders = orders;
 
   // Authentication actions
   const login = async (usernameOrEmail: string, password: string) => {

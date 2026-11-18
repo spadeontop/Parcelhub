@@ -80,8 +80,11 @@ export const StaffTerminalScreen: React.FC = () => {
   const endRecord = Math.min(currentPage * ITEMS_PER_PAGE, totalItems);
 
   // Range text for display (e.g. "1-12 out of 12" or "1-20 out of 45")
-  const rangeDisplay =
-    totalItems > 0 ? `${startRecord}-${endRecord} out of ${totalItems}` : '0 out of 0';
+  const rangeDisplay = isLoadingOrders
+    ? 'Fetching records...'
+    : totalItems > 0
+    ? `${startRecord}-${endRecord} out of ${totalItems}`
+    : '0 out of 0';
 
   // Compute visible page numbers (up to 4 page numbers)
   const pageNumbers = useMemo(() => {
