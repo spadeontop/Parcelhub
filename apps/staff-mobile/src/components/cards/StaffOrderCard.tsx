@@ -27,7 +27,7 @@ export const StaffOrderCard: React.FC<StaffOrderCardProps> = ({
     });
   })();
 
-  const orderId = order.id || order.trackingId;
+  const orderTicket = order.ticketCode || order.id || order.trackingId;
   const customerName = order.customer || order.productName || 'Customer';
   const amountStr = `₱${order.amountToPay.toLocaleString()}`;
 
@@ -97,7 +97,7 @@ export const StaffOrderCard: React.FC<StaffOrderCardProps> = ({
       {/* Top Row: Order ID + Status badge */}
       <View className="flex-row items-center justify-between">
         <Text className="text-[10px] font-semibold text-[#2563EB]">
-          {orderId}
+          {orderTicket}
         </Text>
         <StaffBadge status={order.status} />
       </View>

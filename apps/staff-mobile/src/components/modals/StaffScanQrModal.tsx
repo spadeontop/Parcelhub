@@ -441,7 +441,7 @@ export const StaffScanQrModal: React.FC<StaffScanQrModalProps> = ({
                       className="bg-[#F1F5F9] px-2.5 py-1.5 rounded-lg border border-[#E2E8F0]"
                     >
                       <Text className="text-[11px] font-mono font-semibold text-[#0F172A]">
-                        {o.id}
+                        {o.ticketCode || o.id}
                       </Text>
                     </TouchableOpacity>
                   ))}
