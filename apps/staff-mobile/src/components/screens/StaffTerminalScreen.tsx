@@ -11,6 +11,7 @@ import { StaffHeader } from '../header/StaffHeader';
 import { StaffSearchBar } from '../header/StaffSearchBar';
 import { StaffFilterTabs } from '../navigation/StaffFilterTabs';
 import { StaffOrderCard } from '../cards/StaffOrderCard';
+import { StaffOrderCardSkeleton } from '../cards/StaffOrderCardSkeleton';
 import { StaffAccountModal } from '../modals/StaffAccountModal';
 import { StaffOrderDetailsModal } from '../modals/details/StaffOrderDetailsModal';
 import { StaffManualLookupModal } from '../modals/StaffManualLookupModal';
@@ -37,6 +38,7 @@ export const StaffTerminalScreen: React.FC = () => {
   const {
     orders,
     filteredOrders,
+    isLoadingOrders,
     activeTab,
     setActiveTab,
     searchQuery,
@@ -126,7 +128,7 @@ export const StaffTerminalScreen: React.FC = () => {
             {searchQuery.trim() ? 'SEARCH RESULTS' : 'RECENT ACTIVITIES'}
           </Text>
           <Text className="text-[11px] font-medium text-[#64748B]">
-            {totalItems} {totalItems === 1 ? 'order' : 'orders'}
+            {isLoadingOrders ? 'Loading...' : `${totalItems} ${totalItems === 1 ? 'order' : 'orders'}`}
           </Text>
         </View>
 
@@ -149,7 +151,9 @@ export const StaffTerminalScreen: React.FC = () => {
             style={{ borderWidth: 0, shadowOpacity: 0, elevation: 0 }}
             className="bg-white rounded-[20px] p-4"
           >
-            {pagedOrders.length > 0 ? (
+            {isLoadingOrders ? (
+              <StaffOrderCardSkeleton count={5} />
+            ) : pagedOrders.length > 0 ? (
               pagedOrders.map((order, idx) => (
                 <StaffOrderCard
                   key={`${order.id}-${idx}`}

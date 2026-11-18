@@ -15,6 +15,7 @@ interface StaffContextType {
   isAuthenticated: boolean;
   isOnline: boolean;
   isInitialLoading: boolean;
+  isLoadingOrders: boolean;
   isRefreshing: boolean;
   orders: StaffOrder[];
   filteredOrders: StaffOrder[];
@@ -64,6 +65,7 @@ const StaffContext = createContext<StaffContextType | undefined>(undefined);
 export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [staffUser, setStaffUser] = useState<StaffUser | null>(null);
   const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true);
+  const [isLoadingOrders, setIsLoadingOrders] = useState<boolean>(false);
   const [isOnline, setIsOnline] = useState<boolean>(true);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [orders, setOrders] = useState<StaffOrder[]>([]);
@@ -133,7 +135,10 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     const currentReqId = ++fetchRequestId.current;
 
-    if (!quiet) setIsRefreshing(true);
+    if (!quiet) {
+      setIsLoadingOrders(true);
+      setIsRefreshing(true);
+    }
     try {
       // Strictly limit to 20 results per requirement
       const limit = 20;
@@ -190,7 +195,10 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         showToast(err?.message || 'Failed to sync with backend', 'error');
       }
     } finally {
-      if (!quiet) setIsRefreshing(false);
+      if (!quiet) {
+        setIsLoadingOrders(false);
+        setIsRefreshing(false);
+      }
     }
   }, [showToast]);
 
@@ -203,6 +211,7 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setSearchQuery('');
       searchQueryRef.current = '';
     }
+    setIsLoadingOrders(true);
     const token = userRef.current?.token;
     if (token) {
       fetchOrders(false, token, undefined, tab);
@@ -263,29 +272,13 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     claimed: orders.filter((o) => o.status === 'CLAIMED').length,
   }), [orders]);
 
-  // Filter orders by active tab
-  const tabOrders = useMemo(() => {
-    switch (activeTab) {
-      case 'active':
-        return orders.filter((o) => o.status === 'AWAITING_PARCEL');
-      case 'ready':
-        return orders.filter((o) => o.status === 'READY_TO_CLAIM');
-      case 'unpaid':
-        return orders.filter((o) => o.status === 'PAYMENT_REQUIRED');
-      case 'claimed':
-        return orders.filter((o) => o.status === 'CLAIMED');
-      default:
-        return orders;
-    }
-  }, [orders, activeTab]);
-
-  // Filter orders strictly by trackingId or ticketCode (excluding internal id)
+  // Filter orders strictly by trackingId or ticketCode (excluding internal id) when searching
   const filteredOrders = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return tabOrders;
+    // If not searching, orders is already authoritative and filtered by backend for the active tab
+    if (!q) return orders;
     const cleanQ = q.replace(/[\s-_]/g, '');
 
-    // When actively searching, search across all retrieved orders rather than restricting to active tab
     return orders.filter((o) => {
       const track = (o.trackingId || '').toLowerCase();
       const ticket = (o.ticketCode || '').toLowerCase();
@@ -297,7 +290,7 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         (ticket.length > 0 && (ticket.includes(q) || cleanTicket.includes(cleanQ)))
       );
     });
-  }, [orders, tabOrders, searchQuery]);
+  }, [orders, searchQuery]);
 
   // Authentication actions
   const login = async (usernameOrEmail: string, password: string) => {
@@ -430,6 +423,7 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         isAuthenticated: !!staffUser,
         isOnline,
         isInitialLoading,
+        isLoadingOrders,
         isRefreshing,
         orders,
         filteredOrders,
