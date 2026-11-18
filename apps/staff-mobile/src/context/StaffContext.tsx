@@ -98,16 +98,27 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
   }, []);
 
+  const searchQueryRef = useRef(searchQuery);
+  searchQueryRef.current = searchQuery;
+  const fetchRequestId = useRef(0);
+
   // Fetch orders from live backend (supports optional database search query)
   const fetchOrders = useCallback(async (quiet = false, explicitToken?: string, searchParam?: string) => {
     const token = explicitToken || userRef.current?.token;
     if (!token) return;
+
+    const currentReqId = ++fetchRequestId.current;
 
     if (!quiet) setIsRefreshing(true);
     try {
       // Strictly limit to 20 results per requirement
       const limit = 20;
       const data = await staffApi.getOrders(undefined, limit, token, searchParam);
+
+      // Discard stale responses if a newer fetch request was dispatched
+      if (currentReqId !== fetchRequestId.current) {
+        return;
+      }
       setOrders((prev) => {
         // Merge notes and local claimedAt from local memory if existing
         const notesMap = new Map<string, string>();
@@ -160,18 +171,18 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     if (!staffUser) return;
 
-    // Initial load
+    // Initial load on authentication
     fetchOrders(false, staffUser.token);
 
     const interval = setInterval(() => {
-      // Avoid overwriting active search results with background default poll
-      if (!searchQuery.trim()) {
+      // Do not poll or overwrite while user has a search query typed
+      if (!searchQueryRef.current.trim()) {
         fetchOrders(true, staffUser.token);
       }
     }, ENV.POLLING_INTERVAL_MS);
 
     return () => clearInterval(interval);
-  }, [staffUser, searchQuery, fetchOrders]);
+  }, [staffUser]); // ONLY re-run on authentication change, never on searchQuery change
 
   // Real-time debounced database search (500ms) strictly matching tracking & ticket code
   useEffect(() => {
@@ -189,7 +200,7 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [searchQuery, staffUser, fetchOrders]);
+  }, [searchQuery, staffUser]);
 
   // Compute Badge Counts for Tabs
   const badgeCounts: StaffBadgeCounts = useMemo(() => ({
@@ -220,11 +231,19 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const filteredOrders = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return tabOrders;
+    const cleanQ = q.replace(/[\s-_]/g, '');
+
     // When actively searching, search across all retrieved orders rather than restricting to active tab
     return orders.filter((o) => {
       const track = (o.trackingId || '').toLowerCase();
       const ticket = (o.ticketCode || '').toLowerCase();
-      return (track.length > 0 && track.includes(q)) || (ticket.length > 0 && ticket.includes(q));
+      const cleanTrack = track.replace(/[\s-_]/g, '');
+      const cleanTicket = ticket.replace(/[\s-_]/g, '');
+
+      return (
+        (track.length > 0 && (track.includes(q) || cleanTrack.includes(cleanQ))) ||
+        (ticket.length > 0 && (ticket.includes(q) || cleanTicket.includes(cleanQ)))
+      );
     });
   }, [orders, tabOrders, searchQuery]);
 
