@@ -285,6 +285,7 @@ export type StaffOrderSummary = {
   readonly ticketCode?: string | null;
   readonly trackingId: string | null;
   readonly customer: string;
+  readonly productName?: string;
   readonly amountToPay: number;
   readonly amountReceived: number;
   readonly change: number;
@@ -303,6 +304,7 @@ export type StaffOrderSummary = {
 
 export type StaffListOrdersQueryParams = {
   readonly status?: OrderStatus;
+  readonly search?: string;
   readonly limit?: number;
   readonly offset?: number;
 };

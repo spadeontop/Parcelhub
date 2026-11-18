@@ -154,7 +154,12 @@ export const staffApi = {
     }
   },
 
-  async getOrders(status?: OrderStatus, limit?: number, explicitToken?: string): Promise<StaffOrder[]> {
+  async getOrders(
+    status?: OrderStatus,
+    limit?: number,
+    explicitToken?: string,
+    search?: string
+  ): Promise<StaffOrder[]> {
     const token = explicitToken || (await this.getStoredAuthToken());
     if (!token) {
       throw new StaffApiError('Missing staff authorization token. Please sign in.', 401);
@@ -163,6 +168,7 @@ export const staffApi = {
     const queryParams = new URLSearchParams();
     if (status) queryParams.append('status', status);
     if (limit) queryParams.append('limit', limit.toString());
+    if (search && search.trim()) queryParams.append('search', search.trim());
 
     const qs = queryParams.toString() ? `?${queryParams.toString()}` : '';
 

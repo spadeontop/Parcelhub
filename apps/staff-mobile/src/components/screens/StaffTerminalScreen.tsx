@@ -106,7 +106,7 @@ export const StaffTerminalScreen: React.FC = () => {
         {/* Section Title Header */}
         <View className="px-5 pt-2 pb-1.5 flex-row items-center justify-between">
           <Text className="text-[11px] font-semibold text-[#6B7280] tracking-[0.55px] uppercase">
-            RECENT ACTIVITIES
+            {searchQuery.trim() ? 'SEARCH RESULTS' : 'RECENT ACTIVITIES'}
           </Text>
           <Text className="text-[11px] font-medium text-[#64748B]">
             {totalItems} {totalItems === 1 ? 'order' : 'orders'}
