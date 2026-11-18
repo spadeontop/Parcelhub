@@ -1,17 +1,28 @@
 import React from 'react';
+import { Platform, TurboModuleRegistry, NativeModules } from 'react-native';
 import { registerRootComponent } from 'expo';
 import { ExpoRoot } from 'expo-router';
-import { getMessaging, setBackgroundMessageHandler } from '@react-native-firebase/messaging';
 
-// Top-level background message handler for headless Android tasks
-try {
-  const messaging = getMessaging();
-  setBackgroundMessageHandler(messaging, async (remoteMessage) => {
-    console.log('[FCM Background] Headless message received:', remoteMessage);
-  });
-} catch (e) {
-  // Graceful catch for web or environments where native messaging is not loaded
-  console.warn('[FCM Background] Native messaging init:', e?.message || e);
+// Only initialize native FCM background handler if the native module is actually compiled in the binary
+const isFirebaseAvailable =
+  Platform.OS !== 'web' &&
+  Boolean(
+    TurboModuleRegistry.get?.('NativeRNFBTurboApp') ||
+    TurboModuleRegistry.get?.('NativeRNFBTurboMessaging') ||
+    NativeModules?.RNFBAppModule ||
+    NativeModules?.NativeRNFBTurboApp
+  );
+
+if (isFirebaseAvailable) {
+  try {
+    const { getMessaging, setBackgroundMessageHandler } = require('@react-native-firebase/messaging');
+    const messaging = getMessaging();
+    setBackgroundMessageHandler(messaging, async (remoteMessage) => {
+      console.log('[FCM Background] Headless message received:', remoteMessage);
+    });
+  } catch (e) {
+    console.warn('[FCM Background] Native messaging init:', e?.message || e);
+  }
 }
 
 export function App() {
