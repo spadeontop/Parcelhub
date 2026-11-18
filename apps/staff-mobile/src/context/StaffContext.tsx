@@ -3,6 +3,7 @@ import {
   StaffOrder,
   StaffUser,
   StaffTab,
+  OrderStatus,
   StaffBadgeCounts,
   ToastState,
 } from '../types';
@@ -40,6 +41,22 @@ interface StaffContextType {
   attachPhoto: (orderId: string, imageUrl?: string) => Promise<void>;
   claimOrder: (orderId: string) => Promise<void>;
   updateOrderNotes: (orderId: string, notes: string) => void;
+}
+
+function getStatusForTab(tab: StaffTab): OrderStatus | undefined {
+  switch (tab) {
+    case 'ready':
+      return 'READY_TO_CLAIM';
+    case 'active':
+      return 'AWAITING_PARCEL';
+    case 'unpaid':
+      return 'PAYMENT_REQUIRED';
+    case 'claimed':
+      return 'CLAIMED';
+    case 'all':
+    default:
+      return undefined;
+  }
 }
 
 const StaffContext = createContext<StaffContextType | undefined>(undefined);
@@ -98,12 +115,19 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
   }, []);
 
+  const activeTabRef = useRef(activeTab);
+  activeTabRef.current = activeTab;
   const searchQueryRef = useRef(searchQuery);
   searchQueryRef.current = searchQuery;
   const fetchRequestId = useRef(0);
 
-  // Fetch orders from live backend (supports optional database search query)
-  const fetchOrders = useCallback(async (quiet = false, explicitToken?: string, searchParam?: string) => {
+  // Fetch orders from live backend (supports optional database search query and tab status)
+  const fetchOrders = useCallback(async (
+    quiet = false,
+    explicitToken?: string,
+    searchParam?: string,
+    targetTab?: StaffTab
+  ) => {
     const token = explicitToken || userRef.current?.token;
     if (!token) return;
 
@@ -113,7 +137,10 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       // Strictly limit to 20 results per requirement
       const limit = 20;
-      const data = await staffApi.getOrders(undefined, limit, token, searchParam);
+      const effectiveTab = targetTab ?? activeTabRef.current;
+      // Search is always global (no status filter). When browsing a tab, scope by its status.
+      const status = searchParam ? undefined : getStatusForTab(effectiveTab);
+      const data = await staffApi.getOrders(status, limit, token, searchParam);
 
       // Discard stale responses if a newer fetch request was dispatched
       if (currentReqId !== fetchRequestId.current) {
@@ -167,31 +194,56 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [showToast]);
 
+  // Handle tab switching: clears search and immediately fetches that tab's 20 orders
+  const handleSelectTab = useCallback((tab: StaffTab) => {
+    setActiveTab(tab);
+    activeTabRef.current = tab;
+    // Clear search query if active
+    if (searchQueryRef.current) {
+      setSearchQuery('');
+      searchQueryRef.current = '';
+    }
+    const token = userRef.current?.token;
+    if (token) {
+      fetchOrders(false, token, undefined, tab);
+    }
+  }, [fetchOrders]);
+
+  // Handle search typing: immediately switches tab to 'all' on first keystroke
+  const handleSearchChange = useCallback((text: string) => {
+    setSearchQuery(text);
+    searchQueryRef.current = text;
+    if (text.trim().length > 0 && activeTabRef.current !== 'all') {
+      setActiveTab('all');
+      activeTabRef.current = 'all';
+    }
+  }, []);
+
   // Polling every 4 seconds when authenticated and NOT actively searching
   useEffect(() => {
     if (!staffUser) return;
 
     // Initial load on authentication
-    fetchOrders(false, staffUser.token);
+    fetchOrders(false, staffUser.token, undefined, activeTabRef.current);
 
     const interval = setInterval(() => {
       // Do not poll or overwrite while user has a search query typed
       if (!searchQueryRef.current.trim()) {
-        fetchOrders(true, staffUser.token);
+        fetchOrders(true, staffUser.token, undefined, activeTabRef.current);
       }
     }, ENV.POLLING_INTERVAL_MS);
 
     return () => clearInterval(interval);
-  }, [staffUser]); // ONLY re-run on authentication change, never on searchQuery change
+  }, [staffUser, fetchOrders]);
 
   // Real-time debounced database search (500ms) strictly matching tracking & ticket code
   useEffect(() => {
     if (!staffUser) return;
     const q = searchQuery.trim();
 
-    // If search is cleared, immediately reload default orders
+    // If search is cleared, reload default orders for the active tab (stays on 'all')
     if (!q) {
-      fetchOrders(true, staffUser.token);
+      fetchOrders(true, staffUser.token, undefined, activeTabRef.current);
       return;
     }
 
@@ -200,7 +252,7 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [searchQuery, staffUser]);
+  }, [searchQuery, staffUser, fetchOrders]);
 
   // Compute Badge Counts for Tabs
   const badgeCounts: StaffBadgeCounts = useMemo(() => ({
@@ -382,9 +434,9 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         orders,
         filteredOrders,
         activeTab,
-        setActiveTab,
+        setActiveTab: handleSelectTab,
         searchQuery,
-        setSearchQuery,
+        setSearchQuery: handleSearchChange,
         badgeCounts,
         selectedOrder,
         isDetailsOpen,
@@ -398,7 +450,7 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         showToast,
         login,
         logout,
-        refreshOrders: () => fetchOrders(false, staffUser?.token, searchQuery.trim() || undefined),
+        refreshOrders: () => fetchOrders(false, staffUser?.token, searchQuery.trim() || undefined, activeTabRef.current),
         activateOrder,
         payCourier,
         attachPhoto,

@@ -15,6 +15,23 @@ import { StaffAccountModal } from '../modals/StaffAccountModal';
 import { StaffOrderDetailsModal } from '../modals/details/StaffOrderDetailsModal';
 import { StaffManualLookupModal } from '../modals/StaffManualLookupModal';
 import { Inbox } from '../common/Icons';
+import { StaffTab } from '../../types';
+
+const getTabLabel = (tab: StaffTab): string => {
+  switch (tab) {
+    case 'ready':
+      return 'Ready to Claim';
+    case 'active':
+      return 'Awaiting Parcel';
+    case 'unpaid':
+      return 'Payment Required';
+    case 'claimed':
+      return 'Claimed';
+    case 'all':
+    default:
+      return 'All Orders';
+  }
+};
 
 export const StaffTerminalScreen: React.FC = () => {
   const {
@@ -141,7 +158,7 @@ export const StaffTerminalScreen: React.FC = () => {
                   showDivider={idx < pagedOrders.length - 1}
                 />
               ))
-            ) : (
+            ) : searchQuery.trim() ? (
               <View className="items-center justify-center py-12">
                 <View className="w-12 h-12 rounded-2xl bg-[#F1F5F9] items-center justify-center mb-2.5">
                   <Inbox size={22} color="#94A3B8" />
@@ -149,10 +166,33 @@ export const StaffTerminalScreen: React.FC = () => {
                 <Text className="text-sm font-bold text-[#0F172A]">
                   No activities found
                 </Text>
+                <Text className="text-xs text-[#64748B] text-center mt-1 mb-4">
+                  No orders matching "{searchQuery}"
+                </Text>
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => setSearchQuery('')}
+                  className="bg-[#2563EB] px-4 py-2 rounded-xl"
+                >
+                  <Text className="text-xs font-semibold text-white">
+                    Clear Search
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View className="items-center justify-center py-12">
+                <View className="w-12 h-12 rounded-2xl bg-[#F1F5F9] items-center justify-center mb-2.5">
+                  <Inbox size={22} color="#94A3B8" />
+                </View>
+                <Text className="text-sm font-bold text-[#0F172A]">
+                  {activeTab === 'all'
+                    ? 'No activities found'
+                    : `No ${getTabLabel(activeTab)} orders`}
+                </Text>
                 <Text className="text-xs text-[#64748B] text-center mt-1">
-                  {searchQuery.trim()
-                    ? `No orders matching "${searchQuery}"`
-                    : `No orders in ${activeTab === 'all' ? 'terminal' : activeTab} queue`}
+                  {activeTab === 'all'
+                    ? 'There are currently no orders in the terminal queue.'
+                    : `There are currently no parcels in the ${getTabLabel(activeTab)} queue.`}
                 </Text>
               </View>
             )}
