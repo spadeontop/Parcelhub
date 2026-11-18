@@ -1,13 +1,22 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
+import { captureRef } from 'react-native-view-shot';
 import * as Clipboard from 'expo-clipboard';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as MediaLibrary from 'expo-media-library';
 import { StatusBar } from 'expo-status-bar';
 import { useV1 } from '../../v1/context/V1Context';
-import { CustomerOrderDetail } from '../../v1/types/api';
-import { ArrowLeftIcon, DownloadIcon } from '../common/Icons';
+import { CustomerOrderDetail, OrderStatus } from '../../v1/types/api';
+import { ArrowLeftIcon, DownloadIcon, CheckIcon, ParcelHubLogoSvg } from '../common/Icons';
+
+const isPaidProgression = (status?: string | null): boolean => {
+  return status === 'AWAITING_PARCEL' || status === 'READY_TO_CLAIM' || status === 'CLAIMED';
+};
+
+const isUnpaidStatus = (status?: string | null): boolean => {
+  return status === 'PAYMENT_REQUIRED' || status === 'PENDING_INITIALIZATION';
+};
 
 export const QrScreen: React.FC = () => {
   const {
@@ -15,32 +24,118 @@ export const QrScreen: React.FC = () => {
     selectedOrderTicketCode,
     orders,
     fetchOrderDetail,
+    refetchOrders,
     navigateTo,
     showToast,
   } = useV1();
   const [orderDetail, setOrderDetail] = useState<CustomerOrderDetail | null>(null);
   const [isSavingPass, setIsSavingPass] = useState(false);
+  const [isPassSaved, setIsPassSaved] = useState(false);
+  const cardRef = useRef<any>(null);
   const qrSvgRef = useRef<any>(null);
+  const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (savedTimerRef.current) {
+        clearTimeout(savedTimerRef.current);
+      }
+    };
+  }, []);
 
   const cachedSummary = orders.find(
     (o) => o.id === selectedOrderId || o.ticketCode === selectedOrderId
   );
 
+  const targetLookupId =
+    selectedOrderId ||
+    selectedOrderTicketCode ||
+    cachedSummary?.id ||
+    cachedSummary?.ticketCode ||
+    '';
+
+  const lastStatusRef = useRef<OrderStatus | null>(
+    (cachedSummary?.status as OrderStatus) || null
+  );
+  const hasRedirectedRef = useRef(false);
+
+  const handlePaidTransition = useCallback(
+    (targetOrderId: string, targetTicketCode?: string | null) => {
+      if (hasRedirectedRef.current) return;
+      hasRedirectedRef.current = true;
+      refetchOrders().catch(() => {});
+      navigateTo('order_details', {
+        orderId: targetOrderId,
+        ticketCode: targetTicketCode ?? undefined,
+      });
+    },
+    [navigateTo, refetchOrders]
+  );
+
+  // 1. Polling every 5 seconds for order detail status changes
   useEffect(() => {
+    if (!targetLookupId) return;
+
     let isMounted = true;
-    if (selectedOrderId) {
-      fetchOrderDetail(selectedOrderId)
-        .then((detail) => {
-          if (isMounted) setOrderDetail(detail);
-        })
-        .catch(() => {
-          // If network fetch fails, fallback to cached summary
-        });
-    }
+    let isFetching = false;
+
+    const poll = async () => {
+      if (isFetching || hasRedirectedRef.current) return;
+      isFetching = true;
+      try {
+        const detail = await fetchOrderDetail(targetLookupId);
+        if (!isMounted || hasRedirectedRef.current) return;
+        setOrderDetail(detail);
+
+        const newStatus = detail.status;
+        const previousStatus = lastStatusRef.current;
+
+        // Check if status transitioned from unpaid to paid
+        if (isUnpaidStatus(previousStatus) && isPaidProgression(newStatus)) {
+          handlePaidTransition(detail.id || targetLookupId, detail.ticketCode);
+          return;
+        }
+
+        lastStatusRef.current = newStatus;
+      } catch {
+        // If network fetch fails, fallback gracefully to cached summary
+      } finally {
+        isFetching = false;
+      }
+    };
+
+    // Initial fetch on mount
+    poll();
+
+    // Standard 5-second interval polling
+    const pollInterval = setInterval(poll, 5000);
+
     return () => {
       isMounted = false;
+      clearInterval(pollInterval);
     };
-  }, [selectedOrderId, fetchOrderDetail]);
+  }, [targetLookupId, fetchOrderDetail, handlePaidTransition]);
+
+  // 2. React to external order status updates (e.g. FCM foreground push triggering refetchOrders)
+  useEffect(() => {
+    if (hasRedirectedRef.current) return;
+    const currentStatus = cachedSummary?.status;
+    const previousStatus = lastStatusRef.current;
+
+    if (isUnpaidStatus(previousStatus) && isPaidProgression(currentStatus)) {
+      handlePaidTransition(
+        cachedSummary?.id || targetLookupId,
+        cachedSummary?.ticketCode || selectedOrderTicketCode
+      );
+    }
+  }, [
+    cachedSummary?.status,
+    cachedSummary?.id,
+    cachedSummary?.ticketCode,
+    targetLookupId,
+    selectedOrderTicketCode,
+    handlePaidTransition,
+  ]);
 
   const ticketCode =
     selectedOrderTicketCode || orderDetail?.ticketCode || cachedSummary?.ticketCode;
@@ -54,13 +149,7 @@ export const QrScreen: React.FC = () => {
   const handleSavePhoto = async () => {
     if (isSavingPass) return;
 
-    if (!qrSvgRef.current || typeof qrSvgRef.current.toDataURL !== 'function') {
-      showToast('QR code is still preparing. Please try again.');
-      return;
-    }
-
     setIsSavingPass(true);
-    showToast('Saving pickup pass to gallery...');
 
     try {
       const permission = await MediaLibrary.requestPermissionsAsync();
@@ -70,34 +159,64 @@ export const QrScreen: React.FC = () => {
         return;
       }
 
-      qrSvgRef.current.toDataURL(async (base64Data: string) => {
+      let imageUri = '';
+
+      // 1. Capture the pixel-perfect branded Pass Card View using react-native-view-shot
+      if (cardRef.current) {
         try {
-          const cleanBase64 = base64Data
-            .replace(/^data:image\/[a-zA-Z0-9.+-]+;base64,/, '')
-            .trim();
-          const filename = `${FileSystem.cacheDirectory}parcelhub_pass_${ticketCode || 'qr'}.png`;
-
-          await FileSystem.writeAsStringAsync(filename, cleanBase64, {
-            encoding: FileSystem.EncodingType.Base64,
+          imageUri = await captureRef(cardRef, {
+            format: 'png',
+            quality: 1,
+            result: 'tmpfile',
           });
-
-          // Save to device photo gallery (supports both modern Asset.create and legacy)
-          if ((MediaLibrary as any).Asset?.create) {
-            await (MediaLibrary as any).Asset.create(filename);
-          } else {
-            const legacy = await import('expo-media-library/legacy');
-            await legacy.saveToLibraryAsync(filename);
-          }
-
-          showToast('Pickup QR pass saved to photo gallery!');
-        } catch (innerErr: any) {
-          showToast(innerErr?.message || 'Failed to save pass to gallery.');
-        } finally {
-          setIsSavingPass(false);
+        } catch {
+          // If view capture fails or is unsupported on platform, fallback to QR SVG
         }
-      });
+      }
+
+      // 2. Fallback to raw QR SVG if captureRef didn't produce an imageUri
+      if (!imageUri && qrSvgRef.current && typeof qrSvgRef.current.toDataURL === 'function') {
+        await new Promise<void>((resolve, reject) => {
+          qrSvgRef.current.toDataURL(async (base64Data: string) => {
+            try {
+              const cleanBase64 = base64Data
+                .replace(/^data:image\/[a-zA-Z0-9.+-]+;base64,/, '')
+                .trim();
+              const filename = `${FileSystem.cacheDirectory}parcelhub_pass_${ticketCode || 'qr'}.png`;
+
+              await FileSystem.writeAsStringAsync(filename, cleanBase64, {
+                encoding: FileSystem.EncodingType.Base64,
+              });
+              imageUri = filename;
+              resolve();
+            } catch (innerErr) {
+              reject(innerErr);
+            }
+          });
+        });
+      }
+
+      if (!imageUri) {
+        throw new Error('Failed to capture pass screenshot.');
+      }
+
+      // Save to device photo gallery (supports both modern Asset.create and legacy)
+      if ((MediaLibrary as any).Asset?.create) {
+        await (MediaLibrary as any).Asset.create(imageUri);
+      } else {
+        const legacy = await import('expo-media-library/legacy');
+        await legacy.saveToLibraryAsync(imageUri);
+      }
+
+      // Trigger button feedback indicator state
+      setIsPassSaved(true);
+      if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+      savedTimerRef.current = setTimeout(() => {
+        setIsPassSaved(false);
+      }, 3000);
     } catch (err: any) {
       showToast(err?.message || 'Failed to save pass to gallery.');
+    } finally {
       setIsSavingPass(false);
     }
   };
@@ -212,12 +331,14 @@ export const QrScreen: React.FC = () => {
         >
           {/* Section - Elevated Verification Card (White Surface, 24px Radius) */}
           <View
+            ref={cardRef}
+            collapsable={false}
             style={{
               backgroundColor: '#FFFFFF',
               borderWidth: 1,
               borderColor: 'rgba(241, 245, 249, 0.8)',
               borderRadius: 24,
-              padding: 25,
+              padding: 24,
               alignItems: 'center',
               shadowColor: '#215CD4',
               shadowOffset: { width: 0, height: 10 },
@@ -226,6 +347,48 @@ export const QrScreen: React.FC = () => {
               elevation: 4,
             }}
           >
+            {/* Clean ParcelHub Brand Header inside Pass Card */}
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 10,
+                paddingBottom: 16,
+                marginBottom: 4,
+                borderBottomWidth: 1,
+                borderBottomColor: '#F1F5F9',
+                width: '100%',
+              }}
+            >
+              <ParcelHubLogoSvg size={30} />
+              <View>
+                <Text
+                  style={{
+                    fontWeight: '800',
+                    fontSize: 15,
+                    lineHeight: 20,
+                    letterSpacing: 0.5,
+                    color: '#1E1E1E',
+                  }}
+                >
+                  PARCELHUB
+                </Text>
+                <Text
+                  style={{
+                    fontWeight: '600',
+                    fontSize: 10,
+                    lineHeight: 14,
+                    letterSpacing: 0.6,
+                    color: '#215CD4',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  Official Pickup Pass
+                </Text>
+              </View>
+            </View>
+
             {/* Scannable High-Contrast QR Code Area */}
             <View
               style={{
@@ -331,15 +494,15 @@ export const QrScreen: React.FC = () => {
                 width: '100%',
                 paddingVertical: 15,
                 paddingHorizontal: 21,
-                backgroundColor: '#FFFFFF',
+                backgroundColor: isPassSaved ? '#ECFDF5' : '#FFFFFF',
                 borderWidth: 1,
-                borderColor: 'rgba(33, 92, 212, 0.15)',
+                borderColor: isPassSaved ? '#10B981' : 'rgba(33, 92, 212, 0.15)',
                 borderRadius: 12,
                 flexDirection: 'row',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 10,
-                shadowColor: '#215CD4',
+                shadowColor: isPassSaved ? '#10B981' : '#215CD4',
                 shadowOffset: { width: 0, height: 2 },
                 shadowOpacity: 0.06,
                 shadowRadius: 4,
@@ -347,7 +510,35 @@ export const QrScreen: React.FC = () => {
               }}
             >
               {isSavingPass ? (
-                <ActivityIndicator size="small" color="#215CD4" />
+                <>
+                  <ActivityIndicator size="small" color="#215CD4" />
+                  <Text
+                    style={{
+                      fontWeight: '600',
+                      fontSize: 14,
+                      lineHeight: 20,
+                      color: '#215CD4',
+                      textAlign: 'center',
+                    }}
+                  >
+                    Saving to Gallery...
+                  </Text>
+                </>
+              ) : isPassSaved ? (
+                <>
+                  <CheckIcon size={18} color="#059669" strokeWidth={2.2} />
+                  <Text
+                    style={{
+                      fontWeight: '600',
+                      fontSize: 14,
+                      lineHeight: 20,
+                      color: '#059669',
+                      textAlign: 'center',
+                    }}
+                  >
+                    Pass Saved to Gallery!
+                  </Text>
+                </>
               ) : (
                 <>
                   <DownloadIcon size={16} color="#215CD4" strokeWidth={1.33} />
