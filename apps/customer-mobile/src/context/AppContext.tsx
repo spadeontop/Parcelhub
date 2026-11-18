@@ -325,6 +325,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
 
+    refetchOrders(undefined, true);
+
     let isFetching = false;
     const intervalId = setInterval(async () => {
       if (isFetching) return;

@@ -8,6 +8,7 @@ import React, {
   useMemo,
   ReactNode,
 } from 'react';
+import { BackHandler } from 'react-native';
 import {
   CustomerRegisterReq,
   CustomerRegisterRes,
@@ -126,6 +127,8 @@ export type V1ContextType = {
     screen: ScreenId,
     params?: { orderId?: string | null; ticketCode?: string | null }
   ) => void;
+  readonly goBack: () => boolean;
+  readonly fetchHomeData: () => Promise<void>;
   readonly toast: ToastState;
   readonly showToast: (message: string) => void;
   readonly preAuthToken: JWTToken | null;
@@ -191,6 +194,13 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const selectedOrderTicketCodeRef = useRef<string | null>(null);
   selectedOrderTicketCodeRef.current = selectedOrderTicketCode;
 
+  // Home refresh trigger counter & fetch guard
+  const [homeFetchKey, setHomeFetchKey] = useState<number>(0);
+  const isFetchingHomeRef = useRef<boolean>(false);
+
+  // Navigation history for back press handling
+  const screenHistoryRef = useRef<ScreenId[]>([]);
+
   // Stored return target to resume after MPIN unlock
   const returnTargetRef = useRef<{
     screen: ScreenId;
@@ -216,7 +226,19 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
     (screen: ScreenId, params?: { orderId?: string | null; ticketCode?: string | null }) => {
       if (screen === 'login' || screen === 'register') {
         returnTargetRef.current = null;
+        screenHistoryRef.current = [];
+      } else if (screen !== activeScreenRef.current) {
+        screenHistoryRef.current.push(activeScreenRef.current);
+        if (screenHistoryRef.current.length > 20) {
+          screenHistoryRef.current.shift();
+        }
       }
+
+      if (screen === 'home') {
+        // Trigger immediate fetch straight away, even if already on 'home'
+        setHomeFetchKey((k) => k + 1);
+      }
+
       setActiveScreen(screen);
       if (params?.orderId !== undefined) {
         setSelectedOrderId(params.orderId);
@@ -227,6 +249,34 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
     },
     []
   );
+
+  const goBack = useCallback((): boolean => {
+    const current = activeScreenRef.current;
+    if (current === 'home' || current === 'login' || current === 'register') {
+      return false;
+    }
+
+    while (screenHistoryRef.current.length > 0) {
+      const prev = screenHistoryRef.current.pop()!;
+      if (prev !== current && prev !== 'login' && prev !== 'register') {
+        navigateTo(prev);
+        return true;
+      }
+    }
+
+    navigateTo('home');
+    return true;
+  }, [navigateTo]);
+
+  // Global Android hardware back press listener: navigates back/home gracefully
+  useEffect(() => {
+    const handleHardwareBack = () => {
+      return goBack();
+    };
+
+    const backSub = BackHandler.addEventListener('hardwareBackPress', handleHardwareBack);
+    return () => backSub.remove();
+  }, [goBack]);
 
   const updateRegistrationDraft = useCallback(
     (partial: Partial<RegistrationDraft>) => {
@@ -350,6 +400,23 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
     [authToken, handleSessionExpired]
   );
 
+  // Home data fetcher: fetches orders and profile straight away
+  const fetchHomeData = useCallback(async (): Promise<void> => {
+    let token = authToken;
+    if (!token) token = await v1Storage.getAuthToken();
+    if (!token) return;
+
+    if (isFetchingHomeRef.current) return;
+    isFetchingHomeRef.current = true;
+    try {
+      await Promise.allSettled([refetchOrders(), refetchProfile()]);
+    } catch (e) {
+      console.warn('[Home] Failed to fetch home data:', e);
+    } finally {
+      isFetchingHomeRef.current = false;
+    }
+  }, [authToken, refetchOrders, refetchProfile]);
+
   // Initialize stored tokens on mount
   useEffect(() => {
     const initStorage = async () => {
@@ -366,20 +433,20 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
 
         if (storedAuth) {
           setAuthToken(storedAuth);
-          setActiveScreen('home');
+          navigateTo('home');
         }
       } catch {}
     };
     initStorage();
-  }, []);
+  }, [navigateTo]);
 
-  // When authToken is set, load fresh profile and orders
+  // When authToken is set, load fresh profile and orders if not already on home
   useEffect(() => {
-    if (authToken) {
+    if (authToken && activeScreen !== 'home') {
       refetchProfile();
       refetchOrders();
     }
-  }, [authToken, refetchProfile, refetchOrders]);
+  }, [authToken, activeScreen, refetchProfile, refetchOrders]);
 
   // Push token registration helper
   const registerDevicePushToken = useCallback(async (tokenToAuth: JWTToken) => {
@@ -493,23 +560,26 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
     }
   }, [notificationsEnabled, authToken, showToast]);
 
-  // Interval polling while viewing HomeScreen
+  // Polling & immediate fetch when viewing HomeScreen
   useEffect(() => {
     if (activeScreen !== 'home' || !authToken) return;
 
-    let isFetching = false;
+    // Call data fetching function straight before going to the usual polling
+    fetchHomeData();
+
+    let isPolling = false;
     const intervalTimer = setInterval(async () => {
-      if (isFetching) return;
-      isFetching = true;
+      if (isPolling) return;
+      isPolling = true;
       try {
         await refetchOrders();
       } finally {
-        isFetching = false;
+        isPolling = false;
       }
     }, 5000);
 
     return () => clearInterval(intervalTimer);
-  }, [activeScreen, authToken, refetchOrders]);
+  }, [activeScreen, authToken, homeFetchKey, fetchHomeData, refetchOrders]);
 
   // V1 Register Customer Action
   const registerCustomer = useCallback(
@@ -577,10 +647,10 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
       clearRegistrationDraft();
 
       showToast(res.statusMessage || 'MPIN created successfully!');
-      setActiveScreen('home');
+      navigateTo('home');
       return res;
     },
-    [preAuthToken, showToast, clearRegistrationDraft]
+    [preAuthToken, showToast, clearRegistrationDraft, navigateTo]
   );
 
   // V1 Verify MPIN Action (Dual-Mode: preAuthToken or refreshToken)
@@ -605,7 +675,7 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
         setPreAuthToken(null);
 
         showToast(res.statusMessage || 'Access granted');
-        setActiveScreen('home');
+        navigateTo('home');
         return;
       }
 
@@ -630,7 +700,7 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
               ticketCode: target.ticketCode,
             });
           } else {
-            setActiveScreen('home');
+            navigateTo('home');
           }
           return;
         } catch (err: any) {
@@ -839,6 +909,7 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
     setSelectedOrderId(null);
     setSelectedOrderTicketCode(null);
     returnTargetRef.current = null;
+    screenHistoryRef.current = [];
     clearRegistrationDraft();
     clearOrderDraft();
     setActiveScreen('login');
@@ -848,6 +919,8 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const value: V1ContextType = {
     activeScreen,
     navigateTo,
+    goBack,
+    fetchHomeData,
     toast,
     showToast,
     preAuthToken,
