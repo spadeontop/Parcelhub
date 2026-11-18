@@ -11,15 +11,34 @@ import { StaffHeader } from '../header/StaffHeader';
 import { StaffSearchBar } from '../header/StaffSearchBar';
 import { StaffFilterTabs } from '../navigation/StaffFilterTabs';
 import { StaffOrderCard } from '../cards/StaffOrderCard';
+import { StaffOrderCardSkeleton } from '../cards/StaffOrderCardSkeleton';
 import { StaffAccountModal } from '../modals/StaffAccountModal';
 import { StaffOrderDetailsModal } from '../modals/details/StaffOrderDetailsModal';
 import { StaffManualLookupModal } from '../modals/StaffManualLookupModal';
 import { Inbox } from '../common/Icons';
+import { StaffTab } from '../../types';
+
+const getTabLabel = (tab: StaffTab): string => {
+  switch (tab) {
+    case 'ready':
+      return 'Ready to Claim';
+    case 'active':
+      return 'Awaiting Parcel';
+    case 'unpaid':
+      return 'Payment Required';
+    case 'claimed':
+      return 'Claimed';
+    case 'all':
+    default:
+      return 'All Orders';
+  }
+};
 
 export const StaffTerminalScreen: React.FC = () => {
   const {
     orders,
     filteredOrders,
+    isLoadingOrders,
     totalCount,
     currentPage,
     setCurrentPage,
@@ -61,8 +80,11 @@ export const StaffTerminalScreen: React.FC = () => {
   const endRecord = Math.min(currentPage * ITEMS_PER_PAGE, totalItems);
 
   // Range text for display (e.g. "1-12 out of 12" or "1-20 out of 45")
-  const rangeDisplay =
-    totalItems > 0 ? `${startRecord}-${endRecord} out of ${totalItems}` : '0 out of 0';
+  const rangeDisplay = isLoadingOrders
+    ? 'Fetching records...'
+    : totalItems > 0
+    ? `${startRecord}-${endRecord} out of ${totalItems}`
+    : '0 out of 0';
 
   // Compute visible page numbers (up to 4 page numbers)
   const pageNumbers = useMemo(() => {
@@ -106,10 +128,10 @@ export const StaffTerminalScreen: React.FC = () => {
         {/* Section Title Header */}
         <View className="px-5 pt-2 pb-1.5 flex-row items-center justify-between">
           <Text className="text-[11px] font-semibold text-[#6B7280] tracking-[0.55px] uppercase">
-            RECENT ACTIVITIES
+            {searchQuery.trim() ? 'SEARCH RESULTS' : 'RECENT ACTIVITIES'}
           </Text>
           <Text className="text-[11px] font-medium text-[#64748B]">
-            {totalItems} {totalItems === 1 ? 'order' : 'orders'}
+            {isLoadingOrders ? 'Loading...' : `${totalItems} ${totalItems === 1 ? 'order' : 'orders'}`}
           </Text>
         </View>
 
@@ -132,7 +154,9 @@ export const StaffTerminalScreen: React.FC = () => {
             style={{ borderWidth: 0, shadowOpacity: 0, elevation: 0 }}
             className="bg-white rounded-[20px] p-4"
           >
-            {pagedOrders.length > 0 ? (
+            {isLoadingOrders ? (
+              <StaffOrderCardSkeleton count={5} />
+            ) : pagedOrders.length > 0 ? (
               pagedOrders.map((order, idx) => (
                 <StaffOrderCard
                   key={`${order.id}-${idx}`}
@@ -141,7 +165,7 @@ export const StaffTerminalScreen: React.FC = () => {
                   showDivider={idx < pagedOrders.length - 1}
                 />
               ))
-            ) : (
+            ) : searchQuery.trim() ? (
               <View className="items-center justify-center py-12">
                 <View className="w-12 h-12 rounded-2xl bg-[#F1F5F9] items-center justify-center mb-2.5">
                   <Inbox size={22} color="#94A3B8" />
@@ -149,10 +173,33 @@ export const StaffTerminalScreen: React.FC = () => {
                 <Text className="text-sm font-bold text-[#0F172A]">
                   No activities found
                 </Text>
+                <Text className="text-xs text-[#64748B] text-center mt-1 mb-4">
+                  No orders matching "{searchQuery}"
+                </Text>
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => setSearchQuery('')}
+                  className="bg-[#2563EB] px-4 py-2 rounded-xl"
+                >
+                  <Text className="text-xs font-semibold text-white">
+                    Clear Search
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View className="items-center justify-center py-12">
+                <View className="w-12 h-12 rounded-2xl bg-[#F1F5F9] items-center justify-center mb-2.5">
+                  <Inbox size={22} color="#94A3B8" />
+                </View>
+                <Text className="text-sm font-bold text-[#0F172A]">
+                  {activeTab === 'all'
+                    ? 'No activities found'
+                    : `No ${getTabLabel(activeTab)} orders`}
+                </Text>
                 <Text className="text-xs text-[#64748B] text-center mt-1">
-                  {searchQuery.trim()
-                    ? `No orders matching "${searchQuery}"`
-                    : `No orders in ${activeTab === 'all' ? 'terminal' : activeTab} queue`}
+                  {activeTab === 'all'
+                    ? 'There are currently no orders in the terminal queue.'
+                    : `There are currently no parcels in the ${getTabLabel(activeTab)} queue.`}
                 </Text>
               </View>
             )}

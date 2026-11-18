@@ -28,8 +28,8 @@ export const StaffOrderOverviewCard: React.FC<StaffOrderOverviewCardProps> = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const orderTicket = order.ticketCode || order.id || order.trackingId;
-  const recipientName = order.customer || order.productName || 'John Doe';
+  const orderTicket = order.ticketCode || order.trackingId || order.id;
+  const recipientName = order.customer || 'Customer';
   const trackingNumber = order.trackingId || 'PH2696153368792H';
 
   const price = typeof order.amountToPay === 'number' ? order.amountToPay : 0;

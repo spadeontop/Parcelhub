@@ -36,7 +36,6 @@ export interface StaffOrder {
   ticketCode?: string | null;
   trackingId: string;
   customer: string;
-  productName?: string;
   amountToPay: number;
   amountReceived?: number;
   change: number;
@@ -79,7 +78,6 @@ export interface StaffOrderDetailResponse {
   ticketCode?: string | null;
   trackingId: string;
   customer: string;
-  productName?: string;
   amountToPay: number;
   amountReceived?: number | null;
   change?: number;

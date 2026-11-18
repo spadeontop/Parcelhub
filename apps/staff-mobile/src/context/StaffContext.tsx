@@ -3,6 +3,7 @@ import {
   StaffOrder,
   StaffUser,
   StaffTab,
+  OrderStatus,
   StaffBadgeCounts,
   ToastState,
 } from '../types';
@@ -14,6 +15,7 @@ interface StaffContextType {
   isAuthenticated: boolean;
   isOnline: boolean;
   isInitialLoading: boolean;
+  isLoadingOrders: boolean;
   isRefreshing: boolean;
   orders: StaffOrder[];
   filteredOrders: StaffOrder[];
@@ -45,11 +47,28 @@ interface StaffContextType {
   updateOrderNotes: (orderId: string, notes: string) => void;
 }
 
+function getStatusForTab(tab: StaffTab): OrderStatus | undefined {
+  switch (tab) {
+    case 'ready':
+      return 'READY_TO_CLAIM';
+    case 'active':
+      return 'AWAITING_PARCEL';
+    case 'unpaid':
+      return 'PAYMENT_REQUIRED';
+    case 'claimed':
+      return 'CLAIMED';
+    case 'all':
+    default:
+      return undefined;
+  }
+}
+
 const StaffContext = createContext<StaffContextType | undefined>(undefined);
 
 export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [staffUser, setStaffUser] = useState<StaffUser | null>(null);
   const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true);
+  const [isLoadingOrders, setIsLoadingOrders] = useState<boolean>(false);
   const [isOnline, setIsOnline] = useState<boolean>(true);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [orders, setOrders] = useState<StaffOrder[]>([]);
@@ -104,20 +123,47 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
   }, []);
 
-  // Fetch orders from live backend
-  const fetchOrders = useCallback(async (quiet = false, explicitToken?: string) => {
+  const activeTabRef = useRef(activeTab);
+  activeTabRef.current = activeTab;
+  const searchQueryRef = useRef(searchQuery);
+  searchQueryRef.current = searchQuery;
+  const fetchRequestId = useRef(0);
+
+  // Fetch orders from live backend (supports optional database search query and tab status)
+  const fetchOrders = useCallback(async (
+    quiet = false,
+    explicitToken?: string,
+    searchParam?: string,
+    targetTab?: StaffTab
+  ) => {
     const token = explicitToken || userRef.current?.token;
     if (!token) return;
 
-    if (!quiet) setIsRefreshing(true);
+    const currentReqId = ++fetchRequestId.current;
+
+    if (!quiet) {
+      setIsLoadingOrders(true);
+      setIsRefreshing(true);
+    }
     try {
+      // Strictly limit to 20 results per requirement
+      const limit = 20;
       const offset = (currentPage - 1) * ITEMS_PER_PAGE;
+      const effectiveTab = targetTab ?? activeTabRef.current;
+      // Search is always global (no status filter). When browsing a tab, scope by its status.
+      const status = searchParam ? undefined : getStatusForTab(effectiveTab);
       const { orders: data, pagination } = await staffApi.getOrders(
-        undefined,
-        ITEMS_PER_PAGE,
+        status,
+        limit,
         offset,
-        token
+        token,
+        searchParam
       );
+
+      // Discard stale responses if a newer fetch request was dispatched
+      if (currentReqId !== fetchRequestId.current) {
+        return;
+      }
       setTotalCount(pagination.totalCount);
       setOrders((prev) => {
         // Merge notes and local claimedAt from local memory if existing
@@ -145,14 +191,17 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const fresh = data.find((o) => o.id === prevSelected.id);
         return fresh
           ? {
-              ...fresh,
-              notes: prevSelected.notes,
-              claimedAt: prevSelected.claimedAt || fresh.claimedAt,
-              createdAt: fresh.createdAt || prevSelected.createdAt,
-            }
+            ...fresh,
+            notes: prevSelected.notes,
+            claimedAt: prevSelected.claimedAt || fresh.claimedAt,
+            createdAt: fresh.createdAt || prevSelected.createdAt,
+          }
           : prevSelected;
       });
     } catch (err: any) {
+      if (currentReqId !== fetchRequestId.current) {
+        return;
+      }
       if (err instanceof StaffApiError && err.statusCode === 401) {
         setStaffUser(null);
         showToast('Session expired or unauthorized. Please sign in again.', 'error');
@@ -163,21 +212,103 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         showToast(err?.message || 'Failed to sync with backend', 'error');
       }
     } finally {
-      if (!quiet) setIsRefreshing(false);
+      // Only release loading state if this request is still the active/latest request.
+      // If a newer request was dispatched while this was in flight, the newer request owns loading.
+      if (!quiet && currentReqId === fetchRequestId.current) {
+        setIsLoadingOrders(false);
+        setIsRefreshing(false);
+      }
     }
   }, [showToast, currentPage]);
 
-  // Polling every 4 seconds when authenticated
+  const isSwitchingTabRef = useRef(false);
+
+  // Handle tab switching: clears search and immediately fetches that tab's 20 orders
+  const handleSelectTab = useCallback((tab: StaffTab) => {
+    isSwitchingTabRef.current = true;
+    setActiveTab(tab);
+    activeTabRef.current = tab;
+    // Clear search query if active
+    if (searchQueryRef.current) {
+      setSearchQuery('');
+      searchQueryRef.current = '';
+    }
+    setIsLoadingOrders(true);
+    const token = userRef.current?.token;
+    if (token) {
+      fetchOrders(false, token, undefined, tab);
+    }
+    setTimeout(() => {
+      isSwitchingTabRef.current = false;
+    }, 100);
+  }, [fetchOrders]);
+
+  // Handle search typing: activates loading state and switches tab to 'all' if needed
+  const handleSearchChange = useCallback((text: string) => {
+    setSearchQuery(text);
+    searchQueryRef.current = text;
+    // Keep loading state active during any search edit (typing or clearing)
+    setIsLoadingOrders(true);
+    if (text.trim().length > 0 && activeTabRef.current !== 'all') {
+      setActiveTab('all');
+      activeTabRef.current = 'all';
+    }
+  }, []);
+
+  const isLoadingOrdersRef = useRef(isLoadingOrders);
+  isLoadingOrdersRef.current = isLoadingOrders;
+
+  // Polling every 4 seconds when authenticated, not searching, and not actively loading
   useEffect(() => {
     if (!staffUser) return;
-    fetchOrders(false, staffUser.token);
+
+    // Initial load on authentication
+    fetchOrders(false, staffUser.token, undefined, activeTabRef.current);
 
     const interval = setInterval(() => {
-      fetchOrders(true, staffUser.token);
+      // Do not poll or overwrite while user has a search query typed or while explicitly loading
+      if (!searchQueryRef.current.trim() && !isLoadingOrdersRef.current) {
+        fetchOrders(true, staffUser.token, undefined, activeTabRef.current);
+      }
     }, ENV.POLLING_INTERVAL_MS);
 
     return () => clearInterval(interval);
   }, [staffUser, fetchOrders]);
+
+  const prevSearchQueryRef = useRef(searchQuery);
+
+  // Real-time debounced database search (500ms) strictly matching tracking & ticket code
+  useEffect(() => {
+    if (!staffUser) return;
+    const q = searchQuery.trim();
+    const prevQ = prevSearchQueryRef.current.trim();
+    prevSearchQueryRef.current = searchQuery;
+
+    // If tab switch triggered this clear, handleSelectTab already dispatched the tab fetch
+    if (isSwitchingTabRef.current) {
+      return;
+    }
+
+    // Both were empty (e.g. startup or tab changes when not searching)
+    if (!q && !prevQ) {
+      return;
+    }
+
+    // Search query was cleared by user (via Clear Search button, X, or deleting all text)
+    if (!q) {
+      setIsLoadingOrders(true);
+      fetchOrders(false, staffUser.token, undefined, activeTabRef.current);
+      return;
+    }
+
+    // Active search query typed -> debounced
+    setIsLoadingOrders(true);
+    const timer = setTimeout(() => {
+      fetchOrders(false, staffUser.token, q);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, staffUser, fetchOrders]);
 
   // Compute Badge Counts for Tabs
   const badgeCounts: StaffBadgeCounts = useMemo(() => ({
@@ -188,36 +319,8 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     claimed: orders.filter((o) => o.status === 'CLAIMED').length,
   }), [orders]);
 
-  // Filter orders by active tab
-  const tabOrders = useMemo(() => {
-    switch (activeTab) {
-      case 'active':
-        return orders.filter((o) => o.status === 'AWAITING_PARCEL');
-      case 'ready':
-        return orders.filter((o) => o.status === 'READY_TO_CLAIM');
-      case 'unpaid':
-        return orders.filter((o) => o.status === 'PAYMENT_REQUIRED');
-      case 'claimed':
-        return orders.filter((o) => o.status === 'CLAIMED');
-      default:
-        return orders;
-    }
-  }, [orders, activeTab]);
-
-  // Filter orders by search query
-  const filteredOrders = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return tabOrders;
-    return tabOrders.filter((o) => {
-      const id = o.id.toLowerCase();
-      const track = o.trackingId.toLowerCase();
-      const ticket = (o.ticketCode || '').toLowerCase();
-      const cust = o.customer.toLowerCase();
-      const prod = (o.productName || '').toLowerCase();
-      const notes = (o.notes || '').toLowerCase();
-      return id.includes(q) || track.includes(q) || ticket.includes(q) || cust.includes(q) || prod.includes(q) || notes.includes(q);
-    });
-  }, [tabOrders, searchQuery]);
+  // Backend is the single authoritative source of truth: no premature client-side filtering
+  const filteredOrders = orders;
 
   // Authentication actions
   const login = async (usernameOrEmail: string, password: string) => {
@@ -258,20 +361,19 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setSelectedOrder((prev) =>
           prev && prev.id === order.id
             ? {
-                ...prev,
-                ...detail,
-                amountReceived: detail.amountReceived ?? prev.amountReceived,
-                change: detail.change || prev.change,
-                productName: prev.productName || detail.productName,
-                notes: prev.notes,
-                claimedAt: prev.claimedAt || detail.claimedAt,
-                createdAt: detail.createdAt || prev.createdAt,
-                statusTimeline: detail.statusTimeline || prev.statusTimeline,
-              }
+              ...prev,
+              ...detail,
+              amountReceived: detail.amountReceived ?? prev.amountReceived,
+              change: detail.change || prev.change,
+              notes: prev.notes,
+              claimedAt: prev.claimedAt || detail.claimedAt,
+              createdAt: detail.createdAt || prev.createdAt,
+              statusTimeline: detail.statusTimeline || prev.statusTimeline,
+            }
             : prev
         );
       }
-    } catch {}
+    } catch { }
   };
 
   const closeOrderDetails = () => {
@@ -306,28 +408,28 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       prev.map((o) =>
         o.id === orderId
           ? {
-              ...o,
-              status: 'CLAIMED',
-              isClaimActive: false,
-              claimRemainingSeconds: 0,
-              timestamp: claimedAt,
-              claimedAt,
-              createdAt: o.createdAt || o.statusTimeline?.[0]?.timestamp || o.timestamp,
-            }
+            ...o,
+            status: 'CLAIMED',
+            isClaimActive: false,
+            claimRemainingSeconds: 0,
+            timestamp: claimedAt,
+            claimedAt,
+            createdAt: o.createdAt || o.statusTimeline?.[0]?.timestamp || o.timestamp,
+          }
           : o
       )
     );
     setSelectedOrder((prev) =>
       prev && prev.id === orderId
         ? {
-            ...prev,
-            status: 'CLAIMED',
-            isClaimActive: false,
-            claimRemainingSeconds: 0,
-            timestamp: claimedAt,
-            claimedAt,
-            createdAt: prev.createdAt || prev.statusTimeline?.[0]?.timestamp || prev.timestamp,
-          }
+          ...prev,
+          status: 'CLAIMED',
+          isClaimActive: false,
+          claimRemainingSeconds: 0,
+          timestamp: claimedAt,
+          claimedAt,
+          createdAt: prev.createdAt || prev.statusTimeline?.[0]?.timestamp || prev.timestamp,
+        }
         : prev
     );
     showToast(`Order ${orderId} handed over and marked Claimed!`, 'success');
@@ -351,6 +453,7 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         isAuthenticated: !!staffUser,
         isOnline,
         isInitialLoading,
+        isLoadingOrders,
         isRefreshing,
         orders,
         filteredOrders,
@@ -358,9 +461,9 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         currentPage,
         setCurrentPage,
         activeTab,
-        setActiveTab,
+        setActiveTab: handleSelectTab,
         searchQuery,
-        setSearchQuery,
+        setSearchQuery: handleSearchChange,
         badgeCounts,
         selectedOrder,
         isDetailsOpen,
@@ -374,7 +477,7 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         showToast,
         login,
         logout,
-        refreshOrders: () => fetchOrders(false, staffUser?.token),
+        refreshOrders: () => fetchOrders(false, staffUser?.token, searchQuery.trim() || undefined, activeTabRef.current),
         activateOrder,
         payCourier,
         attachPhoto,

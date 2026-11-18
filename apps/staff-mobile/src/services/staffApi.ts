@@ -158,7 +158,8 @@ export const staffApi = {
     status?: OrderStatus,
     limit?: number,
     offset?: number,
-    explicitToken?: string
+    explicitToken?: string,
+    search?: string
   ): Promise<{
     orders: StaffOrder[];
     pagination: {
@@ -177,6 +178,7 @@ export const staffApi = {
     if (status) queryParams.append('status', status);
     if (limit !== undefined) queryParams.append('limit', limit.toString());
     if (offset !== undefined) queryParams.append('offset', offset.toString());
+    if (search && search.trim()) queryParams.append('search', search.trim());
 
     const qs = queryParams.toString() ? `?${queryParams.toString()}` : '';
 
@@ -205,7 +207,6 @@ export const staffApi = {
         ticketCode: o.ticketCode || null,
         trackingId: o.trackingId || '',
         customer: o.customer || o.recipientName || 'Unknown Customer',
-        productName: o.productName || o.product || 'Standard Parcel',
         amountToPay: typeof o.amountToPay === 'number' ? o.amountToPay : (o.price || 0),
         amountReceived: o.amountReceived,
         change: o.change || 0,
