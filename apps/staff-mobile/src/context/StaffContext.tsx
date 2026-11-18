@@ -185,6 +185,9 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           : prevSelected;
       });
     } catch (err: any) {
+      if (currentReqId !== fetchRequestId.current) {
+        return;
+      }
       if (err instanceof StaffApiError && err.statusCode === 401) {
         setStaffUser(null);
         showToast('Session expired or unauthorized. Please sign in again.', 'error');
@@ -195,15 +198,20 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         showToast(err?.message || 'Failed to sync with backend', 'error');
       }
     } finally {
-      if (!quiet) {
+      // Only release loading state if this request is still the active/latest request.
+      // If a newer request was dispatched while this was in flight, the newer request owns loading.
+      if (!quiet && currentReqId === fetchRequestId.current) {
         setIsLoadingOrders(false);
         setIsRefreshing(false);
       }
     }
   }, [showToast]);
 
+  const isSwitchingTabRef = useRef(false);
+
   // Handle tab switching: clears search and immediately fetches that tab's 20 orders
   const handleSelectTab = useCallback((tab: StaffTab) => {
+    isSwitchingTabRef.current = true;
     setActiveTab(tab);
     activeTabRef.current = tab;
     // Clear search query if active
@@ -216,22 +224,27 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (token) {
       fetchOrders(false, token, undefined, tab);
     }
+    setTimeout(() => {
+      isSwitchingTabRef.current = false;
+    }, 100);
   }, [fetchOrders]);
 
-  // Handle search typing: immediately switches tab to 'all' on first keystroke and activates loading state
+  // Handle search typing: activates loading state and switches tab to 'all' if needed
   const handleSearchChange = useCallback((text: string) => {
     setSearchQuery(text);
     searchQueryRef.current = text;
-    if (text.trim().length > 0) {
-      setIsLoadingOrders(true);
-      if (activeTabRef.current !== 'all') {
-        setActiveTab('all');
-        activeTabRef.current = 'all';
-      }
+    // Keep loading state active during any search edit (typing or clearing)
+    setIsLoadingOrders(true);
+    if (text.trim().length > 0 && activeTabRef.current !== 'all') {
+      setActiveTab('all');
+      activeTabRef.current = 'all';
     }
   }, []);
 
-  // Polling every 4 seconds when authenticated and NOT actively searching
+  const isLoadingOrdersRef = useRef(isLoadingOrders);
+  isLoadingOrdersRef.current = isLoadingOrders;
+
+  // Polling every 4 seconds when authenticated, not searching, and not actively loading
   useEffect(() => {
     if (!staffUser) return;
 
@@ -239,8 +252,8 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     fetchOrders(false, staffUser.token, undefined, activeTabRef.current);
 
     const interval = setInterval(() => {
-      // Do not poll or overwrite while user has a search query typed
-      if (!searchQueryRef.current.trim()) {
+      // Do not poll or overwrite while user has a search query typed or while explicitly loading
+      if (!searchQueryRef.current.trim() && !isLoadingOrdersRef.current) {
         fetchOrders(true, staffUser.token, undefined, activeTabRef.current);
       }
     }, ENV.POLLING_INTERVAL_MS);
@@ -248,20 +261,34 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return () => clearInterval(interval);
   }, [staffUser, fetchOrders]);
 
+  const prevSearchQueryRef = useRef(searchQuery);
+
   // Real-time debounced database search (500ms) strictly matching tracking & ticket code
   useEffect(() => {
     if (!staffUser) return;
     const q = searchQuery.trim();
+    const prevQ = prevSearchQueryRef.current.trim();
+    prevSearchQueryRef.current = searchQuery;
 
-    // If search is cleared, reload default orders for the active tab (stays on 'all')
-    if (!q) {
-      fetchOrders(true, staffUser.token, undefined, activeTabRef.current);
+    // If tab switch triggered this clear, handleSelectTab already dispatched the tab fetch
+    if (isSwitchingTabRef.current) {
       return;
     }
 
-    // Keep loading active while waiting for user to stop typing and request to complete
-    setIsLoadingOrders(true);
+    // Both were empty (e.g. startup or tab changes when not searching)
+    if (!q && !prevQ) {
+      return;
+    }
 
+    // Search query was cleared by user (via Clear Search button, X, or deleting all text)
+    if (!q) {
+      setIsLoadingOrders(true);
+      fetchOrders(false, staffUser.token, undefined, activeTabRef.current);
+      return;
+    }
+
+    // Active search query typed -> debounced
+    setIsLoadingOrders(true);
     const timer = setTimeout(() => {
       fetchOrders(false, staffUser.token, q);
     }, 500);
