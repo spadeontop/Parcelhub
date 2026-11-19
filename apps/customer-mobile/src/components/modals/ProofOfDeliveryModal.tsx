@@ -62,8 +62,10 @@ export const ProofOfDeliveryModal: React.FC = () => {
   const singleTouchStart = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const singleTouchPanStart = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
-  // Double tap tracking
+  // Double-tap tracking with focal point
   const lastTap = useRef<number>(0);
+  const lastTapPos = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const justDoubleTapped = useRef<boolean>(false);
 
   // Sync animated values to plain numbers for gesture calculations
   useEffect(() => {
@@ -106,10 +108,14 @@ export const ProofOfDeliveryModal: React.FC = () => {
     isPinching.current = false;
     pinchStartDist.current = null;
     pinchStartMidpoint.current = null;
+    justDoubleTapped.current = false;
     setDisplayScale(1);
   };
 
-  const animateTo = (targetScale: number) => {
+  const animateTo = (
+    targetScale: number,
+    focalPoint?: { pageX: number; pageY: number }
+  ) => {
     const clampedScale = Math.max(1, Math.min(targetScale, 4));
     setDisplayScale(Number(clampedScale.toFixed(1)));
 
@@ -132,10 +138,24 @@ export const ProofOfDeliveryModal: React.FC = () => {
         currentPan.current = { x: 0, y: 0 };
       });
     } else {
+      let targetX = currentPan.current.x;
+      let targetY = currentPan.current.y;
+
+      if (focalPoint) {
+        const centerX = windowWidth / 2;
+        const centerY = windowHeight / 2;
+        const dx = focalPoint.pageX - centerX;
+        const dy = focalPoint.pageY - centerY;
+
+        // Glides the tapped point toward the center of the viewport
+        targetX = -dx * clampedScale;
+        targetY = -dy * clampedScale;
+      }
+
       const maxPanX = Math.max(0, ((clampedScale - 1) * imageWidth) / 2);
       const maxPanY = Math.max(0, ((clampedScale - 1) * imageHeight) / 2);
-      const clampedX = Math.max(-maxPanX, Math.min(maxPanX, currentPan.current.x));
-      const clampedY = Math.max(-maxPanY, Math.min(maxPanY, currentPan.current.y));
+      const clampedX = Math.max(-maxPanX, Math.min(maxPanX, targetX));
+      const clampedY = Math.max(-maxPanY, Math.min(maxPanY, targetY));
 
       Animated.parallel([
         Animated.spring(scale, {
@@ -150,7 +170,10 @@ export const ProofOfDeliveryModal: React.FC = () => {
           tension: 40,
           useNativeDriver: true,
         }),
-      ]).start();
+      ]).start(() => {
+        currentScale.current = clampedScale;
+        currentPan.current = { x: clampedX, y: clampedY };
+      });
     }
   };
 
@@ -190,20 +213,36 @@ export const ProofOfDeliveryModal: React.FC = () => {
             singleTouchStart.current = { x: touches[0].pageX, y: touches[0].pageY };
             singleTouchPanStart.current = { ...currentPan.current };
 
+            const touch = touches[0];
             const now = Date.now();
-            if (now - lastTap.current < 300) {
-              if (currentScale.current > 1.2) {
+            const timeDiff = now - lastTap.current;
+            const distDiff = Math.hypot(
+              touch.pageX - lastTapPos.current.x,
+              touch.pageY - lastTapPos.current.y
+            );
+
+            // Double-tap detected (within 350ms and within 60px distance)
+            if (timeDiff < 350 && distDiff < 60) {
+              justDoubleTapped.current = true;
+              lastTap.current = 0;
+
+              if (currentScale.current > 1.1) {
+                // Double tap while zoomed in: smoothly zoom out back to default size
                 animateTo(1);
               } else {
-                animateTo(2.5);
+                // Double tap while at default size: smoothly zoom into the tapped location
+                animateTo(2.5, { pageX: touch.pageX, pageY: touch.pageY });
               }
-              lastTap.current = 0;
               return;
             }
+
             lastTap.current = now;
+            lastTapPos.current = { x: touch.pageX, y: touch.pageY };
           }
         },
         onPanResponderMove: (evt) => {
+          if (justDoubleTapped.current) return;
+
           const touches = evt.nativeEvent?.touches || [];
 
           if (touches.length >= 2) {
@@ -252,6 +291,11 @@ export const ProofOfDeliveryModal: React.FC = () => {
           }
         },
         onPanResponderRelease: () => {
+          if (justDoubleTapped.current) {
+            justDoubleTapped.current = false;
+            return;
+          }
+
           isPinching.current = false;
           pinchStartDist.current = null;
           pinchStartMidpoint.current = null;
@@ -284,6 +328,7 @@ export const ProofOfDeliveryModal: React.FC = () => {
           }
         },
         onPanResponderTerminate: () => {
+          justDoubleTapped.current = false;
           isPinching.current = false;
           pinchStartDist.current = null;
           pinchStartMidpoint.current = null;
@@ -292,7 +337,7 @@ export const ProofOfDeliveryModal: React.FC = () => {
           }
         },
       }),
-    [imageWidth, imageHeight]
+    [imageWidth, imageHeight, windowWidth, windowHeight]
   );
 
   useEffect(() => {
