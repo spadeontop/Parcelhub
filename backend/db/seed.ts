@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import { db } from "./index";
 import { runMigrations } from "./migrate";
-import { appConfig, customers, orders, staff } from "./schema";
+import { appConfig, customers, orders, orderScreenshots, staff } from "./schema";
 
 export async function seedDatabase() {
   console.log("🌱 Running migrations on database...");
@@ -551,7 +551,18 @@ export async function seedDatabase() {
   ];
 
   for (const o of seedOrders) {
-    await db.insert(orders).values(o).onConflictDoNothing();
+    const { imageUrl, ...orderData } = o;
+    await db.insert(orders).values(orderData).onConflictDoNothing();
+    if (imageUrl) {
+      await db
+        .insert(orderScreenshots)
+        .values({
+          orderId: o.id,
+          imageUrl,
+          isVerified: o.status !== "PENDING_INITIALIZATION",
+        })
+        .onConflictDoNothing();
+    }
   }
 
   console.log("✅ Database seeded successfully with 2 customers and 20 orders!");

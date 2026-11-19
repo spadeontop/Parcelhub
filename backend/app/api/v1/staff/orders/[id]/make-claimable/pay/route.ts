@@ -34,14 +34,24 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // ---------------------------------------------------------
     // 3. Business Logic:
-    //    a. Fetch order from DB by ID or ticketCode
+    //    a. Fetch order metadata + paying staff name in a single LEFT JOIN query
     //    b. Ensure order status is AWAITING_PARCEL
     //    c. Ensure courier payment has not already been recorded
     //    d. Update courierPaid = true, courierPaidBy, and courierPaidAt
     // ---------------------------------------------------------
-    const order = await db.query.orders.findFirst({
-      where: or(eq(orders.id, lookupId), eq(orders.ticketCode, lookupId)),
-    });
+    const [order] = await db
+      .select({
+        id: orders.id,
+        status: orders.status,
+        courierPaid: orders.courierPaid,
+        courierPaidBy: orders.courierPaidBy,
+        courierPaidByFirstName: staff.firstName,
+        courierPaidByLastName: staff.lastName,
+      })
+      .from(orders)
+      .leftJoin(staff, eq(orders.courierPaidBy, staff.id))
+      .where(or(eq(orders.id, lookupId), eq(orders.ticketCode, lookupId)))
+      .limit(1);
 
     if (!order) {
       return jsonError("Order not found", 404, "Not Found");
@@ -55,15 +65,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     if (order.courierPaid) {
-      let staffName = order.courierPaidBy || "staff";
-      if (order.courierPaidBy) {
-        const payingStaff = await db.query.staff.findFirst({
-          where: eq(staff.id, order.courierPaidBy),
-        });
-        if (payingStaff) {
-          staffName = `${payingStaff.firstName} ${payingStaff.lastName}`;
-        }
-      }
+      const joinedName =
+        order.courierPaidByFirstName || order.courierPaidByLastName
+          ? `${order.courierPaidByFirstName ?? ""} ${order.courierPaidByLastName ?? ""}`.trim()
+          : null;
+      const staffName = joinedName || order.courierPaidBy || "staff";
 
       return jsonError(
         `Courier payment is already recorded for this order (Paid by ${staffName})`,

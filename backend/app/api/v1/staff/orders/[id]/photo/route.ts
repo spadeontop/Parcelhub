@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { eq, or } from "drizzle-orm";
 import { db } from "@/db";
-import { orders } from "@/db/schema";
+import { orders, orderScreenshots } from "@/db/schema";
 import { authenticateStaffRequest } from "@/app/lib/v1/auth";
 import { jsonError, jsonSuccess } from "@/app/lib/response";
 import {
@@ -60,20 +60,61 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     // 3. Logic:
     //    Lookup order by UUID or ticketCode and select ONLY
     //    the requested photo column(s) from the database.
+    //    Screenshots live exclusively in order_screenshots.image_url.
     // ---------------------------------------------------------
-    const columnsConfig = {
-      id: true,
-      imageUrl: photoType === "screenshot" || photoType === "all",
-      proofImageUrl: photoType === "proof" || photoType === "all",
-    };
+    const whereClause = or(eq(orders.id, lookupId), eq(orders.ticketCode, lookupId));
 
-    const order = await db.query.orders.findFirst({
-      where: or(eq(orders.id, lookupId), eq(orders.ticketCode, lookupId)),
-      columns: columnsConfig,
-    });
+    let orderId: string;
+    let imageUrl: string | null = null;
+    let proofImageUrl: string | null = null;
 
-    if (!order) {
-      return jsonError("Order not found", 404, "Not Found");
+    if (photoType === "proof") {
+      const order = await db.query.orders.findFirst({
+        where: whereClause,
+        columns: {
+          id: true,
+          proofImageUrl: true,
+        },
+      });
+      if (!order) {
+        return jsonError("Order not found", 404, "Not Found");
+      }
+      orderId = order.id;
+      proofImageUrl = order.proofImageUrl ?? null;
+    } else if (photoType === "screenshot") {
+      const [order] = await db
+        .select({
+          id: orders.id,
+          imageUrl: orderScreenshots.imageUrl,
+        })
+        .from(orders)
+        .leftJoin(orderScreenshots, eq(orderScreenshots.orderId, orders.id))
+        .where(whereClause)
+        .limit(1);
+
+      if (!order) {
+        return jsonError("Order not found", 404, "Not Found");
+      }
+      orderId = order.id;
+      imageUrl = order.imageUrl ?? null;
+    } else {
+      const [order] = await db
+        .select({
+          id: orders.id,
+          imageUrl: orderScreenshots.imageUrl,
+          proofImageUrl: orders.proofImageUrl,
+        })
+        .from(orders)
+        .leftJoin(orderScreenshots, eq(orderScreenshots.orderId, orders.id))
+        .where(whereClause)
+        .limit(1);
+
+      if (!order) {
+        return jsonError("Order not found", 404, "Not Found");
+      }
+      orderId = order.id;
+      imageUrl = order.imageUrl ?? null;
+      proofImageUrl = order.proofImageUrl ?? null;
     }
 
     // ---------------------------------------------------------
@@ -82,9 +123,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     // ---------------------------------------------------------
     const response: StaffGetOrderPhotoRes = {
       statusMessage: "Order photo(s) retrieved successfully",
-      orderId: order.id as OrderId,
-      imageUrl: "imageUrl" in order ? (order.imageUrl ?? null) : null,
-      proofImageUrl: "proofImageUrl" in order ? (order.proofImageUrl ?? null) : null,
+      orderId: orderId as OrderId,
+      imageUrl,
+      proofImageUrl,
     };
 
     return jsonSuccess(response);

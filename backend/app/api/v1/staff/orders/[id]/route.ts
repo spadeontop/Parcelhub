@@ -59,31 +59,43 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     // ---------------------------------------------------------
     // 3. Business Logic:
-    //    a. Find order by primary ID or human-facing ticketCode
-    //    b. If courierPaidBy exists, fetch the staff member's name
-    //    c. Compute live isClaimActive and claimRemainingSeconds
+    //    a. Find order by primary ID or human-facing ticketCode with LEFT JOIN staff
+    //       (omits base64 image columns and avoids a second DB query for courierPaidByName)
+    //    b. Compute live isClaimActive and claimRemainingSeconds
     // ---------------------------------------------------------
-    const order = await db.query.orders.findFirst({
-      where: or(eq(orders.id, lookupId), eq(orders.ticketCode, lookupId)),
-      columns: {
-        imageUrl: false,
-        proofImageUrl: false,
-      },
-    });
+    const [order] = await db
+      .select({
+        id: orders.id,
+        ticketCode: orders.ticketCode,
+        trackingId: orders.trackingId,
+        recipientName: orders.recipientName,
+        price: orders.price,
+        amountReceived: orders.amountReceived,
+        change: orders.change,
+        status: orders.status,
+        statusTimeline: orders.statusTimeline,
+        claimRequested: orders.claimRequested,
+        claimExpiresAt: orders.claimExpiresAt,
+        courierPaid: orders.courierPaid,
+        courierPaidBy: orders.courierPaidBy,
+        courierPaidAt: orders.courierPaidAt,
+        timestamp: orders.timestamp,
+        courierPaidByFirstName: staff.firstName,
+        courierPaidByLastName: staff.lastName,
+      })
+      .from(orders)
+      .leftJoin(staff, eq(orders.courierPaidBy, staff.id))
+      .where(or(eq(orders.id, lookupId), eq(orders.ticketCode, lookupId)))
+      .limit(1);
 
     if (!order) {
       return jsonError("Order not found", 404, "Not Found");
     }
 
-    let courierPaidByName: string | undefined = undefined;
-    if (order.courierPaidBy) {
-      const payingStaff = await db.query.staff.findFirst({
-        where: eq(staff.id, order.courierPaidBy),
-      });
-      if (payingStaff) {
-        courierPaidByName = `${payingStaff.firstName} ${payingStaff.lastName}`;
-      }
-    }
+    const courierPaidByName =
+      order.courierPaidByFirstName || order.courierPaidByLastName
+        ? `${order.courierPaidByFirstName ?? ""} ${order.courierPaidByLastName ?? ""}`.trim()
+        : undefined;
 
     const nowMs = Date.now();
     let isClaimActive = false;
