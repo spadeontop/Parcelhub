@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity } from 'react-native';
 import { StaffOrder } from '../../../types';
-import { OrderConfirmationCheckbox } from './OrderConfirmationCheckbox';
+import { OrderConfirmationCard } from './OrderConfirmationCard';
 import { OrderCardContainer } from '../../common/OrderCardContainer';
+import { StaffActionButton, ButtonActionState } from '../../common/StaffActionButton';
 
 export interface StaffUnpaidActionSectionProps {
   order: StaffOrder;
@@ -26,11 +27,20 @@ export const StaffUnpaidActionSection: React.FC<StaffUnpaidActionSectionProps> =
   const [isConfirmed, setIsConfirmed] = useState<boolean>(false);
   const [isLocked, setIsLocked] = useState<boolean>(false);
   const [isInputFocused, setIsInputFocused] = useState<boolean>(false);
+  const [btnState, setBtnState] = useState<ButtonActionState>('idle');
+  const [amountError, setAmountError] = useState<string | null>(null);
+  const [hasCardError, setHasCardError] = useState<boolean>(false);
+  const [cardErrorMessage, setCardErrorMessage] = useState<string>('');
+  const [shakeTrigger, setShakeTrigger] = useState<number>(0);
   const inputRef = useRef<any>(null);
 
   useEffect(() => {
     setIsConfirmed(false);
     setIsLocked(false);
+    setBtnState('idle');
+    setAmountError(null);
+    setHasCardError(false);
+    setCardErrorMessage('');
     setCashText(
       typeof order.amountReceived === 'number' && order.amountReceived > 0
         ? String(order.amountReceived)
@@ -41,11 +51,10 @@ export const StaffUnpaidActionSection: React.FC<StaffUnpaidActionSectionProps> =
   const cashNum = parseFloat(cashText) || 0;
   const change = cashNum > 0 ? Math.max(0, cashNum - fee) : 0;
   const isSufficient = fee > 0 ? cashNum >= fee : cashNum > 0;
-  const canActivate = isConfirmed && isSufficient && !isSubmitting;
 
   // Feedback states following AuthInput.tsx
   const hasInput = cashText.trim().length > 0;
-  const isError = hasInput && !isSufficient;
+  const isError = Boolean(amountError) || (hasInput && !isSufficient);
   const isValid = hasInput && isSufficient;
 
   // Border & text colors: red on error (#EF4444), green on sufficient (#16A34A), blue on focus (#2563EB)
@@ -63,11 +72,68 @@ export const StaffUnpaidActionSection: React.FC<StaffUnpaidActionSectionProps> =
     ? '#2563EB'
     : '#64748B';
 
-  const handleSubmit = async () => {
-    if (!canActivate || isLocked) return;
-    setIsLocked(true);
-    await onActivate(order.id, cashNum);
+  const handleToggleConfirm = () => {
+    if (isLocked || isSubmitting || btnState !== 'idle') return;
+    setIsConfirmed((prev) => {
+      const next = !prev;
+      if (next) {
+        setHasCardError(false);
+        setCardErrorMessage('');
+      }
+      return next;
+    });
   };
+
+  const handleSubmit = async () => {
+    if (isLocked || isSubmitting || btnState !== 'idle') return;
+
+    // 1. Context-aware validation: check cash amount first
+    if (!isSufficient) {
+      const msg = fee > 0
+        ? (cashText.trim().length === 0
+            ? 'Please enter the amount received.'
+            : `Amount is not enough. Minimum required is ₱${fee.toLocaleString()}.`)
+        : 'Please enter a valid received amount.';
+      setAmountError(msg);
+      setHasCardError(false);
+      setCardErrorMessage('');
+      inputRef.current?.focus();
+      return;
+    }
+
+    setAmountError(null);
+
+    // 2. Context-aware validation: check confirmation checkbox
+    if (!isConfirmed) {
+      setHasCardError(true);
+      setCardErrorMessage('Please check the confirmation box before submitting.');
+      setShakeTrigger((c) => c + 1);
+      return;
+    }
+
+    // 3. Clear errors and proceed to loading & backend response
+    setHasCardError(false);
+    setCardErrorMessage('');
+    setIsLocked(true);
+    setBtnState('loading');
+
+    try {
+      await onActivate(order.id, cashNum);
+      // Stay in success state until staff returns home or goes back
+      setBtnState('success');
+    } catch {
+      setIsLocked(false);
+      setBtnState('idle');
+    }
+  };
+
+  const activeErrorMessage = amountError
+    ? amountError
+    : isError
+    ? (fee > 0
+        ? `Amount is not enough. Minimum required is ₱${fee.toLocaleString()}.`
+        : 'Please enter a valid amount.')
+    : null;
 
   return (
     <View className="gap-4">
@@ -83,11 +149,16 @@ export const StaffUnpaidActionSection: React.FC<StaffUnpaidActionSectionProps> =
         {/* Currency Input Field with interactive feedback */}
         <TouchableOpacity
           activeOpacity={1}
-          onPress={() => inputRef.current?.focus()}
+          onPress={() => {
+            if (btnState === 'idle' && !isLocked) {
+              inputRef.current?.focus();
+            }
+          }}
           style={{
             borderColor,
             backgroundColor: isError ? '#FFF9F9' : '#FFFFFF',
             borderWidth: isInputFocused ? 2 : 1,
+            opacity: btnState === 'success' ? 0.6 : 1,
           }}
           className="rounded-xl px-4 py-2.5 flex-row items-center justify-between"
         >
@@ -100,7 +171,15 @@ export const StaffUnpaidActionSection: React.FC<StaffUnpaidActionSectionProps> =
           <TextInput
             ref={inputRef}
             value={cashText}
-            onChangeText={setCashText}
+            editable={btnState === 'idle' && !isLocked}
+            onChangeText={(txt) => {
+              setCashText(txt);
+              if (amountError) setAmountError(null);
+              if (hasCardError) {
+                setHasCardError(false);
+                setCardErrorMessage('');
+              }
+            }}
             onFocus={() => setIsInputFocused(true)}
             onBlur={() => setIsInputFocused(false)}
             keyboardType="numeric"
@@ -112,18 +191,16 @@ export const StaffUnpaidActionSection: React.FC<StaffUnpaidActionSectionProps> =
         </TouchableOpacity>
 
         {/* Error Feedback Message matching AuthInput.tsx */}
-        {isError ? (
+        {activeErrorMessage ? (
           <View style={{ marginTop: 4, marginLeft: 4, marginBottom: 8 }}>
             <Text
               style={{
                 fontSize: 11,
                 color: '#DC2626',
-                fontWeight: '400',
+                fontWeight: '500',
               }}
             >
-              {fee > 0
-                ? `Amount is not enough. Minimum required is ₱${fee.toLocaleString()}`
-                : 'Please enter a valid amount'}
+              {activeErrorMessage}
             </Text>
           </View>
         ) : (
@@ -165,54 +242,38 @@ export const StaffUnpaidActionSection: React.FC<StaffUnpaidActionSectionProps> =
         </Text>
       </OrderCardContainer>
 
-      {/* Confirmation Checkbox (Confirmation_Box in Figma) */}
-      <OrderConfirmationCheckbox
+      {/* Confirmation Card with Shake & Inline Error (Reference: button uncheck feedback.html) */}
+      <OrderConfirmationCard
         checked={isConfirmed}
-        onToggle={() => {
-          if (!isLocked && !isSubmitting) {
-            setIsConfirmed((prev) => !prev);
-          }
-        }}
+        onToggle={handleToggleConfirm}
         title={
           cashNum > 0
             ? `I confirm that I received exactly ₱${cashNum.toLocaleString()}`
             : 'I confirm that I received the payment'
         }
         subtitle="Only activate the order if you received the exact or more compared to the specified amount."
-        disabled={isLocked || isSubmitting || !isSufficient}
+        disabled={isLocked || isSubmitting || btnState !== 'idle'}
+        hasError={hasCardError}
+        errorMessage={cardErrorMessage}
+        shakeTrigger={shakeTrigger}
       />
 
-      {/* Action Buttons: Solid Black Activate Order & Return to Home */}
+      {/* Action Buttons: State-driven Action Button & Return to Home */}
       <View className="mt-3">
-        {/* Activate Order Button */}
-        <TouchableOpacity
-          activeOpacity={0.85}
+        <StaffActionButton
+          state={btnState}
+          idleLabel="Activate Order"
+          loadingLabel="Activating..."
+          successLabel="✓ Order Activated"
           onPress={handleSubmit}
-          disabled={!canActivate}
-          className={`w-full h-[48px] rounded-xl items-center justify-center ${
-            canActivate ? 'bg-black' : 'bg-[#94A3B8]'
-          }`}
-          style={{
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 1 },
-            shadowOpacity: 0.05,
-            shadowRadius: 2,
-            elevation: 1,
-          }}
-        >
-          {isSubmitting ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
-          ) : (
-            <Text className="text-white font-bold text-[15px] tracking-wide">
-              Activate Order
-            </Text>
-          )}
-        </TouchableOpacity>
+          disabled={false}
+        />
 
         {/* Return to Home Secondary Button */}
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={onReturnHome}
+          disabled={btnState === 'loading'}
           className="w-full py-3 items-center justify-center mt-2"
         >
           <Text className="text-[13px] font-bold text-[#475569]">

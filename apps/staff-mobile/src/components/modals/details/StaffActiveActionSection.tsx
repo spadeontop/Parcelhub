@@ -16,8 +16,9 @@ import {
   Upload,
 } from '../../common/Icons';
 import { OrderCardContainer } from '../../common/OrderCardContainer';
-import { OrderConfirmationCheckbox } from './OrderConfirmationCheckbox';
+import { OrderConfirmationCard } from './OrderConfirmationCard';
 import { PaymentSummaryCard } from './PaymentSummaryCard';
+import { StaffActionButton, ButtonActionState } from '../../common/StaffActionButton';
 import { compressStaffProof } from '../../../utils/imageCompression';
 
 interface StaffActiveActionSectionProps {
@@ -51,10 +52,13 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
     Boolean(order.courierPaid)
   );
 
-  // Step 1 Confirmation Checkbox
+  // Step 1 Confirmation & Button states
   const [isReceivedConfirmed, setIsReceivedConfirmed] = useState<boolean>(false);
   const [isStep1Locked, setIsStep1Locked] = useState<boolean>(false);
-  const [isPayingStep1, setIsPayingStep1] = useState<boolean>(false);
+  const [step1BtnState, setStep1BtnState] = useState<ButtonActionState>('idle');
+  const [hasStep1Error, setHasStep1Error] = useState<boolean>(false);
+  const [step1ErrorMessage, setStep1ErrorMessage] = useState<string>('');
+  const [step1ShakeTrigger, setStep1ShakeTrigger] = useState<number>(0);
 
   // Step 2: Photo Upload state
   const [hasPhoto, setHasPhoto] = useState<boolean>(Boolean(order.proofImageUrl));
@@ -64,18 +68,28 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
   const [photoValidationState, setPhotoValidationState] = useState<'VALID' | 'INVALID'>('VALID');
   const [isPhotoConfirmed, setIsPhotoConfirmed] = useState<boolean>(false);
   const [isStep2Locked, setIsStep2Locked] = useState<boolean>(false);
-  const [isFinalSubmitting, setIsFinalSubmitting] = useState<boolean>(false);
+  const [step2BtnState, setStep2BtnState] = useState<ButtonActionState>('idle');
+  const [hasStep2Error, setHasStep2Error] = useState<boolean>(false);
+  const [step2ErrorMessage, setStep2ErrorMessage] = useState<string>('');
+  const [step2ShakeTrigger, setStep2ShakeTrigger] = useState<number>(0);
 
   useEffect(() => {
     setLocalCourierPaid(Boolean(order.courierPaid));
     setIsReceivedConfirmed(false);
     setIsStep1Locked(false);
+    setStep1BtnState('idle');
+    setHasStep1Error(false);
+    setStep1ErrorMessage('');
+
     setHasPhoto(Boolean(order.proofImageUrl));
     setPhotoUri(order.proofImageUrl || null);
     setPhotoBase64(null);
     setPhotoValidationState('VALID');
     setIsPhotoConfirmed(false);
     setIsStep2Locked(false);
+    setStep2BtnState('idle');
+    setHasStep2Error(false);
+    setStep2ErrorMessage('');
   }, [order.id, order.courierPaid, order.proofImageUrl]);
 
   const price = typeof order.amountToPay === 'number' ? order.amountToPay : 0;
@@ -91,19 +105,42 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
   // -------------------------------------------------------------
   // Step 1 Handlers (Figma 1346:2288)
   // -------------------------------------------------------------
-  const canPayCourier = isReceivedConfirmed && !isPayingStep1 && !isPayingCourier && !isStep1Locked;
+  const handleToggleReceivedConfirm = () => {
+    if (isStep1Locked || isPayingCourier || step1BtnState !== 'idle') return;
+    setIsReceivedConfirmed((prev) => {
+      const next = !prev;
+      if (next) {
+        setHasStep1Error(false);
+        setStep1ErrorMessage('');
+      }
+      return next;
+    });
+  };
 
   const handlePayCourierStep = async () => {
-    if (!canPayCourier) return;
+    if (isStep1Locked || isPayingCourier || step1BtnState !== 'idle') return;
+
+    if (!isReceivedConfirmed) {
+      setHasStep1Error(true);
+      setStep1ErrorMessage('Please check the confirmation box before submitting.');
+      setStep1ShakeTrigger((c) => c + 1);
+      return;
+    }
+
+    setHasStep1Error(false);
+    setStep1ErrorMessage('');
     setIsStep1Locked(true);
-    setIsPayingStep1(true);
+    setStep1BtnState('loading');
+
     try {
       await onPayCourier(order.id);
+      setStep1BtnState('success');
+      // Show green success feedback for 1.2s, then transition to Step 2 in place
+      await new Promise((resolve) => setTimeout(resolve, 1200));
       setLocalCourierPaid(true);
     } catch {
       setIsStep1Locked(false);
-    } finally {
-      setIsPayingStep1(false);
+      setStep1BtnState('idle');
     }
   };
 
@@ -121,7 +158,6 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
           quality: 1,
         });
       } else {
-        // Fallback to media library if camera permission is unavailable or on simulator
         pickerResult = await ImagePicker.launchImageLibraryAsync({
           mediaTypes: ['images'],
           allowsEditing: false,
@@ -133,7 +169,6 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
         const asset = pickerResult.assets[0];
         setIsCompressing(true);
 
-        // Compress according to IMAGE_COMPRESSION.md: max 800px, WebP @ 80%, <110KB
         const compressed = await compressStaffProof(
           asset.uri,
           asset.width,
@@ -145,15 +180,18 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
         setHasPhoto(true);
         setPhotoValidationState('VALID');
         setIsPhotoConfirmed(false);
+        setHasStep2Error(false);
+        setStep2ErrorMessage('');
       }
     } catch (err: any) {
       console.warn('Camera / compression fallback:', err);
-      // Fallback for desktop/simulator testing without breaking flow
       setPhotoUri(null);
       setPhotoBase64('mock://ai-verified-parcel-proof.jpg');
       setHasPhoto(true);
       setPhotoValidationState('VALID');
       setIsPhotoConfirmed(false);
+      setHasStep2Error(false);
+      setStep2ErrorMessage('');
       if (err?.message && !err.message.includes('permission')) {
         Alert.alert('Image Processing Notice', err.message);
       }
@@ -169,35 +207,63 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
     setPhotoValidationState('VALID');
     setIsPhotoConfirmed(false);
     setIsStep2Locked(false);
+    setHasStep2Error(false);
+    setStep2ErrorMessage('');
   };
 
-  const toggleValidationState = () => {
-    setPhotoValidationState((prev) => {
-      const next = prev === 'VALID' ? 'INVALID' : 'VALID';
-      if (next === 'INVALID') {
-        setIsPhotoConfirmed(false);
+  const handleTogglePhotoConfirm = () => {
+    if (isStep2Locked || isAttachingPhoto || step2BtnState !== 'idle') return;
+    setIsPhotoConfirmed((prev) => {
+      const next = !prev;
+      if (next) {
+        setHasStep2Error(false);
+        setStep2ErrorMessage('');
       }
       return next;
     });
   };
 
-  const isStep2Valid = hasPhoto && photoValidationState === 'VALID';
-  const canSubmitFinal =
-    isStep2Valid && isPhotoConfirmed && !isFinalSubmitting && !isAttachingPhoto && !isStep2Locked && !isCompressing;
-
   const handleFinalClaimAndPaid = async () => {
-    if (!canSubmitFinal) return;
+    if (isStep2Locked || isAttachingPhoto || step2BtnState !== 'idle' || isCompressing) return;
+
+    // 1. Context-aware validation: Photo required
+    if (!hasPhoto && !photoBase64) {
+      setHasStep2Error(true);
+      setStep2ErrorMessage('Please take or attach a parcel waybill photo first.');
+      setStep2ShakeTrigger((c) => c + 1);
+      return;
+    }
+
+    // 2. Photo validation state
+    if (photoValidationState !== 'VALID') {
+      setHasStep2Error(true);
+      setStep2ErrorMessage('Photo is marked invalid. Please retake photo.');
+      setStep2ShakeTrigger((c) => c + 1);
+      return;
+    }
+
+    // 3. Confirmation card validation
+    if (!isPhotoConfirmed) {
+      setHasStep2Error(true);
+      setStep2ErrorMessage('Please check the confirmation box before submitting.');
+      setStep2ShakeTrigger((c) => c + 1);
+      return;
+    }
+
+    // 4. Valid -> Loading -> Success Feedback
+    setHasStep2Error(false);
+    setStep2ErrorMessage('');
     setIsStep2Locked(true);
-    setIsFinalSubmitting(true);
+    setStep2BtnState('loading');
+
     try {
-      // Pass the WebP base64 Data URI (< 110KB) to the backend API
       const payloadUrl = photoBase64 || photoUri || 'mock://ai-verified-parcel-proof.jpg';
       await onAttachPhoto(order.id, payloadUrl);
-      onReturnHome();
+      // Stay in success feedback state until staff goes back or returns home
+      setStep2BtnState('success');
     } catch {
       setIsStep2Locked(false);
-    } finally {
-      setIsFinalSubmitting(false);
+      setStep2BtnState('idle');
     }
   };
 
@@ -216,48 +282,35 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
           className="mb-4"
         />
 
-        {/* Checkbox: "I confirm that I received the order" */}
-        <OrderConfirmationCheckbox
+        {/* Checkbox Card with Shake & Inline Error */}
+        <OrderConfirmationCard
           checked={isReceivedConfirmed}
-          onToggle={() => {
-            if (!isStep1Locked && !isPayingStep1 && !isPayingCourier) {
-              setIsReceivedConfirmed((prev) => !prev);
-            }
-          }}
-          disabled={isStep1Locked || isPayingStep1 || isPayingCourier}
+          onToggle={handleToggleReceivedConfirm}
+          disabled={isStep1Locked || isPayingCourier || step1BtnState !== 'idle'}
           title="I confirm that I received the order"
           subtitle="Only confirm after paying the courier the exact amount and receiving the parcel."
+          hasError={hasStep1Error}
+          errorMessage={step1ErrorMessage}
+          shakeTrigger={step1ShakeTrigger}
         />
 
-        {/* Primary Action Button: Solid Black "Order Claimed & Paid" */}
-        <TouchableOpacity
-          activeOpacity={0.85}
-          onPress={handlePayCourierStep}
-          disabled={!canPayCourier}
-          className={`w-full h-[48px] rounded-xl items-center justify-center mb-2 ${
-            canPayCourier ? 'bg-black' : 'bg-[#94A3B8]'
-          }`}
-          style={{
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 1 },
-            shadowOpacity: 0.05,
-            shadowRadius: 2,
-            elevation: 1,
-          }}
-        >
-          {isPayingStep1 || isPayingCourier ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
-          ) : (
-            <Text className="text-white font-bold text-[14px] tracking-wide">
-              Order Claimed & Paid
-            </Text>
-          )}
-        </TouchableOpacity>
+        {/* State-driven Action Button: "Order Claimed & Paid" */}
+        <View className="mt-2 mb-2">
+          <StaffActionButton
+            state={step1BtnState}
+            idleLabel="Order Claimed & Paid"
+            loadingLabel="Recording Payout..."
+            successLabel="✓ Courier Paid"
+            onPress={handlePayCourierStep}
+            disabled={false}
+          />
+        </View>
 
         {/* Return to Home Secondary Button */}
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={onReturnHome}
+          disabled={step1BtnState === 'loading'}
           className="w-full py-2.5 items-center justify-center mt-1"
         >
           <Text className="text-[13px] font-bold text-[#475569]">
@@ -313,9 +366,7 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
         </View>
 
         {!hasPhoto ? (
-          /* ------------------------------------------------------------- */
-          /* Empty Photo State (Figma 1338:639)                            */
-          /* ------------------------------------------------------------- */
+          /* Empty Photo State (Figma 1338:639) */
           <>
             <Text className="text-[11px] font-normal text-[#64748B] mt-1 mb-4">
               A parcel photo is required to confirm receipt.
@@ -356,9 +407,7 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
             </TouchableOpacity>
           </>
         ) : (
-          /* ------------------------------------------------------------- */
           /* Photo Attached State: Verified (1346:1883) or Invalid (1346:2329) */
-          /* ------------------------------------------------------------- */
           <>
             {/* Verification Status Pill Badge (Figma 1350:21 & 1346:2343) */}
             <View
@@ -407,50 +456,35 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
         )}
       </OrderCardContainer>
 
-      {/* Checkbox: "I confirm that I attached a valid photo" */}
-      <OrderConfirmationCheckbox
+      {/* Checkbox Card with Shake & Inline Error */}
+      <OrderConfirmationCard
         checked={isPhotoConfirmed}
-        onToggle={() => {
-          if (!isStep2Locked && !isFinalSubmitting && !isAttachingPhoto && isStep2Valid) {
-            setIsPhotoConfirmed((prev) => !prev);
-          }
-        }}
-        disabled={
-          !isStep2Valid || isStep2Locked || isFinalSubmitting || isAttachingPhoto
-        }
+        onToggle={handleTogglePhotoConfirm}
+        disabled={isStep2Locked || isAttachingPhoto || step2BtnState !== 'idle'}
         title="I confirm that I attached a valid photo"
         subtitle="Only confirm after paying the courier the exact amount and receiving the parcel."
+        hasError={hasStep2Error}
+        errorMessage={step2ErrorMessage}
+        shakeTrigger={step2ShakeTrigger}
       />
 
-      {/* Primary Action Button: "Order Claimed & Paid" */}
-      <TouchableOpacity
-        activeOpacity={0.85}
-        onPress={handleFinalClaimAndPaid}
-        disabled={!canSubmitFinal}
-        className={`w-full h-[48px] rounded-xl items-center justify-center mb-2 ${
-          canSubmitFinal ? 'bg-black' : 'bg-[#94A3B8]'
-        }`}
-        style={{
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 1 },
-          shadowOpacity: 0.05,
-          shadowRadius: 2,
-          elevation: 1,
-        }}
-      >
-        {isFinalSubmitting || isAttachingPhoto ? (
-          <ActivityIndicator size="small" color="#FFFFFF" />
-        ) : (
-          <Text className="text-white font-bold text-[14px] tracking-wide">
-            Order Claimed & Paid
-          </Text>
-        )}
-      </TouchableOpacity>
+      {/* State-driven Action Button: "Order Claimed & Paid" */}
+      <View className="mt-2 mb-2">
+        <StaffActionButton
+          state={step2BtnState}
+          idleLabel="Order Claimed & Paid"
+          loadingLabel="Submitting Proof..."
+          successLabel="✓ Proof Attached"
+          onPress={handleFinalClaimAndPaid}
+          disabled={false}
+        />
+      </View>
 
       {/* Return to Home Secondary Button */}
       <TouchableOpacity
         activeOpacity={0.7}
         onPress={onReturnHome}
+        disabled={step2BtnState === 'loading'}
         className="w-full py-2.5 items-center justify-center mt-1"
       >
         <Text className="text-[13px] font-bold text-[#475569]">

@@ -58,7 +58,6 @@ export const StaffTerminalScreen: React.FC = () => {
     setIsDeskInfoOpen,
     isRefreshing,
     refreshOrders,
-    showToast,
   } = useStaff();
 
   // 20 items per page (server-side paginated)
@@ -294,9 +293,9 @@ export const StaffTerminalScreen: React.FC = () => {
           onClose={() => setIsLookupOpen(false)}
           onSelectOrder={openOrderDetails}
           onOpenAccount={() => setIsDeskInfoOpen(true)}
-          onNotFound={(query) =>
-            showToast(`No order found matching "${query}"`, 'error')
-          }
+          onNotFound={(query) => {
+            console.warn(`No order found matching "${query}"`);
+          }}
         />
       </View>
 

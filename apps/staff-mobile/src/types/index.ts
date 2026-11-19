@@ -57,12 +57,6 @@ export interface StaffOrder {
   notes?: string;
 }
 
-export interface ToastState {
-  show: boolean;
-  message: string;
-  type?: 'info' | 'success' | 'error';
-}
-
 export interface StaffLoginResponse {
   statusMessage: string;
   authToken: string;

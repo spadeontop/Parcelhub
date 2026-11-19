@@ -29,7 +29,6 @@ export const StaffOrderDetailsModal: React.FC<StaffOrderDetailsModalProps> = ({
     payCourier,
     attachPhoto,
     claimOrder,
-    showToast,
   } = useStaff();
 
   const [isActivating, setIsActivating] = useState<boolean>(false);
@@ -44,7 +43,7 @@ export const StaffOrderDetailsModal: React.FC<StaffOrderDetailsModalProps> = ({
     setIsActivating(true);
     try {
       await activateOrder(orderId, amount);
-      onClose();
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
     } finally {
       setIsActivating(false);
     }
@@ -74,7 +73,7 @@ export const StaffOrderDetailsModal: React.FC<StaffOrderDetailsModalProps> = ({
       await claimOrder(orderId);
       scrollViewRef.current?.scrollTo({ y: 0, animated: true });
     } catch (err: any) {
-      showToast(err?.message || 'Failed to release order', 'error');
+      console.warn(err?.message || 'Failed to release order');
     } finally {
       setIsReleasing(false);
     }

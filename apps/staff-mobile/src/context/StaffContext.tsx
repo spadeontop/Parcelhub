@@ -13,7 +13,6 @@ import {
   StaffTab,
   OrderStatus,
   StaffBadgeCounts,
-  ToastState,
 } from '../types';
 import { staffApi, StaffApiError } from '../services/staffApi';
 import { ENV } from '../config/env';
@@ -55,8 +54,6 @@ interface StaffContextType {
   setIsLookupOpen: (open: boolean) => void;
   isDeskInfoOpen: boolean;
   setIsDeskInfoOpen: (open: boolean) => void;
-  toast: ToastState;
-  showToast: (message: string, type?: 'info' | 'success' | 'error') => void;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshOrders: () => Promise<void>;
@@ -148,9 +145,7 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isDetailsOpen, setIsDetailsOpen] = useState<boolean>(false);
   const [isLookupOpen, setIsLookupOpen] = useState<boolean>(false);
   const [isDeskInfoOpen, setIsDeskInfoOpen] = useState<boolean>(false);
-  const [toast, setToast] = useState<ToastState>({ show: false, message: '' });
 
-  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const userRef = useRef<StaffUser | null>(null);
   userRef.current = staffUser;
 
@@ -172,14 +167,6 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const tabFetchRequestId = useRef(0);
   const tabAbortControllerRef = useRef<AbortController | null>(null);
   const isFetchingTabRef = useRef(false);
-
-  const showToast = useCallback((message: string, type: 'info' | 'success' | 'error' = 'info') => {
-    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-    setToast({ show: true, message, type });
-    toastTimerRef.current = setTimeout(() => {
-      setToast({ show: false, message: '', type: 'info' });
-    }, 3200);
-  }, []);
 
   // Fetch orders for a specific tab and page
   const fetchTabOrders = useCallback(
@@ -251,13 +238,9 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
         if (err instanceof StaffApiError && err.statusCode === 401) {
           setStaffUser(null);
-          showToast('Session expired or unauthorized. Please sign in again.', 'error');
           return;
         }
         setIsOnline(false);
-        if (!quiet) {
-          showToast(err?.message || 'Failed to sync with backend', 'error');
-        }
       } finally {
         isFetchingTabRef.current = false;
         if (!quiet && currentReqId === tabFetchRequestId.current) {
@@ -265,7 +248,7 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
       }
     },
-    [showToast]
+    []
   );
 
   // Strategy A: Eagerly prefetch initial 20 orders for ALL tabs concurrently
@@ -320,7 +303,6 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
         if (has401) {
           setStaffUser(null);
-          showToast('Session expired or unauthorized. Please sign in again.', 'error');
           return;
         }
 
@@ -332,11 +314,8 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         if (hasSuccess) {
           setIsOnline(true);
         }
-      } catch (err: any) {
+      } catch {
         setIsOnline(false);
-        if (!quiet) {
-          showToast(err?.message || 'Failed to sync with backend', 'error');
-        }
       } finally {
         if (!quiet) {
           setIsLoadingOrders(false);
@@ -344,7 +323,7 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
       }
     },
-    [showToast]
+    []
   );
 
   // Search API execution
@@ -373,18 +352,16 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         if (reqId !== searchRequestId.current) return;
         if (err instanceof StaffApiError && err.statusCode === 401) {
           setStaffUser(null);
-          showToast('Session expired or unauthorized. Please sign in again.', 'error');
           return;
         }
         setIsOnline(false);
-        showToast(err?.message || 'Error searching orders', 'error');
       } finally {
         if (reqId === searchRequestId.current) {
           setIsLoadingOrders(false);
         }
       }
     },
-    [showToast]
+    []
   );
 
   // Check stored auth token on startup and prefetch tabs
@@ -595,7 +572,6 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       token: res.authToken,
     };
     setStaffUser(user);
-    showToast(`Signed in as ${normalizedUsername}`, 'success');
     // Strategy A: Eagerly prefetch 20 orders for each tab on login
     await fetchAllTabs(false, res.authToken);
   };
@@ -614,7 +590,6 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setSearchQuery('');
     setSelectedOrder(null);
     setIsDetailsOpen(false);
-    showToast('Signed out of Staff Terminal', 'info');
   };
 
   // Pull to refresh: refreshes search or all tabs
@@ -662,20 +637,74 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Staff counter actions
   const activateOrder = async (orderId: string, amountReceived: number) => {
     const res = await staffApi.activateOrder(orderId, amountReceived, staffUser?.token);
-    showToast(`Order ${orderId} activated! Change: ₱${res.change.toLocaleString()}`, 'success');
+    // Optimistically update tabCache so tabs reflect the updated order upon return to home
+    setTabCache((prev) => {
+      const next = { ...prev };
+      STAFF_TABS.forEach((tab) => {
+        const entry = next[tab];
+        if (!entry) return;
+        const exists = entry.orders.some((o) => o.id === orderId);
+        if (exists) {
+          next[tab] = {
+            ...entry,
+            orders: entry.orders.map((o) =>
+              o.id === orderId
+                ? {
+                    ...o,
+                    status: 'AWAITING_PARCEL' as OrderStatus,
+                    amountReceived,
+                    change: res.change,
+                  }
+                : o
+            ),
+          };
+        }
+      });
+      return next;
+    });
     await fetchAllTabs(true, staffUser?.token);
   };
 
   const payCourier = async (orderId: string) => {
     await staffApi.payCourier(orderId, staffUser?.token);
-    showToast(`Courier payout recorded for ${orderId}`, 'success');
+    setSelectedOrder((prev) =>
+      prev && prev.id === orderId
+        ? {
+            ...prev,
+            courierPaid: true,
+          }
+        : prev
+    );
     await fetchAllTabs(true, staffUser?.token);
   };
 
   const attachPhoto = async (orderId: string, imageUrl?: string) => {
     const payloadUrl = imageUrl?.trim() || 'mock://ai-verified-proof-delivery.jpg';
     await staffApi.attachPhoto(orderId, payloadUrl, staffUser?.token);
-    showToast(`Proof attached. ${orderId} is now Ready to Claim!`, 'success');
+    // Optimistically update tabCache so tabs reflect the updated order upon return to home
+    setTabCache((prev) => {
+      const next = { ...prev };
+      STAFF_TABS.forEach((tab) => {
+        const entry = next[tab];
+        if (!entry) return;
+        const exists = entry.orders.some((o) => o.id === orderId);
+        if (exists) {
+          next[tab] = {
+            ...entry,
+            orders: entry.orders.map((o) =>
+              o.id === orderId
+                ? {
+                    ...o,
+                    status: 'READY_TO_CLAIM' as OrderStatus,
+                    proofImageUrl: payloadUrl,
+                  }
+                : o
+            ),
+          };
+        }
+      });
+      return next;
+    });
     await fetchAllTabs(true, staffUser?.token);
   };
 
@@ -712,21 +741,6 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       return next;
     });
 
-    setSelectedOrder((prev) =>
-      prev && prev.id === orderId
-        ? {
-            ...prev,
-            status: 'CLAIMED',
-            isClaimActive: false,
-            claimRemainingSeconds: 0,
-            timestamp: claimedAt,
-            claimedAt,
-            createdAt: prev.createdAt || prev.statusTimeline?.[0]?.timestamp || prev.timestamp,
-          }
-        : prev
-    );
-
-    showToast(`Order ${orderId} handed over and marked Claimed!`, 'success');
     await fetchAllTabs(true, staffUser?.token);
   };
 
@@ -747,7 +761,6 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (selectedOrder && selectedOrder.id === orderId) {
       setSelectedOrder((prev) => (prev ? { ...prev, notes } : null));
     }
-    showToast('Counter note updated', 'success');
   };
 
   return (
@@ -779,8 +792,6 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setIsLookupOpen,
         isDeskInfoOpen,
         setIsDeskInfoOpen,
-        toast,
-        showToast,
         login,
         logout,
         refreshOrders,

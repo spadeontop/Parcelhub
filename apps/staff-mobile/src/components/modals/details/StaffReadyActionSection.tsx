@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { StaffOrder } from '../../../types';
-import { OrderConfirmationCheckbox } from './OrderConfirmationCheckbox';
+import { OrderConfirmationCard } from './OrderConfirmationCard';
 import { OrderCardContainer } from '../../common/OrderCardContainer';
 import { PaymentSummaryCard } from './PaymentSummaryCard';
+import { StaffActionButton, ButtonActionState } from '../../common/StaffActionButton';
 
 interface StaffReadyActionSectionProps {
   order: StaffOrder;
@@ -33,10 +34,17 @@ export const StaffReadyActionSection: React.FC<StaffReadyActionSectionProps> = (
   );
   const [isConfirmed, setIsConfirmed] = useState<boolean>(false);
   const [isLocked, setIsLocked] = useState<boolean>(false);
+  const [btnState, setBtnState] = useState<ButtonActionState>('idle');
+  const [hasError, setHasError] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [shakeTrigger, setShakeTrigger] = useState<number>(0);
 
   useEffect(() => {
     setIsConfirmed(false);
     setIsLocked(false);
+    setBtnState('idle');
+    setHasError(false);
+    setErrorMessage('');
   }, [order.id]);
 
   useEffect(() => {
@@ -61,7 +69,6 @@ export const StaffReadyActionSection: React.FC<StaffReadyActionSectionProps> = (
   const formattedTimer = `${minutes}:${String(seconds).padStart(2, '0')}`;
 
   const isTimerExpired = isInitiated && secondsRemaining <= 0;
-  const canRelease = isInitiated && isConfirmed && secondsRemaining > 0 && !isReleasing;
 
   const price = typeof order.amountToPay === 'number' ? order.amountToPay : 0;
   const paidAmount =
@@ -73,10 +80,59 @@ export const StaffReadyActionSection: React.FC<StaffReadyActionSectionProps> = (
       ? order.change
       : Math.max(0, paidAmount - price);
 
+  const handleToggleConfirm = () => {
+    if (isLocked || isReleasing || btnState !== 'idle') return;
+    setIsConfirmed((prev) => {
+      const next = !prev;
+      if (next) {
+        setHasError(false);
+        setErrorMessage('');
+      }
+      return next;
+    });
+  };
+
   const handleRelease = async () => {
-    if (!canRelease || isLocked) return;
+    if (isLocked || isReleasing || btnState !== 'idle') return;
+
+    // 1. Context-aware validation: Claim initiated
+    if (!isInitiated) {
+      setHasError(true);
+      setErrorMessage('Customer has not initiated the claim yet. Ask customer to tap Claim on their device.');
+      setShakeTrigger((c) => c + 1);
+      return;
+    }
+
+    // 2. Context-aware validation: Timer expired
+    if (isTimerExpired) {
+      setHasError(true);
+      setErrorMessage('Claiming window has expired. Ask customer to re-initiate.');
+      setShakeTrigger((c) => c + 1);
+      return;
+    }
+
+    // 3. Context-aware validation: Confirmation checkbox
+    if (!isConfirmed) {
+      setHasError(true);
+      setErrorMessage('Please check the confirmation box before submitting.');
+      setShakeTrigger((c) => c + 1);
+      return;
+    }
+
+    // 4. Valid -> Loading -> Success Feedback
+    setHasError(false);
+    setErrorMessage('');
     setIsLocked(true);
-    await onRelease(order.id);
+    setBtnState('loading');
+
+    try {
+      await onRelease(order.id);
+      // Stay in success feedback state until staff goes back or returns home
+      setBtnState('success');
+    } catch {
+      setIsLocked(false);
+      setBtnState('idle');
+    }
   };
 
   return (
@@ -133,50 +189,35 @@ export const StaffReadyActionSection: React.FC<StaffReadyActionSectionProps> = (
         </OrderCardContainer>
       )}
 
-      {/* Confirmation Checkbox */}
-      <OrderConfirmationCheckbox
+      {/* Confirmation Card with Shake & Inline Error (Reference: button uncheck feedback.html) */}
+      <OrderConfirmationCard
         checked={isConfirmed}
-        onToggle={() => {
-          if (!isLocked && !isReleasing && isInitiated && !isTimerExpired) {
-            setIsConfirmed((prev) => !prev);
-          }
-        }}
-        disabled={isLocked || isReleasing || !isInitiated || isTimerExpired}
+        onToggle={handleToggleConfirm}
+        disabled={isLocked || isReleasing || btnState !== 'idle'}
         title="I confirm that I want to release the order"
         subtitle="Only initiate release when customer is physically claiming their order."
+        hasError={hasError}
+        errorMessage={errorMessage}
+        shakeTrigger={shakeTrigger}
       />
 
-      {/* Primary Action Button */}
-      <TouchableOpacity
-        activeOpacity={0.85}
-        onPress={handleRelease}
-        disabled={!canRelease || isReleasing || isLocked}
-        className={`w-full h-[48px] rounded-xl items-center justify-center mb-2 ${
-          canRelease && !isReleasing && !isLocked
-            ? 'bg-black'
-            : 'bg-[#94A3B8]'
-        }`}
-        style={{
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 1 },
-          shadowOpacity: 0.05,
-          shadowRadius: 2,
-          elevation: 1,
-        }}
-      >
-        {isReleasing ? (
-          <ActivityIndicator size="small" color="#FFFFFF" />
-        ) : (
-          <Text className="text-white font-bold text-[15px]">
-            Release Order
-          </Text>
-        )}
-      </TouchableOpacity>
+      {/* State-driven Action Button: "Release Order" (Reference: button feedback 2.html) */}
+      <View className="mt-2 mb-2">
+        <StaffActionButton
+          state={btnState}
+          idleLabel="Release Order"
+          loadingLabel="Releasing..."
+          successLabel="✓ Parcel Released"
+          onPress={handleRelease}
+          disabled={false}
+        />
+      </View>
 
       {/* Return to Home Secondary Button */}
       <TouchableOpacity
         activeOpacity={0.7}
         onPress={onReturnHome}
+        disabled={btnState === 'loading'}
         className="w-full py-2.5 items-center justify-center mt-1"
       >
         <Text className="text-[13px] font-bold text-[#475569]">
