@@ -71,14 +71,13 @@ export async function GET(request: NextRequest) {
       limit,
       offset,
       columns: {
-        imageUrl: false,
         proofImageUrl: false,
       },
     });
 
     const now = new Date();
 
-    const orderSummaries: CustomerOrderSummary[] = rows.map((row: Omit<OrderRow, "imageUrl" | "proofImageUrl">) => ({
+    const orderSummaries: CustomerOrderSummary[] = rows.map((row: Omit<OrderRow, "proofImageUrl">) => ({
       id: row.id as OrderId,
       ticketCode: row.ticketCode,
       trackingId: row.trackingId,

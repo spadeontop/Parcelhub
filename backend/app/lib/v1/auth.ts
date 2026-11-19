@@ -9,16 +9,19 @@ import {
   verifyV1Token,
 } from "./jwt";
 
+export type SafeCustomerRow = Omit<CustomerRow, "passwordHash" | "mpin">;
+export type SafeStaffRow = Omit<StaffRow, "passwordHash">;
+
 export interface AuthenticatedCustomerResult {
   session: V1TokenPayload | null;
-  customer?: CustomerRow;
+  customer?: SafeCustomerRow;
   error?: string;
   status: number;
 }
 
 export interface AuthenticatedStaffResult {
   session: V1StaffTokenPayload | null;
-  staff?: StaffRow;
+  staff?: SafeStaffRow;
   error?: string;
   status: number;
 }
@@ -45,6 +48,10 @@ export async function authenticateCustomerRequest(
   try {
     const customer = await db.query.customers.findFirst({
       where: eq(customers.id, auth.session.userId),
+      columns: {
+        passwordHash: false,
+        mpin: false,
+      },
     });
 
     if (!customer) {
@@ -107,6 +114,9 @@ export async function authenticateStaffRequest(
   try {
     const staffMember = await db.query.staff.findFirst({
       where: eq(staff.id, payload.userId),
+      columns: {
+        passwordHash: false,
+      },
     });
 
     if (!staffMember) {
@@ -183,6 +193,26 @@ export async function authenticateAnyV1User(
   // 1. Try Customer/Admin token
   const customerAuth = await verifyV1Token(token, "AUTH");
   if (customerAuth.payload && !customerAuth.payload.isPreAuth) {
+    if (customerAuth.payload.role === "CUSTOMER") {
+      try {
+        const existingCustomer = await db.query.customers.findFirst({
+          where: eq(customers.id, customerAuth.payload.userId),
+          columns: { id: true },
+        });
+        if (!existingCustomer) {
+          return {
+            session: null,
+            error: "Unauthorized: Account no longer exists in database",
+            status: 401,
+          };
+        }
+      } catch (err: unknown) {
+        const errorMsg =
+          err instanceof Error ? err.message : "Database error verifying customer account";
+        return { session: null, error: errorMsg, status: 500 };
+      }
+    }
+
     return {
       session: {
         userId: customerAuth.payload.userId,
@@ -195,6 +225,24 @@ export async function authenticateAnyV1User(
   // 2. Try Staff token
   const staffAuth = await verifyStaffToken(token, "AUTH");
   if (staffAuth.payload) {
+    try {
+      const existingStaff = await db.query.staff.findFirst({
+        where: eq(staff.id, staffAuth.payload.userId),
+        columns: { id: true },
+      });
+      if (!existingStaff) {
+        return {
+          session: null,
+          error: "Unauthorized: Staff account no longer exists in database",
+          status: 401,
+        };
+      }
+    } catch (err: unknown) {
+      const errorMsg =
+        err instanceof Error ? err.message : "Database error verifying staff account";
+      return { session: null, error: errorMsg, status: 500 };
+    }
+
     return {
       session: {
         userId: staffAuth.payload.userId,
