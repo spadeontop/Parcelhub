@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, ne } from "drizzle-orm";
 import { db } from "@/db";
 import { OrderRow, orders } from "@/db/schema";
 import { authenticateCustomerRequest } from "@/app/lib/v1/auth";
@@ -13,7 +13,6 @@ import {
 } from "@/app/types/v1/api";
 
 const VALID_ORDER_STATUSES: readonly OrderStatus[] = [
-  "PENDING_INITIALIZATION",
   "PAYMENT_REQUIRED",
   "AWAITING_PARCEL",
   "READY_TO_CLAIM",
@@ -57,25 +56,28 @@ export async function GET(request: NextRequest) {
 
     // ---------------------------------------------------------
     // 3. Logic:
-    //    Query orders strictly for this customer, applying optional status filter,
-    //    sorting by timestamp DESC, paginated by limit & offset.
+    //    Query orders strictly for this customer, omitting PENDING_INITIALIZATION
+    //    drafts at the DB level, applying optional status filter, sorting by
+    //    timestamp DESC, paginated by limit & offset.
     // ---------------------------------------------------------
     const rows = await db.query.orders.findMany({
       where: statusFilter
         ? and(eq(orders.customerId, auth.session.userId), eq(orders.status, statusFilter))
-        : eq(orders.customerId, auth.session.userId),
+        : and(
+            eq(orders.customerId, auth.session.userId),
+            ne(orders.status, "PENDING_INITIALIZATION")
+          ),
       orderBy: [desc(orders.timestamp)],
       limit,
       offset,
       columns: {
-        imageUrl: false,
         proofImageUrl: false,
       },
     });
 
     const now = new Date();
 
-    const orderSummaries: CustomerOrderSummary[] = rows.map((row: Omit<OrderRow, "imageUrl" | "proofImageUrl">) => ({
+    const orderSummaries: CustomerOrderSummary[] = rows.map((row: Omit<OrderRow, "proofImageUrl">) => ({
       id: row.id as OrderId,
       ticketCode: row.ticketCode,
       trackingId: row.trackingId,

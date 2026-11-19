@@ -1,10 +1,11 @@
 import { NextRequest } from "next/server";
-import { eq, or } from "drizzle-orm";
+import { and, eq, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { orders } from "@/db/schema";
 import { authenticateStaffRequest } from "@/app/lib/v1/auth";
 import { sendFcmNotification } from "@/app/lib/v1/fcm";
 import { validateImageSize } from "@/app/lib/v1/image";
+import { ORDER_NON_IMAGE_COLUMNS } from "@/app/lib/v1/orders";
 import { jsonError, jsonSuccess } from "@/app/lib/response";
 import {
   StaffAttachPhotoReq,
@@ -65,6 +66,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     // ---------------------------------------------------------
     const order = await db.query.orders.findFirst({
       where: or(eq(orders.id, lookupId), eq(orders.ticketCode, lookupId)),
+      columns: ORDER_NON_IMAGE_COLUMNS,
     });
 
     if (!order) {
@@ -88,26 +90,36 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     const now = new Date();
     const nowIso = now.toISOString();
+    const timelineEntry: StatusTimelineEntry = {
+      status: "READY_TO_CLAIM",
+      timestamp: nowIso,
+    };
 
-    const currentTimeline = (order.statusTimeline || []) as StatusTimelineEntry[];
-    const updatedTimeline: StatusTimelineEntry[] = [
-      ...currentTimeline,
-      {
-        status: "READY_TO_CLAIM",
-        timestamp: nowIso,
-      },
-    ];
-
-    await db
+    const [updatedOrder] = await db
       .update(orders)
       .set({
         proofImageUrl: imageUrl,
         status: "READY_TO_CLAIM",
-        statusTimeline: updatedTimeline,
+        statusTimeline: sql<StatusTimelineEntry[]>`coalesce(${orders.statusTimeline}, '[]'::jsonb) || ${JSON.stringify([timelineEntry])}::jsonb`,
         modifiedBy: auth.session.userId,
         timestamp: now,
       })
-      .where(eq(orders.id, order.id));
+      .where(
+        and(
+          eq(orders.id, order.id),
+          eq(orders.status, "AWAITING_PARCEL"),
+          eq(orders.courierPaid, true)
+        )
+      )
+      .returning({ id: orders.id });
+
+    if (!updatedOrder) {
+      return jsonError(
+        "Order status changed concurrently or courier payment is missing",
+        409,
+        "Conflict"
+      );
+    }
 
     // Non-fatal FCM push to customer
     sendFcmNotification({

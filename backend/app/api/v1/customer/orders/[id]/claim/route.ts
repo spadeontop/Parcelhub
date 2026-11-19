@@ -57,6 +57,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         or(eq(orders.id, identifier), eq(orders.ticketCode, identifier.toUpperCase())),
         eq(orders.customerId, auth.session.userId)
       ),
+      columns: {
+        id: true,
+        status: true,
+      },
     });
 
     if (!order) {
@@ -79,8 +83,15 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         claimExpiresAt: expiresAt,
         timestamp: initiatedAt,
       })
-      .where(eq(orders.id, order.id))
-      .returning();
+      .where(and(eq(orders.id, order.id), eq(orders.status, "READY_TO_CLAIM")))
+      .returning({
+        claimInitiatedAt: orders.claimInitiatedAt,
+        claimExpiresAt: orders.claimExpiresAt,
+      });
+
+    if (!updatedOrder) {
+      return jsonError("Parcel is no longer ready for pickup", 409, "Conflict");
+    }
 
     // ---------------------------------------------------------
     // 4. Response:

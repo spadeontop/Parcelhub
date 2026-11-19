@@ -59,7 +59,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         eq(orders.customerId, auth.session.userId)
       ),
       columns: {
-        imageUrl: false,
         proofImageUrl: false,
       },
     });
@@ -174,18 +173,28 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     // ---------------------------------------------------------
     // 3. Logic:
-    //    a. Fetch order by UUID or ticketCode matching customerId
+    //    a. Fetch order metadata + screenshot verification flag in one joined query
     //    b. Enforce one-shot continuation strictly from PENDING_INITIALIZATION
     //    c. Enforce AI_VERIFICATION gate when enabled in environment
     //    d. Check trackingId uniqueness against paid non-cancelled orders
     //    e. Update order details and transition status -> PAYMENT_REQUIRED
     // ---------------------------------------------------------
-    const order = await db.query.orders.findFirst({
-      where: and(
-        or(eq(orders.id, identifier), eq(orders.ticketCode, identifier.toUpperCase())),
-        eq(orders.customerId, auth.session.userId)
-      ),
-    });
+    const [order] = await db
+      .select({
+        id: orders.id,
+        status: orders.status,
+        statusTimeline: orders.statusTimeline,
+        screenshotVerified: orderScreenshots.isVerified,
+      })
+      .from(orders)
+      .leftJoin(orderScreenshots, eq(orderScreenshots.orderId, orders.id))
+      .where(
+        and(
+          or(eq(orders.id, identifier), eq(orders.ticketCode, identifier.toUpperCase())),
+          eq(orders.customerId, auth.session.userId)
+        )
+      )
+      .limit(1);
 
     if (!order) {
       return jsonError("Order not found", 404, "Not Found");
@@ -199,18 +208,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    if (process.env.AI_VERIFICATION === "true") {
-      const screenshot = await db.query.orderScreenshots.findFirst({
-        where: eq(orderScreenshots.orderId, order.id),
-      });
-
-      if (!screenshot || !screenshot.isVerified) {
-        return jsonError(
-          "Order screenshot has not passed AI verification",
-          403,
-          "Forbidden"
-        );
-      }
+    if (process.env.AI_VERIFICATION === "true" && !order.screenshotVerified) {
+      return jsonError(
+        "Order screenshot has not passed AI verification",
+        403,
+        "Forbidden"
+      );
     }
 
     const paidDuplicate = await db.query.orders.findFirst({
@@ -223,6 +226,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
           "CLAIMED",
         ] as OrderStatus[])
       ),
+      columns: { id: true },
     });
 
     if (paidDuplicate) {
@@ -258,7 +262,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       .where(
         and(eq(orders.id, order.id), eq(orders.status, "PENDING_INITIALIZATION"))
       )
-      .returning();
+      .returning({ id: orders.id });
 
     if (!updatedOrder) {
       return jsonError(

@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { eq } from "drizzle-orm";
+import { and, eq, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { fcmTokens } from "@/db/schema";
 import { authenticateAnyV1User } from "@/app/lib/v1/auth";
@@ -38,25 +38,41 @@ export async function POST(request: NextRequest) {
 
     // ---------------------------------------------------------
     // 3. Database Persistence (Single Active Device Policy):
-    //    a. Remove any previous device token registered to this user
-    //    b. Insert or update the new token mapped to auth.session.userId
+    //    a. Acquire per-user transaction advisory lock to serialize concurrent uploads
+    //    b. Remove any other device token registered to this user
+    //    c. Insert or update the new token mapped to auth.session.userId
     // ---------------------------------------------------------
-    await db.delete(fcmTokens).where(eq(fcmTokens.userId, auth.session.userId));
+    const now = new Date();
+    await db.transaction(async (tx: typeof db) => {
+      // Serialize concurrent token uploads for the same user under READ COMMITTED
+      await tx.execute(
+        sql`SELECT pg_advisory_xact_lock(hashtext(${`fcm:${auth.session!.userId}`}))`
+      );
 
-    await db
-      .insert(fcmTokens)
-      .values({
-        token: fcmToken,
-        userId: auth.session.userId,
-        createdAt: new Date(),
-      })
-      .onConflictDoUpdate({
-        target: fcmTokens.token,
-        set: {
-          userId: auth.session.userId,
-          createdAt: new Date(),
-        },
-      });
+      await tx
+        .delete(fcmTokens)
+        .where(
+          and(
+            eq(fcmTokens.userId, auth.session!.userId),
+            ne(fcmTokens.token, fcmToken)
+          )
+        );
+
+      await tx
+        .insert(fcmTokens)
+        .values({
+          token: fcmToken,
+          userId: auth.session!.userId,
+          createdAt: now,
+        })
+        .onConflictDoUpdate({
+          target: fcmTokens.token,
+          set: {
+            userId: auth.session!.userId,
+            createdAt: now,
+          },
+        });
+    });
 
     // ---------------------------------------------------------
     // 4. Response:

@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { eq, or } from "drizzle-orm";
+import { and, eq, or } from "drizzle-orm";
 import { db } from "@/db";
 import { orders, staff } from "@/db/schema";
 import { authenticateStaffRequest } from "@/app/lib/v1/auth";
@@ -34,14 +34,24 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // ---------------------------------------------------------
     // 3. Business Logic:
-    //    a. Fetch order from DB by ID or ticketCode
+    //    a. Fetch order metadata + paying staff name in a single LEFT JOIN query
     //    b. Ensure order status is AWAITING_PARCEL
     //    c. Ensure courier payment has not already been recorded
     //    d. Update courierPaid = true, courierPaidBy, and courierPaidAt
     // ---------------------------------------------------------
-    const order = await db.query.orders.findFirst({
-      where: or(eq(orders.id, lookupId), eq(orders.ticketCode, lookupId)),
-    });
+    const [order] = await db
+      .select({
+        id: orders.id,
+        status: orders.status,
+        courierPaid: orders.courierPaid,
+        courierPaidBy: orders.courierPaidBy,
+        courierPaidByFirstName: staff.firstName,
+        courierPaidByLastName: staff.lastName,
+      })
+      .from(orders)
+      .leftJoin(staff, eq(orders.courierPaidBy, staff.id))
+      .where(or(eq(orders.id, lookupId), eq(orders.ticketCode, lookupId)))
+      .limit(1);
 
     if (!order) {
       return jsonError("Order not found", 404, "Not Found");
@@ -55,15 +65,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     if (order.courierPaid) {
-      let staffName = order.courierPaidBy || "staff";
-      if (order.courierPaidBy) {
-        const payingStaff = await db.query.staff.findFirst({
-          where: eq(staff.id, order.courierPaidBy),
-        });
-        if (payingStaff) {
-          staffName = `${payingStaff.firstName} ${payingStaff.lastName}`;
-        }
-      }
+      const joinedName =
+        order.courierPaidByFirstName || order.courierPaidByLastName
+          ? `${order.courierPaidByFirstName ?? ""} ${order.courierPaidByLastName ?? ""}`.trim()
+          : null;
+      const staffName = joinedName || order.courierPaidBy || "staff";
 
       return jsonError(
         `Courier payment is already recorded for this order (Paid by ${staffName})`,
@@ -74,7 +80,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     const now = new Date();
 
-    await db
+    const [updatedOrder] = await db
       .update(orders)
       .set({
         courierPaid: true,
@@ -83,7 +89,22 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         modifiedBy: auth.session.userId,
         timestamp: now,
       })
-      .where(eq(orders.id, order.id));
+      .where(
+        and(
+          eq(orders.id, order.id),
+          eq(orders.status, "AWAITING_PARCEL"),
+          eq(orders.courierPaid, false)
+        )
+      )
+      .returning({ id: orders.id });
+
+    if (!updatedOrder) {
+      return jsonError(
+        "Courier payment was already recorded or order status changed concurrently",
+        409,
+        "Conflict"
+      );
+    }
 
     // ---------------------------------------------------------
     // 4. Response:

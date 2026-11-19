@@ -191,15 +191,21 @@ async function runNotificationV1Tests() {
     // -------------------------------------------------------------
     console.log("6. Testing sendFcmNotification() In-Process Utility...");
     
-    // 6a. User without token
+    // 6a. User without token (or short-circuited dry-run when FCM is disabled)
     const noTokenResult = await sendFcmNotification({
       userId: "NON_EXISTENT_USER",
       title: "Test",
       body: "Test Body",
     });
-    assert.strictEqual(noTokenResult.success, false);
-    assert.strictEqual(noTokenResult.reason, "NO_ACTIVE_DEVICE_TOKEN");
-    console.log("   ✅ Correctly handles user with no registered device token");
+    if (!isFcmConfigured()) {
+      assert.strictEqual(noTokenResult.success, true);
+      assert.strictEqual(noTokenResult.reason, "FCM_DISABLED_DRY_RUN");
+      console.log("   ✅ Short-circuited before DB query when FCM is disabled");
+    } else {
+      assert.strictEqual(noTokenResult.success, false);
+      assert.strictEqual(noTokenResult.reason, "NO_ACTIVE_DEVICE_TOKEN");
+      console.log("   ✅ Correctly handles user with no registered device token");
+    }
 
     // 6b. Dry-run / resilient mode for existing user
     assert.strictEqual(typeof isFcmConfigured(), "boolean");

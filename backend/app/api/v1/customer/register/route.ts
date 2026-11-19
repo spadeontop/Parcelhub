@@ -3,11 +3,13 @@ import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { customers } from "@/db/schema";
+import { isUniqueViolation } from "@/app/lib/v1/db-errors";
 import { signPreAuthToken } from "@/app/lib/v1/jwt";
 import { jsonError, jsonSuccess } from "@/app/lib/response";
 import { CustomerRegisterReq, CustomerRegisterRes } from "@/app/types/v1/api";
 
 export async function POST(request: NextRequest) {
+  let body: CustomerRegisterReq;
   try {
     // ---------------------------------------------------------
     // 1. Auth Validation: None (Public registration route)
@@ -16,14 +18,18 @@ export async function POST(request: NextRequest) {
     // ---------------------------------------------------------
     // 2. Request Validation: Parse and validate required fields
     // ---------------------------------------------------------
-    const body = (await request.json()) as CustomerRegisterReq;
+    body = (await request.json()) as CustomerRegisterReq;
+  } catch {
+    return jsonError("Invalid request body", 400);
+  }
 
-    const email = body.email?.trim().toLowerCase();
-    const password = body.password;
-    const firstName = body.firstName?.trim();
-    const lastName = body.lastName?.trim();
-    const phoneNumber = body.phoneNumber?.trim();
-    const middleInitial = body.middleInitial?.trim() || null;
+  try {
+    const email = body?.email?.trim().toLowerCase();
+    const password = body?.password;
+    const firstName = body?.firstName?.trim();
+    const lastName = body?.lastName?.trim();
+    const phoneNumber = body?.phoneNumber?.trim();
+    const middleInitial = body?.middleInitial?.trim() || null;
 
     if (!email || !password || !firstName || !lastName || !phoneNumber) {
       return jsonError("Missing required registration fields", 400);
@@ -31,12 +37,13 @@ export async function POST(request: NextRequest) {
 
     // ---------------------------------------------------------
     // 3. Logic:
-    //    a. Check if email already registered in DB
+    //    a. Fast-path check if email already registered in DB (avoids wasted bcrypt work)
     //    b. Hash password using bcrypt (cost 10)
-    //    c. Insert new record into customers table
+    //    c. Insert new record into customers table, handling concurrent unique violations
     // ---------------------------------------------------------
     const existing = await db.query.customers.findFirst({
       where: eq(customers.email, email),
+      columns: { id: true },
     });
 
     if (existing) {
@@ -45,17 +52,25 @@ export async function POST(request: NextRequest) {
 
     const passwordHash = await bcrypt.hash(password, 10);
 
-    const [newCustomer] = await db
-      .insert(customers)
-      .values({
-        email,
-        passwordHash,
-        firstName,
-        lastName,
-        middleInitial,
-        phoneNumber,
-      })
-      .returning();
+    let newCustomer: typeof customers.$inferSelect;
+    try {
+      [newCustomer] = await db
+        .insert(customers)
+        .values({
+          email,
+          passwordHash,
+          firstName,
+          lastName,
+          middleInitial,
+          phoneNumber,
+        })
+        .returning();
+    } catch (insertErr: unknown) {
+      if (isUniqueViolation(insertErr)) {
+        return jsonError("Customer with this email already exists", 409, "Conflict");
+      }
+      throw insertErr;
+    }
 
     // ---------------------------------------------------------
     // 4. Response:
@@ -73,7 +88,8 @@ export async function POST(request: NextRequest) {
     };
 
     return jsonSuccess(response, 201);
-  } catch {
-    return jsonError("Invalid request body", 400);
+  } catch (err: unknown) {
+    console.error("[Customer Register Error]:", err);
+    return jsonError("Unable to complete registration. Please try again.", 500);
   }
 }

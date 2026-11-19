@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
-import { desc, eq, count, inArray, and, or, ilike } from "drizzle-orm";
+import { desc, eq, ne, count, and, or, ilike } from "drizzle-orm";
 import { db } from "@/db";
-import { orders, staff, OrderRow } from "@/db/schema";
+import { orders, staff } from "@/db/schema";
 import { authenticateStaffRequest } from "@/app/lib/v1/auth";
 import { parsePagination } from "@/app/lib/pagination";
 import { jsonError, jsonSuccess } from "@/app/lib/response";
@@ -14,7 +14,6 @@ import {
 } from "@/app/types/v1/api";
 
 const VALID_ORDER_STATUSES: OrderStatus[] = [
-  "PENDING_INITIALIZATION",
   "PAYMENT_REQUIRED",
   "AWAITING_PARCEL",
   "READY_TO_CLAIM",
@@ -71,8 +70,8 @@ export async function GET(request: NextRequest) {
 
     const { limit, offset } = parsePagination(searchParams, 20, 20);
 
-    // Build filter expressions strictly scoped to status and (trackingId OR ticketCode)
-    const conditions = [];
+    // Build filter expressions strictly scoped to non-draft orders, status, and (trackingId OR ticketCode)
+    const conditions = [ne(orders.status, "PENDING_INITIALIZATION")];
     if (statusFilter) {
       conditions.push(eq(orders.status, statusFilter));
     }
@@ -81,84 +80,53 @@ export async function GET(request: NextRequest) {
         or(
           ilike(orders.trackingId, `%${searchFilter}%`),
           ilike(orders.ticketCode, `%${searchFilter}%`)
-        )
+        )!
       );
     }
-    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+    const whereClause = and(...conditions);
 
     // ---------------------------------------------------------
     // 3. Business Logic:
-    //    a. Count total matching orders for pagination metadata
-    //    b. Fetch paginated orders from database ordered by timestamp desc
-    //    c. Compute live claim statuses and staff names
+    //    a. Run total count and paginated orders (LEFT JOIN staff for courierPaidByName) in parallel
+    //    b. Compute live claim statuses and format summaries
     // ---------------------------------------------------------
-    const countQuery = db
-      .select({ count: count() })
-      .from(orders);
+    const [totalCountResult, dbOrders] = await Promise.all([
+      db.select({ count: count() }).from(orders).where(whereClause),
+      db
+        .select({
+          id: orders.id,
+          ticketCode: orders.ticketCode,
+          trackingId: orders.trackingId,
+          recipientName: orders.recipientName,
+          price: orders.price,
+          amountReceived: orders.amountReceived,
+          change: orders.change,
+          status: orders.status,
+          statusTimeline: orders.statusTimeline,
+          modifiedBy: orders.modifiedBy,
+          claimRequested: orders.claimRequested,
+          claimInitiatedAt: orders.claimInitiatedAt,
+          claimExpiresAt: orders.claimExpiresAt,
+          courierPaid: orders.courierPaid,
+          courierPaidBy: orders.courierPaidBy,
+          courierPaidAt: orders.courierPaidAt,
+          isRefunded: orders.isRefunded,
+          timestamp: orders.timestamp,
+          courierPaidByFirstName: staff.firstName,
+          courierPaidByLastName: staff.lastName,
+        })
+        .from(orders)
+        .leftJoin(staff, eq(orders.courierPaidBy, staff.id))
+        .where(whereClause)
+        .orderBy(desc(orders.timestamp))
+        .limit(limit)
+        .offset(offset),
+    ]);
 
-    const totalCountResult = whereClause
-      ? await countQuery.where(whereClause)
-      : await countQuery;
     const totalCount = Number(totalCountResult[0]?.count || 0);
-
-    const ordersQuery = db
-      .select({
-        id: orders.id,
-        ticketCode: orders.ticketCode,
-        trackingId: orders.trackingId,
-        recipientName: orders.recipientName,
-        price: orders.price,
-        amountReceived: orders.amountReceived,
-        change: orders.change,
-        status: orders.status,
-        statusTimeline: orders.statusTimeline,
-        modifiedBy: orders.modifiedBy,
-        claimRequested: orders.claimRequested,
-        claimInitiatedAt: orders.claimInitiatedAt,
-        claimExpiresAt: orders.claimExpiresAt,
-        courierPaid: orders.courierPaid,
-        courierPaidBy: orders.courierPaidBy,
-        courierPaidAt: orders.courierPaidAt,
-        isRefunded: orders.isRefunded,
-        timestamp: orders.timestamp,
-      })
-      .from(orders);
-
-    const dbOrders = whereClause
-      ? await ordersQuery
-          .where(whereClause)
-          .orderBy(desc(orders.timestamp))
-          .limit(limit)
-          .offset(offset)
-      : await ordersQuery
-          .orderBy(desc(orders.timestamp))
-          .limit(limit)
-          .offset(offset);
-
-    // Collect courier staff IDs to fetch names in one batch if needed
-    const staffIdsToFetch: string[] = Array.from(
-      new Set(
-        dbOrders
-          .map((o: Omit<OrderRow, "imageUrl" | "proofImageUrl">): string | null => o.courierPaidBy)
-          .filter((id: string | null): id is string => typeof id === "string" && id.length > 0)
-      )
-    );
-
-    const staffMap = new Map<string, string>();
-    if (staffIdsToFetch.length > 0) {
-      const staffList = await db
-        .select()
-        .from(staff)
-        .where(inArray(staff.id, staffIdsToFetch));
-
-      for (const s of staffList) {
-        staffMap.set(s.id, `${s.firstName} ${s.lastName}`);
-      }
-    }
-
     const nowMs = Date.now();
 
-    const formattedOrders: StaffOrderSummary[] = dbOrders.map((o: Omit<OrderRow, "imageUrl" | "proofImageUrl">) => {
+    const formattedOrders: StaffOrderSummary[] = dbOrders.map((o: (typeof dbOrders)[number]) => {
       let isClaimActive = false;
       let claimRemainingSeconds = 0;
 
@@ -171,9 +139,10 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      const courierPaidByName = o.courierPaidBy
-        ? staffMap.get(o.courierPaidBy)
-        : undefined;
+      const courierPaidByName =
+        o.courierPaidByFirstName || o.courierPaidByLastName
+          ? `${o.courierPaidByFirstName ?? ""} ${o.courierPaidByLastName ?? ""}`.trim()
+          : undefined;
 
       return {
         id: o.id as OrderId,
