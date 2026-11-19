@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { StaffOrder } from '../../../types';
 import { OrderConfirmationCheckbox } from './OrderConfirmationCheckbox';
@@ -26,6 +26,7 @@ export const StaffUnpaidActionSection: React.FC<StaffUnpaidActionSectionProps> =
   const [isConfirmed, setIsConfirmed] = useState<boolean>(false);
   const [isLocked, setIsLocked] = useState<boolean>(false);
   const [isInputFocused, setIsInputFocused] = useState<boolean>(false);
+  const inputRef = useRef<any>(null);
 
   useEffect(() => {
     setIsConfirmed(false);
@@ -42,6 +43,26 @@ export const StaffUnpaidActionSection: React.FC<StaffUnpaidActionSectionProps> =
   const isSufficient = fee > 0 ? cashNum >= fee : cashNum > 0;
   const canActivate = isConfirmed && isSufficient && !isSubmitting;
 
+  // Feedback states following AuthInput.tsx
+  const hasInput = cashText.trim().length > 0;
+  const isError = hasInput && !isSufficient;
+  const isValid = hasInput && isSufficient;
+
+  // Border & text colors: red on error (#EF4444), green on sufficient (#16A34A), blue on focus (#2563EB)
+  const borderColor = isError
+    ? '#EF4444'
+    : isValid
+    ? '#16A34A'
+    : isInputFocused
+    ? '#2563EB'
+    : '#CBD5E1';
+
+  const labelColor = isError
+    ? '#DC2626'
+    : isInputFocused
+    ? '#2563EB'
+    : '#64748B';
+
   const handleSubmit = async () => {
     if (!canActivate || isLocked) return;
     setIsLocked(true);
@@ -52,20 +73,32 @@ export const StaffUnpaidActionSection: React.FC<StaffUnpaidActionSectionProps> =
     <View className="gap-4">
       {/* Card: AMOUNT RECEIVED (Card_Amount_Received in Figma 1343:1662) */}
       <OrderCardContainer className="mb-4">
-        <Text className="text-[11px] font-bold text-[#64748B] tracking-wider uppercase mb-2.5">
+        <Text
+          style={{ color: labelColor }}
+          className="text-[11px] font-bold tracking-wider uppercase mb-2.5"
+        >
           AMOUNT RECEIVED
         </Text>
 
-        {/* Currency Input Field */}
-        <View
-          className={`rounded-xl px-4 py-2.5 flex-row items-center justify-between bg-white mb-4 ${
-            isInputFocused
-              ? 'border-2 border-[#2563EB]'
-              : 'border border-[#CBD5E1]'
-          }`}
+        {/* Currency Input Field with interactive feedback */}
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={() => inputRef.current?.focus()}
+          style={{
+            borderColor,
+            backgroundColor: isError ? '#FFF9F9' : '#FFFFFF',
+            borderWidth: isInputFocused ? 2 : 1,
+          }}
+          className="rounded-xl px-4 py-2.5 flex-row items-center justify-between"
         >
-          <Text className="text-[18px] font-bold text-[#64748B]">₱</Text>
+          <Text
+            style={{ color: isError ? '#DC2626' : '#64748B' }}
+            className="text-[18px] font-bold"
+          >
+            ₱
+          </Text>
           <TextInput
+            ref={inputRef}
             value={cashText}
             onChangeText={setCashText}
             onFocus={() => setIsInputFocused(true)}
@@ -76,7 +109,26 @@ export const StaffUnpaidActionSection: React.FC<StaffUnpaidActionSectionProps> =
             style={{ fontSize: 18, fontWeight: '700', color: '#0F172A', padding: 0 }}
             className="flex-1 text-right text-[18px] font-bold text-[#0F172A]"
           />
-        </View>
+        </TouchableOpacity>
+
+        {/* Error Feedback Message matching AuthInput.tsx */}
+        {isError ? (
+          <View style={{ marginTop: 4, marginLeft: 4, marginBottom: 8 }}>
+            <Text
+              style={{
+                fontSize: 11,
+                color: '#DC2626',
+                fontWeight: '400',
+              }}
+            >
+              {fee > 0
+                ? `Amount is not enough. Minimum required is ₱${fee.toLocaleString()}`
+                : 'Please enter a valid amount'}
+            </Text>
+          </View>
+        ) : (
+          <View style={{ marginBottom: 12 }} />
+        )}
 
         {/* Horizontal Divider */}
         <View className="h-px bg-[#F1F5F9] my-2" />
