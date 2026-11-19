@@ -90,7 +90,7 @@ export const StaffOrderDetailsModal: React.FC<StaffOrderDetailsModalProps> = ({
         return { title: 'Order Details', subtitle: 'Unpaid Order' };
       case 'AWAITING_PARCEL':
         return {
-          title: order.courierPaid ? 'Order Details' : 'Complete details',
+          title: 'Order Details',
           subtitle: 'Awaiting Parcel',
         };
       case 'CLAIMED':
