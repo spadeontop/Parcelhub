@@ -70,7 +70,10 @@ async function runV1StaffSuite() {
   const testCustomerEmail = `test_staff_cust_${suffix}@example.com`;
 
   const testOrderId = `ORD-TEST-${suffix}`;
+  const cancelledOrderId = `ORD-TEST-CANCELLED-${suffix}`;
+  const draftOrderId = `ORD-TEST-DRAFT-${suffix}`;
   const testTicketCode = `TST-${suffix.slice(-4)}`;
+  const draftTicketCode = `DRF-${suffix.slice(-4)}`;
   const testTrackingId = `PH-TEST-${suffix}`;
 
   try {
@@ -197,7 +200,7 @@ async function runV1StaffSuite() {
     console.log(`   ✅ Orders listed & filtered (${listData.orders.length} returned, invalid status rejected 400). Images omitted from general list.`);
 
     // ---------------------------------------------------------
-    // 4. View Order Details by ID, TicketCode, and 404 Guard
+    // 4. View Order Details by ID, TicketCode, TrackingId, and Guards
     // ---------------------------------------------------------
     console.log("\n4. Testing View Order Details (GET /api/v1/staff/orders/[id])...");
     const notFoundRes = await getStaffOrder(
@@ -223,7 +226,73 @@ async function runV1StaffSuite() {
     assert.strictEqual(byCodeRes.status, 200);
     const byCodeData = await byCodeRes.json();
     assert.strictEqual(byCodeData.orderId, testOrderId);
-    console.log("   ✅ Order retrieved by ID and ticketCode (200), non-existent rejected (404).");
+
+    const byLowerCodeRes = await getStaffOrder(
+      makeReq(`/api/v1/staff/orders/${testTicketCode.toLowerCase()}`, { token: authToken }),
+      { params: Promise.resolve({ id: testTicketCode.toLowerCase() }) }
+    );
+    assert.strictEqual(byLowerCodeRes.status, 200, "Lowercase ticketCode lookup must return 200");
+    assert.strictEqual((await byLowerCodeRes.json()).orderId, testOrderId);
+
+    // Insert an older CANCELLED order sharing the same trackingId and a PENDING_INITIALIZATION draft
+    await db.insert(orders).values([
+      {
+        id: cancelledOrderId,
+        ticketCode: `CNL-${suffix.slice(-4)}`,
+        trackingId: testTrackingId,
+        productName: "Cancelled Mouse",
+        recipientName: "Test Customer",
+        price: 480,
+        change: 0,
+        amountReceived: 0,
+        status: "CANCELLED",
+        statusTimeline: [
+          { status: "PENDING_INITIALIZATION", timestamp: new Date(Date.now() - 120_000).toISOString() },
+          { status: "CANCELLED", timestamp: new Date(Date.now() - 60_000).toISOString() },
+        ],
+        customerId: testCustomerId,
+        modifiedBy: testStaffId,
+        courierPaid: false,
+        timestamp: new Date(Date.now() + 60_000),
+      },
+      {
+        id: draftOrderId,
+        ticketCode: draftTicketCode,
+        trackingId: null,
+        productName: "",
+        recipientName: "",
+        price: 0,
+        change: 0,
+        amountReceived: null,
+        status: "PENDING_INITIALIZATION",
+        statusTimeline: [{ status: "PENDING_INITIALIZATION", timestamp: new Date().toISOString() }],
+        customerId: testCustomerId,
+        modifiedBy: testCustomerId,
+        courierPaid: false,
+      },
+    ]);
+
+    const byTrackingRes = await getStaffOrder(
+      makeReq(`/api/v1/staff/orders/${testTrackingId.toLowerCase()}`, { token: authToken }),
+      { params: Promise.resolve({ id: testTrackingId.toLowerCase() }) }
+    );
+    assert.strictEqual(byTrackingRes.status, 200, "Case-insensitive trackingId lookup must return 200");
+    const byTrackingData = await byTrackingRes.json();
+    assert.strictEqual(
+      byTrackingData.orderId,
+      testOrderId,
+      "trackingId lookup must prefer active non-cancelled order over CANCELLED order"
+    );
+
+    const draftRes = await getStaffOrder(
+      makeReq(`/api/v1/staff/orders/${draftOrderId}`, { token: authToken }),
+      { params: Promise.resolve({ id: draftOrderId }) }
+    );
+    assert.strictEqual(draftRes.status, 404, "PENDING_INITIALIZATION draft must return 404");
+
+    console.log(
+      "   ✅ Order retrieved by ID, ticketCode (case-insensitive), and trackingId (preferring active over CANCELLED); draft and non-existent rejected (404)."
+    );
 
     // ---------------------------------------------------------
     // 5. Order Activation (Underpayment Guard, Success, & Re-activation Guard)
@@ -360,12 +429,20 @@ async function runV1StaffSuite() {
     assert.strictEqual(defaultStaffPhotoJson.orderId, testOrderId);
     assert.strictEqual(defaultStaffPhotoJson.proofImageUrl, "https://storage.parcelhub.com/proof/test.jpg");
 
-    // Lookup by ticketCode -> 200
+    // Lookup by ticketCode (case-insensitive) & trackingId -> 200
     const codeStaffPhotoRes = await getStaffOrderPhoto(
-      makeReq(`/api/v1/staff/orders/${testTicketCode}/photo`, { token: authToken }),
-      { params: Promise.resolve({ id: testTicketCode }) }
+      makeReq(`/api/v1/staff/orders/${testTicketCode.toLowerCase()}/photo`, { token: authToken }),
+      { params: Promise.resolve({ id: testTicketCode.toLowerCase() }) }
     );
     assert.strictEqual(codeStaffPhotoRes.status, 200);
+    assert.strictEqual((await codeStaffPhotoRes.json()).orderId, testOrderId);
+
+    const trackingStaffPhotoRes = await getStaffOrderPhoto(
+      makeReq(`/api/v1/staff/orders/${testTrackingId}/photo`, { token: authToken }),
+      { params: Promise.resolve({ id: testTrackingId }) }
+    );
+    assert.strictEqual(trackingStaffPhotoRes.status, 200);
+    assert.strictEqual((await trackingStaffPhotoRes.json()).orderId, testOrderId);
 
     // Filter type=proof -> returns proof, imageUrl is null
     const proofStaffPhotoRes = await getStaffOrderPhoto(
@@ -451,6 +528,8 @@ async function runV1StaffSuite() {
   } finally {
     console.log("🧹 Cleaning up ephemeral test database records...");
     await db.delete(orders).where(eq(orders.id, testOrderId));
+    await db.delete(orders).where(eq(orders.id, cancelledOrderId));
+    await db.delete(orders).where(eq(orders.id, draftOrderId));
     await db.delete(customers).where(eq(customers.id, testCustomerId));
     await db.delete(staff).where(eq(staff.id, testStaffId));
     console.log("   ✅ Ephemeral test records cleaned up.");

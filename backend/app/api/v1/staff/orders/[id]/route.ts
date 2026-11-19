@@ -1,8 +1,12 @@
 import { NextRequest } from "next/server";
-import { eq, or } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { orders, staff } from "@/db/schema";
 import { authenticateStaffRequest } from "@/app/lib/v1/auth";
+import {
+  buildStaffOrderLookupWhere,
+  getStaffOrderLookupOrderBy,
+} from "@/app/lib/v1/orders";
 import { jsonError, jsonSuccess } from "@/app/lib/response";
 import {
   OrderId,
@@ -59,7 +63,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     // ---------------------------------------------------------
     // 3. Business Logic:
-    //    a. Find order by primary ID or human-facing ticketCode with LEFT JOIN staff
+    //    a. Find non-draft order by primary ID, case-insensitive ticketCode,
+    //       or case-insensitive waybill trackingId with LEFT JOIN staff
     //       (omits base64 image columns and avoids a second DB query for courierPaidByName)
     //    b. Compute live isClaimActive and claimRemainingSeconds
     // ---------------------------------------------------------
@@ -85,7 +90,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       })
       .from(orders)
       .leftJoin(staff, eq(orders.courierPaidBy, staff.id))
-      .where(or(eq(orders.id, lookupId), eq(orders.ticketCode, lookupId)))
+      .where(buildStaffOrderLookupWhere(lookupId))
+      .orderBy(...getStaffOrderLookupOrderBy(lookupId))
       .limit(1);
 
     if (!order) {

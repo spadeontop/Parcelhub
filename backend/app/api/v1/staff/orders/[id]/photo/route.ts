@@ -1,8 +1,12 @@
 import { NextRequest } from "next/server";
-import { eq, or } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { orders, orderScreenshots } from "@/db/schema";
 import { authenticateStaffRequest } from "@/app/lib/v1/auth";
+import {
+  buildStaffOrderLookupWhere,
+  getStaffOrderLookupOrderBy,
+} from "@/app/lib/v1/orders";
 import { jsonError, jsonSuccess } from "@/app/lib/response";
 import {
   OrderId,
@@ -58,24 +62,27 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     // ---------------------------------------------------------
     // 3. Logic:
-    //    Lookup order by UUID or ticketCode and select ONLY
-    //    the requested photo column(s) from the database.
+    //    Lookup non-draft order by UUID, case-insensitive ticketCode, or
+    //    case-insensitive trackingId and select ONLY the requested photo column(s).
     //    Screenshots live exclusively in order_screenshots.image_url.
     // ---------------------------------------------------------
-    const whereClause = or(eq(orders.id, lookupId), eq(orders.ticketCode, lookupId));
+    const whereClause = buildStaffOrderLookupWhere(lookupId);
+    const orderBy = getStaffOrderLookupOrderBy(lookupId);
 
     let orderId: string;
     let imageUrl: string | null = null;
     let proofImageUrl: string | null = null;
 
     if (photoType === "proof") {
-      const order = await db.query.orders.findFirst({
-        where: whereClause,
-        columns: {
-          id: true,
-          proofImageUrl: true,
-        },
-      });
+      const [order] = await db
+        .select({
+          id: orders.id,
+          proofImageUrl: orders.proofImageUrl,
+        })
+        .from(orders)
+        .where(whereClause)
+        .orderBy(...orderBy)
+        .limit(1);
       if (!order) {
         return jsonError("Order not found", 404, "Not Found");
       }
@@ -90,6 +97,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         .from(orders)
         .leftJoin(orderScreenshots, eq(orderScreenshots.orderId, orders.id))
         .where(whereClause)
+        .orderBy(...orderBy)
         .limit(1);
 
       if (!order) {
@@ -107,6 +115,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         .from(orders)
         .leftJoin(orderScreenshots, eq(orderScreenshots.orderId, orders.id))
         .where(whereClause)
+        .orderBy(...orderBy)
         .limit(1);
 
       if (!order) {
