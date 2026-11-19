@@ -1,8 +1,9 @@
 import { NextRequest } from "next/server";
-import { and, eq, inArray, ne, or } from "drizzle-orm";
+import { and, eq, inArray, ne, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { orders } from "@/db/schema";
 import { authenticateStaffRequest } from "@/app/lib/v1/auth";
+import { isUniqueViolation } from "@/app/lib/v1/db-errors";
 import { sendFcmNotification } from "@/app/lib/v1/fcm";
 import { jsonError, jsonSuccess } from "@/app/lib/response";
 import {
@@ -110,28 +111,45 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     const change = Math.max(0, body.amountReceived - order.price);
-    const nowIso = new Date().toISOString();
+    const now = new Date();
+    const nowIso = now.toISOString();
+    const timelineEntry: StatusTimelineEntry = {
+      status: "AWAITING_PARCEL",
+      timestamp: nowIso,
+    };
 
-    const currentTimeline = (order.statusTimeline || []) as StatusTimelineEntry[];
-    const updatedTimeline: StatusTimelineEntry[] = [
-      ...currentTimeline,
-      {
-        status: "AWAITING_PARCEL",
-        timestamp: nowIso,
-      },
-    ];
+    let updatedOrder: { id: string } | undefined;
+    try {
+      [updatedOrder] = await db
+        .update(orders)
+        .set({
+          amountReceived: body.amountReceived,
+          change,
+          status: "AWAITING_PARCEL",
+          statusTimeline: sql<StatusTimelineEntry[]>`coalesce(${orders.statusTimeline}, '[]'::jsonb) || ${JSON.stringify([timelineEntry])}::jsonb`,
+          modifiedBy: auth.session.userId,
+          timestamp: now,
+        })
+        .where(and(eq(orders.id, order.id), eq(orders.status, "PAYMENT_REQUIRED")))
+        .returning({ id: orders.id });
+    } catch (updateErr: unknown) {
+      if (isUniqueViolation(updateErr, "orders_paid_tracking_id_unique")) {
+        return jsonError(
+          `Tracking ID "${order.trackingId}" is already registered to another active parcel. Cannot activate duplicate parcel.`,
+          409,
+          "Conflict"
+        );
+      }
+      throw updateErr;
+    }
 
-    await db
-      .update(orders)
-      .set({
-        amountReceived: body.amountReceived,
-        change,
-        status: "AWAITING_PARCEL",
-        statusTimeline: updatedTimeline,
-        modifiedBy: auth.session.userId,
-        timestamp: new Date(),
-      })
-      .where(eq(orders.id, order.id));
+    if (!updatedOrder) {
+      return jsonError(
+        "Order has already been activated or its status changed concurrently",
+        409,
+        "Conflict"
+      );
+    }
 
     // Non-fatal FCM push to customer
     sendFcmNotification({

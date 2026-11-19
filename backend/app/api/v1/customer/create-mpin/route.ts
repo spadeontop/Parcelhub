@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import bcrypt from "bcryptjs";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { customers } from "@/db/schema";
 import {
@@ -16,13 +16,18 @@ import {
 } from "@/app/types/v1/api";
 
 export async function POST(request: NextRequest) {
+  let body: CustomerCreateMpinReq;
   try {
     // ---------------------------------------------------------
     // 2. Request Validation: Parse body & validate format
     // ---------------------------------------------------------
-    const body = (await request.json()) as CustomerCreateMpinReq;
+    body = (await request.json()) as CustomerCreateMpinReq;
+  } catch {
+    return jsonError("Invalid request body", 400);
+  }
 
-    if (!body.preAuthToken || !body.mpin) {
+  try {
+    if (!body?.preAuthToken || !body?.mpin) {
       return jsonError("Please enter your 4-digit MPIN", 400);
     }
 
@@ -76,8 +81,22 @@ export async function POST(request: NextRequest) {
         mpin: hashedMpin,
         updatedAt: new Date(),
       })
-      .where(eq(customers.id, payload.userId))
+      .where(
+        and(
+          eq(customers.id, payload.userId),
+          isNull(customers.mpin),
+          eq(customers.blacklisted, false)
+        )
+      )
       .returning();
+
+    if (!updatedCustomer) {
+      return jsonError(
+        "MPIN is already set. Please log in or use MPIN verification.",
+        409,
+        "Conflict"
+      );
+    }
 
     // ---------------------------------------------------------
     // 4. Response:
@@ -114,7 +133,8 @@ export async function POST(request: NextRequest) {
     };
 
     return jsonSuccess(response);
-  } catch {
-    return jsonError("Invalid request body", 400);
+  } catch (err: unknown) {
+    console.error("[Customer Create MPIN Error]:", err);
+    return jsonError("Unable to create MPIN. Please try again.", 500);
   }
 }

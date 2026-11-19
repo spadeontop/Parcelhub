@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { eq, or } from "drizzle-orm";
+import { and, eq, or } from "drizzle-orm";
 import { db } from "@/db";
 import { orders, staff } from "@/db/schema";
 import { authenticateStaffRequest } from "@/app/lib/v1/auth";
@@ -74,7 +74,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     const now = new Date();
 
-    await db
+    const [updatedOrder] = await db
       .update(orders)
       .set({
         courierPaid: true,
@@ -83,7 +83,22 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         modifiedBy: auth.session.userId,
         timestamp: now,
       })
-      .where(eq(orders.id, order.id));
+      .where(
+        and(
+          eq(orders.id, order.id),
+          eq(orders.status, "AWAITING_PARCEL"),
+          eq(orders.courierPaid, false)
+        )
+      )
+      .returning({ id: orders.id });
+
+    if (!updatedOrder) {
+      return jsonError(
+        "Courier payment was already recorded or order status changed concurrently",
+        409,
+        "Conflict"
+      );
+    }
 
     // ---------------------------------------------------------
     // 4. Response:
