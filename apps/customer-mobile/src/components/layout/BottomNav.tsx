@@ -1,18 +1,22 @@
 import React from 'react';
 import { View, TouchableOpacity, Text } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { useApp } from '../../context/AppContext';
+import { useV1 } from '../../v1/context/V1Context';
 
 interface BottomNavProps {
   activeTab?: 'home' | 'transactions' | 'notifications' | 'profile';
 }
 
 export const BottomNav: React.FC<BottomNavProps> = ({ activeTab = 'home' }) => {
-  const { navigateTo, notifications } = useApp();
+  const { navigateTo, notifications } = useV1();
   const unreadCount = notifications.filter((n) => n.unread).length;
 
   return (
-    <View className="absolute bottom-3 left-4 right-4 pointer-events-box-none">
+    <View
+      pointerEvents="box-none"
+      className="absolute bottom-3 left-4 right-4"
+      style={{ zIndex: 50, elevation: 10 }}
+    >
       <View
         className="bg-white border border-[#f1f5f9] flex-row items-center justify-between px-[17px] py-[10px] rounded-full"
         style={{
@@ -58,10 +62,11 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab = 'home' }) => {
               </Svg>
             )}
             <Text
-              className={`text-[9px] pt-[3px] ${activeTab === 'home'
-                ? 'font-bold text-[#215cd4]'
-                : 'font-medium text-[#94a3b8]'
-                }`}
+              className={`text-[9px] pt-[3px] ${
+                activeTab === 'home'
+                  ? 'font-bold text-[#215cd4]'
+                  : 'font-medium text-[#94a3b8]'
+              }`}
             >
               Home
             </Text>
@@ -86,10 +91,11 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab = 'home' }) => {
               />
             </Svg>
             <Text
-              className={`text-[9px] pt-[3px] ${activeTab === 'transactions'
-                ? 'font-bold text-[#215cd4]'
-                : 'font-medium text-[#94a3b8]'
-                }`}
+              className={`text-[9px] pt-[3px] ${
+                activeTab === 'transactions'
+                  ? 'font-bold text-[#215cd4]'
+                  : 'font-medium text-[#94a3b8]'
+              }`}
             >
               Orders
             </Text>
@@ -117,16 +123,15 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab = 'home' }) => {
 
               {/* Notification Badge Dot (matching Figma 8px #f43f5e dot) */}
               {unreadCount > 0 && (
-                <View
-                  className="absolute -top-[1px] -right-[2px] w-[8px] h-[8px] rounded-full bg-[#f43f5e] border border-white"
-                />
+                <View className="absolute -top-[1px] -right-[2px] w-[8px] h-[8px] rounded-full bg-[#f43f5e] border border-white" />
               )}
             </View>
             <Text
-              className={`text-[9px] pt-[3px] ${activeTab === 'notifications'
-                ? 'font-bold text-[#215cd4]'
-                : 'font-medium text-[#94a3b8]'
-                }`}
+              className={`text-[9px] pt-[3px] ${
+                activeTab === 'notifications'
+                  ? 'font-bold text-[#215cd4]'
+                  : 'font-medium text-[#94a3b8]'
+              }`}
             >
               Alerts
             </Text>
@@ -151,10 +156,11 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab = 'home' }) => {
               />
             </Svg>
             <Text
-              className={`text-[9px] pt-[3px] ${activeTab === 'profile'
-                ? 'font-bold text-[#215cd4]'
-                : 'font-medium text-[#94a3b8]'
-                }`}
+              className={`text-[9px] pt-[3px] ${
+                activeTab === 'profile'
+                  ? 'font-bold text-[#215cd4]'
+                  : 'font-medium text-[#94a3b8]'
+              }`}
             >
               Profile
             </Text>
@@ -165,3 +171,4 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab = 'home' }) => {
   );
 };
 
+export default BottomNav;
