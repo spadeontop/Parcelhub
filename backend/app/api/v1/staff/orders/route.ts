@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { desc, eq, count, inArray, and, or, ilike } from "drizzle-orm";
+import { desc, eq, ne, count, inArray, and, or, ilike } from "drizzle-orm";
 import { db } from "@/db";
 import { orders, staff, OrderRow } from "@/db/schema";
 import { authenticateStaffRequest } from "@/app/lib/v1/auth";
@@ -14,7 +14,6 @@ import {
 } from "@/app/types/v1/api";
 
 const VALID_ORDER_STATUSES: OrderStatus[] = [
-  "PENDING_INITIALIZATION",
   "PAYMENT_REQUIRED",
   "AWAITING_PARCEL",
   "READY_TO_CLAIM",
@@ -71,8 +70,8 @@ export async function GET(request: NextRequest) {
 
     const { limit, offset } = parsePagination(searchParams, 20, 20);
 
-    // Build filter expressions strictly scoped to status and (trackingId OR ticketCode)
-    const conditions = [];
+    // Build filter expressions strictly scoped to non-draft orders, status, and (trackingId OR ticketCode)
+    const conditions = [ne(orders.status, "PENDING_INITIALIZATION")];
     if (statusFilter) {
       conditions.push(eq(orders.status, statusFilter));
     }
@@ -81,10 +80,10 @@ export async function GET(request: NextRequest) {
         or(
           ilike(orders.trackingId, `%${searchFilter}%`),
           ilike(orders.ticketCode, `%${searchFilter}%`)
-        )
+        )!
       );
     }
-    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+    const whereClause = and(...conditions);
 
     // ---------------------------------------------------------
     // 3. Business Logic:
