@@ -44,6 +44,9 @@ export async function POST(request: NextRequest) {
     // ---------------------------------------------------------
     const now = new Date();
     await db.transaction(async (tx: typeof db) => {
+      // Bound lock wait time so bursts for the same user cannot hog the connection pool
+      await tx.execute(sql`SET LOCAL lock_timeout = '5s'`);
+
       // Serialize concurrent token uploads for the same user under READ COMMITTED
       await tx.execute(
         sql`SELECT pg_advisory_xact_lock(hashtext(${`fcm:${auth.session!.userId}`}))`

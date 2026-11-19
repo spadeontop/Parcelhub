@@ -52,7 +52,12 @@ export async function POST(request: NextRequest) {
     // 2. Request Validation:
     //    Parse JSON body, strictly require only imageUrl
     // ---------------------------------------------------------
-    const body = (await request.json()) as CustomerInitOrderReq;
+    let body: CustomerInitOrderReq;
+    try {
+      body = (await request.json()) as CustomerInitOrderReq;
+    } catch {
+      return jsonError("Invalid request body", 400);
+    }
     const imageUrl = typeof body?.imageUrl === "string" ? body.imageUrl.trim() : "";
 
     if (!imageUrl) {
@@ -124,8 +129,9 @@ export async function POST(request: NextRequest) {
     };
 
     return jsonSuccess(response, 201);
-  } catch {
-    return jsonError("Unable to create order. Please try again.", 400);
+  } catch (err: unknown) {
+    console.error("[Customer Initialize Order Error]:", err);
+    return jsonError("Unable to create order. Please try again.", 500, "Internal Server Error");
   }
 }
 

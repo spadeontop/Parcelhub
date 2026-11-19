@@ -8,10 +8,15 @@ import { jsonError, jsonSuccess } from "@/app/lib/response";
 import { CustomerLoginReq, CustomerLoginRes } from "@/app/types/v1/api";
 
 export async function POST(request: NextRequest) {
+  let body: CustomerLoginReq;
   try {
-    const body = (await request.json()) as CustomerLoginReq;
+    body = (await request.json()) as CustomerLoginReq;
+  } catch {
+    return jsonError("Invalid request body", 400);
+  }
 
-    if (!body.email || !body.password) {
+  try {
+    if (!body?.email || !body?.password) {
       return jsonError("Email and password are required", 400);
     }
 
@@ -53,7 +58,8 @@ export async function POST(request: NextRequest) {
     };
 
     return jsonSuccess(response);
-  } catch {
-    return jsonError("Invalid request body", 400);
+  } catch (err: unknown) {
+    console.error("[Customer Login Error]:", err);
+    return jsonError("Unable to log in. Please try again.", 500, "Internal Server Error");
   }
 }
