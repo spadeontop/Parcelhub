@@ -264,7 +264,7 @@ export const StaffUnpaidActionSection: React.FC<StaffUnpaidActionSectionProps> =
           state={btnState}
           idleLabel="Activate Order"
           loadingLabel="Activating..."
-          successLabel="✓ Order Activated"
+          successLabel="Order Activated"
           onPress={handleSubmit}
           disabled={false}
         />

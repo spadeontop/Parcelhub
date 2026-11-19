@@ -300,7 +300,7 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
             state={step1BtnState}
             idleLabel="Order Claimed & Paid"
             loadingLabel="Recording Payout..."
-            successLabel="✓ Courier Paid"
+            successLabel="Courier Paid"
             onPress={handlePayCourierStep}
             disabled={false}
           />
@@ -474,7 +474,7 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
           state={step2BtnState}
           idleLabel="Order Claimed & Paid"
           loadingLabel="Submitting Proof..."
-          successLabel="✓ Proof Attached"
+          successLabel="Proof Attached"
           onPress={handleFinalClaimAndPaid}
           disabled={false}
         />

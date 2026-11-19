@@ -207,7 +207,7 @@ export const StaffReadyActionSection: React.FC<StaffReadyActionSectionProps> = (
           state={btnState}
           idleLabel="Release Order"
           loadingLabel="Releasing..."
-          successLabel="✓ Parcel Released"
+          successLabel="Parcel Released"
           onPress={handleRelease}
           disabled={false}
         />

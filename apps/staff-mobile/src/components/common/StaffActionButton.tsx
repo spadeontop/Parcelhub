@@ -10,6 +10,8 @@ import {
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
+const AnimatedPath = Animated.createAnimatedComponent(Path);
+
 export type ButtonActionState = 'idle' | 'loading' | 'success';
 
 export interface StaffActionButtonProps {
@@ -41,6 +43,9 @@ export const StaffActionButton: React.FC<StaffActionButtonProps> = ({
   const isLoading = state === 'loading';
   const isSuccess = state === 'success';
 
+  // Strip any accidental leading checkmark character from label to prevent double-check
+  const cleanSuccessLabel = (successLabel || 'Completed').replace(/^[✓✔]\s*/, '');
+
   // 1:1 Background color transition: 0.32s cubic-bezier(0.22, 1, 0.36, 1)
   const bgAnim = useRef(new Animated.Value(0)).current; // 0: idle, 1: loading, 2: success
 
@@ -60,8 +65,14 @@ export const StaffActionButton: React.FC<StaffActionButtonProps> = ({
   const successOpacity = useRef(new Animated.Value(0)).current;
   const successScale = useRef(new Animated.Value(0.9)).current;
 
+  // 1:1 SVG Checkmark Draw animation: stroke-dashoffset 22 -> 0 over 0.36s with 0.1s delay
+  const checkDashOffset = useRef(new Animated.Value(22)).current;
+
   useEffect(() => {
     if (isLoading) {
+      // Reset check path
+      checkDashOffset.setValue(22);
+
       // Transition to Loading (background: #18181B)
       Animated.parallel([
         Animated.timing(bgAnim, {
@@ -110,6 +121,8 @@ export const StaffActionButton: React.FC<StaffActionButtonProps> = ({
       ]).start();
     } else if (isSuccess) {
       // Transition to Success (background: #16A34A)
+      checkDashOffset.setValue(22);
+
       Animated.parallel([
         Animated.timing(bgAnim, {
           toValue: 2,
@@ -153,8 +166,18 @@ export const StaffActionButton: React.FC<StaffActionButtonProps> = ({
           easing: customBezier,
           useNativeDriver: true,
         }),
+        // Exact 1:1 SVG drawCheck: 0.36s cubic-bezier(0.22, 1, 0.36, 1) with 0.1s delay
+        Animated.timing(checkDashOffset, {
+          toValue: 0,
+          duration: 360,
+          delay: 100,
+          easing: customBezier,
+          useNativeDriver: false,
+        }),
       ]).start();
     } else {
+      checkDashOffset.setValue(22);
+
       // Idle state (background: #09090B)
       Animated.parallel([
         Animated.timing(bgAnim, {
@@ -210,6 +233,7 @@ export const StaffActionButton: React.FC<StaffActionButtonProps> = ({
     loadingTranslateY,
     successOpacity,
     successScale,
+    checkDashOffset,
   ]);
 
   const handlePressIn = () => {
@@ -321,7 +345,7 @@ export const StaffActionButton: React.FC<StaffActionButtonProps> = ({
             </Text>
           </Animated.View>
 
-          {/* Layer 3: Success (0.22s opacity, 0.28s scale 0.9 -> 1) */}
+          {/* Layer 3: Success (0.22s opacity, 0.28s scale 0.9 -> 1 + SVG drawCheck) */}
           <Animated.View
             pointerEvents={isSuccess ? 'auto' : 'none'}
             style={{
@@ -335,17 +359,20 @@ export const StaffActionButton: React.FC<StaffActionButtonProps> = ({
               transform: [{ scale: successScale }],
             }}
           >
-            <Svg width={20} height={20} viewBox="0 0 20 20" fill="none">
-              <Path
+            {/* 1:1 Animated Checkmark SVG from button feedback 2.html */}
+            <Svg width={18} height={18} viewBox="0 0 20 20" fill="none">
+              <AnimatedPath
                 d="M4.5 10.5L8.2 14.2L15.8 6.5"
                 stroke="#FFFFFF"
                 strokeWidth={2.25}
                 strokeLinecap="round"
                 strokeLinejoin="round"
+                strokeDasharray={[22, 22]}
+                strokeDashoffset={checkDashOffset}
               />
             </Svg>
             <Text className="text-white font-semibold text-[14.5px] tracking-wide">
-              {successLabel}
+              {cleanSuccessLabel}
             </Text>
           </Animated.View>
         </Animated.View>
