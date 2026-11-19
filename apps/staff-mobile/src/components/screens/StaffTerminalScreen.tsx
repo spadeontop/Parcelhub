@@ -131,9 +131,6 @@ export const StaffTerminalScreen: React.FC = () => {
           <Text className="text-[11px] font-semibold text-[#6B7280] tracking-[0.55px] uppercase">
             {searchQuery.trim() ? 'SEARCH RESULTS' : 'RECENT ACTIVITIES'}
           </Text>
-          <Text className="text-[11px] font-medium text-[#64748B]">
-            {isLoadingOrders ? 'Loading...' : `${totalItems} ${totalItems === 1 ? 'order' : 'orders'}`}
-          </Text>
         </View>
 
         {/* Middle Scrollable Content (List of 20 orders per page) */}

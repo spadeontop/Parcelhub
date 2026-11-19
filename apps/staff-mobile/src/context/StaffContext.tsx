@@ -169,6 +169,10 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const isLoadingOrdersRef = useRef(isLoadingOrders);
   isLoadingOrdersRef.current = isLoadingOrders;
 
+  const tabFetchRequestId = useRef(0);
+  const tabAbortControllerRef = useRef<AbortController | null>(null);
+  const isFetchingTabRef = useRef(false);
+
   const showToast = useCallback((message: string, type: 'info' | 'success' | 'error' = 'info') => {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     setToast({ show: true, message, type });
@@ -183,6 +187,21 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const token = explicitToken || userRef.current?.token;
       if (!token) return;
 
+      // Prevent overlapping background requests
+      if (quiet && isFetchingTabRef.current) {
+        return;
+      }
+
+      // Cancel previous in-flight tab request if any
+      if (tabAbortControllerRef.current) {
+        tabAbortControllerRef.current.abort();
+      }
+      tabAbortControllerRef.current = new AbortController();
+      const signal = tabAbortControllerRef.current.signal;
+
+      const currentReqId = ++tabFetchRequestId.current;
+      isFetchingTabRef.current = true;
+
       if (!quiet) {
         setIsLoadingOrders(true);
       }
@@ -196,8 +215,15 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           status,
           limit,
           offset,
-          token
+          token,
+          undefined,
+          signal
         );
+
+        // Guard against out-of-order responses if user switched tabs while request was in flight
+        if (currentReqId !== tabFetchRequestId.current || signal.aborted) {
+          return;
+        }
 
         const overrides = extractLocalOverrides(tabCacheRef.current);
         const mergedOrders = mergeOrders(data, overrides);
@@ -220,6 +246,9 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           return fresh ? { ...fresh, notes: prevSelected.notes } : prevSelected;
         });
       } catch (err: any) {
+        if (err?.name === 'AbortError' || currentReqId !== tabFetchRequestId.current) {
+          return;
+        }
         if (err instanceof StaffApiError && err.statusCode === 401) {
           setStaffUser(null);
           showToast('Session expired or unauthorized. Please sign in again.', 'error');
@@ -230,7 +259,8 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           showToast(err?.message || 'Failed to sync with backend', 'error');
         }
       } finally {
-        if (!quiet) {
+        isFetchingTabRef.current = false;
+        if (!quiet && currentReqId === tabFetchRequestId.current) {
           setIsLoadingOrders(false);
         }
       }
@@ -388,10 +418,16 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [fetchAllTabs]);
 
   // Handle tab switching:
-  // - If cached, switches INSTANTLY (0ms latency, zero skeleton flash)
-  // - In background, triggers quiet revalidation
+  // - Pure client-side switch from memory cache!
+  // - 0 network requests on tab change (Instant 0ms UI)
+  // - The 4-second polling timer will silently refresh whatever tab is active
   const handleSelectTab = useCallback(
     (tab: StaffTab) => {
+      // Guard 1: Ignore click if tab is already active and no search query is typed
+      if (activeTabRef.current === tab && !searchQueryRef.current.trim()) {
+        return;
+      }
+
       // Clear search if active
       if (searchQueryRef.current) {
         setSearchQuery('');
@@ -402,19 +438,14 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setActiveTab(tab);
       activeTabRef.current = tab;
 
+      // DO NOT REQUEST THE BACKEND!
+      // Switching tabs reads 100% directly from cache.
       const cached = tabCacheRef.current[tab];
-      const token = userRef.current?.token;
-
       if (!cached) {
-        // Tab not yet cached -> fetch with loading skeleton
+        // Fallback ONLY if the tab was somehow never loaded during login prefetch
+        const token = userRef.current?.token;
         if (token) {
           fetchTabOrders(tab, false, token, 1);
-        }
-      } else {
-        // Tab is cached -> instant switch!
-        // Quietly background-revalidate active tab without skeletons
-        if (token) {
-          fetchTabOrders(tab, true, token, 1);
         }
       }
     },
@@ -475,18 +506,36 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [currentPage, staffUser, performSearch, fetchTabOrders]);
 
   // Background polling every 4 seconds:
-  // Polls ONLY the active tab to preserve bandwidth and eliminate server strain
+  // Polls ONLY the active tab sequentially, NEVER overlapping
   useEffect(() => {
     if (!staffUser) return;
 
-    const interval = setInterval(() => {
-      // Do not poll while searching or while explicitly loading
-      if (!searchQueryRef.current.trim() && !isLoadingOrdersRef.current) {
-        fetchTabOrders(activeTabRef.current, true, staffUser.token, currentPageRef.current);
-      }
-    }, ENV.POLLING_INTERVAL_MS);
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let isCancelled = false;
 
-    return () => clearInterval(interval);
+    const poll = async () => {
+      if (isCancelled) return;
+
+      // Do not poll while searching, foreground loading, or if a fetch is already in flight
+      if (
+        !searchQueryRef.current.trim() &&
+        !isLoadingOrdersRef.current &&
+        !isFetchingTabRef.current
+      ) {
+        await fetchTabOrders(activeTabRef.current, true, staffUser.token, currentPageRef.current);
+      }
+
+      if (!isCancelled) {
+        timer = setTimeout(poll, ENV.POLLING_INTERVAL_MS);
+      }
+    };
+
+    timer = setTimeout(poll, ENV.POLLING_INTERVAL_MS);
+
+    return () => {
+      isCancelled = true;
+      if (timer) clearTimeout(timer);
+    };
   }, [staffUser, fetchTabOrders]);
 
   // Derived active tab data
