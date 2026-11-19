@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { db } from "@/db";
 import { orders, orderScreenshots } from "@/db/schema";
-import { authenticateCustomerRequest, checkCustomerBlacklisted } from "@/app/lib/v1/auth";
+import { authenticateCustomerRequest } from "@/app/lib/v1/auth";
 import { validateImageSize } from "@/app/lib/v1/image";
 import { jsonError, jsonSuccess } from "@/app/lib/response";
 import {
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     //    Require valid 15-minute authToken, strictly CUSTOMER role & valid DB user
     // ---------------------------------------------------------
     const auth = await authenticateCustomerRequest(request);
-    if (!auth.session) {
+    if (!auth.session || !auth.customer) {
       if (auth.status === 403) {
         return jsonError("Access denied", 403, "Forbidden");
       }
@@ -39,11 +39,10 @@ export async function POST(request: NextRequest) {
       return jsonError("Please log in again", 401, "Unauthorized");
     }
 
-    // 1b. Blacklist Check (strictly enforced when initializing new orders)
-    const blacklistCheck = await checkCustomerBlacklisted(auth.session.userId);
-    if (blacklistCheck.isBlacklisted) {
+    // 1b. Blacklist Check (strictly enforced when initializing new orders — reuse auth.customer)
+    if (auth.customer.blacklisted) {
       return jsonError(
-        `Account suspended: ${blacklistCheck.reason || "Please contact support"}`,
+        `Account suspended: ${auth.customer.blacklistReason || "Please contact support"}`,
         403,
         "Forbidden"
       );
@@ -93,12 +92,14 @@ export async function POST(request: NextRequest) {
           change: 0,
           status: "PENDING_INITIALIZATION",
           statusTimeline: initialTimeline,
-          imageUrl,
           customerId: auth.session!.userId,
           modifiedBy: auth.session!.userId,
           timestamp: now,
         })
-        .returning();
+        .returning({
+          id: orders.id,
+          ticketCode: orders.ticketCode,
+        });
 
       await tx.insert(orderScreenshots).values({
         orderId: createdOrder.id,

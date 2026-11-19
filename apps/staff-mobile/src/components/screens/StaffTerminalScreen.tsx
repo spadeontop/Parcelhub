@@ -38,6 +38,7 @@ export const StaffTerminalScreen: React.FC = () => {
   const {
     orders,
     filteredOrders,
+    allCachedOrders,
     isLoadingOrders,
     totalCount,
     currentPage,
@@ -68,8 +69,8 @@ export const StaffTerminalScreen: React.FC = () => {
     setCurrentPage(1);
   }, [activeTab, searchQuery, setCurrentPage]);
 
-  const isClientFiltered = activeTab !== 'all' || searchQuery.trim().length > 0;
-  const totalItems = isClientFiltered ? filteredOrders.length : totalCount;
+  // Total items for current view (server-authoritative count per tab and search)
+  const totalItems = totalCount > 0 ? totalCount : filteredOrders.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / ITEMS_PER_PAGE));
 
   // Current page records (already sliced by server)
@@ -129,9 +130,6 @@ export const StaffTerminalScreen: React.FC = () => {
         <View className="px-5 pt-2 pb-1.5 flex-row items-center justify-between">
           <Text className="text-[11px] font-semibold text-[#6B7280] tracking-[0.55px] uppercase">
             {searchQuery.trim() ? 'SEARCH RESULTS' : 'RECENT ACTIVITIES'}
-          </Text>
-          <Text className="text-[11px] font-medium text-[#64748B]">
-            {isLoadingOrders ? 'Loading...' : `${totalItems} ${totalItems === 1 ? 'order' : 'orders'}`}
           </Text>
         </View>
 
@@ -292,7 +290,7 @@ export const StaffTerminalScreen: React.FC = () => {
         {/* In-sheet QR Scanner View (Figma node 1355:3) */}
         <StaffManualLookupModal
           isOpen={isLookupOpen}
-          orders={orders}
+          orders={allCachedOrders.length > 0 ? allCachedOrders : orders}
           onClose={() => setIsLookupOpen(false)}
           onSelectOrder={openOrderDetails}
           onOpenAccount={() => setIsDeskInfoOpen(true)}

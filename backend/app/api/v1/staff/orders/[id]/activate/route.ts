@@ -5,6 +5,7 @@ import { orders } from "@/db/schema";
 import { authenticateStaffRequest } from "@/app/lib/v1/auth";
 import { isUniqueViolation } from "@/app/lib/v1/db-errors";
 import { sendFcmNotification } from "@/app/lib/v1/fcm";
+import { ORDER_NON_IMAGE_COLUMNS } from "@/app/lib/v1/orders";
 import { jsonError, jsonSuccess } from "@/app/lib/response";
 import {
   OrderStatus,
@@ -63,6 +64,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     // ---------------------------------------------------------
     const order = await db.query.orders.findFirst({
       where: or(eq(orders.id, lookupId), eq(orders.ticketCode, lookupId)),
+      columns: ORDER_NON_IMAGE_COLUMNS,
     });
 
     if (!order) {
@@ -99,6 +101,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             "CLAIMED",
           ] as OrderStatus[])
         ),
+        columns: { id: true },
       });
 
       if (activePaidDuplicate) {

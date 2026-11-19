@@ -128,7 +128,15 @@ export async function sendFcmNotification(
   const { userId, title, body, notifId, data } = params;
 
   try {
-    // 1. Look up user's active device token in DB
+    // 1. Short-circuit before hitting DB if FCM is disabled or unconfigured
+    if (!isFcmConfigured()) {
+      return {
+        success: true,
+        reason: "FCM_DISABLED_DRY_RUN",
+      };
+    }
+
+    // 2. Look up user's active device token in DB
     const record = await db.query.fcmTokens.findFirst({
       where: eq(fcmTokens.userId, userId),
     });
@@ -137,14 +145,6 @@ export async function sendFcmNotification(
       return {
         success: false,
         reason: "NO_ACTIVE_DEVICE_TOKEN",
-      };
-    }
-
-    // 2. If FCM is disabled or unconfigured, log dry-run info and return cleanly
-    if (!isFcmConfigured()) {
-      return {
-        success: true,
-        reason: "FCM_DISABLED_DRY_RUN",
       };
     }
 

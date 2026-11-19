@@ -57,6 +57,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         or(eq(orders.id, identifier), eq(orders.ticketCode, identifier.toUpperCase())),
         eq(orders.customerId, auth.session.userId)
       ),
+      columns: {
+        id: true,
+        status: true,
+      },
     });
 
     if (!order) {
