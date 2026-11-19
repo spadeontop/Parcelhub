@@ -257,7 +257,7 @@ async function runV1CustomerTests() {
     console.log(`   ✅ Order & screenshot initialized in DB. Order ID: ${createdOrderId}, Ticket: ${initJson.ticketCode}`);
 
     // ==========================================
-    // 8. List Orders
+    // 8. List Orders (PENDING_INITIALIZATION must be omitted)
     // ==========================================
     console.log("8. Testing List Orders (GET /api/v1/customer/orders)...");
     const listReq = makeReq("http://localhost:3000/api/v1/customer/orders", {
@@ -268,11 +268,17 @@ async function runV1CustomerTests() {
     const listJson = await listRes.json();
     assert.strictEqual(listRes.status, 200, `Expected 200, got ${listRes.status}`);
     assert.ok(Array.isArray(listJson.orders), "orders must be an array");
-    const foundOrder = listJson.orders.find((o: { id: string }) => o.id === createdOrderId);
-    assert.ok(foundOrder, "Newly created order must be in customer order list");
-    assert.strictEqual((foundOrder as Record<string, unknown>).imageUrl, undefined, "Customer list orders must omit imageUrl");
-    assert.strictEqual((foundOrder as Record<string, unknown>).proofImageUrl, undefined, "Customer list orders must omit proofImageUrl");
-    console.log(`   ✅ Orders listed. Found ${listJson.orders.length} order(s). Images omitted from general list.`);
+    const foundDraftOrder = listJson.orders.find((o: { id: string }) => o.id === createdOrderId);
+    assert.strictEqual(foundDraftOrder, undefined, "PENDING_INITIALIZATION order must be omitted from customer order list");
+
+    const draftFilterRes = await listCustomerOrders(
+      makeReq("http://localhost:3000/api/v1/customer/orders?type=PENDING_INITIALIZATION", {
+        method: "GET",
+        token: authToken,
+      })
+    );
+    assert.strictEqual(draftFilterRes.status, 400, "Filtering by PENDING_INITIALIZATION must be rejected with 400");
+    console.log(`   ✅ Orders listed (${listJson.orders.length}). PENDING_INITIALIZATION draft omitted and filter rejected (400).`);
 
     // ==========================================
     // 9. Get Single Order by ID
@@ -362,6 +368,20 @@ async function runV1CustomerTests() {
     assert.strictEqual(updatedOrderRow?.status, "PAYMENT_REQUIRED");
     assert.strictEqual(updatedOrderRow?.trackingId, trackingNumber);
     assert.strictEqual(updatedOrderRow?.price, 350);
+
+    // Once transitioned to PAYMENT_REQUIRED, order must appear in GET /api/v1/customer/orders without images
+    const listAfterPutRes = await listCustomerOrders(
+      makeReq("http://localhost:3000/api/v1/customer/orders", {
+        method: "GET",
+        token: authToken,
+      })
+    );
+    const listAfterPutJson = await listAfterPutRes.json();
+    assert.strictEqual(listAfterPutRes.status, 200);
+    const foundConfirmedOrder = listAfterPutJson.orders.find((o: { id: string }) => o.id === createdOrderId);
+    assert.ok(foundConfirmedOrder, "Confirmed PAYMENT_REQUIRED order must appear in customer order list");
+    assert.strictEqual((foundConfirmedOrder as Record<string, unknown>).imageUrl, undefined, "Customer list orders must omit imageUrl");
+    assert.strictEqual((foundConfirmedOrder as Record<string, unknown>).proofImageUrl, undefined, "Customer list orders must omit proofImageUrl");
 
     // Calling PUT a second time on PAYMENT_REQUIRED must be rejected with 400
     const secondPutRes = await updateCustomerOrder(
