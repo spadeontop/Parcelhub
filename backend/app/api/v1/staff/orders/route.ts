@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { desc, eq, ne, count, and, or, ilike } from "drizzle-orm";
+import { desc, eq, ne, count, and, or, ilike, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { orders, staff } from "@/db/schema";
 import { authenticateStaffRequest } from "@/app/lib/v1/auth";
@@ -87,43 +87,49 @@ export async function GET(request: NextRequest) {
 
     // ---------------------------------------------------------
     // 3. Business Logic:
-    //    a. Run total count and paginated orders (LEFT JOIN staff for courierPaidByName) in parallel
+    //    a. Fetch paginated orders (LEFT JOIN staff for courierPaidByName) and totalCount
+    //       in a single query using COUNT(*) OVER() to halve DB pool concurrency under bursts
     //    b. Compute live claim statuses and format summaries
     // ---------------------------------------------------------
-    const [totalCountResult, dbOrders] = await Promise.all([
-      db.select({ count: count() }).from(orders).where(whereClause),
-      db
-        .select({
-          id: orders.id,
-          ticketCode: orders.ticketCode,
-          trackingId: orders.trackingId,
-          recipientName: orders.recipientName,
-          price: orders.price,
-          amountReceived: orders.amountReceived,
-          change: orders.change,
-          status: orders.status,
-          statusTimeline: orders.statusTimeline,
-          modifiedBy: orders.modifiedBy,
-          claimRequested: orders.claimRequested,
-          claimInitiatedAt: orders.claimInitiatedAt,
-          claimExpiresAt: orders.claimExpiresAt,
-          courierPaid: orders.courierPaid,
-          courierPaidBy: orders.courierPaidBy,
-          courierPaidAt: orders.courierPaidAt,
-          isRefunded: orders.isRefunded,
-          timestamp: orders.timestamp,
-          courierPaidByFirstName: staff.firstName,
-          courierPaidByLastName: staff.lastName,
-        })
-        .from(orders)
-        .leftJoin(staff, eq(orders.courierPaidBy, staff.id))
-        .where(whereClause)
-        .orderBy(desc(orders.timestamp))
-        .limit(limit)
-        .offset(offset),
-    ]);
+    const dbOrders = await db
+      .select({
+        id: orders.id,
+        ticketCode: orders.ticketCode,
+        trackingId: orders.trackingId,
+        recipientName: orders.recipientName,
+        price: orders.price,
+        amountReceived: orders.amountReceived,
+        change: orders.change,
+        status: orders.status,
+        statusTimeline: orders.statusTimeline,
+        modifiedBy: orders.modifiedBy,
+        claimRequested: orders.claimRequested,
+        claimInitiatedAt: orders.claimInitiatedAt,
+        claimExpiresAt: orders.claimExpiresAt,
+        courierPaid: orders.courierPaid,
+        courierPaidBy: orders.courierPaidBy,
+        courierPaidAt: orders.courierPaidAt,
+        isRefunded: orders.isRefunded,
+        timestamp: orders.timestamp,
+        courierPaidByFirstName: staff.firstName,
+        courierPaidByLastName: staff.lastName,
+        totalCount: sql<number>`count(*) over()`,
+      })
+      .from(orders)
+      .leftJoin(staff, eq(orders.courierPaidBy, staff.id))
+      .where(whereClause)
+      .orderBy(desc(orders.timestamp))
+      .limit(limit)
+      .offset(offset);
 
-    const totalCount = Number(totalCountResult[0]?.count || 0);
+    let totalCount = Number(dbOrders[0]?.totalCount || 0);
+    if (dbOrders.length === 0 && offset > 0) {
+      const [countResult] = await db
+        .select({ count: count() })
+        .from(orders)
+        .where(whereClause);
+      totalCount = Number(countResult?.count || 0);
+    }
     const nowMs = Date.now();
 
     const formattedOrders: StaffOrderSummary[] = dbOrders.map((o: (typeof dbOrders)[number]) => {

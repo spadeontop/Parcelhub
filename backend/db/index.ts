@@ -44,7 +44,14 @@ function createDatabaseClient() {
     const client = postgres(process.env.DATABASE_URL, {
       prepare: false,
       max: 5,
+      // Disable query pipelining: Supabase Transaction Pooler (:6543) drops/hangs
+      // pipelined extended-protocol queries, deadlocking pooled connections.
+      max_pipeline: 1,
       ssl: "require",
+      connect_timeout: 10,
+      idle_timeout: 20,
+      queue_timeout: 10,
+      query_timeout: 15,
     });
     return { db: drizzle(client, { schema }), pglite: undefined };
   }

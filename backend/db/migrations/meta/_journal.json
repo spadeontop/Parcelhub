@@ -15,6 +15,13 @@
       "when": 1795080871678,
       "tag": "0001_drop_orders_image_url",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795096604105,
+      "tag": "0002_add_orders_query_indexes",
+      "breakpoints": true
     }
   ]
 }

@@ -97,6 +97,15 @@ export const orders = pgTable(
       .where(
         sql`${table.trackingId} IS NOT NULL AND ${table.status} IN ('AWAITING_PARCEL', 'READY_TO_CLAIM', 'CLAIMED')`
       ),
+    index("orders_customer_id_timestamp_idx").on(
+      table.customerId,
+      table.timestamp.desc()
+    ),
+    index("orders_status_timestamp_idx").on(
+      table.status,
+      table.timestamp.desc()
+    ),
+    index("orders_ticket_code_idx").on(table.ticketCode),
   ]
 );
 
