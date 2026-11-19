@@ -159,7 +159,8 @@ export const staffApi = {
     limit?: number,
     offset?: number,
     explicitToken?: string,
-    search?: string
+    search?: string,
+    signal?: AbortSignal
   ): Promise<{
     orders: StaffOrder[];
     pagination: {
@@ -189,6 +190,7 @@ export const staffApi = {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
+        signal,
       });
 
       const data = await res.json().catch(() => null);
@@ -238,6 +240,7 @@ export const staffApi = {
         },
       };
     } catch (err: any) {
+      if (err?.name === 'AbortError') throw err;
       if (err instanceof StaffApiError) throw err;
       throw new StaffApiError(
         err?.message?.includes('Network request failed')
