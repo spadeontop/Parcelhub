@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { eq, or } from "drizzle-orm";
+import { and, eq, gte, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { orders } from "@/db/schema";
 import { authenticateStaffRequest } from "@/app/lib/v1/auth";
@@ -79,25 +79,37 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     const nowIso = now.toISOString();
-    const currentTimeline = (order.statusTimeline || []) as StatusTimelineEntry[];
-    const updatedTimeline: StatusTimelineEntry[] = [
-      ...currentTimeline,
-      {
-        status: "CLAIMED",
-        timestamp: nowIso,
-      },
-    ];
+    const timelineEntry: StatusTimelineEntry = {
+      status: "CLAIMED",
+      timestamp: nowIso,
+    };
 
-    await db
+    const [updatedOrder] = await db
       .update(orders)
       .set({
         status: "CLAIMED",
         claimRequested: false,
-        statusTimeline: updatedTimeline,
+        statusTimeline: sql<StatusTimelineEntry[]>`coalesce(${orders.statusTimeline}, '[]'::jsonb) || ${JSON.stringify([timelineEntry])}::jsonb`,
         modifiedBy: auth.session.userId,
         timestamp: now,
       })
-      .where(eq(orders.id, order.id));
+      .where(
+        and(
+          eq(orders.id, order.id),
+          eq(orders.status, "READY_TO_CLAIM"),
+          eq(orders.claimRequested, true),
+          gte(orders.claimExpiresAt, now)
+        )
+      )
+      .returning({ id: orders.id });
+
+    if (!updatedOrder) {
+      return jsonError(
+        "Order has already been claimed or its claim window changed concurrently",
+        409,
+        "Conflict"
+      );
+    }
 
     // Non-fatal FCM push to customer
     sendFcmNotification({
