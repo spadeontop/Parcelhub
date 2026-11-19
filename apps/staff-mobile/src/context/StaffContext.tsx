@@ -1,4 +1,12 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from 'react';
 import {
   StaffOrder,
   StaffUser,
@@ -10,6 +18,16 @@ import {
 import { staffApi, StaffApiError } from '../services/staffApi';
 import { ENV } from '../config/env';
 
+export const STAFF_TABS: StaffTab[] = ['all', 'ready', 'active', 'unpaid', 'claimed'];
+
+export interface TabCacheEntry {
+  orders: StaffOrder[];
+  totalCount: number;
+  lastFetched: number;
+}
+
+export type StaffTabCache = Record<StaffTab, TabCacheEntry | undefined>;
+
 interface StaffContextType {
   staffUser: StaffUser | null;
   isAuthenticated: boolean;
@@ -19,6 +37,8 @@ interface StaffContextType {
   isRefreshing: boolean;
   orders: StaffOrder[];
   filteredOrders: StaffOrder[];
+  allCachedOrders: StaffOrder[];
+  tabCache: StaffTabCache;
   totalCount: number;
   currentPage: number;
   setCurrentPage: React.Dispatch<React.SetStateAction<number>>;
@@ -63,6 +83,42 @@ function getStatusForTab(tab: StaffTab): OrderStatus | undefined {
   }
 }
 
+function extractLocalOverrides(cache: StaffTabCache): {
+  notesMap: Map<string, string>;
+  claimedAtMap: Map<string, string>;
+  createdAtMap: Map<string, string>;
+} {
+  const notesMap = new Map<string, string>();
+  const claimedAtMap = new Map<string, string>();
+  const createdAtMap = new Map<string, string>();
+
+  Object.values(cache).forEach((entry) => {
+    entry?.orders.forEach((o) => {
+      if (o.notes) notesMap.set(o.id, o.notes);
+      if (o.claimedAt) claimedAtMap.set(o.id, o.claimedAt);
+      if (o.createdAt) createdAtMap.set(o.id, o.createdAt);
+    });
+  });
+
+  return { notesMap, claimedAtMap, createdAtMap };
+}
+
+function mergeOrders(
+  rawOrders: StaffOrder[],
+  overrides: {
+    notesMap: Map<string, string>;
+    claimedAtMap: Map<string, string>;
+    createdAtMap: Map<string, string>;
+  }
+): StaffOrder[] {
+  return rawOrders.map((o) => ({
+    ...o,
+    notes: overrides.notesMap.get(o.id) || o.notes,
+    claimedAt: overrides.claimedAtMap.get(o.id) || o.claimedAt,
+    createdAt: o.createdAt || overrides.createdAtMap.get(o.id),
+  }));
+}
+
 const StaffContext = createContext<StaffContextType | undefined>(undefined);
 
 export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -71,10 +127,21 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isLoadingOrders, setIsLoadingOrders] = useState<boolean>(false);
   const [isOnline, setIsOnline] = useState<boolean>(true);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
-  const [orders, setOrders] = useState<StaffOrder[]>([]);
-  const [totalCount, setTotalCount] = useState<number>(0);
+
+  // Tab cache: stores 20 orders, totalCount, and lastFetched timestamp per tab
+  const [tabCache, setTabCache] = useState<StaffTabCache>({
+    all: undefined,
+    ready: undefined,
+    active: undefined,
+    unpaid: undefined,
+    claimed: undefined,
+  });
+
+  // Dedicated search state (so search never pollutes or erases tab cache)
+  const [searchOrders, setSearchOrders] = useState<StaffOrder[] | null>(null);
+  const [searchTotalCount, setSearchTotalCount] = useState<number>(0);
+
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const ITEMS_PER_PAGE = 20;
   const [activeTab, setActiveTab] = useState<StaffTab>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedOrder, setSelectedOrder] = useState<StaffOrder | null>(null);
@@ -87,6 +154,21 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const userRef = useRef<StaffUser | null>(null);
   userRef.current = staffUser;
 
+  const tabCacheRef = useRef<StaffTabCache>(tabCache);
+  tabCacheRef.current = tabCache;
+
+  const activeTabRef = useRef(activeTab);
+  activeTabRef.current = activeTab;
+
+  const searchQueryRef = useRef(searchQuery);
+  searchQueryRef.current = searchQuery;
+
+  const currentPageRef = useRef(currentPage);
+  currentPageRef.current = currentPage;
+
+  const isLoadingOrdersRef = useRef(isLoadingOrders);
+  isLoadingOrdersRef.current = isLoadingOrders;
+
   const showToast = useCallback((message: string, type: 'info' | 'success' | 'error' = 'info') => {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     setToast({ show: true, message, type });
@@ -95,7 +177,187 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }, 3200);
   }, []);
 
-  // Check stored auth token on startup
+  // Fetch orders for a specific tab and page
+  const fetchTabOrders = useCallback(
+    async (tab: StaffTab, quiet = false, explicitToken?: string, page = 1) => {
+      const token = explicitToken || userRef.current?.token;
+      if (!token) return;
+
+      if (!quiet) {
+        setIsLoadingOrders(true);
+      }
+
+      try {
+        const status = getStatusForTab(tab);
+        const limit = 20;
+        const offset = (page - 1) * limit;
+
+        const { orders: data, pagination } = await staffApi.getOrders(
+          status,
+          limit,
+          offset,
+          token
+        );
+
+        const overrides = extractLocalOverrides(tabCacheRef.current);
+        const mergedOrders = mergeOrders(data, overrides);
+
+        setTabCache((prev) => ({
+          ...prev,
+          [tab]: {
+            orders: mergedOrders,
+            totalCount: pagination.totalCount,
+            lastFetched: Date.now(),
+          },
+        }));
+
+        setIsOnline(true);
+
+        // Keep selected order in sync if details modal is open
+        setSelectedOrder((prevSelected) => {
+          if (!prevSelected) return null;
+          const fresh = mergedOrders.find((o) => o.id === prevSelected.id);
+          return fresh ? { ...fresh, notes: prevSelected.notes } : prevSelected;
+        });
+      } catch (err: any) {
+        if (err instanceof StaffApiError && err.statusCode === 401) {
+          setStaffUser(null);
+          showToast('Session expired or unauthorized. Please sign in again.', 'error');
+          return;
+        }
+        setIsOnline(false);
+        if (!quiet) {
+          showToast(err?.message || 'Failed to sync with backend', 'error');
+        }
+      } finally {
+        if (!quiet) {
+          setIsLoadingOrders(false);
+        }
+      }
+    },
+    [showToast]
+  );
+
+  // Strategy A: Eagerly prefetch initial 20 orders for ALL tabs concurrently
+  const fetchAllTabs = useCallback(
+    async (quiet = false, explicitToken?: string) => {
+      const token = explicitToken || userRef.current?.token;
+      if (!token) return;
+
+      if (!quiet) {
+        setIsLoadingOrders(true);
+        setIsRefreshing(true);
+      }
+
+      try {
+        const limit = 20;
+        const offset = 0;
+
+        const settledResults = await Promise.allSettled(
+          STAFF_TABS.map(async (tab) => {
+            const status = getStatusForTab(tab);
+            const { orders: data, pagination } = await staffApi.getOrders(
+              status,
+              limit,
+              offset,
+              token
+            );
+            return { tab, orders: data, totalCount: pagination.totalCount };
+          })
+        );
+
+        const overrides = extractLocalOverrides(tabCacheRef.current);
+        let hasSuccess = false;
+        let has401 = false;
+
+        const newEntries: Partial<StaffTabCache> = {};
+
+        settledResults.forEach((res) => {
+          if (res.status === 'fulfilled') {
+            hasSuccess = true;
+            const { tab, orders: data, totalCount } = res.value;
+            newEntries[tab] = {
+              orders: mergeOrders(data, overrides),
+              totalCount,
+              lastFetched: Date.now(),
+            };
+          } else {
+            if (res.reason instanceof StaffApiError && res.reason.statusCode === 401) {
+              has401 = true;
+            }
+          }
+        });
+
+        if (has401) {
+          setStaffUser(null);
+          showToast('Session expired or unauthorized. Please sign in again.', 'error');
+          return;
+        }
+
+        setTabCache((prev) => ({
+          ...prev,
+          ...newEntries,
+        }));
+
+        if (hasSuccess) {
+          setIsOnline(true);
+        }
+      } catch (err: any) {
+        setIsOnline(false);
+        if (!quiet) {
+          showToast(err?.message || 'Failed to sync with backend', 'error');
+        }
+      } finally {
+        if (!quiet) {
+          setIsLoadingOrders(false);
+          setIsRefreshing(false);
+        }
+      }
+    },
+    [showToast]
+  );
+
+  // Search API execution
+  const searchRequestId = useRef(0);
+
+  const performSearch = useCallback(
+    async (query: string, token: string, page = 1) => {
+      const reqId = ++searchRequestId.current;
+      setIsLoadingOrders(true);
+      try {
+        const limit = 20;
+        const offset = (page - 1) * limit;
+        const { orders: data, pagination } = await staffApi.getOrders(
+          undefined,
+          limit,
+          offset,
+          token,
+          query
+        );
+        if (reqId !== searchRequestId.current) return;
+        const overrides = extractLocalOverrides(tabCacheRef.current);
+        setSearchOrders(mergeOrders(data, overrides));
+        setSearchTotalCount(pagination.totalCount);
+        setIsOnline(true);
+      } catch (err: any) {
+        if (reqId !== searchRequestId.current) return;
+        if (err instanceof StaffApiError && err.statusCode === 401) {
+          setStaffUser(null);
+          showToast('Session expired or unauthorized. Please sign in again.', 'error');
+          return;
+        }
+        setIsOnline(false);
+        showToast(err?.message || 'Error searching orders', 'error');
+      } finally {
+        if (reqId === searchRequestId.current) {
+          setIsLoadingOrders(false);
+        }
+      }
+    },
+    [showToast]
+  );
+
+  // Check stored auth token on startup and prefetch tabs
   useEffect(() => {
     let isMounted = true;
     (async () => {
@@ -113,6 +375,8 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             token,
           };
           setStaffUser(user);
+          // Eager pre-fetch for all tabs on session restore
+          await fetchAllTabs(false, token);
         }
       } finally {
         if (isMounted) setIsInitialLoading(false);
@@ -121,133 +385,46 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [fetchAllTabs]);
 
-  const activeTabRef = useRef(activeTab);
-  activeTabRef.current = activeTab;
-  const searchQueryRef = useRef(searchQuery);
-  searchQueryRef.current = searchQuery;
-  const fetchRequestId = useRef(0);
-
-  // Fetch orders from live backend (supports optional database search query and tab status)
-  const fetchOrders = useCallback(async (
-    quiet = false,
-    explicitToken?: string,
-    searchParam?: string,
-    targetTab?: StaffTab
-  ) => {
-    const token = explicitToken || userRef.current?.token;
-    if (!token) return;
-
-    const currentReqId = ++fetchRequestId.current;
-
-    if (!quiet) {
-      setIsLoadingOrders(true);
-      setIsRefreshing(true);
-    }
-    try {
-      // Strictly limit to 20 results per requirement
-      const limit = 20;
-      const offset = (currentPage - 1) * ITEMS_PER_PAGE;
-      const effectiveTab = targetTab ?? activeTabRef.current;
-      // Search is always global (no status filter). When browsing a tab, scope by its status.
-      const status = searchParam ? undefined : getStatusForTab(effectiveTab);
-      const { orders: data, pagination } = await staffApi.getOrders(
-        status,
-        limit,
-        offset,
-        token,
-        searchParam
-      );
-
-      // Discard stale responses if a newer fetch request was dispatched
-      if (currentReqId !== fetchRequestId.current) {
-        return;
+  // Handle tab switching:
+  // - If cached, switches INSTANTLY (0ms latency, zero skeleton flash)
+  // - In background, triggers quiet revalidation
+  const handleSelectTab = useCallback(
+    (tab: StaffTab) => {
+      // Clear search if active
+      if (searchQueryRef.current) {
+        setSearchQuery('');
+        searchQueryRef.current = '';
+        setSearchOrders(null);
       }
-      setTotalCount(pagination.totalCount);
-      setOrders((prev) => {
-        // Merge notes and local claimedAt from local memory if existing
-        const notesMap = new Map<string, string>();
-        const claimedAtMap = new Map<string, string>();
-        const createdAtMap = new Map<string, string>();
-        prev.forEach((o) => {
-          if (o.notes) notesMap.set(o.id, o.notes);
-          if (o.claimedAt) claimedAtMap.set(o.id, o.claimedAt);
-          if (o.createdAt) createdAtMap.set(o.id, o.createdAt);
-        });
 
-        return data.map((o) => ({
-          ...o,
-          notes: notesMap.get(o.id) || o.notes,
-          claimedAt: claimedAtMap.get(o.id) || o.claimedAt,
-          createdAt: o.createdAt || createdAtMap.get(o.id),
-        }));
-      });
-      setIsOnline(true);
+      setActiveTab(tab);
+      activeTabRef.current = tab;
 
-      // Keep selected order in sync if modal is open
-      setSelectedOrder((prevSelected) => {
-        if (!prevSelected) return null;
-        const fresh = data.find((o) => o.id === prevSelected.id);
-        return fresh
-          ? {
-            ...fresh,
-            notes: prevSelected.notes,
-            claimedAt: prevSelected.claimedAt || fresh.claimedAt,
-            createdAt: fresh.createdAt || prevSelected.createdAt,
-          }
-          : prevSelected;
-      });
-    } catch (err: any) {
-      if (currentReqId !== fetchRequestId.current) {
-        return;
-      }
-      if (err instanceof StaffApiError && err.statusCode === 401) {
-        setStaffUser(null);
-        showToast('Session expired or unauthorized. Please sign in again.', 'error');
-        return;
-      }
-      setIsOnline(false);
-      if (!quiet) {
-        showToast(err?.message || 'Failed to sync with backend', 'error');
-      }
-    } finally {
-      // Only release loading state if this request is still the active/latest request.
-      // If a newer request was dispatched while this was in flight, the newer request owns loading.
-      if (!quiet && currentReqId === fetchRequestId.current) {
-        setIsLoadingOrders(false);
-        setIsRefreshing(false);
-      }
-    }
-  }, [showToast, currentPage]);
+      const cached = tabCacheRef.current[tab];
+      const token = userRef.current?.token;
 
-  const isSwitchingTabRef = useRef(false);
-
-  // Handle tab switching: clears search and immediately fetches that tab's 20 orders
-  const handleSelectTab = useCallback((tab: StaffTab) => {
-    isSwitchingTabRef.current = true;
-    setActiveTab(tab);
-    activeTabRef.current = tab;
-    // Clear search query if active
-    if (searchQueryRef.current) {
-      setSearchQuery('');
-      searchQueryRef.current = '';
-    }
-    setIsLoadingOrders(true);
-    const token = userRef.current?.token;
-    if (token) {
-      fetchOrders(false, token, undefined, tab);
-    }
-    setTimeout(() => {
-      isSwitchingTabRef.current = false;
-    }, 100);
-  }, [fetchOrders]);
+      if (!cached) {
+        // Tab not yet cached -> fetch with loading skeleton
+        if (token) {
+          fetchTabOrders(tab, false, token, 1);
+        }
+      } else {
+        // Tab is cached -> instant switch!
+        // Quietly background-revalidate active tab without skeletons
+        if (token) {
+          fetchTabOrders(tab, true, token, 1);
+        }
+      }
+    },
+    [fetchTabOrders]
+  );
 
   // Handle search typing: activates loading state and switches tab to 'all' if needed
   const handleSearchChange = useCallback((text: string) => {
     setSearchQuery(text);
     searchQueryRef.current = text;
-    // Keep loading state active during any search edit (typing or clearing)
     setIsLoadingOrders(true);
     if (text.trim().length > 0 && activeTabRef.current !== 'all') {
       setActiveTab('all');
@@ -255,72 +432,103 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, []);
 
-  const isLoadingOrdersRef = useRef(isLoadingOrders);
-  isLoadingOrdersRef.current = isLoadingOrders;
-
-  // Polling every 4 seconds when authenticated, not searching, and not actively loading
-  useEffect(() => {
-    if (!staffUser) return;
-
-    // Initial load on authentication
-    fetchOrders(false, staffUser.token, undefined, activeTabRef.current);
-
-    const interval = setInterval(() => {
-      // Do not poll or overwrite while user has a search query typed or while explicitly loading
-      if (!searchQueryRef.current.trim() && !isLoadingOrdersRef.current) {
-        fetchOrders(true, staffUser.token, undefined, activeTabRef.current);
-      }
-    }, ENV.POLLING_INTERVAL_MS);
-
-    return () => clearInterval(interval);
-  }, [staffUser, fetchOrders]);
-
   const prevSearchQueryRef = useRef(searchQuery);
 
-  // Real-time debounced database search (500ms) strictly matching tracking & ticket code
+  // Real-time debounced database search (500ms)
   useEffect(() => {
     if (!staffUser) return;
     const q = searchQuery.trim();
     const prevQ = prevSearchQueryRef.current.trim();
     prevSearchQueryRef.current = searchQuery;
 
-    // If tab switch triggered this clear, handleSelectTab already dispatched the tab fetch
-    if (isSwitchingTabRef.current) {
-      return;
-    }
+    if (!q && !prevQ) return;
 
-    // Both were empty (e.g. startup or tab changes when not searching)
-    if (!q && !prevQ) {
-      return;
-    }
-
-    // Search query was cleared by user (via Clear Search button, X, or deleting all text)
+    // Search query cleared -> immediately restore cached tab view
     if (!q) {
-      setIsLoadingOrders(true);
-      fetchOrders(false, staffUser.token, undefined, activeTabRef.current);
+      setSearchOrders(null);
+      setIsLoadingOrders(false);
       return;
     }
 
-    // Active search query typed -> debounced
+    // Active search query typed -> debounced backend search
     setIsLoadingOrders(true);
     const timer = setTimeout(() => {
-      fetchOrders(false, staffUser.token, q);
+      performSearch(q, staffUser.token, 1);
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [searchQuery, staffUser, fetchOrders]);
+  }, [searchQuery, staffUser, performSearch]);
 
-  // Compute Badge Counts for Tabs
-  const badgeCounts: StaffBadgeCounts = useMemo(() => ({
-    all: orders.length,
-    active: orders.filter((o) => o.status === 'AWAITING_PARCEL').length,
-    ready: orders.filter((o) => o.status === 'READY_TO_CLAIM').length,
-    unpaid: orders.filter((o) => o.status === 'PAYMENT_REQUIRED').length,
-    claimed: orders.filter((o) => o.status === 'CLAIMED').length,
-  }), [orders]);
+  // Page navigation effect
+  const prevPageRef = useRef(currentPage);
+  useEffect(() => {
+    if (!staffUser) return;
+    if (prevPageRef.current === currentPage) return;
+    prevPageRef.current = currentPage;
 
-  // Backend is the single authoritative source of truth: no premature client-side filtering
-  const filteredOrders = orders;
+    const q = searchQueryRef.current.trim();
+    if (q) {
+      performSearch(q, staffUser.token, currentPage);
+    } else {
+      fetchTabOrders(activeTabRef.current, false, staffUser.token, currentPage);
+    }
+  }, [currentPage, staffUser, performSearch, fetchTabOrders]);
+
+  // Background polling every 4 seconds:
+  // Polls ONLY the active tab to preserve bandwidth and eliminate server strain
+  useEffect(() => {
+    if (!staffUser) return;
+
+    const interval = setInterval(() => {
+      // Do not poll while searching or while explicitly loading
+      if (!searchQueryRef.current.trim() && !isLoadingOrdersRef.current) {
+        fetchTabOrders(activeTabRef.current, true, staffUser.token, currentPageRef.current);
+      }
+    }, ENV.POLLING_INTERVAL_MS);
+
+    return () => clearInterval(interval);
+  }, [staffUser, fetchTabOrders]);
+
+  // Derived active tab data
+  const currentTabEntry = tabCache[activeTab];
+
+  const displayedOrders = useMemo(() => {
+    if (searchQuery.trim().length > 0) {
+      return searchOrders ?? [];
+    }
+    return currentTabEntry?.orders ?? [];
+  }, [searchQuery, searchOrders, currentTabEntry]);
+
+  const currentTotalCount = useMemo(() => {
+    if (searchQuery.trim().length > 0) {
+      return searchTotalCount;
+    }
+    return currentTabEntry?.totalCount ?? displayedOrders.length;
+  }, [searchQuery, searchTotalCount, currentTabEntry, displayedOrders.length]);
+
+  // Badge counts directly derived from server counts across all tabs
+  const badgeCounts: StaffBadgeCounts = useMemo(
+    () => ({
+      all: tabCache.all?.totalCount ?? 0,
+      active: tabCache.active?.totalCount ?? 0,
+      ready: tabCache.ready?.totalCount ?? 0,
+      unpaid: tabCache.unpaid?.totalCount ?? 0,
+      claimed: tabCache.claimed?.totalCount ?? 0,
+    }),
+    [tabCache]
+  );
+
+  // Aggregated pool of all cached orders across all tabs (for global manual QR lookup)
+  const allCachedOrders = useMemo(() => {
+    const map = new Map<string, StaffOrder>();
+    Object.values(tabCache).forEach((entry) => {
+      entry?.orders.forEach((o) => map.set(o.id, o));
+    });
+    if (searchOrders) {
+      searchOrders.forEach((o) => map.set(o.id, o));
+    }
+    return Array.from(map.values());
+  }, [tabCache, searchOrders]);
 
   // Authentication actions
   const login = async (usernameOrEmail: string, password: string) => {
@@ -339,16 +547,37 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
     setStaffUser(user);
     showToast(`Signed in as ${normalizedUsername}`, 'success');
-    await fetchOrders(false, res.authToken);
+    // Strategy A: Eagerly prefetch 20 orders for each tab on login
+    await fetchAllTabs(false, res.authToken);
   };
 
   const logout = async () => {
     await staffApi.clearStoredSession();
     setStaffUser(null);
+    setTabCache({
+      all: undefined,
+      ready: undefined,
+      active: undefined,
+      unpaid: undefined,
+      claimed: undefined,
+    });
+    setSearchOrders(null);
+    setSearchQuery('');
     setSelectedOrder(null);
     setIsDetailsOpen(false);
     showToast('Signed out of Staff Terminal', 'info');
   };
+
+  // Pull to refresh: refreshes search or all tabs
+  const refreshOrders = useCallback(async () => {
+    const token = staffUser?.token;
+    if (!token) return;
+    if (searchQueryRef.current.trim()) {
+      await performSearch(searchQueryRef.current.trim(), token, currentPageRef.current);
+    } else {
+      await fetchAllTabs(false, token);
+    }
+  }, [staffUser, performSearch, fetchAllTabs]);
 
   // Order Details Modal helpers
   const openOrderDetails = async (order: StaffOrder) => {
@@ -361,19 +590,19 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setSelectedOrder((prev) =>
           prev && prev.id === order.id
             ? {
-              ...prev,
-              ...detail,
-              amountReceived: detail.amountReceived ?? prev.amountReceived,
-              change: detail.change || prev.change,
-              notes: prev.notes,
-              claimedAt: prev.claimedAt || detail.claimedAt,
-              createdAt: detail.createdAt || prev.createdAt,
-              statusTimeline: detail.statusTimeline || prev.statusTimeline,
-            }
+                ...prev,
+                ...detail,
+                amountReceived: detail.amountReceived ?? prev.amountReceived,
+                change: detail.change || prev.change,
+                notes: prev.notes,
+                claimedAt: prev.claimedAt || detail.claimedAt,
+                createdAt: detail.createdAt || prev.createdAt,
+                statusTimeline: detail.statusTimeline || prev.statusTimeline,
+              }
             : prev
         );
       }
-    } catch { }
+    } catch {}
   };
 
   const closeOrderDetails = () => {
@@ -385,61 +614,87 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const activateOrder = async (orderId: string, amountReceived: number) => {
     const res = await staffApi.activateOrder(orderId, amountReceived, staffUser?.token);
     showToast(`Order ${orderId} activated! Change: ₱${res.change.toLocaleString()}`, 'success');
-    await fetchOrders(true, staffUser?.token);
+    await fetchAllTabs(true, staffUser?.token);
   };
 
   const payCourier = async (orderId: string) => {
     await staffApi.payCourier(orderId, staffUser?.token);
     showToast(`Courier payout recorded for ${orderId}`, 'success');
-    await fetchOrders(true, staffUser?.token);
+    await fetchAllTabs(true, staffUser?.token);
   };
 
   const attachPhoto = async (orderId: string, imageUrl?: string) => {
     const payloadUrl = imageUrl?.trim() || 'mock://ai-verified-proof-delivery.jpg';
     await staffApi.attachPhoto(orderId, payloadUrl, staffUser?.token);
     showToast(`Proof attached. ${orderId} is now Ready to Claim!`, 'success');
-    await fetchOrders(true, staffUser?.token);
+    await fetchAllTabs(true, staffUser?.token);
   };
 
   const claimOrder = async (orderId: string) => {
     await staffApi.claimOrder(orderId, staffUser?.token);
     const claimedAt = new Date().toISOString();
-    setOrders((prev) =>
-      prev.map((o) =>
-        o.id === orderId
-          ? {
-            ...o,
+
+    // Optimistically update order in cache
+    setTabCache((prev) => {
+      const next = { ...prev };
+      STAFF_TABS.forEach((tab) => {
+        const entry = next[tab];
+        if (!entry) return;
+        const exists = entry.orders.some((o) => o.id === orderId);
+        if (exists) {
+          next[tab] = {
+            ...entry,
+            orders: entry.orders.map((o) =>
+              o.id === orderId
+                ? {
+                    ...o,
+                    status: 'CLAIMED' as OrderStatus,
+                    isClaimActive: false,
+                    claimRemainingSeconds: 0,
+                    timestamp: claimedAt,
+                    claimedAt,
+                    createdAt: o.createdAt || o.statusTimeline?.[0]?.timestamp || o.timestamp,
+                  }
+                : o
+            ),
+          };
+        }
+      });
+      return next;
+    });
+
+    setSelectedOrder((prev) =>
+      prev && prev.id === orderId
+        ? {
+            ...prev,
             status: 'CLAIMED',
             isClaimActive: false,
             claimRemainingSeconds: 0,
             timestamp: claimedAt,
             claimedAt,
-            createdAt: o.createdAt || o.statusTimeline?.[0]?.timestamp || o.timestamp,
+            createdAt: prev.createdAt || prev.statusTimeline?.[0]?.timestamp || prev.timestamp,
           }
-          : o
-      )
-    );
-    setSelectedOrder((prev) =>
-      prev && prev.id === orderId
-        ? {
-          ...prev,
-          status: 'CLAIMED',
-          isClaimActive: false,
-          claimRemainingSeconds: 0,
-          timestamp: claimedAt,
-          claimedAt,
-          createdAt: prev.createdAt || prev.statusTimeline?.[0]?.timestamp || prev.timestamp,
-        }
         : prev
     );
+
     showToast(`Order ${orderId} handed over and marked Claimed!`, 'success');
-    await fetchOrders(true, staffUser?.token);
+    await fetchAllTabs(true, staffUser?.token);
   };
 
   const updateOrderNotes = (orderId: string, notes: string) => {
-    setOrders((prev) =>
-      prev.map((o) => (o.id === orderId ? { ...o, notes } : o))
-    );
+    setTabCache((prev) => {
+      const next = { ...prev };
+      STAFF_TABS.forEach((tab) => {
+        const entry = next[tab];
+        if (!entry) return;
+        next[tab] = {
+          ...entry,
+          orders: entry.orders.map((o) => (o.id === orderId ? { ...o, notes } : o)),
+        };
+      });
+      return next;
+    });
+
     if (selectedOrder && selectedOrder.id === orderId) {
       setSelectedOrder((prev) => (prev ? { ...prev, notes } : null));
     }
@@ -455,9 +710,11 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         isInitialLoading,
         isLoadingOrders,
         isRefreshing,
-        orders,
-        filteredOrders,
-        totalCount,
+        orders: displayedOrders,
+        filteredOrders: displayedOrders,
+        allCachedOrders,
+        tabCache,
+        totalCount: currentTotalCount,
         currentPage,
         setCurrentPage,
         activeTab,
@@ -477,7 +734,7 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         showToast,
         login,
         logout,
-        refreshOrders: () => fetchOrders(false, staffUser?.token, searchQuery.trim() || undefined, activeTabRef.current),
+        refreshOrders,
         activateOrder,
         payCourier,
         attachPhoto,
