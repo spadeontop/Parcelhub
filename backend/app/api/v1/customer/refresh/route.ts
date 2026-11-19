@@ -11,14 +11,19 @@ import {
 } from "@/app/types/v1/api";
 
 export async function POST(request: NextRequest) {
+  let body: CustomerRefreshTokenReq;
   try {
     // ---------------------------------------------------------
     // 2. Request Validation: Parse body & check required fields
     // ---------------------------------------------------------
-    const body = (await request.json()) as CustomerRefreshTokenReq;
+    body = (await request.json()) as CustomerRefreshTokenReq;
+  } catch {
+    return jsonError("Invalid request body", 400);
+  }
 
-    const refreshToken = body.refreshToken?.trim();
-    const mpin = body.mpin?.trim();
+  try {
+    const refreshToken = body?.refreshToken?.trim();
+    const mpin = body?.mpin?.trim();
 
     if (!refreshToken || !mpin) {
       return jsonError("Please enter your 4-digit MPIN", 400);
@@ -85,7 +90,8 @@ export async function POST(request: NextRequest) {
     };
 
     return jsonSuccess(response);
-  } catch {
-    return jsonError("Please log in again", 400);
+  } catch (err: unknown) {
+    console.error("[Customer Refresh Token Error]:", err);
+    return jsonError("Unable to refresh session. Please try again.", 500, "Internal Server Error");
   }
 }
