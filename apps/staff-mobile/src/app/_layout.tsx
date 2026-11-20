@@ -4,15 +4,12 @@ import { Slot } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { StaffProvider, useStaff } from '../context/StaffContext';
-import { Toast } from '../components/common/Toast';
+import { StaffProvider } from '../context/StaffContext';
 import '../global.css';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 function RootAppContent() {
-  const { toast } = useStaff();
-
   useEffect(() => {
     SplashScreen.hideAsync().catch(() => {});
   }, []);
@@ -30,9 +27,6 @@ function RootAppContent() {
       >
         <Slot />
       </View>
-
-      {/* Global Animated Toast Notification */}
-      <Toast isOpen={toast.show} message={toast.message} type={toast.type} />
     </SafeAreaView>
   );
 }

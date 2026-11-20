@@ -92,7 +92,15 @@ export const StaffOrderCard: React.FC<StaffOrderCardProps> = ({
     <TouchableOpacity
       activeOpacity={0.7}
       onPress={() => onPress(order)}
-      className="py-2.5"
+      style={{
+        paddingHorizontal: 16,
+        paddingTop: 14,
+        paddingBottom: 14,
+        borderBottomWidth: showDivider ? 1 : 0,
+        borderBottomColor: '#F1F5F9',
+        height: 92,
+        justifyContent: 'space-between',
+      }}
     >
       {/* Top Row: Order ID + Status badge */}
       <View className="flex-row items-center justify-between">
@@ -104,7 +112,7 @@ export const StaffOrderCard: React.FC<StaffOrderCardProps> = ({
 
       {/* Middle Row: Customer name */}
       <Text
-        className="text-[12px] font-semibold text-[#1E293B] leading-[17px] mt-1"
+        className="text-[12px] font-semibold text-[#1E293B] leading-[18px] mt-1 mb-0.5"
         numberOfLines={1}
       >
         {customerName}
@@ -117,9 +125,6 @@ export const StaffOrderCard: React.FC<StaffOrderCardProps> = ({
         </Text>
         {renderPriceOrTimer()}
       </View>
-
-      {/* Item Divider */}
-      {showDivider && <View className="h-px bg-[#F1F5F9] mt-2.5" />}
     </TouchableOpacity>
   );
 };

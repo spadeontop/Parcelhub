@@ -1,22 +1,25 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   ScrollView,
   RefreshControl,
   TouchableOpacity,
+  Animated,
+  Easing,
 } from 'react-native';
 import { useStaff } from '../../context/StaffContext';
 import { StaffHeader } from '../header/StaffHeader';
 import { StaffSearchBar } from '../header/StaffSearchBar';
 import { StaffFilterTabs } from '../navigation/StaffFilterTabs';
 import { StaffOrderCard } from '../cards/StaffOrderCard';
+import { StaffLiveUpdatedRow } from '../cards/StaffLiveUpdatedRow';
 import { StaffOrderCardSkeleton } from '../cards/StaffOrderCardSkeleton';
 import { StaffAccountModal } from '../modals/StaffAccountModal';
 import { StaffOrderDetailsModal } from '../modals/details/StaffOrderDetailsModal';
 import { StaffManualLookupModal } from '../modals/StaffManualLookupModal';
 import { Inbox } from '../common/Icons';
-import { StaffTab } from '../../types';
+import { StaffTab, StaffOrder } from '../../types';
 
 const getTabLabel = (tab: StaffTab): string => {
   switch (tab) {
@@ -58,8 +61,14 @@ export const StaffTerminalScreen: React.FC = () => {
     setIsDeskInfoOpen,
     isRefreshing,
     refreshOrders,
-    showToast,
+    justUpdatedOrder,
+    setJustUpdatedOrder,
   } = useStaff();
+
+  const handleOpenOrderDetails = (order: StaffOrder) => {
+    if (justUpdatedOrder) setJustUpdatedOrder(null);
+    openOrderDetails(order);
+  };
 
   // 20 items per page (server-side paginated)
   const ITEMS_PER_PAGE = 20;
@@ -114,7 +123,10 @@ export const StaffTerminalScreen: React.FC = () => {
         {/* Fixed Sheet Controls: Search & QR Wing Button */}
         <StaffSearchBar
           searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
+          onSearchChange={(q) => {
+            if (justUpdatedOrder) setJustUpdatedOrder(null);
+            setSearchQuery(q);
+          }}
           onClear={() => setSearchQuery('')}
           onOpenLookup={() => setIsLookupOpen(true)}
         />
@@ -123,7 +135,10 @@ export const StaffTerminalScreen: React.FC = () => {
         <StaffFilterTabs
           activeTab={activeTab}
           badgeCounts={badgeCounts}
-          onSelectTab={setActiveTab}
+          onSelectTab={(tab) => {
+            if (justUpdatedOrder) setJustUpdatedOrder(null);
+            setActiveTab(tab);
+          }}
         />
 
         {/* Section Title Header */}
@@ -141,7 +156,10 @@ export const StaffTerminalScreen: React.FC = () => {
           refreshControl={
             <RefreshControl
               refreshing={isRefreshing}
-              onRefresh={refreshOrders}
+              onRefresh={() => {
+                if (justUpdatedOrder) setJustUpdatedOrder(null);
+                refreshOrders();
+              }}
               tintColor="#2563EB"
               colors={['#2563EB']}
             />
@@ -149,22 +167,51 @@ export const StaffTerminalScreen: React.FC = () => {
         >
           {/* Flat pure white container with no border or drop shadow outline */}
           <View
-            style={{ borderWidth: 0, shadowOpacity: 0, elevation: 0 }}
-            className="bg-white rounded-[20px] p-4"
+            style={{ borderWidth: 0, shadowOpacity: 0, elevation: 0, overflow: 'hidden' }}
+            className="bg-white rounded-[20px] overflow-hidden"
           >
             {isLoadingOrders ? (
-              <StaffOrderCardSkeleton count={5} />
-            ) : pagedOrders.length > 0 ? (
-              pagedOrders.map((order, idx) => (
-                <StaffOrderCard
-                  key={`${order.id}-${idx}`}
-                  order={order}
-                  onPress={openOrderDetails}
-                  showDivider={idx < pagedOrders.length - 1}
-                />
-              ))
+              <View className="p-4">
+                <StaffOrderCardSkeleton count={5} />
+              </View>
+            ) : pagedOrders.length > 0 || justUpdatedOrder ? (
+              (() => {
+                const liveOrder = justUpdatedOrder
+                  ? pagedOrders.find((o) => o.id === justUpdatedOrder.orderId) ||
+                    orders.find((o) => o.id === justUpdatedOrder.orderId) ||
+                    allCachedOrders.find((o) => o.id === justUpdatedOrder.orderId)
+                  : null;
+
+                const remainingOrders = liveOrder
+                  ? pagedOrders.filter((o) => o.id !== liveOrder.id)
+                  : pagedOrders;
+
+                return (
+                  <>
+                    {liveOrder && justUpdatedOrder && (
+                      <StaffLiveUpdatedRow
+                        key={`live-${liveOrder.id}`}
+                        order={liveOrder}
+                        actionBadgeText={justUpdatedOrder.actionBadgeText}
+                        targetBadgeText={justUpdatedOrder.targetBadgeText}
+                        targetStatus={justUpdatedOrder.targetStatus}
+                        onPress={handleOpenOrderDetails}
+                        showDivider={remainingOrders.length > 0}
+                      />
+                    )}
+                    {remainingOrders.map((order, idx) => (
+                      <StaffOrderCard
+                        key={`${order.id}-${idx}`}
+                        order={order}
+                        onPress={handleOpenOrderDetails}
+                        showDivider={idx < remainingOrders.length - 1}
+                      />
+                    ))}
+                  </>
+                );
+              })()
             ) : searchQuery.trim() ? (
-              <View className="items-center justify-center py-12">
+              <View className="items-center justify-center py-12 px-4">
                 <View className="w-12 h-12 rounded-2xl bg-[#F1F5F9] items-center justify-center mb-2.5">
                   <Inbox size={22} color="#94A3B8" />
                 </View>
@@ -185,7 +232,7 @@ export const StaffTerminalScreen: React.FC = () => {
                 </TouchableOpacity>
               </View>
             ) : (
-              <View className="items-center justify-center py-12">
+              <View className="items-center justify-center py-12 px-4">
                 <View className="w-12 h-12 rounded-2xl bg-[#F1F5F9] items-center justify-center mb-2.5">
                   <Inbox size={22} color="#94A3B8" />
                 </View>
@@ -294,9 +341,9 @@ export const StaffTerminalScreen: React.FC = () => {
           onClose={() => setIsLookupOpen(false)}
           onSelectOrder={openOrderDetails}
           onOpenAccount={() => setIsDeskInfoOpen(true)}
-          onNotFound={(query) =>
-            showToast(`No order found matching "${query}"`, 'error')
-          }
+          onNotFound={(query) => {
+            console.warn(`No order found matching "${query}"`);
+          }}
         />
       </View>
 

@@ -57,12 +57,6 @@ export interface StaffOrder {
   notes?: string;
 }
 
-export interface ToastState {
-  show: boolean;
-  message: string;
-  type?: 'info' | 'success' | 'error';
-}
-
 export interface StaffLoginResponse {
   statusMessage: string;
   authToken: string;
@@ -118,4 +112,12 @@ export interface StaffAttachPhotoResponse {
 
 export interface StaffClaimOrderResponse {
   statusMessage: string;
+}
+
+export interface JustUpdatedOrderInfo {
+  orderId: string;
+  actionBadgeText: string;
+  targetBadgeText: string;
+  targetStatus: OrderStatus;
+  targetTab: StaffTab;
 }

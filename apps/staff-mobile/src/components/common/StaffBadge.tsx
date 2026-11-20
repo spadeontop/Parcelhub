@@ -49,13 +49,13 @@ export const StaffBadge: React.FC<StaffBadgeProps> = ({ status, variant = 'card'
 
   return (
     <View
-      className={`flex-row items-center justify-center rounded-[9px] ${bgColor} ${
-        isModal ? 'px-3 py-1' : 'px-2 py-0.5'
+      className={`flex-row items-center justify-center rounded-full ${bgColor} ${
+        isModal ? 'px-3 py-1' : 'px-2.5 py-0.5'
       }`}
     >
       <Text
         className={`font-medium ${textColor} ${
-          isModal ? 'text-xs' : 'text-[9px]'
+          isModal ? 'text-xs' : 'text-[10px]'
         }`}
       >
         {label}
