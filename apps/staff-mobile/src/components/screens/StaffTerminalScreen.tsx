@@ -65,25 +65,6 @@ export const StaffTerminalScreen: React.FC = () => {
     setJustUpdatedOrder,
   } = useStaff();
 
-  const liveLabelAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    if (justUpdatedOrder) {
-      liveLabelAnim.setValue(0);
-      Animated.timing(liveLabelAnim, {
-        toValue: 1,
-        duration: 4500,
-        easing: Easing.linear,
-        useNativeDriver: true,
-      }).start();
-    }
-  }, [justUpdatedOrder]);
-
-  const liveLabelOpacity = liveLabelAnim.interpolate({
-    inputRange: [0, 0.08, 0.68, 0.85, 1],
-    outputRange: [0, 1, 1, 0, 0],
-  });
-
   // 20 items per page (server-side paginated)
   const ITEMS_PER_PAGE = 20;
 
@@ -154,17 +135,6 @@ export const StaffTerminalScreen: React.FC = () => {
           <Text className="text-[11px] font-semibold text-[#6B7280] tracking-[0.55px] uppercase">
             {searchQuery.trim() ? 'SEARCH RESULTS' : 'RECENT ACTIVITIES'}
           </Text>
-          {justUpdatedOrder && (
-            <Animated.View
-              style={{ opacity: liveLabelOpacity }}
-              className="flex-row items-center gap-1.5"
-            >
-              <View className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              <Text className="text-[10px] font-semibold text-emerald-600">
-                Just Updated
-              </Text>
-            </Animated.View>
-          )}
         </View>
 
         {/* Middle Scrollable Content (List of 20 orders per page) */}

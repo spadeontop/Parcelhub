@@ -94,7 +94,10 @@ export const StaffOrderCard: React.FC<StaffOrderCardProps> = ({
       onPress={() => onPress(order)}
       style={{
         paddingHorizontal: 16,
-        paddingVertical: 14,
+        paddingTop: 14,
+        paddingBottom: 14,
+        borderBottomWidth: showDivider ? 1 : 0,
+        borderBottomColor: '#F1F5F9',
       }}
     >
       {/* Top Row: Order ID + Status badge */}
@@ -120,9 +123,6 @@ export const StaffOrderCard: React.FC<StaffOrderCardProps> = ({
         </Text>
         {renderPriceOrTimer()}
       </View>
-
-      {/* Item Divider */}
-      {showDivider && <View className="h-px bg-[#F1F5F9] mt-3.5" />}
     </TouchableOpacity>
   );
 };
