@@ -85,7 +85,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       })
       .from(orders)
       .leftJoin(staff, eq(orders.courierPaidBy, staff.id))
-      .where(or(eq(orders.id, lookupId), eq(orders.ticketCode, lookupId)))
+      .where(or(eq(orders.id, lookupId), eq(orders.ticketCode, lookupId.toUpperCase())))
       .limit(1);
 
     if (!order) {

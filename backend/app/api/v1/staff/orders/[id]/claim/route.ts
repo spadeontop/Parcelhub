@@ -43,7 +43,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     //    e. Update order to CLAIMED and append to statusTimeline
     // ---------------------------------------------------------
     const order = await db.query.orders.findFirst({
-      where: or(eq(orders.id, lookupId), eq(orders.ticketCode, lookupId)),
+      where: or(eq(orders.id, lookupId), eq(orders.ticketCode, lookupId.toUpperCase())),
       columns: ORDER_NON_IMAGE_COLUMNS,
     });
 

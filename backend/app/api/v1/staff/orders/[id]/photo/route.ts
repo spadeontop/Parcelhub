@@ -62,7 +62,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     //    the requested photo column(s) from the database.
     //    Screenshots live exclusively in order_screenshots.image_url.
     // ---------------------------------------------------------
-    const whereClause = or(eq(orders.id, lookupId), eq(orders.ticketCode, lookupId));
+    const whereClause = or(eq(orders.id, lookupId), eq(orders.ticketCode, lookupId.toUpperCase()));
 
     let orderId: string;
     let imageUrl: string | null = null;

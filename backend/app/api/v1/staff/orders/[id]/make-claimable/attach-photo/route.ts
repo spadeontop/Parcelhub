@@ -65,7 +65,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     //    d. Update proofImageUrl, set status to READY_TO_CLAIM, and append timeline
     // ---------------------------------------------------------
     const order = await db.query.orders.findFirst({
-      where: or(eq(orders.id, lookupId), eq(orders.ticketCode, lookupId)),
+      where: or(eq(orders.id, lookupId), eq(orders.ticketCode, lookupId.toUpperCase())),
       columns: ORDER_NON_IMAGE_COLUMNS,
     });
 

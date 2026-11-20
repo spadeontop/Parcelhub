@@ -63,7 +63,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     //    d. Update order to AWAITING_PARCEL and calculate change
     // ---------------------------------------------------------
     const order = await db.query.orders.findFirst({
-      where: or(eq(orders.id, lookupId), eq(orders.ticketCode, lookupId)),
+      where: or(eq(orders.id, lookupId), eq(orders.ticketCode, lookupId.toUpperCase())),
       columns: ORDER_NON_IMAGE_COLUMNS,
     });
 
