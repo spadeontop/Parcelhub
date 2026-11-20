@@ -91,9 +91,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     // doesn't already hold the same trackingId before activating this order.
     // ---------------------------------------------------------
     if (order.trackingId) {
+      const normalizedTrackingId = order.trackingId.replace(/\s+/g, "").toLowerCase();
       const activePaidDuplicate = await db.query.orders.findFirst({
         where: and(
-          eq(orders.trackingId, order.trackingId),
+          sql`lower(regexp_replace(${orders.trackingId}, '[[:space:]]+', '', 'g')) = ${normalizedTrackingId}`,
           ne(orders.id, order.id),
           inArray(orders.status, [
             "AWAITING_PARCEL",
