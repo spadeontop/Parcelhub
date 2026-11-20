@@ -183,11 +183,13 @@ export const StaffTerminalScreen: React.FC = () => {
         >
           {/* Flat pure white container with no border or drop shadow outline */}
           <View
-            style={{ borderWidth: 0, shadowOpacity: 0, elevation: 0 }}
-            className="bg-white rounded-[20px] p-4"
+            style={{ borderWidth: 0, shadowOpacity: 0, elevation: 0, overflow: 'hidden' }}
+            className="bg-white rounded-[20px] overflow-hidden"
           >
             {isLoadingOrders ? (
-              <StaffOrderCardSkeleton count={5} />
+              <View className="p-4">
+                <StaffOrderCardSkeleton count={5} />
+              </View>
             ) : pagedOrders.length > 0 || justUpdatedOrder ? (
               (() => {
                 const liveOrder = justUpdatedOrder
@@ -226,7 +228,7 @@ export const StaffTerminalScreen: React.FC = () => {
                 );
               })()
             ) : searchQuery.trim() ? (
-              <View className="items-center justify-center py-12">
+              <View className="items-center justify-center py-12 px-4">
                 <View className="w-12 h-12 rounded-2xl bg-[#F1F5F9] items-center justify-center mb-2.5">
                   <Inbox size={22} color="#94A3B8" />
                 </View>
@@ -247,7 +249,7 @@ export const StaffTerminalScreen: React.FC = () => {
                 </TouchableOpacity>
               </View>
             ) : (
-              <View className="items-center justify-center py-12">
+              <View className="items-center justify-center py-12 px-4">
                 <View className="w-12 h-12 rounded-2xl bg-[#F1F5F9] items-center justify-center mb-2.5">
                   <Inbox size={22} color="#94A3B8" />
                 </View>

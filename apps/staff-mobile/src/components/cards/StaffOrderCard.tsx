@@ -93,9 +93,8 @@ export const StaffOrderCard: React.FC<StaffOrderCardProps> = ({
       activeOpacity={0.7}
       onPress={() => onPress(order)}
       style={{
-        paddingHorizontal: 8,
-        paddingVertical: 10,
-        borderRadius: 12,
+        paddingHorizontal: 16,
+        paddingVertical: 14,
       }}
     >
       {/* Top Row: Order ID + Status badge */}
@@ -123,7 +122,7 @@ export const StaffOrderCard: React.FC<StaffOrderCardProps> = ({
       </View>
 
       {/* Item Divider */}
-      {showDivider && <View className="h-px bg-[#F1F5F9] mt-2.5" />}
+      {showDivider && <View className="h-px bg-[#F1F5F9] mt-3.5" />}
     </TouchableOpacity>
   );
 };

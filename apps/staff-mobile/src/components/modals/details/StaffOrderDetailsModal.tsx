@@ -1,8 +1,11 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Modal,
   View,
   ScrollView,
+  Animated,
+  Easing,
+  Dimensions,
 } from 'react-native';
 import { StaffOrder, JustUpdatedOrderInfo } from '../../../types';
 import { useStaff } from '../../../context/StaffContext';
@@ -39,12 +42,53 @@ export const StaffOrderDetailsModal: React.FC<StaffOrderDetailsModalProps> = ({
   const [isReleasing, setIsReleasing] = useState<boolean>(false);
   const scrollViewRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
 
+  const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+  const translateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const isClosingRef = useRef(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      isClosingRef.current = false;
+      translateY.setValue(SCREEN_HEIGHT);
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration: 320,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [isOpen]);
+
   if (!order) return null;
 
+  const handleClose = () => {
+    if (isClosingRef.current) return;
+    isClosingRef.current = true;
+    Animated.timing(translateY, {
+      toValue: SCREEN_HEIGHT,
+      duration: 300,
+      easing: Easing.inOut(Easing.ease),
+      useNativeDriver: true,
+    }).start(() => {
+      onClose();
+    });
+  };
+
   const handleSuccessTransition = (info: JustUpdatedOrderInfo) => {
-    setJustUpdatedOrder(info);
-    setActiveTab(info.targetTab);
-    onClose();
+    if (isClosingRef.current) return;
+    isClosingRef.current = true;
+    // Smoothly slide the Order Details modal downward (translateY(100%), 350ms ease-in-out)
+    // off the screen before revealing the Home list update
+    Animated.timing(translateY, {
+      toValue: SCREEN_HEIGHT,
+      duration: 350,
+      easing: Easing.inOut(Easing.ease),
+      useNativeDriver: true,
+    }).start(() => {
+      setJustUpdatedOrder(info);
+      setActiveTab(info.targetTab);
+      onClose();
+    });
   };
 
   const handleActivate = async (orderId: string, amount: number) => {
@@ -113,76 +157,84 @@ export const StaffOrderDetailsModal: React.FC<StaffOrderDetailsModalProps> = ({
   return (
     <Modal
       visible={isOpen}
-      animationType="slide"
-      transparent={false}
-      onRequestClose={onClose}
+      animationType="none"
+      transparent={true}
+      onRequestClose={handleClose}
     >
-      <View className="flex-1 bg-black">
-        {/* Top Header matching Figma 1343:1662 & 1346:2288 */}
-        <OrderDetailsHeader
-          title={headerTitle}
-          subtitle={headerSubtitle}
-          onBack={onClose}
-        />
-
-        {/* Content Sheet with curved top corners */}
-        <View
-          style={{ borderTopLeftRadius: 28, borderTopRightRadius: 28 }}
-          className="flex-1 bg-[#F8FAFC] overflow-hidden"
+      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' }}>
+        <Animated.View
+          style={{
+            flex: 1,
+            backgroundColor: '#000000',
+            transform: [{ translateY }],
+          }}
         >
-          <ScrollView
-            ref={scrollViewRef}
-            className="flex-1"
-            contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
-            showsVerticalScrollIndicator={false}
+          {/* Top Header matching Figma 1343:1662 & 1346:2288 */}
+          <OrderDetailsHeader
+            title={headerTitle}
+            subtitle={headerSubtitle}
+            onBack={handleClose}
+          />
+
+          {/* Content Sheet with curved top corners */}
+          <View
+            style={{ borderTopLeftRadius: 28, borderTopRightRadius: 28 }}
+            className="flex-1 bg-[#F8FAFC] overflow-hidden"
           >
-            {/* Overview Card (matching Figma 1346:2358) */}
-            <StaffOrderOverviewCard
-              order={order}
-              showFinancials={false}
-            />
-
-            {/* Status-specific Action Section */}
-            {order.status === 'PAYMENT_REQUIRED' && (
-              <StaffUnpaidActionSection
+            <ScrollView
+              ref={scrollViewRef}
+              className="flex-1"
+              contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
+              showsVerticalScrollIndicator={false}
+            >
+              {/* Overview Card (matching Figma 1346:2358) */}
+              <StaffOrderOverviewCard
                 order={order}
-                isSubmitting={isActivating}
-                onActivate={handleActivate}
-                onReturnHome={onClose}
-                onSuccessTransition={handleSuccessTransition}
+                showFinancials={false}
               />
-            )}
 
-            {order.status === 'READY_TO_CLAIM' && (
-              <StaffReadyActionSection
-                order={order}
-                isReleasing={isReleasing}
-                onRelease={handleRelease}
-                onReturnHome={onClose}
-                onSuccessTransition={handleSuccessTransition}
-              />
-            )}
+              {/* Status-specific Action Section */}
+              {order.status === 'PAYMENT_REQUIRED' && (
+                <StaffUnpaidActionSection
+                  order={order}
+                  isSubmitting={isActivating}
+                  onActivate={handleActivate}
+                  onReturnHome={handleClose}
+                  onSuccessTransition={handleSuccessTransition}
+                />
+              )}
 
-            {order.status === 'AWAITING_PARCEL' && (
-              <StaffActiveActionSection
-                order={order}
-                isPayingCourier={isPayingCourier}
-                isAttachingPhoto={isAttachingPhoto}
-                onPayCourier={handlePayCourier}
-                onAttachPhoto={handleAttachPhoto}
-                onReturnHome={onClose}
-                onSuccessTransition={handleSuccessTransition}
-              />
-            )}
+              {order.status === 'READY_TO_CLAIM' && (
+                <StaffReadyActionSection
+                  order={order}
+                  isReleasing={isReleasing}
+                  onRelease={handleRelease}
+                  onReturnHome={handleClose}
+                  onSuccessTransition={handleSuccessTransition}
+                />
+              )}
 
-            {order.status === 'CLAIMED' && (
-              <StaffClaimedSummarySection
-                order={order}
-                onReturnHome={onClose}
-              />
-            )}
-          </ScrollView>
-        </View>
+              {order.status === 'AWAITING_PARCEL' && (
+                <StaffActiveActionSection
+                  order={order}
+                  isPayingCourier={isPayingCourier}
+                  isAttachingPhoto={isAttachingPhoto}
+                  onPayCourier={handlePayCourier}
+                  onAttachPhoto={handleAttachPhoto}
+                  onReturnHome={handleClose}
+                  onSuccessTransition={handleSuccessTransition}
+                />
+              )}
+
+              {order.status === 'CLAIMED' && (
+                <StaffClaimedSummarySection
+                  order={order}
+                  onReturnHome={handleClose}
+                />
+              )}
+            </ScrollView>
+          </View>
+        </Animated.View>
       </View>
     </Modal>
   );
