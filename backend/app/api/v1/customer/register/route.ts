@@ -35,6 +35,18 @@ export async function POST(request: NextRequest) {
       return jsonError("Missing required registration fields", 400);
     }
 
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return jsonError("Invalid email format", 400);
+    }
+
+    if (typeof password !== "string" || password.length < 6) {
+      return jsonError("Password must be at least 6 characters", 400);
+    }
+
+    if (Buffer.byteLength(password, "utf-8") > 72) {
+      return jsonError("Password must not exceed 72 bytes", 400);
+    }
+
     // ---------------------------------------------------------
     // 3. Logic:
     //    a. Fast-path check if email already registered in DB (avoids wasted bcrypt work)
