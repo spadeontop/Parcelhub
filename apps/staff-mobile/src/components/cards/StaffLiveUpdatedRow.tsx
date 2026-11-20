@@ -22,7 +22,7 @@ interface StaffLiveUpdatedRowProps {
 }
 
 const customBezier = Easing.bezier(0.22, 1, 0.36, 1);
-const ROW_HEIGHT = 93;
+const ROW_HEIGHT = 92;
 
 export const StaffLiveUpdatedRow: React.FC<StaffLiveUpdatedRowProps> = ({
   order,
@@ -36,10 +36,10 @@ export const StaffLiveUpdatedRow: React.FC<StaffLiveUpdatedRowProps> = ({
   // 1. Top-row expansion: 0fr to 1fr (450ms) pushing existing rows down smoothly
   const insertHeight = useRef(new Animated.Value(0)).current;
 
-  // 2. Full-width subtle emerald tint & morph cycle: 4.2s total (3.5s hold, then smooth 500ms cross-fade to white)
+  // 2. Status morph & surface highlight cycle: 3s total matching button feedback 4.html
   const animCycle = useRef(new Animated.Value(0)).current;
 
-  // 3. Shimmer sweep: 1.1s with 0.15s delay
+  // 3. Shimmer sweep: 1.1s with 0.2s delay matching button feedback 4.html
   const shimmerAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -51,20 +51,19 @@ export const StaffLiveUpdatedRow: React.FC<StaffLiveUpdatedRowProps> = ({
       useNativeDriver: false,
     }).start();
 
-    // 2. Subtle shimmer sweep during initial emerald highlight
+    // 2. Subtle shimmer sweep (1.1s with 0.2s delay matching button feedback 4.html)
     Animated.timing(shimmerAnim, {
       toValue: 1,
       duration: 1100,
-      delay: 150,
+      delay: 200,
       easing: customBezier,
       useNativeDriver: true,
     }).start();
 
-    // 3. 4.2s total cycle: 3.5s hold in subtle emerald tint & Phase 1 badge ("✓ Activated"),
-    // then smooth cross-fade to white & target status badge between 3.5s and 4.0s
+    // 3. 3s status morph & surface highlight cycle matching button feedback 4.html 1:1
     Animated.timing(animCycle, {
       toValue: 1,
-      duration: 4200,
+      duration: 3000,
       easing: customBezier,
       useNativeDriver: false,
     }).start(({ finished }) => {
@@ -90,16 +89,17 @@ export const StaffLiveUpdatedRow: React.FC<StaffLiveUpdatedRowProps> = ({
   const customerName = order.customer || 'Customer';
   const amountStr = `₱${order.amountToPay.toLocaleString()}`;
 
-  // 0fr to 1fr row expansion: 0 to 93px over 450ms
+  // 0fr to 1fr row expansion: 0 to 92px over 450ms
   const animatedRowHeight = insertHeight.interpolate({
     inputRange: [0, 1],
     outputRange: [0, ROW_HEIGHT],
   });
 
-  // Background color: subtle emerald tint (#ECFDF5) held for 3.5s (0 to 0.833), then smoothly fades to white (#FFFFFF)
+  // rowHighlightCycle 1:1 from button feedback 4.html:
+  // 0%: #d1fae5 | 18%, 68%: #ecfdf5 | 100%: #ffffff
   const backgroundColor = animCycle.interpolate({
-    inputRange: [0, 0.833, 0.95, 1],
-    outputRange: ['#ECFDF5', '#ECFDF5', '#FFFFFF', '#FFFFFF'],
+    inputRange: [0, 0.18, 0.68, 1],
+    outputRange: ['#d1fae5', '#ecfdf5', '#ecfdf5', '#ffffff'],
   });
 
   // Subtle Shimmer sweep across the row
@@ -108,36 +108,41 @@ export const StaffLiveUpdatedRow: React.FC<StaffLiveUpdatedRowProps> = ({
     outputRange: [-350, 450],
   });
 
-  // Phase 1 Badge ("✓ Activated" in green): Holds for 3.5s, then cross-fades out between 3.5s and 4.0s
+  // activatedBadgeCycle 1:1 from button feedback 4.html:
+  // 0%: opacity 0, scale 0.75
+  // 12%: opacity 1, scale 1.06 (pop-in with spring overshoot)
+  // 18%, 68%: opacity 1, scale 1.0 (steady readable hold)
+  // 78%, 100%: opacity 0, scale 0.85, translateY -3px (smooth float-up exit)
   const phase1Opacity = animCycle.interpolate({
-    inputRange: [0, 0.05, 0.833, 0.95, 1],
+    inputRange: [0, 0.12, 0.68, 0.78, 1],
     outputRange: [0, 1, 1, 0, 0],
   });
 
   const phase1Scale = animCycle.interpolate({
-    inputRange: [0, 0.05, 0.833, 0.95, 1],
-    outputRange: [0.85, 1, 1, 0.9, 0.9],
+    inputRange: [0, 0.12, 0.18, 0.68, 0.78, 1],
+    outputRange: [0.75, 1.06, 1.0, 1.0, 0.85, 0.85],
   });
 
   const phase1TranslateY = animCycle.interpolate({
-    inputRange: [0, 0.833, 0.95, 1],
+    inputRange: [0, 0.68, 0.78, 1],
     outputRange: [0, 0, -3, -3],
   });
 
-  // Phase 2 Badge (Permanent target status pill e.g. blue "Awaiting Parcel"):
-  // Cross-fades in at 3.5s, fully visible by 4.0s, settles permanently
+  // awaitingBadgeCycle 1:1 from button feedback 4.html:
+  // 0%, 72%: opacity 0, scale 0.85, translateY 3px
+  // 84%, 100%: opacity 1, scale 1.0, translateY 0 (rises up into resting position)
   const phase2Opacity = animCycle.interpolate({
-    inputRange: [0, 0.833, 0.95, 1],
+    inputRange: [0, 0.72, 0.84, 1],
     outputRange: [0, 0, 1, 1],
   });
 
   const phase2Scale = animCycle.interpolate({
-    inputRange: [0, 0.833, 0.95, 1],
-    outputRange: [0.9, 0.9, 1, 1],
+    inputRange: [0, 0.72, 0.84, 1],
+    outputRange: [0.85, 0.85, 1.0, 1.0],
   });
 
   const phase2TranslateY = animCycle.interpolate({
-    inputRange: [0, 0.833, 0.95, 1],
+    inputRange: [0, 0.72, 0.84, 1],
     outputRange: [3, 3, 0, 0],
   });
 
@@ -184,7 +189,7 @@ export const StaffLiveUpdatedRow: React.FC<StaffLiveUpdatedRowProps> = ({
               <Defs>
                 <LinearGradient id="rowShimmerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
                   <Stop offset="0%" stopColor="#10B981" stopOpacity="0" />
-                  <Stop offset="50%" stopColor="#10B981" stopOpacity="0.12" />
+                  <Stop offset="50%" stopColor="#10B981" stopOpacity="0.16" />
                   <Stop offset="100%" stopColor="#10B981" stopOpacity="0" />
                 </LinearGradient>
               </Defs>
@@ -192,15 +197,15 @@ export const StaffLiveUpdatedRow: React.FC<StaffLiveUpdatedRowProps> = ({
             </Svg>
           </Animated.View>
 
-          {/* Top Row: Order ID + Stacked Morphing Badges */}
+          {/* Top Row: Order ID + Stacked Morphing Badges (1:1 button feedback 4.html) */}
           <View className="flex-row items-center justify-between">
             <Text className="text-[10px] font-semibold text-[#2563EB]">
               {orderTicket}
             </Text>
 
-            {/* Stacked Morphing Badges Container */}
-            <View className="relative h-6 items-end justify-center min-w-[110px]">
-              {/* Phase 1 Pill: Green pop-in "✓ Activated" badge for 3.5s */}
+            {/* Stacked Morphing Badges: Activated -> Awaiting Parcel */}
+            <View className="relative h-5 flex-row items-center justify-end min-w-[110px]">
+              {/* Phase 1 Pill: Green pop-in "✓ Activated" badge */}
               <Animated.View
                 pointerEvents="none"
                 style={{
@@ -246,7 +251,7 @@ export const StaffLiveUpdatedRow: React.FC<StaffLiveUpdatedRowProps> = ({
             </View>
           </View>
 
-          {/* Middle Row: Customer name (clean natural text line-height) */}
+          {/* Middle Row: Customer name */}
           <Text
             className="text-[12px] font-semibold text-[#1E293B] leading-[18px] mt-1 mb-0.5"
             numberOfLines={1}

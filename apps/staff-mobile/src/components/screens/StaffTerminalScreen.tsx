@@ -19,7 +19,7 @@ import { StaffAccountModal } from '../modals/StaffAccountModal';
 import { StaffOrderDetailsModal } from '../modals/details/StaffOrderDetailsModal';
 import { StaffManualLookupModal } from '../modals/StaffManualLookupModal';
 import { Inbox } from '../common/Icons';
-import { StaffTab } from '../../types';
+import { StaffTab, StaffOrder } from '../../types';
 
 const getTabLabel = (tab: StaffTab): string => {
   switch (tab) {
@@ -64,6 +64,11 @@ export const StaffTerminalScreen: React.FC = () => {
     justUpdatedOrder,
     setJustUpdatedOrder,
   } = useStaff();
+
+  const handleOpenOrderDetails = (order: StaffOrder) => {
+    if (justUpdatedOrder) setJustUpdatedOrder(null);
+    openOrderDetails(order);
+  };
 
   // 20 items per page (server-side paginated)
   const ITEMS_PER_PAGE = 20;
@@ -118,7 +123,10 @@ export const StaffTerminalScreen: React.FC = () => {
         {/* Fixed Sheet Controls: Search & QR Wing Button */}
         <StaffSearchBar
           searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
+          onSearchChange={(q) => {
+            if (justUpdatedOrder) setJustUpdatedOrder(null);
+            setSearchQuery(q);
+          }}
           onClear={() => setSearchQuery('')}
           onOpenLookup={() => setIsLookupOpen(true)}
         />
@@ -127,7 +135,10 @@ export const StaffTerminalScreen: React.FC = () => {
         <StaffFilterTabs
           activeTab={activeTab}
           badgeCounts={badgeCounts}
-          onSelectTab={setActiveTab}
+          onSelectTab={(tab) => {
+            if (justUpdatedOrder) setJustUpdatedOrder(null);
+            setActiveTab(tab);
+          }}
         />
 
         {/* Section Title Header */}
@@ -145,7 +156,10 @@ export const StaffTerminalScreen: React.FC = () => {
           refreshControl={
             <RefreshControl
               refreshing={isRefreshing}
-              onRefresh={refreshOrders}
+              onRefresh={() => {
+                if (justUpdatedOrder) setJustUpdatedOrder(null);
+                refreshOrders();
+              }}
               tintColor="#2563EB"
               colors={['#2563EB']}
             />
@@ -181,8 +195,7 @@ export const StaffTerminalScreen: React.FC = () => {
                         actionBadgeText={justUpdatedOrder.actionBadgeText}
                         targetBadgeText={justUpdatedOrder.targetBadgeText}
                         targetStatus={justUpdatedOrder.targetStatus}
-                        onPress={openOrderDetails}
-                        onAnimationComplete={() => setJustUpdatedOrder(null)}
+                        onPress={handleOpenOrderDetails}
                         showDivider={remainingOrders.length > 0}
                       />
                     )}
@@ -190,7 +203,7 @@ export const StaffTerminalScreen: React.FC = () => {
                       <StaffOrderCard
                         key={`${order.id}-${idx}`}
                         order={order}
-                        onPress={openOrderDetails}
+                        onPress={handleOpenOrderDetails}
                         showDivider={idx < remainingOrders.length - 1}
                       />
                     ))}

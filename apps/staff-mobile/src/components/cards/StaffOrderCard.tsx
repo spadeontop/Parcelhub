@@ -98,6 +98,8 @@ export const StaffOrderCard: React.FC<StaffOrderCardProps> = ({
         paddingBottom: 14,
         borderBottomWidth: showDivider ? 1 : 0,
         borderBottomColor: '#F1F5F9',
+        height: 92,
+        justifyContent: 'space-between',
       }}
     >
       {/* Top Row: Order ID + Status badge */}
