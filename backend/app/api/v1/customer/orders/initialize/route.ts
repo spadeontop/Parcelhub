@@ -1,3 +1,4 @@
+import { randomInt } from "crypto";
 import { NextRequest } from "next/server";
 import { db } from "@/db";
 import { orders, orderScreenshots } from "@/db/schema";
@@ -16,8 +17,8 @@ function generateTicketCode(): string {
   let firstPart = "";
   let secondPart = "";
   for (let i = 0; i < 3; i++) {
-    firstPart += chars.charAt(Math.floor(Math.random() * chars.length));
-    secondPart += chars.charAt(Math.floor(Math.random() * chars.length));
+    firstPart += chars.charAt(randomInt(0, chars.length));
+    secondPart += chars.charAt(randomInt(0, chars.length));
   }
   return `${firstPart}-${secondPart}`;
 }
