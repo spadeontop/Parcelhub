@@ -129,8 +129,6 @@ export const StaffReadyActionSection: React.FC<StaffReadyActionSectionProps> = (
 
     try {
       await onRelease(order.id);
-      setBtnState('success');
-      await new Promise((r) => setTimeout(r, 350));
       onSuccessTransition?.({
         orderId: order.id,
         actionBadgeText: 'Released',

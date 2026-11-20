@@ -121,8 +121,6 @@ export const StaffUnpaidActionSection: React.FC<StaffUnpaidActionSectionProps> =
 
     try {
       await onActivate(order.id, cashNum);
-      setBtnState('success');
-      await new Promise((r) => setTimeout(r, 350));
       onSuccessTransition?.({
         orderId: order.id,
         actionBadgeText: 'Activated',

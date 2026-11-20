@@ -136,9 +136,6 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
 
     try {
       await onPayCourier(order.id);
-      setStep1BtnState('success');
-      // Show green success feedback for 1.2s, then transition to Step 2 in place
-      await new Promise((resolve) => setTimeout(resolve, 1200));
       setLocalCourierPaid(true);
     } catch {
       setIsStep1Locked(false);
@@ -261,8 +258,6 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
     try {
       const payloadUrl = photoBase64 || photoUri || 'mock://ai-verified-parcel-proof.jpg';
       await onAttachPhoto(order.id, payloadUrl);
-      setStep2BtnState('success');
-      await new Promise((r) => setTimeout(r, 350));
       onSuccessTransition?.({
         orderId: order.id,
         actionBadgeText: 'Proof Attached',

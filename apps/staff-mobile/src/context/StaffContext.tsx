@@ -683,12 +683,24 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             orders: [updatedOrder, ...rest],
             totalCount: next.active.totalCount + 1,
           };
+        } else {
+          next.active = {
+            orders: [updatedOrder],
+            totalCount: 1,
+            lastFetched: Date.now(),
+          };
         }
         if (next.all) {
           const rest = next.all.orders.filter((o) => o.id !== orderId);
           next.all = {
             ...next.all,
             orders: [updatedOrder, ...rest],
+          };
+        } else {
+          next.all = {
+            orders: [updatedOrder],
+            totalCount: 1,
+            lastFetched: Date.now(),
           };
         }
       }
@@ -753,12 +765,24 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             orders: [updatedOrder, ...rest],
             totalCount: next.ready.totalCount + 1,
           };
+        } else {
+          next.ready = {
+            orders: [updatedOrder],
+            totalCount: 1,
+            lastFetched: Date.now(),
+          };
         }
         if (next.all) {
           const rest = next.all.orders.filter((o) => o.id !== orderId);
           next.all = {
             ...next.all,
             orders: [updatedOrder, ...rest],
+          };
+        } else {
+          next.all = {
+            orders: [updatedOrder],
+            totalCount: 1,
+            lastFetched: Date.now(),
           };
         }
       }
@@ -816,12 +840,24 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             orders: [updatedOrder, ...rest],
             totalCount: next.claimed.totalCount + 1,
           };
+        } else {
+          next.claimed = {
+            orders: [updatedOrder],
+            totalCount: 1,
+            lastFetched: Date.now(),
+          };
         }
         if (next.all) {
           const rest = next.all.orders.filter((o) => o.id !== orderId);
           next.all = {
             ...next.all,
             orders: [updatedOrder, ...rest],
+          };
+        } else {
+          next.all = {
+            orders: [updatedOrder],
+            totalCount: 1,
+            lastFetched: Date.now(),
           };
         }
       }

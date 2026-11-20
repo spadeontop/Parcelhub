@@ -111,7 +111,7 @@ export const StaffLiveUpdatedRow: React.FC<StaffLiveUpdatedRowProps> = ({
   // Interpolations
   const rowHeight = insertHeight.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, 80],
+    outputRange: [0, 100],
   });
 
   const backgroundColor = surfaceAnim.interpolate({
