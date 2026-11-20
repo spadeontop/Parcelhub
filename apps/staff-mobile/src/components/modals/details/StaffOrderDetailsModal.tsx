@@ -4,7 +4,7 @@ import {
   View,
   ScrollView,
 } from 'react-native';
-import { StaffOrder } from '../../../types';
+import { StaffOrder, JustUpdatedOrderInfo } from '../../../types';
 import { useStaff } from '../../../context/StaffContext';
 import { OrderDetailsHeader } from './OrderDetailsHeader';
 import { StaffOrderOverviewCard } from './StaffOrderOverviewCard';
@@ -29,6 +29,8 @@ export const StaffOrderDetailsModal: React.FC<StaffOrderDetailsModalProps> = ({
     payCourier,
     attachPhoto,
     claimOrder,
+    setJustUpdatedOrder,
+    setActiveTab,
   } = useStaff();
 
   const [isActivating, setIsActivating] = useState<boolean>(false);
@@ -38,6 +40,12 @@ export const StaffOrderDetailsModal: React.FC<StaffOrderDetailsModalProps> = ({
   const scrollViewRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
 
   if (!order) return null;
+
+  const handleSuccessTransition = (info: JustUpdatedOrderInfo) => {
+    setJustUpdatedOrder(info);
+    setActiveTab(info.targetTab);
+    onClose();
+  };
 
   const handleActivate = async (orderId: string, amount: number) => {
     setIsActivating(true);
@@ -141,6 +149,7 @@ export const StaffOrderDetailsModal: React.FC<StaffOrderDetailsModalProps> = ({
                 isSubmitting={isActivating}
                 onActivate={handleActivate}
                 onReturnHome={onClose}
+                onSuccessTransition={handleSuccessTransition}
               />
             )}
 
@@ -150,6 +159,7 @@ export const StaffOrderDetailsModal: React.FC<StaffOrderDetailsModalProps> = ({
                 isReleasing={isReleasing}
                 onRelease={handleRelease}
                 onReturnHome={onClose}
+                onSuccessTransition={handleSuccessTransition}
               />
             )}
 
@@ -161,6 +171,7 @@ export const StaffOrderDetailsModal: React.FC<StaffOrderDetailsModalProps> = ({
                 onPayCourier={handlePayCourier}
                 onAttachPhoto={handleAttachPhoto}
                 onReturnHome={onClose}
+                onSuccessTransition={handleSuccessTransition}
               />
             )}
 

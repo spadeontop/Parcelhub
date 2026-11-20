@@ -113,3 +113,11 @@ export interface StaffAttachPhotoResponse {
 export interface StaffClaimOrderResponse {
   statusMessage: string;
 }
+
+export interface JustUpdatedOrderInfo {
+  orderId: string;
+  actionBadgeText: string;
+  targetBadgeText: string;
+  targetStatus: OrderStatus;
+  targetTab: StaffTab;
+}

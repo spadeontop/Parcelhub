@@ -1,16 +1,19 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   ScrollView,
   RefreshControl,
   TouchableOpacity,
+  Animated,
+  Easing,
 } from 'react-native';
 import { useStaff } from '../../context/StaffContext';
 import { StaffHeader } from '../header/StaffHeader';
 import { StaffSearchBar } from '../header/StaffSearchBar';
 import { StaffFilterTabs } from '../navigation/StaffFilterTabs';
 import { StaffOrderCard } from '../cards/StaffOrderCard';
+import { StaffLiveUpdatedRow } from '../cards/StaffLiveUpdatedRow';
 import { StaffOrderCardSkeleton } from '../cards/StaffOrderCardSkeleton';
 import { StaffAccountModal } from '../modals/StaffAccountModal';
 import { StaffOrderDetailsModal } from '../modals/details/StaffOrderDetailsModal';
@@ -58,7 +61,28 @@ export const StaffTerminalScreen: React.FC = () => {
     setIsDeskInfoOpen,
     isRefreshing,
     refreshOrders,
+    justUpdatedOrder,
+    setJustUpdatedOrder,
   } = useStaff();
+
+  const liveLabelAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (justUpdatedOrder) {
+      liveLabelAnim.setValue(0);
+      Animated.timing(liveLabelAnim, {
+        toValue: 1,
+        duration: 3000,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [justUpdatedOrder]);
+
+  const liveLabelOpacity = liveLabelAnim.interpolate({
+    inputRange: [0, 0.12, 0.68, 0.82, 1],
+    outputRange: [0, 1, 1, 0, 0],
+  });
 
   // 20 items per page (server-side paginated)
   const ITEMS_PER_PAGE = 20;
@@ -130,6 +154,17 @@ export const StaffTerminalScreen: React.FC = () => {
           <Text className="text-[11px] font-semibold text-[#6B7280] tracking-[0.55px] uppercase">
             {searchQuery.trim() ? 'SEARCH RESULTS' : 'RECENT ACTIVITIES'}
           </Text>
+          {justUpdatedOrder && (
+            <Animated.View
+              style={{ opacity: liveLabelOpacity }}
+              className="flex-row items-center gap-1.5"
+            >
+              <View className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              <Text className="text-[10px] font-semibold text-emerald-600">
+                Just Updated
+              </Text>
+            </Animated.View>
+          )}
         </View>
 
         {/* Middle Scrollable Content (List of 20 orders per page) */}
@@ -153,15 +188,43 @@ export const StaffTerminalScreen: React.FC = () => {
           >
             {isLoadingOrders ? (
               <StaffOrderCardSkeleton count={5} />
-            ) : pagedOrders.length > 0 ? (
-              pagedOrders.map((order, idx) => (
-                <StaffOrderCard
-                  key={`${order.id}-${idx}`}
-                  order={order}
-                  onPress={openOrderDetails}
-                  showDivider={idx < pagedOrders.length - 1}
-                />
-              ))
+            ) : pagedOrders.length > 0 || justUpdatedOrder ? (
+              (() => {
+                const liveOrder = justUpdatedOrder
+                  ? pagedOrders.find((o) => o.id === justUpdatedOrder.orderId) ||
+                    orders.find((o) => o.id === justUpdatedOrder.orderId) ||
+                    allCachedOrders.find((o) => o.id === justUpdatedOrder.orderId)
+                  : null;
+
+                const remainingOrders = liveOrder
+                  ? pagedOrders.filter((o) => o.id !== liveOrder.id)
+                  : pagedOrders;
+
+                return (
+                  <>
+                    {liveOrder && justUpdatedOrder && (
+                      <StaffLiveUpdatedRow
+                        key={`live-${liveOrder.id}`}
+                        order={liveOrder}
+                        actionBadgeText={justUpdatedOrder.actionBadgeText}
+                        targetBadgeText={justUpdatedOrder.targetBadgeText}
+                        targetStatus={justUpdatedOrder.targetStatus}
+                        onPress={openOrderDetails}
+                        onAnimationComplete={() => setJustUpdatedOrder(null)}
+                        showDivider={remainingOrders.length > 0}
+                      />
+                    )}
+                    {remainingOrders.map((order, idx) => (
+                      <StaffOrderCard
+                        key={`${order.id}-${idx}`}
+                        order={order}
+                        onPress={openOrderDetails}
+                        showDivider={idx < remainingOrders.length - 1}
+                      />
+                    ))}
+                  </>
+                );
+              })()
             ) : searchQuery.trim() ? (
               <View className="items-center justify-center py-12">
                 <View className="w-12 h-12 rounded-2xl bg-[#F1F5F9] items-center justify-center mb-2.5">

@@ -13,6 +13,7 @@ import {
   StaffTab,
   OrderStatus,
   StaffBadgeCounts,
+  JustUpdatedOrderInfo,
 } from '../types';
 import { staffApi, StaffApiError } from '../services/staffApi';
 import { ENV } from '../config/env';
@@ -62,6 +63,8 @@ interface StaffContextType {
   attachPhoto: (orderId: string, imageUrl?: string) => Promise<void>;
   claimOrder: (orderId: string) => Promise<void>;
   updateOrderNotes: (orderId: string, notes: string) => void;
+  justUpdatedOrder: JustUpdatedOrderInfo | null;
+  setJustUpdatedOrder: (info: JustUpdatedOrderInfo | null) => void;
 }
 
 function getStatusForTab(tab: StaffTab): OrderStatus | undefined {
@@ -145,6 +148,7 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isDetailsOpen, setIsDetailsOpen] = useState<boolean>(false);
   const [isLookupOpen, setIsLookupOpen] = useState<boolean>(false);
   const [isDeskInfoOpen, setIsDeskInfoOpen] = useState<boolean>(false);
+  const [justUpdatedOrder, setJustUpdatedOrder] = useState<JustUpdatedOrderInfo | null>(null);
 
   const userRef = useRef<StaffUser | null>(null);
   userRef.current = staffUser;
@@ -640,26 +644,54 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     // Optimistically update tabCache so tabs reflect the updated order upon return to home
     setTabCache((prev) => {
       const next = { ...prev };
-      STAFF_TABS.forEach((tab) => {
-        const entry = next[tab];
-        if (!entry) return;
-        const exists = entry.orders.some((o) => o.id === orderId);
-        if (exists) {
-          next[tab] = {
-            ...entry,
-            orders: entry.orders.map((o) =>
-              o.id === orderId
-                ? {
-                    ...o,
-                    status: 'AWAITING_PARCEL' as OrderStatus,
-                    amountReceived,
-                    change: res.change,
-                  }
-                : o
-            ),
+      let updatedOrder: StaffOrder | null = null;
+      for (const tab of STAFF_TABS) {
+        const found = next[tab]?.orders.find((o) => o.id === orderId);
+        if (found) {
+          updatedOrder = {
+            ...found,
+            status: 'AWAITING_PARCEL' as OrderStatus,
+            amountReceived,
+            change: res.change,
+            timestamp: new Date().toISOString(),
+          };
+          break;
+        }
+      }
+      if (!updatedOrder && selectedOrder?.id === orderId) {
+        updatedOrder = {
+          ...selectedOrder,
+          status: 'AWAITING_PARCEL' as OrderStatus,
+          amountReceived,
+          change: res.change,
+          timestamp: new Date().toISOString(),
+        };
+      }
+
+      if (updatedOrder) {
+        if (next.unpaid) {
+          next.unpaid = {
+            ...next.unpaid,
+            orders: next.unpaid.orders.filter((o) => o.id !== orderId),
+            totalCount: Math.max(0, next.unpaid.totalCount - 1),
           };
         }
-      });
+        if (next.active) {
+          const rest = next.active.orders.filter((o) => o.id !== orderId);
+          next.active = {
+            ...next.active,
+            orders: [updatedOrder, ...rest],
+            totalCount: next.active.totalCount + 1,
+          };
+        }
+        if (next.all) {
+          const rest = next.all.orders.filter((o) => o.id !== orderId);
+          next.all = {
+            ...next.all,
+            orders: [updatedOrder, ...rest],
+          };
+        }
+      }
       return next;
     });
     await fetchAllTabs(true, staffUser?.token);
@@ -684,25 +716,52 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     // Optimistically update tabCache so tabs reflect the updated order upon return to home
     setTabCache((prev) => {
       const next = { ...prev };
-      STAFF_TABS.forEach((tab) => {
-        const entry = next[tab];
-        if (!entry) return;
-        const exists = entry.orders.some((o) => o.id === orderId);
-        if (exists) {
-          next[tab] = {
-            ...entry,
-            orders: entry.orders.map((o) =>
-              o.id === orderId
-                ? {
-                    ...o,
-                    status: 'READY_TO_CLAIM' as OrderStatus,
-                    proofImageUrl: payloadUrl,
-                  }
-                : o
-            ),
+      let updatedOrder: StaffOrder | null = null;
+      for (const tab of STAFF_TABS) {
+        const found = next[tab]?.orders.find((o) => o.id === orderId);
+        if (found) {
+          updatedOrder = {
+            ...found,
+            status: 'READY_TO_CLAIM' as OrderStatus,
+            proofImageUrl: payloadUrl,
+            timestamp: new Date().toISOString(),
+          };
+          break;
+        }
+      }
+      if (!updatedOrder && selectedOrder?.id === orderId) {
+        updatedOrder = {
+          ...selectedOrder,
+          status: 'READY_TO_CLAIM' as OrderStatus,
+          proofImageUrl: payloadUrl,
+          timestamp: new Date().toISOString(),
+        };
+      }
+
+      if (updatedOrder) {
+        if (next.active) {
+          next.active = {
+            ...next.active,
+            orders: next.active.orders.filter((o) => o.id !== orderId),
+            totalCount: Math.max(0, next.active.totalCount - 1),
           };
         }
-      });
+        if (next.ready) {
+          const rest = next.ready.orders.filter((o) => o.id !== orderId);
+          next.ready = {
+            ...next.ready,
+            orders: [updatedOrder, ...rest],
+            totalCount: next.ready.totalCount + 1,
+          };
+        }
+        if (next.all) {
+          const rest = next.all.orders.filter((o) => o.id !== orderId);
+          next.all = {
+            ...next.all,
+            orders: [updatedOrder, ...rest],
+          };
+        }
+      }
       return next;
     });
     await fetchAllTabs(true, staffUser?.token);
@@ -715,29 +774,57 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     // Optimistically update order in cache
     setTabCache((prev) => {
       const next = { ...prev };
-      STAFF_TABS.forEach((tab) => {
-        const entry = next[tab];
-        if (!entry) return;
-        const exists = entry.orders.some((o) => o.id === orderId);
-        if (exists) {
-          next[tab] = {
-            ...entry,
-            orders: entry.orders.map((o) =>
-              o.id === orderId
-                ? {
-                    ...o,
-                    status: 'CLAIMED' as OrderStatus,
-                    isClaimActive: false,
-                    claimRemainingSeconds: 0,
-                    timestamp: claimedAt,
-                    claimedAt,
-                    createdAt: o.createdAt || o.statusTimeline?.[0]?.timestamp || o.timestamp,
-                  }
-                : o
-            ),
+      let updatedOrder: StaffOrder | null = null;
+      for (const tab of STAFF_TABS) {
+        const found = next[tab]?.orders.find((o) => o.id === orderId);
+        if (found) {
+          updatedOrder = {
+            ...found,
+            status: 'CLAIMED' as OrderStatus,
+            isClaimActive: false,
+            claimRemainingSeconds: 0,
+            timestamp: claimedAt,
+            claimedAt,
+            createdAt: found.createdAt || found.statusTimeline?.[0]?.timestamp || found.timestamp,
+          };
+          break;
+        }
+      }
+      if (!updatedOrder && selectedOrder?.id === orderId) {
+        updatedOrder = {
+          ...selectedOrder,
+          status: 'CLAIMED' as OrderStatus,
+          isClaimActive: false,
+          claimRemainingSeconds: 0,
+          timestamp: claimedAt,
+          claimedAt,
+        };
+      }
+
+      if (updatedOrder) {
+        if (next.ready) {
+          next.ready = {
+            ...next.ready,
+            orders: next.ready.orders.filter((o) => o.id !== orderId),
+            totalCount: Math.max(0, next.ready.totalCount - 1),
           };
         }
-      });
+        if (next.claimed) {
+          const rest = next.claimed.orders.filter((o) => o.id !== orderId);
+          next.claimed = {
+            ...next.claimed,
+            orders: [updatedOrder, ...rest],
+            totalCount: next.claimed.totalCount + 1,
+          };
+        }
+        if (next.all) {
+          const rest = next.all.orders.filter((o) => o.id !== orderId);
+          next.all = {
+            ...next.all,
+            orders: [updatedOrder, ...rest],
+          };
+        }
+      }
       return next;
     });
 
@@ -800,6 +887,8 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         attachPhoto,
         claimOrder,
         updateOrderNotes,
+        justUpdatedOrder,
+        setJustUpdatedOrder,
       }}
     >
       {children}

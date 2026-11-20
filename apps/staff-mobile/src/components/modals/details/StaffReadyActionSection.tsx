@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { StaffOrder } from '../../../types';
+import { StaffOrder, JustUpdatedOrderInfo } from '../../../types';
 import { OrderConfirmationCard } from './OrderConfirmationCard';
 import { OrderCardContainer } from '../../common/OrderCardContainer';
 import { PaymentSummaryCard } from './PaymentSummaryCard';
@@ -11,6 +11,7 @@ interface StaffReadyActionSectionProps {
   isReleasing: boolean;
   onRelease: (orderId: string) => Promise<void>;
   onReturnHome: () => void;
+  onSuccessTransition?: (info: JustUpdatedOrderInfo) => void;
 }
 
 /**
@@ -23,6 +24,7 @@ export const StaffReadyActionSection: React.FC<StaffReadyActionSectionProps> = (
   isReleasing,
   onRelease,
   onReturnHome,
+  onSuccessTransition,
 }) => {
   // Check if claim has actually been initiated by the customer
   const isInitiated = Boolean(
@@ -127,8 +129,15 @@ export const StaffReadyActionSection: React.FC<StaffReadyActionSectionProps> = (
 
     try {
       await onRelease(order.id);
-      // Stay in success feedback state until staff goes back or returns home
       setBtnState('success');
+      await new Promise((r) => setTimeout(r, 350));
+      onSuccessTransition?.({
+        orderId: order.id,
+        actionBadgeText: 'Released',
+        targetBadgeText: 'Claimed',
+        targetStatus: 'CLAIMED',
+        targetTab: 'claimed',
+      });
     } catch {
       setIsLocked(false);
       setBtnState('idle');
@@ -207,7 +216,7 @@ export const StaffReadyActionSection: React.FC<StaffReadyActionSectionProps> = (
           state={btnState}
           idleLabel="Release Order"
           loadingLabel="Releasing..."
-          successLabel="Parcel Released"
+          successLabel="Released"
           onPress={handleRelease}
           disabled={false}
         />

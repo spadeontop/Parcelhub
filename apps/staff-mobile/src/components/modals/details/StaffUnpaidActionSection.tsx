@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TextInput, TouchableOpacity } from 'react-native';
-import { StaffOrder } from '../../../types';
+import { StaffOrder, JustUpdatedOrderInfo } from '../../../types';
 import { OrderConfirmationCard } from './OrderConfirmationCard';
 import { OrderCardContainer } from '../../common/OrderCardContainer';
 import { StaffActionButton, ButtonActionState } from '../../common/StaffActionButton';
@@ -10,6 +10,7 @@ export interface StaffUnpaidActionSectionProps {
   isSubmitting: boolean;
   onActivate: (orderId: string, amount: number) => Promise<void>;
   onReturnHome: () => void;
+  onSuccessTransition?: (info: JustUpdatedOrderInfo) => void;
 }
 
 export const StaffUnpaidActionSection: React.FC<StaffUnpaidActionSectionProps> = ({
@@ -17,6 +18,7 @@ export const StaffUnpaidActionSection: React.FC<StaffUnpaidActionSectionProps> =
   isSubmitting,
   onActivate,
   onReturnHome,
+  onSuccessTransition,
 }) => {
   const fee = typeof order.amountToPay === 'number' ? order.amountToPay : 0;
   const [cashText, setCashText] = useState<string>(
@@ -119,8 +121,15 @@ export const StaffUnpaidActionSection: React.FC<StaffUnpaidActionSectionProps> =
 
     try {
       await onActivate(order.id, cashNum);
-      // Stay in success state until staff returns home or goes back
       setBtnState('success');
+      await new Promise((r) => setTimeout(r, 350));
+      onSuccessTransition?.({
+        orderId: order.id,
+        actionBadgeText: 'Activated',
+        targetBadgeText: 'Awaiting Parcel',
+        targetStatus: 'AWAITING_PARCEL',
+        targetTab: 'active',
+      });
     } catch {
       setIsLocked(false);
       setBtnState('idle');
@@ -264,7 +273,7 @@ export const StaffUnpaidActionSection: React.FC<StaffUnpaidActionSectionProps> =
           state={btnState}
           idleLabel="Activate Order"
           loadingLabel="Activating..."
-          successLabel="Order Activated"
+          successLabel="Activated"
           onPress={handleSubmit}
           disabled={false}
         />

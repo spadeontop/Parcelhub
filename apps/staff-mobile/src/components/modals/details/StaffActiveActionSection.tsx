@@ -8,7 +8,7 @@ import {
   Alert,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { StaffOrder } from '../../../types';
+import { StaffOrder, JustUpdatedOrderInfo } from '../../../types';
 import {
   Camera,
   Check,
@@ -28,6 +28,7 @@ interface StaffActiveActionSectionProps {
   onPayCourier: (orderId: string) => Promise<void>;
   onAttachPhoto: (orderId: string, imageUrl?: string) => Promise<void>;
   onReturnHome: () => void;
+  onSuccessTransition?: (info: JustUpdatedOrderInfo) => void;
 }
 
 const sampleWaybill = require('../../../../assets/parcelhub/sample_parcel_waybill.png');
@@ -46,6 +47,7 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
   onPayCourier,
   onAttachPhoto,
   onReturnHome,
+  onSuccessTransition,
 }) => {
   // Step 1: Courier Paid state
   const [localCourierPaid, setLocalCourierPaid] = useState<boolean>(
@@ -259,8 +261,15 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
     try {
       const payloadUrl = photoBase64 || photoUri || 'mock://ai-verified-parcel-proof.jpg';
       await onAttachPhoto(order.id, payloadUrl);
-      // Stay in success feedback state until staff goes back or returns home
       setStep2BtnState('success');
+      await new Promise((r) => setTimeout(r, 350));
+      onSuccessTransition?.({
+        orderId: order.id,
+        actionBadgeText: 'Proof Attached',
+        targetBadgeText: 'Ready to Claim',
+        targetStatus: 'READY_TO_CLAIM',
+        targetTab: 'ready',
+      });
     } catch {
       setIsStep2Locked(false);
       setStep2BtnState('idle');
