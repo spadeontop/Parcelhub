@@ -190,13 +190,13 @@ export async function authenticateAnyV1User(
 
   const token = parts[1];
 
-  // 1. Try Customer/Admin token
-  const customerAuth = await verifyV1Token(token, "AUTH");
-  if (customerAuth.payload && !customerAuth.payload.isPreAuth) {
-    if (customerAuth.payload.role === "CUSTOMER") {
+  // 1. Verify HS256 AUTH token and enforce DB existence per role
+  const authResult = await verifyV1Token(token, "AUTH");
+  if (authResult.payload && !authResult.payload.isPreAuth) {
+    if (authResult.payload.role === "CUSTOMER") {
       try {
         const existingCustomer = await db.query.customers.findFirst({
-          where: eq(customers.id, customerAuth.payload.userId),
+          where: eq(customers.id, authResult.payload.userId),
           columns: { id: true },
         });
         if (!existingCustomer) {
@@ -211,42 +211,30 @@ export async function authenticateAnyV1User(
           err instanceof Error ? err.message : "Database error verifying customer account";
         return { session: null, error: errorMsg, status: 500 };
       }
-    }
-
-    return {
-      session: {
-        userId: customerAuth.payload.userId,
-        role: customerAuth.payload.role,
-      },
-      status: 200,
-    };
-  }
-
-  // 2. Try Staff token
-  const staffAuth = await verifyStaffToken(token, "AUTH");
-  if (staffAuth.payload) {
-    try {
-      const existingStaff = await db.query.staff.findFirst({
-        where: eq(staff.id, staffAuth.payload.userId),
-        columns: { id: true },
-      });
-      if (!existingStaff) {
-        return {
-          session: null,
-          error: "Unauthorized: Staff account no longer exists in database",
-          status: 401,
-        };
+    } else if (authResult.payload.role === "STAFF") {
+      try {
+        const existingStaff = await db.query.staff.findFirst({
+          where: eq(staff.id, authResult.payload.userId),
+          columns: { id: true },
+        });
+        if (!existingStaff) {
+          return {
+            session: null,
+            error: "Unauthorized: Staff account no longer exists in database",
+            status: 401,
+          };
+        }
+      } catch (err: unknown) {
+        const errorMsg =
+          err instanceof Error ? err.message : "Database error verifying staff account";
+        return { session: null, error: errorMsg, status: 500 };
       }
-    } catch (err: unknown) {
-      const errorMsg =
-        err instanceof Error ? err.message : "Database error verifying staff account";
-      return { session: null, error: errorMsg, status: 500 };
     }
 
     return {
       session: {
-        userId: staffAuth.payload.userId,
-        role: staffAuth.payload.role,
+        userId: authResult.payload.userId,
+        role: authResult.payload.role,
       },
       status: 200,
     };
@@ -254,7 +242,7 @@ export async function authenticateAnyV1User(
 
   return {
     session: null,
-    error: customerAuth.error || staffAuth.error || "Invalid or expired token",
+    error: authResult.error || "Invalid or expired token",
     status: 401,
   };
 }
