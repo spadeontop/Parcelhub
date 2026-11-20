@@ -13,6 +13,7 @@ import {
   type OpenRouterProviderConfig,
   type OpenRouterReasoningConfig,
   type OpenRouterReasoningEffort,
+  type OpenRouterUsage,
 } from "./openrouter";
 
 export type AiVerificationInput = {
@@ -24,6 +25,8 @@ export type AiVerificationResult = {
   readonly isVerified: boolean;
   readonly checks: OrderScreenshotChecks | null;
   readonly model: string | null;
+  readonly provider?: string;
+  readonly usage?: OpenRouterUsage;
   readonly autofill: CustomerOrderAutofill | null;
   readonly sourceApp: ScreenshotSourceApp;
   readonly reason?: string;
@@ -252,6 +255,8 @@ export async function verifyOrderScreenshot(
     isVerified,
     checks,
     model: response.model,
+    provider: response.provider,
+    usage: response.usage,
     autofill,
     sourceApp: parsed.sourceApp,
     reason: isVerified ? undefined : "Screenshot did not pass parcel verification",

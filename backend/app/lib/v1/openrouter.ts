@@ -40,10 +40,19 @@ export type OpenRouterImageRequest = {
   readonly timeoutMs?: number;
 };
 
+export type OpenRouterUsage = {
+  readonly inputTokens: number | null;
+  readonly outputTokens: number | null;
+  readonly totalTokens: number | null;
+  readonly cost?: number | null;
+};
+
 export type OpenRouterCallResult =
   | {
       readonly ok: true;
       readonly model: string;
+      readonly provider?: string;
+      readonly usage?: OpenRouterUsage;
       readonly text: string;
     }
   | {
@@ -54,7 +63,16 @@ export type OpenRouterCallResult =
 
 type OpenRouterResponsePayload = {
   model?: string;
+  provider?: string;
   status?: string;
+  usage?: {
+    input_tokens?: number;
+    output_tokens?: number;
+    total_tokens?: number;
+    prompt_tokens?: number;
+    completion_tokens?: number;
+    cost?: number;
+  } | null;
   error?: { message?: string } | null;
   output?: Array<{
     type?: string;
@@ -185,9 +203,24 @@ export async function callOpenRouterWithImage(
     };
   }
 
+  const inputTokens = data.usage?.input_tokens ?? data.usage?.prompt_tokens ?? null;
+  const outputTokens = data.usage?.output_tokens ?? data.usage?.completion_tokens ?? null;
+  const totalTokens =
+    data.usage?.total_tokens ??
+    (inputTokens !== null && outputTokens !== null ? inputTokens + outputTokens : null);
+
   return {
     ok: true,
     model: data.model ?? req.model,
+    provider: data.provider,
+    usage: data.usage
+      ? {
+          inputTokens,
+          outputTokens,
+          totalTokens,
+          cost: data.usage.cost ?? null,
+        }
+      : undefined,
     text: outputText,
   };
 }

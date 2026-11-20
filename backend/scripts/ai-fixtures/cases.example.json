@@ -1,0 +1,116 @@
+[
+  {
+    "id": "shopee-full",
+    "file": "shopee-full.jpg",
+    "scenario": "full",
+    "customerFullName": "Juan Dela Cruz",
+    "expected": {
+      "sourceApp": "shopee",
+      "isParcel": true,
+      "hasRealMetadata": true,
+      "trackingId": "SPXPH000000000001",
+      "productName": "Wireless Mouse",
+      "price": 450
+    }
+  },
+  {
+    "id": "shopee-order-id-only",
+    "file": "shopee-order-id-only.jpg",
+    "scenario": "order_id_only",
+    "customerFullName": "Juan Dela Cruz",
+    "expected": {
+      "sourceApp": "shopee",
+      "isParcel": true,
+      "hasRealMetadata": true,
+      "trackingId": null
+    }
+  },
+  {
+    "id": "shopee-no-metadata",
+    "file": "shopee-no-metadata.jpg",
+    "scenario": "no_metadata",
+    "customerFullName": "Juan Dela Cruz",
+    "expected": {
+      "sourceApp": "shopee",
+      "isParcel": false,
+      "hasRealMetadata": false,
+      "trackingId": null
+    }
+  },
+  {
+    "id": "lazada-full",
+    "file": "lazada-full.jpg",
+    "scenario": "full",
+    "customerFullName": "Juan Dela Cruz",
+    "expected": {
+      "sourceApp": "lazada",
+      "isParcel": true,
+      "hasRealMetadata": true,
+      "trackingId": "LEXPH0000000001",
+      "productName": "USB-C Cable",
+      "price": 199
+    }
+  },
+  {
+    "id": "lazada-order-id-only",
+    "file": "lazada-order-id-only.jpg",
+    "scenario": "order_id_only",
+    "customerFullName": "Juan Dela Cruz",
+    "expected": {
+      "sourceApp": "lazada",
+      "isParcel": true,
+      "hasRealMetadata": true,
+      "trackingId": null
+    }
+  },
+  {
+    "id": "lazada-no-metadata",
+    "file": "lazada-no-metadata.jpg",
+    "scenario": "no_metadata",
+    "customerFullName": "Juan Dela Cruz",
+    "expected": {
+      "sourceApp": "lazada",
+      "isParcel": false,
+      "hasRealMetadata": false,
+      "trackingId": null
+    }
+  },
+  {
+    "id": "tiktok-full",
+    "file": "tiktok-full.jpg",
+    "scenario": "full",
+    "customerFullName": "Juan Dela Cruz",
+    "expected": {
+      "sourceApp": "tiktok",
+      "isParcel": true,
+      "hasRealMetadata": true,
+      "trackingId": "TTPH0000000001",
+      "productName": "Phone Stand",
+      "price": 120
+    }
+  },
+  {
+    "id": "tiktok-order-id-only",
+    "file": "tiktok-order-id-only.jpg",
+    "scenario": "order_id_only",
+    "customerFullName": "Juan Dela Cruz",
+    "expected": {
+      "sourceApp": "tiktok",
+      "isParcel": true,
+      "hasRealMetadata": true,
+      "trackingId": null
+    }
+  },
+  {
+    "id": "tiktok-no-metadata",
+    "file": "tiktok-no-metadata.jpg",
+    "scenario": "no_metadata",
+    "customerFullName": "Juan Dela Cruz",
+    "expected": {
+      "sourceApp": "tiktok",
+      "isParcel": false,
+      "hasRealMetadata": false,
+      "trackingId": null
+    }
+  }
+]
