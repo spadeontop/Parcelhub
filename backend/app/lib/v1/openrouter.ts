@@ -8,12 +8,35 @@ export type OpenRouterJsonSchemaFormat = {
   readonly schema: Record<string, unknown>;
 };
 
+export type OpenRouterProviderConfig = {
+  readonly only?: readonly string[];
+  readonly allow_fallbacks?: boolean;
+  readonly require_parameters?: boolean;
+};
+
+export type OpenRouterReasoningEffort =
+  | "max"
+  | "xhigh"
+  | "high"
+  | "medium"
+  | "low"
+  | "minimal"
+  | "none";
+
+export type OpenRouterReasoningConfig = {
+  readonly enabled?: boolean;
+  readonly effort?: OpenRouterReasoningEffort;
+};
+
 export type OpenRouterImageRequest = {
   readonly model: string;
   readonly prompt: string;
   readonly imageUrl: string;
   readonly detail?: "auto" | "low" | "high";
   readonly format?: OpenRouterJsonSchemaFormat;
+  readonly provider?: OpenRouterProviderConfig;
+  readonly reasoning?: OpenRouterReasoningConfig;
+  readonly temperature?: number;
   readonly timeoutMs?: number;
 };
 
@@ -98,6 +121,15 @@ export async function callOpenRouterWithImage(
 
   if (req.format) {
     body.text = { format: req.format };
+  }
+  if (req.provider) {
+    body.provider = req.provider;
+  }
+  if (req.reasoning) {
+    body.reasoning = req.reasoning;
+  }
+  if (typeof req.temperature === "number") {
+    body.temperature = req.temperature;
   }
 
   let response: Response;

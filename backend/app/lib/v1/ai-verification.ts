@@ -10,6 +10,9 @@ import { buildParcelVerificationContext } from "./ai-context";
 import {
   callOpenRouterWithImage,
   type OpenRouterJsonSchemaFormat,
+  type OpenRouterProviderConfig,
+  type OpenRouterReasoningConfig,
+  type OpenRouterReasoningEffort,
 } from "./openrouter";
 
 export type AiVerificationInput = {
@@ -95,6 +98,64 @@ export function getAiTrackingIdMode(): AiTrackingIdMode {
   return "present";
 }
 
+const VALID_REASONING_EFFORTS: readonly OpenRouterReasoningEffort[] = [
+  "max",
+  "xhigh",
+  "high",
+  "medium",
+  "low",
+  "minimal",
+  "none",
+] as const;
+
+function getOpenRouterProviderConfig(): OpenRouterProviderConfig | undefined {
+  const onlyRaw = process.env.OPENROUTER_PROVIDER_ONLY?.trim();
+  const only = onlyRaw
+    ? onlyRaw
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : undefined;
+  const allowFallbacksRaw = process.env.OPENROUTER_ALLOW_FALLBACKS?.trim().toLowerCase();
+  const allow_fallbacks =
+    allowFallbacksRaw === "false"
+      ? false
+      : allowFallbacksRaw === "true"
+        ? true
+        : undefined;
+
+  if (!only?.length && allow_fallbacks === undefined) {
+    return undefined;
+  }
+
+  return {
+    ...(only?.length ? { only } : {}),
+    ...(allow_fallbacks !== undefined ? { allow_fallbacks } : {}),
+    require_parameters: true,
+  };
+}
+
+function getOpenRouterReasoningConfig(): OpenRouterReasoningConfig | undefined {
+  const enabledRaw = process.env.OPENROUTER_REASONING_ENABLED?.trim().toLowerCase();
+  const effortRaw = process.env.OPENROUTER_REASONING_EFFORT?.trim().toLowerCase();
+
+  const enabled =
+    enabledRaw === "true" ? true : enabledRaw === "false" ? false : undefined;
+  const effort =
+    effortRaw && VALID_REASONING_EFFORTS.includes(effortRaw as OpenRouterReasoningEffort)
+      ? (effortRaw as OpenRouterReasoningEffort)
+      : undefined;
+
+  if (enabled === undefined && !effort) {
+    return undefined;
+  }
+
+  return {
+    ...(enabled !== undefined ? { enabled } : {}),
+    ...(effort ? { effort } : {}),
+  };
+}
+
 /**
  * Runs internal AI verification and autofill extraction against a customer order screenshot via OpenRouter.
  */
@@ -129,6 +190,9 @@ export async function verifyOrderScreenshot(
     prompt: buildParcelVerificationContext(),
     imageUrl: input.imageUrl,
     format: SCREENSHOT_CHECKS_FORMAT,
+    provider: getOpenRouterProviderConfig(),
+    reasoning: getOpenRouterReasoningConfig(),
+    temperature: 0,
   });
 
   if (!response.ok) {
