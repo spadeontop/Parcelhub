@@ -138,8 +138,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const response: StaffGetOrderRes = orderDetail;
     return jsonSuccess(response);
   } catch (err: unknown) {
-    const errorMsg =
-      err instanceof Error ? err.message : "Internal server error fetching order detail";
-    return jsonError(errorMsg, 500);
+    console.error("[Staff Get Order Error]:", err);
+    return jsonError("Internal server error fetching order detail", 500, "Internal Server Error");
   }
 }

@@ -145,8 +145,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     return jsonSuccess(response);
   } catch (err: unknown) {
-    const errorMsg =
-      err instanceof Error ? err.message : "Internal server error attaching proof photo";
-    return jsonError(errorMsg, 500);
+    console.error("[Staff Attach Photo Error]:", err);
+    return jsonError("Internal server error attaching proof photo", 500, "Internal Server Error");
   }
 }

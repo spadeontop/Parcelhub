@@ -116,8 +116,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     return jsonSuccess(response);
   } catch (err: unknown) {
-    const errorMsg =
-      err instanceof Error ? err.message : "Internal server error recording courier payment";
-    return jsonError(errorMsg, 500);
+    console.error("[Staff Pay Courier Error]:", err);
+    return jsonError("Internal server error recording courier payment", 500, "Internal Server Error");
   }
 }
