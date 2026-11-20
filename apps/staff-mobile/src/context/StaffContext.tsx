@@ -87,20 +87,23 @@ function extractLocalOverrides(cache: StaffTabCache): {
   notesMap: Map<string, string>;
   claimedAtMap: Map<string, string>;
   createdAtMap: Map<string, string>;
+  proofImageUrlMap: Map<string, string>;
 } {
   const notesMap = new Map<string, string>();
   const claimedAtMap = new Map<string, string>();
   const createdAtMap = new Map<string, string>();
+  const proofImageUrlMap = new Map<string, string>();
 
   Object.values(cache).forEach((entry) => {
     entry?.orders.forEach((o) => {
       if (o.notes) notesMap.set(o.id, o.notes);
       if (o.claimedAt) claimedAtMap.set(o.id, o.claimedAt);
       if (o.createdAt) createdAtMap.set(o.id, o.createdAt);
+      if (o.proofImageUrl) proofImageUrlMap.set(o.id, o.proofImageUrl);
     });
   });
 
-  return { notesMap, claimedAtMap, createdAtMap };
+  return { notesMap, claimedAtMap, createdAtMap, proofImageUrlMap };
 }
 
 function mergeOrders(
@@ -109,6 +112,7 @@ function mergeOrders(
     notesMap: Map<string, string>;
     claimedAtMap: Map<string, string>;
     createdAtMap: Map<string, string>;
+    proofImageUrlMap: Map<string, string>;
   }
 ): StaffOrder[] {
   return rawOrders.map((o) => ({
@@ -116,6 +120,7 @@ function mergeOrders(
     notes: overrides.notesMap.get(o.id) || o.notes,
     claimedAt: overrides.claimedAtMap.get(o.id) || o.claimedAt,
     createdAt: o.createdAt || overrides.createdAtMap.get(o.id),
+    proofImageUrl: overrides.proofImageUrlMap.get(o.id) || o.proofImageUrl,
   }));
 }
 
@@ -243,7 +248,13 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setSelectedOrder((prevSelected) => {
           if (!prevSelected) return null;
           const fresh = mergedOrders.find((o) => o.id === prevSelected.id);
-          return fresh ? { ...fresh, notes: prevSelected.notes } : prevSelected;
+          return fresh
+            ? {
+                ...fresh,
+                notes: prevSelected.notes,
+                proofImageUrl: prevSelected.proofImageUrl || fresh.proofImageUrl,
+              }
+            : prevSelected;
         });
       } catch (err: any) {
         if (err?.name === 'AbortError' || currentReqId !== tabFetchRequestId.current) {
@@ -647,6 +658,7 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 claimedAt: prev.claimedAt || detail.claimedAt,
                 createdAt: detail.createdAt || prev.createdAt,
                 statusTimeline: detail.statusTimeline || prev.statusTimeline,
+                proofImageUrl: detail.proofImageUrl || prev.proofImageUrl || order.proofImageUrl,
               }
             : prev
         );
@@ -675,6 +687,42 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const attachPhoto = async (orderId: string, imageUrl?: string) => {
     const payloadUrl = imageUrl?.trim() || 'mock://ai-verified-proof-delivery.jpg';
     await staffApi.attachPhoto(orderId, payloadUrl, staffUser?.token);
+
+    // Optimistically update selectedOrder and tabCache with the new proof photo
+    setSelectedOrder((prev) =>
+      prev && prev.id === orderId
+        ? {
+            ...prev,
+            proofImageUrl: payloadUrl,
+            status: 'READY_TO_CLAIM',
+          }
+        : prev
+    );
+
+    setTabCache((prev) => {
+      const next = { ...prev };
+      STAFF_TABS.forEach((tab) => {
+        const entry = next[tab];
+        if (!entry) return;
+        const exists = entry.orders.some((o) => o.id === orderId);
+        if (exists) {
+          next[tab] = {
+            ...entry,
+            orders: entry.orders.map((o) =>
+              o.id === orderId
+                ? {
+                    ...o,
+                    proofImageUrl: payloadUrl,
+                    status: 'READY_TO_CLAIM',
+                  }
+                : o
+            ),
+          };
+        }
+      });
+      return next;
+    });
+
     showToast(`Proof attached. ${orderId} is now Ready to Claim!`, 'success');
     await fetchAllTabs(true, staffUser?.token);
   };
@@ -703,6 +751,7 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                     timestamp: claimedAt,
                     claimedAt,
                     createdAt: o.createdAt || o.statusTimeline?.[0]?.timestamp || o.timestamp,
+                    proofImageUrl: o.proofImageUrl,
                   }
                 : o
             ),
@@ -722,6 +771,7 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             timestamp: claimedAt,
             claimedAt,
             createdAt: prev.createdAt || prev.statusTimeline?.[0]?.timestamp || prev.timestamp,
+            proofImageUrl: prev.proofImageUrl,
           }
         : prev
     );
