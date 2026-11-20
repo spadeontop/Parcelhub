@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { customers, CustomerRow, staff, StaffRow } from "@/db/schema";
+import { jsonError } from "@/app/lib/response";
 import {
   authenticateV1Request,
   V1TokenPayload,
@@ -75,6 +76,27 @@ export async function authenticateCustomerRequest(
       status: 500,
     };
   }
+}
+
+/**
+ * Maps an unsuccessful `authenticateCustomerRequest` result to the standardized HTTP error response,
+ * preserving 500 DB errors instead of misreporting them as 401 session expirations.
+ */
+export function customerAuthErrorResponse(auth: AuthenticatedCustomerResult) {
+  if (auth.status === 403) {
+    return jsonError("Access denied", 403, "Forbidden");
+  }
+  if (auth.status === 404) {
+    return jsonError("Account not found", 404, "Not Found");
+  }
+  if (auth.status >= 500) {
+    return jsonError(
+      "Service temporarily unavailable. Please try again.",
+      500,
+      "Internal Server Error"
+    );
+  }
+  return jsonError("Please log in again", 401, "Unauthorized");
 }
 
 /**

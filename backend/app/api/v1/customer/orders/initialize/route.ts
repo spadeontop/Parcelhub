@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { db } from "@/db";
 import { orders, orderScreenshots } from "@/db/schema";
-import { authenticateCustomerRequest } from "@/app/lib/v1/auth";
+import { authenticateCustomerRequest, customerAuthErrorResponse } from "@/app/lib/v1/auth";
 import { validateImageSize } from "@/app/lib/v1/image";
 import { jsonError, jsonSuccess } from "@/app/lib/response";
 import {
@@ -30,13 +30,7 @@ export async function POST(request: NextRequest) {
     // ---------------------------------------------------------
     const auth = await authenticateCustomerRequest(request);
     if (!auth.session || !auth.customer) {
-      if (auth.status === 403) {
-        return jsonError("Access denied", 403, "Forbidden");
-      }
-      if (auth.status === 404) {
-        return jsonError("Account not found", 404, "Not Found");
-      }
-      return jsonError("Please log in again", 401, "Unauthorized");
+      return customerAuthErrorResponse(auth);
     }
 
     // 1b. Blacklist Check (strictly enforced when initializing new orders — reuse auth.customer)

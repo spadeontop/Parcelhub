@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { authenticateCustomerRequest } from "@/app/lib/v1/auth";
+import { authenticateCustomerRequest, customerAuthErrorResponse } from "@/app/lib/v1/auth";
 import { jsonError, jsonSuccess } from "@/app/lib/response";
 import { CustomerId, CustomerProfileRes } from "@/app/types/v1/api";
 
@@ -12,13 +12,7 @@ export async function GET(request: NextRequest) {
     // ---------------------------------------------------------
     const auth = await authenticateCustomerRequest(request);
     if (!auth.session || !auth.customer) {
-      if (auth.status === 403) {
-        return jsonError("Access denied", 403, "Forbidden");
-      }
-      if (auth.status === 404) {
-        return jsonError("Account not found", 404, "Not Found");
-      }
-      return jsonError("Please log in again", 401, "Unauthorized");
+      return customerAuthErrorResponse(auth);
     }
 
     const customer = auth.customer;
