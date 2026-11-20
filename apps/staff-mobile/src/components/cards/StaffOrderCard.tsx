@@ -108,14 +108,14 @@ export const StaffOrderCard: React.FC<StaffOrderCardProps> = ({
 
       {/* Middle Row: Customer name */}
       <Text
-        className="text-[12px] font-semibold text-[#1E293B] leading-[17px] mt-0.5"
+        className="text-[12px] font-semibold text-[#1E293B] leading-[18px] mt-1 mb-0.5"
         numberOfLines={1}
       >
         {customerName}
       </Text>
 
       {/* Bottom Row: Date + Price or Countdown Timer */}
-      <View className="flex-row items-center justify-between mt-0.5">
+      <View className="flex-row items-center justify-between mt-1">
         <Text className="text-[10px] font-normal text-[#64748B]">
           {formattedDate}
         </Text>
@@ -123,7 +123,7 @@ export const StaffOrderCard: React.FC<StaffOrderCardProps> = ({
       </View>
 
       {/* Item Divider */}
-      {showDivider && <View className="h-px bg-[#F1F5F9] mt-2" />}
+      {showDivider && <View className="h-px bg-[#F1F5F9] mt-2.5" />}
     </TouchableOpacity>
   );
 };

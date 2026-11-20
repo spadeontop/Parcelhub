@@ -72,7 +72,7 @@ export const StaffTerminalScreen: React.FC = () => {
       liveLabelAnim.setValue(0);
       Animated.timing(liveLabelAnim, {
         toValue: 1,
-        duration: 3000,
+        duration: 4500,
         easing: Easing.linear,
         useNativeDriver: true,
       }).start();
@@ -80,7 +80,7 @@ export const StaffTerminalScreen: React.FC = () => {
   }, [justUpdatedOrder]);
 
   const liveLabelOpacity = liveLabelAnim.interpolate({
-    inputRange: [0, 0.12, 0.68, 0.82, 1],
+    inputRange: [0, 0.08, 0.68, 0.85, 1],
     outputRange: [0, 1, 1, 0, 0],
   });
 

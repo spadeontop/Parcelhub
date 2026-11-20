@@ -22,7 +22,6 @@ interface StaffLiveUpdatedRowProps {
 }
 
 const customBezier = Easing.bezier(0.22, 1, 0.36, 1);
-const ROW_FIXED_HEIGHT = 84;
 
 export const StaffLiveUpdatedRow: React.FC<StaffLiveUpdatedRowProps> = ({
   order,
@@ -33,69 +32,44 @@ export const StaffLiveUpdatedRow: React.FC<StaffLiveUpdatedRowProps> = ({
   onAnimationComplete,
   showDivider = true,
 }) => {
-  // 1. Insert slot expansion: 0.55s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.4s ease
-  const insertHeight = useRef(new Animated.Value(0)).current;
-  const insertOpacity = useRef(new Animated.Value(0)).current;
-
-  // 2. Surface highlight cycle: 3s cubic-bezier(0.22, 1, 0.36, 1)
+  // 1. Surface highlight cycle: 4.5s
   const surfaceAnim = useRef(new Animated.Value(0)).current;
 
-  // 3. Shimmer sweep: 1.1s cubic-bezier(0.22, 1, 0.36, 1) with 0.2s delay
+  // 2. Shimmer sweep: 1.2s with 0.2s delay
   const shimmerAnim = useRef(new Animated.Value(0)).current;
 
-  // 4. Badges cycle: 3s
+  // 3. Badges cycle: 4.5s (longer, clear status animation)
   const badgeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // 100ms delay letting modal slide-down begin so row smoothly expands in place
-    const timer = setTimeout(() => {
-      // Start insert slot animation (reveals row without shrinking content)
-      Animated.parallel([
-        Animated.timing(insertHeight, {
-          toValue: 1,
-          duration: 550,
-          easing: customBezier,
-          useNativeDriver: false,
-        }),
-        Animated.timing(insertOpacity, {
-          toValue: 1,
-          duration: 400,
-          easing: Easing.ease,
-          useNativeDriver: true,
-        }),
-      ]).start();
+    // Start surface highlight animation (4.5s)
+    Animated.timing(surfaceAnim, {
+      toValue: 1,
+      duration: 4500,
+      easing: customBezier,
+      useNativeDriver: false,
+    }).start();
 
-      // Start surface highlight animation (3s cycle)
-      Animated.timing(surfaceAnim, {
-        toValue: 1,
-        duration: 3000,
-        easing: customBezier,
-        useNativeDriver: false,
-      }).start();
+    // Start shimmer sweep (1.2s, delay 200ms)
+    Animated.timing(shimmerAnim, {
+      toValue: 1,
+      duration: 1200,
+      delay: 200,
+      easing: customBezier,
+      useNativeDriver: true,
+    }).start();
 
-      // Start shimmer sweep (1.1s, delay 200ms)
-      Animated.timing(shimmerAnim, {
-        toValue: 1,
-        duration: 1100,
-        delay: 200,
-        easing: customBezier,
-        useNativeDriver: true,
-      }).start();
-
-      // Start badge cycle animation (3s)
-      Animated.timing(badgeAnim, {
-        toValue: 1,
-        duration: 3000,
-        easing: customBezier,
-        useNativeDriver: true,
-      }).start(({ finished }) => {
-        if (finished && onAnimationComplete) {
-          onAnimationComplete();
-        }
-      });
-    }, 100);
-
-    return () => clearTimeout(timer);
+    // Start badge cycle animation (4.5s)
+    Animated.timing(badgeAnim, {
+      toValue: 1,
+      duration: 4500,
+      easing: customBezier,
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (finished && onAnimationComplete) {
+        onAnimationComplete();
+      }
+    });
   }, []);
 
   const formattedDate = (() => {
@@ -114,14 +88,9 @@ export const StaffLiveUpdatedRow: React.FC<StaffLiveUpdatedRowProps> = ({
   const customerName = order.customer || 'Customer';
   const amountStr = `₱${order.amountToPay.toLocaleString()}`;
 
-  // Outer container height expands from 0 to exact natural ROW_FIXED_HEIGHT (84px)
-  const rowHeight = insertHeight.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, ROW_FIXED_HEIGHT],
-  });
-
+  // Background color cycle (4.5s total)
   const backgroundColor = surfaceAnim.interpolate({
-    inputRange: [0, 0.18, 0.68, 1],
+    inputRange: [0, 0.1, 0.68, 1],
     outputRange: ['#d1fae5', '#ecfdf5', '#ecfdf5', '#ffffff'],
   });
 
@@ -131,50 +100,46 @@ export const StaffLiveUpdatedRow: React.FC<StaffLiveUpdatedRowProps> = ({
   });
 
   // Phase 1 Badge: "Activated" / "Proof Attached" / "Released"
+  // Pops in, holds clearly for ~2.8s (much longer), then smoothly floats up & exits
   const phase1Opacity = badgeAnim.interpolate({
-    inputRange: [0, 0.12, 0.18, 0.68, 0.78, 1],
+    inputRange: [0, 0.05, 0.08, 0.62, 0.74, 1],
     outputRange: [0, 1, 1, 1, 0, 0],
   });
 
   const phase1Scale = badgeAnim.interpolate({
-    inputRange: [0, 0.12, 0.18, 0.68, 0.78, 1],
-    outputRange: [0.75, 1.06, 1, 1, 0.85, 0.85],
+    inputRange: [0, 0.05, 0.08, 0.62, 0.74, 1],
+    outputRange: [0.8, 1.05, 1, 1, 0.9, 0.9],
   });
 
   const phase1TranslateY = badgeAnim.interpolate({
-    inputRange: [0, 0.68, 0.78, 1],
-    outputRange: [0, 0, -3, -3],
+    inputRange: [0, 0.62, 0.74, 1],
+    outputRange: [0, 0, -4, -4],
   });
 
   // Phase 2 Badge: Permanent Target Badge
+  // Morphs in from ~3.0s and settles permanently
   const phase2Opacity = badgeAnim.interpolate({
-    inputRange: [0, 0.72, 0.84, 1],
+    inputRange: [0, 0.68, 0.8, 1],
     outputRange: [0, 0, 1, 1],
   });
 
   const phase2Scale = badgeAnim.interpolate({
-    inputRange: [0, 0.72, 0.84, 1],
-    outputRange: [0.85, 0.85, 1, 1],
+    inputRange: [0, 0.68, 0.8, 1],
+    outputRange: [0.9, 0.9, 1, 1],
   });
 
   const phase2TranslateY = badgeAnim.interpolate({
-    inputRange: [0, 0.72, 0.84, 1],
-    outputRange: [3, 3, 0, 0],
+    inputRange: [0, 0.68, 0.8, 1],
+    outputRange: [4, 4, 0, 0],
   });
 
   return (
-    <Animated.View
-      style={{
-        height: rowHeight,
-        opacity: insertOpacity,
-        overflow: 'hidden',
-      }}
-    >
+    <View style={{ width: '100%' }}>
       <TouchableOpacity
         activeOpacity={0.7}
         onPress={() => onPress(order)}
       >
-        {/* Inner View has FIXED height 84px and exact same padding as StaffOrderCard: never squished or resized! */}
+        {/* Rendered directly at natural full size — no height resizing or squishing */}
         <Animated.View
           style={{
             backgroundColor,
@@ -183,11 +148,9 @@ export const StaffLiveUpdatedRow: React.FC<StaffLiveUpdatedRowProps> = ({
             paddingVertical: 10,
             overflow: 'hidden',
             position: 'relative',
-            height: ROW_FIXED_HEIGHT,
-            justifyContent: 'space-between',
           }}
         >
-          {/* Shimmer Overlay: subtle sweep from left to right */}
+          {/* Shimmer Overlay */}
           <Animated.View
             pointerEvents="none"
             style={[
@@ -199,7 +162,7 @@ export const StaffLiveUpdatedRow: React.FC<StaffLiveUpdatedRowProps> = ({
               },
             ]}
           >
-            <Svg width={350} height={100}>
+            <Svg width={350} height={120}>
               <Defs>
                 <LinearGradient id="rowShimmerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
                   <Stop offset="0%" stopColor="#10B981" stopOpacity="0" />
@@ -207,7 +170,7 @@ export const StaffLiveUpdatedRow: React.FC<StaffLiveUpdatedRowProps> = ({
                   <Stop offset="100%" stopColor="#10B981" stopOpacity="0" />
                 </LinearGradient>
               </Defs>
-              <Rect x="0" y="0" width={350} height={100} fill="url(#rowShimmerGrad)" />
+              <Rect x="0" y="0" width={350} height={120} fill="url(#rowShimmerGrad)" />
             </Svg>
           </Animated.View>
 
@@ -265,16 +228,16 @@ export const StaffLiveUpdatedRow: React.FC<StaffLiveUpdatedRowProps> = ({
             </View>
           </View>
 
-          {/* Middle Row: Customer name */}
+          {/* Middle Row: Customer name (generous line-height so descenders are never clipped) */}
           <Text
-            className="text-[12px] font-semibold text-[#1E293B] leading-[17px] mt-0.5"
+            className="text-[12px] font-semibold text-[#1E293B] leading-[18px] mt-1 mb-0.5"
             numberOfLines={1}
           >
             {customerName}
           </Text>
 
           {/* Bottom Row: Date + Price */}
-          <View className="flex-row items-center justify-between mt-0.5">
+          <View className="flex-row items-center justify-between mt-1">
             <Text className="text-[10px] font-normal text-[#64748B]">
               {formattedDate}
             </Text>
@@ -284,9 +247,9 @@ export const StaffLiveUpdatedRow: React.FC<StaffLiveUpdatedRowProps> = ({
           </View>
 
           {/* Item Divider */}
-          {showDivider && <View className="h-px bg-[#F1F5F9] mt-2" />}
+          {showDivider && <View className="h-px bg-[#F1F5F9] mt-2.5" />}
         </Animated.View>
       </TouchableOpacity>
-    </Animated.View>
+    </View>
   );
 };
