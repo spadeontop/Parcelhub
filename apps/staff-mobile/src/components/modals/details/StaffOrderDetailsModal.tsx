@@ -85,9 +85,11 @@ export const StaffOrderDetailsModal: React.FC<StaffOrderDetailsModalProps> = ({
       easing: Easing.inOut(Easing.ease),
       useNativeDriver: true,
     }).start(() => {
-      setJustUpdatedOrder(info);
-      setActiveTab(info.targetTab);
       onClose();
+      requestAnimationFrame(() => {
+        setActiveTab(info.targetTab);
+        setJustUpdatedOrder(info);
+      });
     });
   };
 
@@ -161,7 +163,7 @@ export const StaffOrderDetailsModal: React.FC<StaffOrderDetailsModalProps> = ({
       transparent={true}
       onRequestClose={handleClose}
     >
-      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' }}>
+      <View style={{ flex: 1, backgroundColor: 'transparent' }}>
         <Animated.View
           style={{
             flex: 1,
