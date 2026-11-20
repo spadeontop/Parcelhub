@@ -219,6 +219,18 @@ export type CustomerGetOrderPhotoRes = StandardSuccessResponse & {
 };
 
 // POST /api/v1/customer/orders/initialize
+export type ScreenshotSourceApp = "shopee" | "lazada" | "tiktok" | "unknown";
+export type AiTrackingIdMode = "none" | "present" | "unique" | "strict";
+
+export type CustomerOrderAutofill = {
+  readonly trackingId: string | null;
+  readonly productName: string | null;
+  readonly recipientName: string;
+  readonly price: number | null;
+  readonly trackingIdLocked: boolean;
+  readonly sourceApp: ScreenshotSourceApp;
+};
+
 export type CustomerInitOrderReq = {
   readonly imageUrl: string;
 };
@@ -226,6 +238,7 @@ export type CustomerInitOrderReq = {
 export type CustomerInitOrderRes = StandardSuccessResponse & {
   readonly orderId: OrderId;
   readonly ticketCode: string;
+  readonly autofill?: CustomerOrderAutofill;
 };
 
 // PUT /api/v1/customer/orders/{id}
