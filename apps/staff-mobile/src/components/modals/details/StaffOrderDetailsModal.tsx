@@ -77,8 +77,12 @@ export const StaffOrderDetailsModal: React.FC<StaffOrderDetailsModalProps> = ({
   const handleSuccessTransition = (info: JustUpdatedOrderInfo) => {
     if (isClosingRef.current) return;
     isClosingRef.current = true;
-    // Smoothly slide the Order Details modal downward (translateY(100%), 350ms ease-in-out)
-    // off the screen before revealing the Home list update
+
+    // 1. Immediately switch to the updated pill tabs while still covered by the modal
+    setActiveTab(info.targetTab);
+
+    // 2. Smoothly slide the Order Details modal downward off the screen (translateY(100%), 350ms ease-in-out)
+    // so when it slides down, the Home screen is already on the updated pill tabs
     Animated.timing(translateY, {
       toValue: SCREEN_HEIGHT,
       duration: 350,
@@ -86,10 +90,7 @@ export const StaffOrderDetailsModal: React.FC<StaffOrderDetailsModalProps> = ({
       useNativeDriver: true,
     }).start(() => {
       onClose();
-      requestAnimationFrame(() => {
-        setActiveTab(info.targetTab);
-        setJustUpdatedOrder(info);
-      });
+      setJustUpdatedOrder(info);
     });
   };
 
