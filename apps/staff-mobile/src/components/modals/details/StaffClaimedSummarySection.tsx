@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   Modal,
   Image,
+  ActivityIndicator,
   Animated,
   PanResponder,
   useWindowDimensions,
@@ -14,13 +15,12 @@ import { StaffOrder } from '../../../types';
 import { Check, X, Plus, Minus } from '../../common/Icons';
 import { OrderCardContainer } from '../../common/OrderCardContainer';
 import { PaymentSummaryCard } from './PaymentSummaryCard';
+import { staffApi } from '../../../services/staffApi';
 
 interface StaffClaimedSummarySectionProps {
   order: StaffOrder;
   onReturnHome: () => void;
 }
-
-const sampleWaybill = require('../../../../assets/parcelhub/sample_parcel_waybill.png');
 
 const formatDateMonth = (iso?: string, fallback = '17 Oct'): string => {
   if (!iso) return fallback;
@@ -41,6 +41,61 @@ export const StaffClaimedSummarySection: React.FC<StaffClaimedSummarySectionProp
   onReturnHome,
 }) => {
   const [isPodModalOpen, setIsPodModalOpen] = useState<boolean>(false);
+  const [proofPhotoUrl, setProofPhotoUrl] = useState<string | null>(order.proofImageUrl || null);
+  const [loadingPhoto, setLoadingPhoto] = useState<boolean>(false);
+
+  // Synchronize proofPhotoUrl if order prop receives proofImageUrl
+  useEffect(() => {
+    if (order.proofImageUrl) {
+      setProofPhotoUrl(order.proofImageUrl);
+      setLoadingPhoto(false);
+    }
+  }, [order.proofImageUrl]);
+
+  // Reset state when switching to a different order
+  useEffect(() => {
+    setProofPhotoUrl(order.proofImageUrl || null);
+    setLoadingPhoto(false);
+  }, [order.id]);
+
+  // On-demand fetch when the modal is opened
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!isPodModalOpen) {
+      setLoadingPhoto(false);
+      return;
+    }
+
+    // If photo is already available in memory, show it immediately without network request
+    if (order.proofImageUrl || proofPhotoUrl) {
+      setLoadingPhoto(false);
+      return;
+    }
+
+    setLoadingPhoto(true);
+    (async () => {
+      try {
+        const photoData = await staffApi.getOrderPhoto(order.id, 'proof');
+        if (!cancelled) {
+          const url = photoData.proofImageUrl || photoData.imageUrl;
+          if (url) {
+            setProofPhotoUrl(url);
+          }
+        }
+      } catch (err) {
+        console.warn('[Staff Proof] Failed to fetch photo:', err);
+      } finally {
+        if (!cancelled) {
+          setLoadingPhoto(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isPodModalOpen, order.id]);
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
 
   // Photo size tailored for mobile view: clearly visible, comfortable margins, not cramped or overflowing
@@ -187,6 +242,7 @@ export const StaffClaimedSummarySection: React.FC<StaffClaimedSummarySectionProp
 
   const handleClose = () => {
     resetZoom();
+    setLoadingPhoto(false);
     setIsPodModalOpen(false);
   };
 
@@ -366,12 +422,13 @@ export const StaffClaimedSummarySection: React.FC<StaffClaimedSummarySectionProp
     placedTimestamp = awaitingTimestamp || readyTimestamp || claimedTimestamp;
   }
 
+  const activeProofUri = proofPhotoUrl || order.proofImageUrl;
   const hasRemoteProof = Boolean(
-    order.proofImageUrl &&
-      (order.proofImageUrl.startsWith('http://') ||
-        order.proofImageUrl.startsWith('https://') ||
-        order.proofImageUrl.startsWith('data:') ||
-        order.proofImageUrl.startsWith('file://'))
+    activeProofUri &&
+      (activeProofUri.startsWith('http://') ||
+        activeProofUri.startsWith('https://') ||
+        activeProofUri.startsWith('data:') ||
+        activeProofUri.startsWith('file://'))
   );
 
   const price = typeof order.amountToPay === 'number' ? order.amountToPay : 0;
@@ -583,116 +640,148 @@ export const StaffClaimedSummarySection: React.FC<StaffClaimedSummarySectionProp
             </TouchableOpacity>
           </SafeAreaView>
 
-          {/* Interactable Zoomable Photo */}
-          <Animated.View
-            {...panResponder.panHandlers}
-            style={{
-              zIndex: 20,
-              transform: [
-                { translateX: pan.x },
-                { translateY: pan.y },
-                { scale: scale },
-              ],
-            }}
-          >
-            <Image
-              source={hasRemoteProof ? { uri: order.proofImageUrl! } : sampleWaybill}
-              style={{
-                width: imageWidth,
-                height: imageHeight,
-                borderRadius: 16,
-              }}
-              resizeMode="contain"
-            />
-          </Animated.View>
-
-          {/* Subtle Hint Pill (Visible when unzoomed) */}
-          {displayScale <= 1.05 && (
-            <View
-              pointerEvents="none"
-              style={{
-                position: 'absolute',
-                bottom: 36,
-                zIndex: 30,
-                backgroundColor: 'rgba(15, 23, 42, 0.75)',
-                paddingHorizontal: 16,
-                paddingVertical: 8,
-                borderRadius: 9999,
-                borderWidth: 1,
-                borderColor: 'rgba(255, 255, 255, 0.2)',
-              }}
-            >
-              <Text style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: 12, fontWeight: '500' }}>
-                Pinch or double-tap to zoom
+          {/* Loading Indicator */}
+          {loadingPhoto ? (
+            <View className="items-center justify-center">
+              <ActivityIndicator size="large" color="#ffffff" />
+              <Text className="text-xs text-gray-300 mt-3 font-medium">
+                Loading verification photo...
               </Text>
             </View>
-          )}
-
-          {/* Floating Zoom Controls Bar */}
-          {displayScale > 1.05 && (
-            <View
-              style={{
-                position: 'absolute',
-                bottom: 36,
-                zIndex: 30,
-                flexDirection: 'row',
-                alignItems: 'center',
-                backgroundColor: 'rgba(15, 23, 42, 0.85)',
-                paddingHorizontal: 16,
-                paddingVertical: 10,
-                borderRadius: 9999,
-                borderWidth: 1,
-                borderColor: 'rgba(255, 255, 255, 0.25)',
-                gap: 12,
-              }}
-            >
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() => animateTo(currentScale.current - 0.5)}
-                disabled={displayScale <= 1}
+          ) : (
+            <>
+              {/* Interactable Zoomable Photo */}
+              <Animated.View
+                {...panResponder.panHandlers}
                 style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 16,
-                  backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                  zIndex: 20,
+                  width: imageWidth,
+                  height: imageHeight,
                   alignItems: 'center',
                   justifyContent: 'center',
-                  opacity: displayScale <= 1 ? 0.35 : 1,
+                  transform: [
+                    { translateX: pan.x },
+                    { translateY: pan.y },
+                    { scale: scale },
+                  ],
                 }}
-                accessibilityLabel="Zoom Out"
               >
-                <Minus size={16} color="#FFFFFF" strokeWidth={2.5} />
-              </TouchableOpacity>
+                {hasRemoteProof && activeProofUri ? (
+                  <Image
+                    source={{ uri: activeProofUri }}
+                    style={{
+                      width: imageWidth,
+                      height: imageHeight,
+                      borderRadius: 16,
+                    }}
+                    resizeMode="contain"
+                  />
+                ) : (
+                  <View className="py-12 px-8 rounded-3xl bg-gray-900 border border-gray-800 items-center justify-center">
+                    <View className="w-24 h-20 rounded-xl bg-amber-500/20 border-2 border-amber-400 items-center justify-center mb-3">
+                      <Text className="text-xs font-mono font-bold text-amber-300">
+                        POUCH
+                      </Text>
+                    </View>
+                    <Text className="text-sm font-mono text-[#10b780] font-bold">
+                      MATCH: {order.trackingId || order.id}
+                    </Text>
+                    <Text className="text-xs text-gray-400 mt-1">
+                      Hub Counter Camera • Verified Intact
+                    </Text>
+                  </View>
+                )}
+              </Animated.View>
 
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() => animateTo(1)}
-                style={{ paddingHorizontal: 6, alignItems: 'center', justifyContent: 'center' }}
-                accessibilityLabel="Reset Zoom"
-              >
-                <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>
-                  {displayScale}x <Text style={{ fontWeight: '400', color: 'rgba(255, 255, 255, 0.7)' }}>(Reset)</Text>
-                </Text>
-              </TouchableOpacity>
+              {/* Subtle Hint Pill (Visible when unzoomed) */}
+              {displayScale <= 1.05 && (
+                <View
+                  pointerEvents="none"
+                  style={{
+                    position: 'absolute',
+                    bottom: 36,
+                    zIndex: 30,
+                    backgroundColor: 'rgba(15, 23, 42, 0.75)',
+                    paddingHorizontal: 16,
+                    paddingVertical: 8,
+                    borderRadius: 9999,
+                    borderWidth: 1,
+                    borderColor: 'rgba(255, 255, 255, 0.2)',
+                  }}
+                >
+                  <Text style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: 12, fontWeight: '500' }}>
+                    Pinch or double-tap to zoom
+                  </Text>
+                </View>
+              )}
 
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() => animateTo(currentScale.current + 0.5)}
-                disabled={displayScale >= 4}
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 16,
-                  backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  opacity: displayScale >= 4 ? 0.35 : 1,
-                }}
-                accessibilityLabel="Zoom In"
-              >
-                <Plus size={16} color="#FFFFFF" strokeWidth={2.5} />
-              </TouchableOpacity>
-            </View>
+              {/* Floating Zoom Controls Bar */}
+              {displayScale > 1.05 && (
+                <View
+                  style={{
+                    position: 'absolute',
+                    bottom: 36,
+                    zIndex: 30,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: 'rgba(15, 23, 42, 0.85)',
+                    paddingHorizontal: 16,
+                    paddingVertical: 10,
+                    borderRadius: 9999,
+                    borderWidth: 1,
+                    borderColor: 'rgba(255, 255, 255, 0.25)',
+                    gap: 12,
+                  }}
+                >
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={() => animateTo(currentScale.current - 0.5)}
+                    disabled={displayScale <= 1}
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 16,
+                      backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      opacity: displayScale <= 1 ? 0.35 : 1,
+                    }}
+                    accessibilityLabel="Zoom Out"
+                  >
+                    <Minus size={16} color="#FFFFFF" strokeWidth={2.5} />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={() => animateTo(1)}
+                    style={{ paddingHorizontal: 6, alignItems: 'center', justifyContent: 'center' }}
+                    accessibilityLabel="Reset Zoom"
+                  >
+                    <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>
+                      {displayScale}x <Text style={{ fontWeight: '400', color: 'rgba(255, 255, 255, 0.7)' }}>(Reset)</Text>
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={() => animateTo(currentScale.current + 0.5)}
+                    disabled={displayScale >= 4}
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 16,
+                      backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      opacity: displayScale >= 4 ? 0.35 : 1,
+                    }}
+                    accessibilityLabel="Zoom In"
+                  >
+                    <Plus size={16} color="#FFFFFF" strokeWidth={2.5} />
+                  </TouchableOpacity>
+                </View>
+              )}
+            </>
           )}
         </View>
       </Modal>

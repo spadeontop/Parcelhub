@@ -258,6 +258,9 @@ export const staffApi = {
     const token = explicitToken || (await this.getStoredAuthToken());
     if (!token) return { imageUrl: null, proofImageUrl: null };
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
     try {
       const res = await fetch(
         `${ENV.API_BASE_URL}/api/v1/staff/orders/${encodeURIComponent(orderId)}/photo?type=${type}`,
@@ -267,6 +270,7 @@ export const staffApi = {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
           },
+          signal: controller.signal,
         }
       );
       if (!res.ok) return { imageUrl: null, proofImageUrl: null };
@@ -277,6 +281,8 @@ export const staffApi = {
       };
     } catch {
       return { imageUrl: null, proofImageUrl: null };
+    } finally {
+      clearTimeout(timeoutId);
     }
   },
 
