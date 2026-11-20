@@ -76,10 +76,11 @@ export async function GET(request: NextRequest) {
       conditions.push(eq(orders.status, statusFilter));
     }
     if (searchFilter) {
+      const escapedSearch = searchFilter.replace(/[\\%_]/g, "\\$&");
       conditions.push(
         or(
-          ilike(orders.trackingId, `%${searchFilter}%`),
-          ilike(orders.ticketCode, `%${searchFilter}%`)
+          ilike(orders.trackingId, `%${escapedSearch}%`),
+          ilike(orders.ticketCode, `%${escapedSearch}%`)
         )!
       );
     }
