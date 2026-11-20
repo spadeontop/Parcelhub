@@ -92,7 +92,11 @@ export const StaffOrderCard: React.FC<StaffOrderCardProps> = ({
     <TouchableOpacity
       activeOpacity={0.7}
       onPress={() => onPress(order)}
-      className="py-2.5"
+      style={{
+        paddingHorizontal: 8,
+        paddingVertical: 10,
+        borderRadius: 12,
+      }}
     >
       {/* Top Row: Order ID + Status badge */}
       <View className="flex-row items-center justify-between">
@@ -104,14 +108,14 @@ export const StaffOrderCard: React.FC<StaffOrderCardProps> = ({
 
       {/* Middle Row: Customer name */}
       <Text
-        className="text-[12px] font-semibold text-[#1E293B] leading-[17px] mt-1"
+        className="text-[12px] font-semibold text-[#1E293B] leading-[17px] mt-0.5"
         numberOfLines={1}
       >
         {customerName}
       </Text>
 
       {/* Bottom Row: Date + Price or Countdown Timer */}
-      <View className="flex-row items-center justify-between mt-1">
+      <View className="flex-row items-center justify-between mt-0.5">
         <Text className="text-[10px] font-normal text-[#64748B]">
           {formattedDate}
         </Text>
@@ -119,7 +123,7 @@ export const StaffOrderCard: React.FC<StaffOrderCardProps> = ({
       </View>
 
       {/* Item Divider */}
-      {showDivider && <View className="h-px bg-[#F1F5F9] mt-2.5" />}
+      {showDivider && <View className="h-px bg-[#F1F5F9] mt-2" />}
     </TouchableOpacity>
   );
 };

@@ -22,6 +22,7 @@ interface StaffLiveUpdatedRowProps {
 }
 
 const customBezier = Easing.bezier(0.22, 1, 0.36, 1);
+const ROW_FIXED_HEIGHT = 84;
 
 export const StaffLiveUpdatedRow: React.FC<StaffLiveUpdatedRowProps> = ({
   order,
@@ -46,50 +47,55 @@ export const StaffLiveUpdatedRow: React.FC<StaffLiveUpdatedRowProps> = ({
   const badgeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Start insert slot animation
-    Animated.parallel([
-      Animated.timing(insertHeight, {
+    // 100ms delay letting modal slide-down begin so row smoothly expands in place
+    const timer = setTimeout(() => {
+      // Start insert slot animation (reveals row without shrinking content)
+      Animated.parallel([
+        Animated.timing(insertHeight, {
+          toValue: 1,
+          duration: 550,
+          easing: customBezier,
+          useNativeDriver: false,
+        }),
+        Animated.timing(insertOpacity, {
+          toValue: 1,
+          duration: 400,
+          easing: Easing.ease,
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      // Start surface highlight animation (3s cycle)
+      Animated.timing(surfaceAnim, {
         toValue: 1,
-        duration: 550,
+        duration: 3000,
         easing: customBezier,
         useNativeDriver: false,
-      }),
-      Animated.timing(insertOpacity, {
+      }).start();
+
+      // Start shimmer sweep (1.1s, delay 200ms)
+      Animated.timing(shimmerAnim, {
         toValue: 1,
-        duration: 400,
-        easing: Easing.ease,
+        duration: 1100,
+        delay: 200,
+        easing: customBezier,
         useNativeDriver: true,
-      }),
-    ]).start();
+      }).start();
 
-    // Start surface highlight animation (3s)
-    Animated.timing(surfaceAnim, {
-      toValue: 1,
-      duration: 3000,
-      easing: customBezier,
-      useNativeDriver: false,
-    }).start();
+      // Start badge cycle animation (3s)
+      Animated.timing(badgeAnim, {
+        toValue: 1,
+        duration: 3000,
+        easing: customBezier,
+        useNativeDriver: true,
+      }).start(({ finished }) => {
+        if (finished && onAnimationComplete) {
+          onAnimationComplete();
+        }
+      });
+    }, 100);
 
-    // Start shimmer sweep (1.1s, delay 200ms)
-    Animated.timing(shimmerAnim, {
-      toValue: 1,
-      duration: 1100,
-      delay: 200,
-      easing: customBezier,
-      useNativeDriver: true,
-    }).start();
-
-    // Start badge cycle animation (3s)
-    Animated.timing(badgeAnim, {
-      toValue: 1,
-      duration: 3000,
-      easing: customBezier,
-      useNativeDriver: true,
-    }).start(({ finished }) => {
-      if (finished && onAnimationComplete) {
-        onAnimationComplete();
-      }
-    });
+    return () => clearTimeout(timer);
   }, []);
 
   const formattedDate = (() => {
@@ -108,10 +114,10 @@ export const StaffLiveUpdatedRow: React.FC<StaffLiveUpdatedRowProps> = ({
   const customerName = order.customer || 'Customer';
   const amountStr = `₱${order.amountToPay.toLocaleString()}`;
 
-  // Interpolations
+  // Outer container height expands from 0 to exact natural ROW_FIXED_HEIGHT (84px)
   const rowHeight = insertHeight.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, 100],
+    outputRange: [0, ROW_FIXED_HEIGHT],
   });
 
   const backgroundColor = surfaceAnim.interpolate({
@@ -121,7 +127,7 @@ export const StaffLiveUpdatedRow: React.FC<StaffLiveUpdatedRowProps> = ({
 
   const shimmerTranslateX = shimmerAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [-300, 400],
+    outputRange: [-350, 450],
   });
 
   // Phase 1 Badge: "Activated" / "Proof Attached" / "Released"
@@ -159,7 +165,7 @@ export const StaffLiveUpdatedRow: React.FC<StaffLiveUpdatedRowProps> = ({
   return (
     <Animated.View
       style={{
-        maxHeight: rowHeight,
+        height: rowHeight,
         opacity: insertOpacity,
         overflow: 'hidden',
       }}
@@ -168,6 +174,7 @@ export const StaffLiveUpdatedRow: React.FC<StaffLiveUpdatedRowProps> = ({
         activeOpacity={0.7}
         onPress={() => onPress(order)}
       >
+        {/* Inner View has FIXED height 84px and exact same padding as StaffOrderCard: never squished or resized! */}
         <Animated.View
           style={{
             backgroundColor,
@@ -176,6 +183,8 @@ export const StaffLiveUpdatedRow: React.FC<StaffLiveUpdatedRowProps> = ({
             paddingVertical: 10,
             overflow: 'hidden',
             position: 'relative',
+            height: ROW_FIXED_HEIGHT,
+            justifyContent: 'space-between',
           }}
         >
           {/* Shimmer Overlay: subtle sweep from left to right */}
@@ -185,12 +194,12 @@ export const StaffLiveUpdatedRow: React.FC<StaffLiveUpdatedRowProps> = ({
               StyleSheet.absoluteFill,
               {
                 transform: [{ translateX: shimmerTranslateX }],
-                width: 300,
+                width: 350,
                 zIndex: 10,
               },
             ]}
           >
-            <Svg width={300} height={100}>
+            <Svg width={350} height={100}>
               <Defs>
                 <LinearGradient id="rowShimmerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
                   <Stop offset="0%" stopColor="#10B981" stopOpacity="0" />
@@ -198,7 +207,7 @@ export const StaffLiveUpdatedRow: React.FC<StaffLiveUpdatedRowProps> = ({
                   <Stop offset="100%" stopColor="#10B981" stopOpacity="0" />
                 </LinearGradient>
               </Defs>
-              <Rect x="0" y="0" width={300} height={100} fill="url(#rowShimmerGrad)" />
+              <Rect x="0" y="0" width={350} height={100} fill="url(#rowShimmerGrad)" />
             </Svg>
           </Animated.View>
 
@@ -273,11 +282,11 @@ export const StaffLiveUpdatedRow: React.FC<StaffLiveUpdatedRowProps> = ({
               {amountStr}
             </Text>
           </View>
+
+          {/* Item Divider */}
+          {showDivider && <View className="h-px bg-[#F1F5F9] mt-2" />}
         </Animated.View>
       </TouchableOpacity>
-
-      {/* Item Divider */}
-      {showDivider && <View className="h-px bg-[#F1F5F9] my-1" />}
     </Animated.View>
   );
 };
