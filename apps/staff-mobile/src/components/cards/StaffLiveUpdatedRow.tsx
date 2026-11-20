@@ -60,10 +60,10 @@ export const StaffLiveUpdatedRow: React.FC<StaffLiveUpdatedRowProps> = ({
       useNativeDriver: true,
     }).start();
 
-    // 3. 3s status morph & surface highlight cycle matching button feedback 4.html 1:1
+    // 3. Status morph & surface highlight cycle: 3.8s total (Activated badge holds rock-solid for 2.2s before switching)
     Animated.timing(animCycle, {
       toValue: 1,
-      duration: 3000,
+      duration: 3800,
       easing: customBezier,
       useNativeDriver: false,
     }).start(({ finished }) => {
@@ -95,11 +95,11 @@ export const StaffLiveUpdatedRow: React.FC<StaffLiveUpdatedRowProps> = ({
     outputRange: [0, ROW_HEIGHT],
   });
 
-  // rowHighlightCycle 1:1 from button feedback 4.html:
-  // 0%: #d1fae5 | 18%, 68%: #ecfdf5 | 100%: #ffffff
+  // rowHighlightCycle:
+  // 0%: #d1fae5 | 13% to 70%: #ecfdf5 (holds emerald tint for >2s) | 95% to 100%: #ffffff
   const backgroundColor = animCycle.interpolate({
-    inputRange: [0, 0.18, 0.68, 1],
-    outputRange: ['#d1fae5', '#ecfdf5', '#ecfdf5', '#ffffff'],
+    inputRange: [0, 0.13, 0.70, 0.95, 1],
+    outputRange: ['#d1fae5', '#ecfdf5', '#ecfdf5', '#ffffff', '#ffffff'],
   });
 
   // Subtle Shimmer sweep across the row
@@ -108,28 +108,28 @@ export const StaffLiveUpdatedRow: React.FC<StaffLiveUpdatedRowProps> = ({
     outputRange: [-350, 450],
   });
 
-  // activatedBadgeCycle 1:1 from button feedback 4.html:
+  // activatedBadgeCycle:
   // 0%: opacity 0, scale 0.75
-  // 12%: opacity 1, scale 1.06 (pop-in with spring overshoot)
-  // 18%, 68%: opacity 1, scale 1.0 (steady readable hold)
-  // 78%, 100%: opacity 0, scale 0.85, translateY -3px (smooth float-up exit)
+  // 10%: opacity 1, scale 1.06 (pop-in with spring overshoot)
+  // 13% to 70%: opacity 1, scale 1.0 (holds for 2.2 full seconds!)
+  // 80%, 100%: opacity 0, scale 0.85, translateY -3px (smooth float-up exit)
   const phase1Opacity = animCycle.interpolate({
-    inputRange: [0, 0.12, 0.68, 0.78, 1],
+    inputRange: [0, 0.10, 0.70, 0.80, 1],
     outputRange: [0, 1, 1, 0, 0],
   });
 
   const phase1Scale = animCycle.interpolate({
-    inputRange: [0, 0.12, 0.18, 0.68, 0.78, 1],
+    inputRange: [0, 0.10, 0.13, 0.70, 0.80, 1],
     outputRange: [0.75, 1.06, 1.0, 1.0, 0.85, 0.85],
   });
 
   const phase1TranslateY = animCycle.interpolate({
-    inputRange: [0, 0.68, 0.78, 1],
+    inputRange: [0, 0.70, 0.80, 1],
     outputRange: [0, 0, -3, -3],
   });
 
-  // awaitingBadgeCycle 1:1 from button feedback 4.html:
-  // 0%, 72%: opacity 0, scale 0.85, translateY 3px
+  // awaitingBadgeCycle:
+  // 0% to 72%: opacity 0, scale 0.85, translateY 3px
   // 84%, 100%: opacity 1, scale 1.0, translateY 0 (rises up into resting position)
   const phase2Opacity = animCycle.interpolate({
     inputRange: [0, 0.72, 0.84, 1],
