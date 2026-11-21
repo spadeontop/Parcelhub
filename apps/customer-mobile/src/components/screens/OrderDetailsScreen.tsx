@@ -16,6 +16,7 @@ import { useV1 } from '../../v1/context/V1Context';
 import { CustomerOrderDetail } from '../../v1/types/api';
 import { CopyIcon, QrCodeIcon, ClockIcon } from '../common/Icons';
 import { AppHeader } from '../layout/AppHeader';
+import { ConfirmationSubmitSection } from '../common/ConfirmationSubmitSection';
 import { getStatusLabel } from '../../utils/statusHelpers';
 
 export const OrderDetailsScreen: React.FC = () => {
@@ -1053,46 +1054,6 @@ export const OrderDetailsScreen: React.FC = () => {
               {status === 'READY_TO_CLAIM' &&
                 (hubOpen ? (
                   <View className="gap-3">
-                    {/* Confirmation Checkbox */}
-                    <TouchableOpacity
-                      activeOpacity={isClaimLocked || isInitiatingClaim ? 1 : 0.8}
-                      disabled={isClaimLocked || isInitiatingClaim}
-                      onPress={() => {
-                        if (!isClaimLocked && !isInitiatingClaim) {
-                          setClaimConfirmed(!claimConfirmed);
-                        }
-                      }}
-                      className="flex-row items-start gap-3 px-1"
-                    >
-                      <View
-                        className={`w-[22px] h-[22px] rounded-[4px] items-center justify-center mt-0.5 border ${
-                          claimConfirmed
-                            ? 'bg-[#215cd4] border-[#215cd4]'
-                            : 'border-[#cbd5e1] bg-white'
-                        }`}
-                      >
-                        {claimConfirmed && (
-                          <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
-                            <Path
-                              d="M20 6L9 17L4 12"
-                              stroke="#ffffff"
-                              strokeWidth={3}
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </Svg>
-                        )}
-                      </View>
-                      <View className="flex-1">
-                        <Text className="text-[13px] font-bold text-[#111827]">
-                          I confirm that I want to claim the order
-                        </Text>
-                        <Text className="text-[12px] text-[#64748b] font-normal leading-[16.5px] mt-0.5">
-                          Only initiate claim when you’re physically claiming at the hub
-                        </Text>
-                      </View>
-                    </TouchableOpacity>
-
                     {/* Previous Window Elapsed Note */}
                     {orderDetail?.claimInitiatedAt && remainingSecs === 0 && (
                       <View className="bg-amber-50 py-2 px-3 rounded-xl border border-amber-200">
@@ -1102,42 +1063,18 @@ export const OrderDetailsScreen: React.FC = () => {
                       </View>
                     )}
 
-                    {/* Primary Claim Button */}
-                    <TouchableOpacity
-                      activeOpacity={0.8}
-                      onPress={handleInitiateClaim}
-                      disabled={!claimConfirmed || isInitiatingClaim}
-                      className={`w-full h-[48px] rounded-[12px] items-center justify-center ${
-                        !claimConfirmed
-                          ? 'bg-[#cbd5e1]'
-                          : isInitiatingClaim
-                          ? 'bg-[#215cd4] opacity-85'
-                          : 'bg-[#215cd4]'
-                      }`}
-                      style={
-                        claimConfirmed
-                          ? {
-                              shadowColor: '#215cd4',
-                              shadowOffset: { width: 0, height: 8 },
-                              shadowOpacity: 0.35,
-                              shadowRadius: 20,
-                              elevation: 4,
-                            }
-                          : undefined
-                      }
-                    >
-                      {isInitiatingClaim ? (
-                        <ActivityIndicator size="small" color="#ffffff" />
-                      ) : (
-                        <Text
-                          className={`font-bold text-[14px] tracking-[0.35px] text-center ${
-                            claimConfirmed ? 'text-white' : 'text-[#64748b]'
-                          }`}
-                        >
-                          Initiate Claim
-                        </Text>
-                      )}
-                    </TouchableOpacity>
+                    {/* Confirmation & Initiate Claim Action Section */}
+                    <ConfirmationSubmitSection
+                      title="I confirm that I want to claim the order"
+                      subtitle="Only initiate claim when you’re physically claiming at the hub"
+                      buttonLabel="Initiate Claim"
+                      errorMessage="Please check the confirmation box before initiating claim."
+                      isChecked={claimConfirmed}
+                      onCheckedChange={setClaimConfirmed}
+                      onSubmit={handleInitiateClaim}
+                      isLoading={isInitiatingClaim}
+                      themeColor="#215cd4"
+                    />
                   </View>
                 ) : (
                   <View className="gap-2">
