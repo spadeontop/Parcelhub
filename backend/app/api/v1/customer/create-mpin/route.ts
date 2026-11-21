@@ -3,28 +3,25 @@ import bcrypt from "bcryptjs";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { customers } from "@/db/schema";
+import { serializeCustomerProfile } from "@/app/lib/v1/auth";
 import {
   verifyV1Token,
   signAuthToken,
   signRefreshToken,
 } from "@/app/lib/v1/jwt";
+import { parseJsonBody } from "@/app/lib/v1/request";
 import { jsonError, jsonSuccess } from "@/app/lib/response";
 import {
   CustomerCreateMpinReq,
   CustomerCreateMpinRes,
-  CustomerId,
 } from "@/app/types/v1/api";
 
 export async function POST(request: NextRequest) {
-  let body: CustomerCreateMpinReq;
-  try {
-    // ---------------------------------------------------------
-    // 2. Request Validation: Parse body & validate format
-    // ---------------------------------------------------------
-    body = (await request.json()) as CustomerCreateMpinReq;
-  } catch {
-    return jsonError("Invalid request body", 400);
+  const parsedBody = await parseJsonBody<CustomerCreateMpinReq>(request);
+  if (!parsedBody.ok) {
+    return parsedBody.response;
   }
+  const body = parsedBody.data;
 
   try {
     if (!body?.preAuthToken || !body?.mpin) {
@@ -118,18 +115,7 @@ export async function POST(request: NextRequest) {
       statusMessage: "MPIN created successfully",
       authToken,
       refreshToken,
-      customer: {
-        id: updatedCustomer.id as CustomerId,
-        email: updatedCustomer.email,
-        firstName: updatedCustomer.firstName,
-        lastName: updatedCustomer.lastName,
-        middleInitial: updatedCustomer.middleInitial ?? undefined,
-        phoneNumber: updatedCustomer.phoneNumber,
-        blacklisted: updatedCustomer.blacklisted,
-        blacklistReason: updatedCustomer.blacklistReason,
-        createdAt: updatedCustomer.createdAt.toISOString(),
-        updatedAt: updatedCustomer.updatedAt.toISOString(),
-      },
+      customer: serializeCustomerProfile(updatedCustomer),
     };
 
     return jsonSuccess(response);

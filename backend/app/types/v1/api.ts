@@ -20,6 +20,9 @@ export type {
   OrderScreenshotChecks,
   FcmTokenRow,
   NewFcmTokenRow,
+  AiVerificationOutcome,
+  AiVerificationLogRow,
+  NewAiVerificationLogRow,
 } from "@/db/schema";
 
 export type AppConfigRow = typeof import("@/db/schema").appConfig.$inferSelect;

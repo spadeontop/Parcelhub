@@ -1,8 +1,9 @@
 import { NextRequest } from "next/server";
-import { and, eq, or } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { orders } from "@/db/schema";
 import { authenticateCustomerRequest, customerAuthErrorResponse } from "@/app/lib/v1/auth";
+import { matchOrderByIdOrTicket } from "@/app/lib/v1/orders";
 import { jsonError, jsonSuccess } from "@/app/lib/response";
 import { CustomerClaimOrderRes } from "@/app/types/v1/api";
 
@@ -48,7 +49,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     // ---------------------------------------------------------
     const order = await db.query.orders.findFirst({
       where: and(
-        or(eq(orders.id, identifier), eq(orders.ticketCode, identifier.toUpperCase())),
+        matchOrderByIdOrTicket(identifier),
         eq(orders.customerId, auth.session.userId)
       ),
       columns: {
