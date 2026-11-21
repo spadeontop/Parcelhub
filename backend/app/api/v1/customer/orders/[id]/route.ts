@@ -1,8 +1,9 @@
 import { NextRequest } from "next/server";
-import { and, eq, inArray, ne, or, sql } from "drizzle-orm";
+import { and, eq, inArray, ne, or } from "drizzle-orm";
 import { db } from "@/db";
 import { orders, orderScreenshots } from "@/db/schema";
 import { authenticateCustomerRequest, customerAuthErrorResponse } from "@/app/lib/v1/auth";
+import { normalizeTrackingId } from "@/app/lib/v1/orders";
 import { jsonError, jsonSuccess } from "@/app/lib/response";
 import {
   CustomerGetOrderRes,
@@ -204,10 +205,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const normalizedTrackingId = trackingId.replace(/\s+/g, "").toLowerCase();
+    const normalizedTrackingId = normalizeTrackingId(trackingId);
     const paidDuplicate = await db.query.orders.findFirst({
       where: and(
-        sql`lower(regexp_replace(${orders.trackingId}, '[[:space:]]+', '', 'g')) = ${normalizedTrackingId}`,
+        eq(orders.trackingId, normalizedTrackingId),
         ne(orders.id, order.id),
         inArray(orders.status, [
           "AWAITING_PARCEL",
@@ -239,7 +240,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const [updatedOrder] = await db
       .update(orders)
       .set({
-        trackingId,
+        trackingId: normalizedTrackingId,
         productName,
         recipientName,
         price,

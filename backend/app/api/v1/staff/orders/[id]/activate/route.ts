@@ -5,7 +5,7 @@ import { orders } from "@/db/schema";
 import { authenticateStaffRequest } from "@/app/lib/v1/auth";
 import { isUniqueViolation } from "@/app/lib/v1/db-errors";
 import { sendFcmNotification } from "@/app/lib/v1/fcm";
-import { ORDER_NON_IMAGE_COLUMNS } from "@/app/lib/v1/orders";
+import { normalizeTrackingId, ORDER_NON_IMAGE_COLUMNS } from "@/app/lib/v1/orders";
 import { jsonError, jsonSuccess } from "@/app/lib/response";
 import {
   OrderStatus,
@@ -90,11 +90,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     // Ensure another active parcel (AWAITING_PARCEL, READY_TO_CLAIM, CLAIMED)
     // doesn't already hold the same trackingId before activating this order.
     // ---------------------------------------------------------
-    if (order.trackingId) {
-      const normalizedTrackingId = order.trackingId.replace(/\s+/g, "").toLowerCase();
+    const normalizedTrackingId = order.trackingId
+      ? normalizeTrackingId(order.trackingId)
+      : null;
+
+    if (normalizedTrackingId) {
       const activePaidDuplicate = await db.query.orders.findFirst({
         where: and(
-          sql`lower(regexp_replace(${orders.trackingId}, '[[:space:]]+', '', 'g')) = ${normalizedTrackingId}`,
+          eq(orders.trackingId, normalizedTrackingId),
           ne(orders.id, order.id),
           inArray(orders.status, [
             "AWAITING_PARCEL",
@@ -107,7 +110,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
       if (activePaidDuplicate) {
         return jsonError(
-          `Tracking ID "${order.trackingId}" is already registered to another active parcel. Cannot activate duplicate parcel.`,
+          `Tracking ID "${normalizedTrackingId}" is already registered to another active parcel. Cannot activate duplicate parcel.`,
           409,
           "Conflict"
         );
@@ -127,6 +130,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       [updatedOrder] = await db
         .update(orders)
         .set({
+          ...(normalizedTrackingId ? { trackingId: normalizedTrackingId } : {}),
           amountReceived: body.amountReceived,
           change,
           status: "AWAITING_PARCEL",

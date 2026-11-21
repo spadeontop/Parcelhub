@@ -3,6 +3,7 @@ import {
   boolean,
   doublePrecision,
   index,
+  integer,
   jsonb,
   pgTable,
   text,
@@ -15,10 +16,19 @@ import type { OrderStatus, StatusTimelineEntry } from "@/app/types/api";
 export type OrderScreenshotChecks = {
   trackingId_strict?: string;
   trackingId_similar?: string;
+  trackingIdLocked?: boolean;
+  sourceApp?: "shopee" | "lazada" | "tiktok" | "unknown";
   isParcel?: boolean;
   hasRealMetadata?: boolean;
   [key: string]: unknown;
 };
+
+export type AiVerificationOutcome =
+  | "OK"
+  | "INVALID_SCREENSHOT"
+  | "TRACKING_MISSING"
+  | "DUPLICATE_TRACKING"
+  | "PROVIDER_ERROR";
 
 export const customers = pgTable("customers", {
   id: text("id")
@@ -105,6 +115,9 @@ export const orders = pgTable(
       table.status,
       table.timestamp.desc()
     ),
+    index("orders_non_draft_timestamp_idx")
+      .on(table.timestamp.desc())
+      .where(sql`${table.status} <> 'PENDING_INITIALIZATION'`),
     index("orders_ticket_code_idx").on(table.ticketCode),
   ]
 );
@@ -148,6 +161,42 @@ export const appConfig = pgTable("app_config", {
     .notNull(),
 });
 
+export const aiVerificationLogs = pgTable(
+  "ai_verification_logs",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => uuidv7()),
+    customerId: text("customer_id")
+      .notNull()
+      .references(() => customers.id, { onDelete: "cascade" }),
+    orderId: text("order_id").references(() => orders.id, {
+      onDelete: "set null",
+    }),
+    outcome: text("outcome").$type<AiVerificationOutcome>().notNull(),
+    trackingIdMode: text("tracking_id_mode").notNull(),
+    sourceApp: text("source_app").default("unknown").notNull(),
+    model: text("model"),
+    provider: text("provider"),
+    inputTokens: integer("input_tokens"),
+    outputTokens: integer("output_tokens"),
+    totalTokens: integer("total_tokens"),
+    costUsd: doublePrecision("cost_usd"),
+    latencyMs: integer("latency_ms").notNull(),
+    errorReason: text("error_reason"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("ai_logs_customer_created_idx").on(
+      table.customerId,
+      table.createdAt.desc()
+    ),
+    index("ai_logs_created_at_idx").on(table.createdAt.desc()),
+  ]
+);
+
 export type CustomerRow = typeof customers.$inferSelect;
 export type NewCustomerRow = typeof customers.$inferInsert;
 
@@ -162,3 +211,6 @@ export type NewOrderScreenshotRow = typeof orderScreenshots.$inferInsert;
 
 export type FcmTokenRow = typeof fcmTokens.$inferSelect;
 export type NewFcmTokenRow = typeof fcmTokens.$inferInsert;
+
+export type AiVerificationLogRow = typeof aiVerificationLogs.$inferSelect;
+export type NewAiVerificationLogRow = typeof aiVerificationLogs.$inferInsert;
