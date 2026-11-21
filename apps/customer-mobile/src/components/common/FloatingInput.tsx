@@ -20,6 +20,11 @@ export interface FloatingInputProps extends TextInputProps {
   inputContainerStyle?: StyleProp<ViewStyle>;
   rightElement?: React.ReactNode;
   isPassword?: boolean;
+  defaultBorderColor?: string;
+  focusedBorderColor?: string;
+  errorColor?: string;
+  placeholderColor?: string;
+  textColor?: string;
 }
 
 export const FloatingInput: React.FC<FloatingInputProps> = ({
@@ -36,6 +41,11 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
   onFocus,
   onBlur,
   style,
+  defaultBorderColor = '#e2e8f0',
+  focusedBorderColor = '#2563eb',
+  errorColor = '#ef4444',
+  placeholderColor = '#94a3b8',
+  textColor = '#1e293b',
   ...rest
 }) => {
   const { height } = useWindowDimensions();
@@ -79,26 +89,29 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
 
   const labelFontSize = animatedProgress.interpolate({
     inputRange: [0, 1],
-    outputRange: [isCompact ? 14 : 15, isCompact ? 10.5 : 11.5],
+    outputRange: [isCompact ? 13.5 : 14.5, isCompact ? 10 : 11],
   });
 
-  // Apple Design Colors:
-  // - default border: #86868b (borderWidth: 1, borderRadius: 12)
-  // - active/focused border: #0071e3
-  // - error border & error text: #ff3b30
-  // - floating label/placeholder: #6e6e73 (active focus: #0071e3, error: #ff3b30)
-  // - typed text: #1d1d1f
+  // Retained Brand Colors matching the UI design:
+  // - default border: #e2e8f0 (subtle neutral border)
+  // - focused border & active focused label: #2563eb (brand blue)
+  // - error border & error label/text: #ef4444
+  // - resting placeholder: #94a3b8 (slate-400 placeholder)
+  // - filled unfocused label: #64748b (slate-500)
+  // - typed text: #1e293b (slate-800)
   const borderColor = isError
-    ? '#ff3b30'
+    ? errorColor
     : isFocused
-    ? '#0071e3'
-    : '#86868b';
+    ? focusedBorderColor
+    : defaultBorderColor;
 
   const labelColor = isError
-    ? '#ff3b30'
+    ? errorColor
     : isFocused
-    ? '#0071e3'
-    : '#6e6e73';
+    ? focusedBorderColor
+    : hasValue
+    ? '#64748b'
+    : placeholderColor;
 
   const handleChangeText = (text: string) => {
     if (!isControlled) {
@@ -112,7 +125,7 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
 
   return (
     <View style={[{ marginBottom: isCompact ? 10 : 12 }, containerStyle]}>
-      {/* Apple Minimalist Input Box */}
+      {/* Input Box */}
       <TouchableOpacity
         activeOpacity={1}
         onPress={() => inputRef.current?.focus()}
@@ -120,9 +133,9 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
           {
             height: isCompact ? 50 : 54,
             borderRadius: 12,
-            borderWidth: 1,
+            borderWidth: isFocused ? 1.5 : 1,
             borderColor,
-            backgroundColor: '#ffffff',
+            backgroundColor: isError ? '#fff9f9' : '#ffffff',
             paddingHorizontal: 14,
             justifyContent: 'center',
             position: 'relative',
@@ -185,11 +198,11 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
               onBlur?.(e);
             }}
             secureTextEntry={isPasswordField ? !showPassword : false}
-            selectionColor="#0071e3"
+            selectionColor={focusedBorderColor}
             style={[
               {
-                fontSize: isCompact ? 14.5 : 15.5,
-                color: '#1d1d1f',
+                fontSize: isCompact ? 14 : 15,
+                color: textColor,
                 fontWeight: '400',
                 height: isCompact ? 22 : 24,
                 padding: 0,
@@ -237,14 +250,14 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
                   <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
                     <Path
                       d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"
-                      stroke="#86868b"
+                      stroke={placeholderColor}
                       strokeWidth={1.75}
                       strokeLinecap="round"
                       strokeLinejoin="round"
                     />
                     <Path
                       d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"
-                      stroke="#86868b"
+                      stroke={placeholderColor}
                       strokeWidth={1.75}
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -255,14 +268,14 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
                   <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
                     <Path
                       d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"
-                      stroke="#86868b"
+                      stroke={placeholderColor}
                       strokeWidth={1.75}
                       strokeLinecap="round"
                       strokeLinejoin="round"
                     />
                     <Path
                       d="M1 1l22 22"
-                      stroke="#86868b"
+                      stroke={placeholderColor}
                       strokeWidth={1.75}
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -281,7 +294,7 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
           <Text
             style={{
               fontSize: 12,
-              color: '#ff3b30',
+              color: errorColor,
               fontWeight: '400',
             }}
           >
