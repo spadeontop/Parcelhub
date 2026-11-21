@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -75,6 +75,10 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
   const [step2ErrorMessage, setStep2ErrorMessage] = useState<string>('');
   const [step2ShakeTrigger, setStep2ShakeTrigger] = useState<number>(0);
 
+  // Frequent click tracking for disabled photo confirmation checkbox
+  const photoConfirmClickCountRef = useRef<number>(0);
+  const photoConfirmLastClickTimeRef = useRef<number>(0);
+
   useEffect(() => {
     setLocalCourierPaid(Boolean(order.courierPaid));
     setIsReceivedConfirmed(false);
@@ -92,6 +96,8 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
     setStep2BtnState('idle');
     setHasStep2Error(false);
     setStep2ErrorMessage('');
+    photoConfirmClickCountRef.current = 0;
+    photoConfirmLastClickTimeRef.current = 0;
   }, [order.id, order.courierPaid, order.proofImageUrl]);
 
   const price = typeof order.amountToPay === 'number' ? order.amountToPay : 0;
@@ -181,6 +187,8 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
         setIsPhotoConfirmed(false);
         setHasStep2Error(false);
         setStep2ErrorMessage('');
+        photoConfirmClickCountRef.current = 0;
+        photoConfirmLastClickTimeRef.current = 0;
       }
     } catch (err: any) {
       console.warn('Camera / compression fallback:', err);
@@ -191,6 +199,8 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
       setIsPhotoConfirmed(false);
       setHasStep2Error(false);
       setStep2ErrorMessage('');
+      photoConfirmClickCountRef.current = 0;
+      photoConfirmLastClickTimeRef.current = 0;
       if (err?.message && !err.message.includes('permission')) {
         Alert.alert('Image Processing Notice', err.message);
       }
@@ -208,10 +218,34 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
     setIsStep2Locked(false);
     setHasStep2Error(false);
     setStep2ErrorMessage('');
+    photoConfirmClickCountRef.current = 0;
+    photoConfirmLastClickTimeRef.current = 0;
   };
 
   const handleTogglePhotoConfirm = () => {
     if (isStep2Locked || isAttachingPhoto || step2BtnState !== 'idle') return;
+
+    const isPhotoAttached = Boolean(hasPhoto || photoUri || photoBase64);
+
+    if (!isPhotoAttached) {
+      // Checkbox is disabled when there is no attached or uploaded photo.
+      // Track frequent clicks (e.g. 3 clicks within 2.5s) to trigger error feedback.
+      const now = Date.now();
+      if (now - photoConfirmLastClickTimeRef.current > 2500) {
+        photoConfirmClickCountRef.current = 1;
+      } else {
+        photoConfirmClickCountRef.current += 1;
+      }
+      photoConfirmLastClickTimeRef.current = now;
+
+      if (photoConfirmClickCountRef.current >= 3 || hasStep2Error) {
+        setHasStep2Error(true);
+        setStep2ErrorMessage('Please take or attach a parcel waybill photo first.');
+        setStep2ShakeTrigger((c) => c + 1);
+      }
+      return;
+    }
+
     setIsPhotoConfirmed((prev) => {
       const next = !prev;
       if (next) {
