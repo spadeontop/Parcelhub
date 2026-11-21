@@ -135,6 +135,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         id: orders.id,
         status: orders.status,
         screenshotVerified: orderScreenshots.isVerified,
+        screenshotChecks: orderScreenshots.checks,
       })
       .from(orders)
       .leftJoin(orderScreenshots, eq(orderScreenshots.orderId, orders.id))
@@ -167,6 +168,19 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     const normalizedTrackingId = normalizeTrackingId(trackingId);
+    const lockedTrackingId =
+      order.screenshotChecks?.trackingIdLocked === true &&
+      order.screenshotChecks.trackingId_strict
+        ? normalizeTrackingId(order.screenshotChecks.trackingId_strict)
+        : null;
+
+    if (lockedTrackingId && normalizedTrackingId !== lockedTrackingId) {
+      return jsonError(
+        "Tracking ID is locked to the verified screenshot and cannot be modified",
+        403,
+        "TrackingIdLocked"
+      );
+    }
     if (await hasActivePaidTrackingId(normalizedTrackingId, order.id)) {
       return jsonError(
         "Tracking number is already registered to a paid active parcel",
