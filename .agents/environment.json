@@ -1,0 +1,3 @@
+{
+  "install": "npm --prefix backend install --no-audit --no-fund && npm --prefix mobile-web-prototype ci --no-audit --no-fund"
+}
