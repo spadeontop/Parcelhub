@@ -8,6 +8,9 @@ export interface CompressedImageResult {
   readonly sizeBytes: number;
 }
 
+const MAX_CUSTOMER_BYTES = 110 * 1024;
+const TARGET_WIDTH_PX = 780;
+
 /**
  * Calculates byte size of a base64 string
  */
@@ -19,9 +22,9 @@ export function getBase64ByteLength(base64Str: string): number {
 
 /**
  * Compresses customer receipt screenshot:
- * - Dimensions: scaled down to max 800px (aspect ratio preserved)
+ * - Dimensions: caps width at 780px (preserves aspect ratio so portrait phone screenshots stay legible for OCR)
  * - Format: WebP
- * - Quality: 50% lossy (0.5)
+ * - Quality: 50% lossy (0.5), with a single fallback pass (600px / 0.35) for extra-tall scrolling screenshots
  * - Size check: ensures final base64 is under 110KB ceiling (V1 Feature #4 & IMAGE_COMPRESSION.md)
  */
 export async function compressCustomerScreenshot(
@@ -31,21 +34,12 @@ export async function compressCustomerScreenshot(
 ): Promise<CompressedImageResult> {
   const actions: ImageManipulator.Action[] = [];
 
-  // Dimension check: if either side > 800, scale down longest dimension to 800px
-  if (sourceWidth && sourceHeight) {
-    if (sourceWidth > 800 || sourceHeight > 800) {
-      if (sourceWidth >= sourceHeight) {
-        actions.push({ resize: { width: 800 } });
-      } else {
-        actions.push({ resize: { height: 800 } });
-      }
-    }
-  } else {
-    // If original dimensions are not pre-known, resize width to 800 (aspect ratio preserved)
-    actions.push({ resize: { width: 800 } });
+  // Cap width at 780px (avoid upscaling images already narrower than 780px)
+  if (!sourceWidth || sourceWidth > TARGET_WIDTH_PX) {
+    actions.push({ resize: { width: TARGET_WIDTH_PX } });
   }
 
-  const result = await ImageManipulator.manipulateAsync(
+  let result = await ImageManipulator.manipulateAsync(
     sourceUri,
     actions,
     {
@@ -55,10 +49,29 @@ export async function compressCustomerScreenshot(
     }
   );
 
-  const base64DataUri = `data:image/webp;base64,${result.base64}`;
-  const sizeBytes = getBase64ByteLength(base64DataUri);
+  let base64DataUri = `data:image/webp;base64,${result.base64}`;
+  let sizeBytes = getBase64ByteLength(base64DataUri);
 
-  if (sizeBytes > 110 * 1024) {
+  // Safety fallback for extra-tall / scrolling screenshots that exceed 110KB at 780px width
+  if (sizeBytes > MAX_CUSTOMER_BYTES) {
+    const fallbackActions: ImageManipulator.Action[] =
+      !sourceWidth || sourceWidth > 600 ? [{ resize: { width: 600 } }] : [];
+
+    result = await ImageManipulator.manipulateAsync(
+      sourceUri,
+      fallbackActions,
+      {
+        compress: 0.35,
+        format: ImageManipulator.SaveFormat.WEBP,
+        base64: true,
+      }
+    );
+
+    base64DataUri = `data:image/webp;base64,${result.base64}`;
+    sizeBytes = getBase64ByteLength(base64DataUri);
+  }
+
+  if (sizeBytes > MAX_CUSTOMER_BYTES) {
     throw new Error(`Compressed image size (${Math.round(sizeBytes / 1024)} KB) exceeds 110KB limit`);
   }
 

@@ -24,6 +24,7 @@ import {
   CustomerListOrdersQueryParams,
   JWTToken,
   OrderId,
+  ScreenshotSourceApp,
 } from '../types/api';
 import { authApi } from '../services/authApi';
 import { orderApi } from '../services/orderApi';
@@ -115,6 +116,8 @@ export type OrderDraft = {
   readonly recipientName?: string;
   readonly price?: number;
   readonly totalAmount?: string;
+  readonly trackingIdLocked?: boolean;
+  readonly sourceApp?: ScreenshotSourceApp;
 };
 
 const DEFAULT_ORDER_DRAFT: OrderDraft = {
@@ -685,11 +688,19 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
         ? `${customer.firstName || ''} ${customer.lastName || ''}`.trim()
         : '';
 
+      const autofill = res.autofill;
       updateOrderDraft({
         orderId: res.orderId,
         ticketCode: res.ticketCode,
         imageUrl,
-        recipientName: defaultRecipient,
+        recipientName: autofill?.recipientName || defaultRecipient,
+        ...(autofill?.trackingId ? { trackingId: autofill.trackingId } : {}),
+        ...(autofill?.productName ? { productName: autofill.productName } : {}),
+        ...(typeof autofill?.price === 'number'
+          ? { price: autofill.price, totalAmount: String(autofill.price) }
+          : {}),
+        trackingIdLocked: Boolean(autofill?.trackingIdLocked && autofill?.trackingId),
+        sourceApp: autofill?.sourceApp,
       });
 
       setSelectedOrderTicketCode(res.ticketCode);

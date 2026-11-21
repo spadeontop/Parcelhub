@@ -5,7 +5,34 @@ import Svg, { Path } from 'react-native-svg';
 import * as ImagePicker from 'expo-image-picker';
 import { useV1 } from '../../v1/context/V1Context';
 import { compressCustomerScreenshot } from '../../v1/utils/imageCompression';
+import { ScreenshotSourceApp } from '../../v1/types/api';
 import { AppHeader } from '../layout/AppHeader';
+
+const TRACKING_TUTORIAL_BY_APP: Record<
+  ScreenshotSourceApp,
+  { title: string; steps: string }
+> = {
+  shopee: {
+    title: 'Shopee Tracking Number Not Found',
+    steps:
+      'Open Shopee → Me → To Receive → tap your order → tap "Shipping Information" so the SPX/courier tracking number is visible, then take a screenshot.',
+  },
+  lazada: {
+    title: 'Lazada Tracking Number Not Found',
+    steps:
+      'Open Lazada → Account → To Receive → tap your order → tap "Track Package" so the LEX/courier tracking number is visible, then take a screenshot.',
+  },
+  tiktok: {
+    title: 'TikTok Shop Tracking Number Not Found',
+    steps:
+      'Open TikTok → Profile → Your Orders → tap your order → tap "Shipping details" so the courier tracking number is visible, then take a screenshot.',
+  },
+  unknown: {
+    title: 'Tracking Number Not Visible',
+    steps:
+      'Please upload a clear order or shipping details screenshot from Shopee, Lazada, or TikTok Shop that clearly shows the courier tracking number.',
+  },
+};
 
 export const CreateOrderScreen: React.FC = () => {
   const {
@@ -20,6 +47,7 @@ export const CreateOrderScreen: React.FC = () => {
 
   const [isInitializing, setIsInitializing] = useState(false);
   const [isPicking, setIsPicking] = useState(false);
+  const [missingTrackingApp, setMissingTrackingApp] = useState<ScreenshotSourceApp | null>(null);
 
   const previewSourceUri = orderDraft.previewUri || orderDraft.imageUrl || null;
   const hasUploadedReceipt = Boolean(previewSourceUri);
@@ -53,6 +81,7 @@ export const CreateOrderScreen: React.FC = () => {
           imageUrl: compressed.base64,
           previewUri: compressed.uri,
         });
+        setMissingTrackingApp(null);
         showToast('Receipt attached successfully!');
       }
     } catch (err: any) {
@@ -75,10 +104,20 @@ export const CreateOrderScreen: React.FC = () => {
       return;
     }
 
+    setMissingTrackingApp(null);
     setIsInitializing(true);
     try {
       await initializeCustomerOrder(orderDraft.imageUrl);
     } catch (err: any) {
+      if (err?.error === 'TrackingIdMissing') {
+        const app: ScreenshotSourceApp =
+          err?.sourceApp === 'shopee' ||
+          err?.sourceApp === 'lazada' ||
+          err?.sourceApp === 'tiktok'
+            ? err.sourceApp
+            : 'unknown';
+        setMissingTrackingApp(app);
+      }
       showToast(err?.message || 'Failed to initialize order.');
     } finally {
       setIsInitializing(false);
@@ -210,6 +249,18 @@ export const CreateOrderScreen: React.FC = () => {
               )}
             </TouchableOpacity>
           </View>
+
+          {/* App-Specific Tracking ID Guidance Card (shown on 422 TrackingIdMissing) */}
+          {missingTrackingApp && (
+            <View className="rounded-[20px] bg-[#fffbeb] border border-[#fde68a] p-4 mb-4">
+              <Text className="text-[13px] font-bold text-[#92400e] mb-1">
+                {TRACKING_TUTORIAL_BY_APP[missingTrackingApp].title}
+              </Text>
+              <Text className="text-[12px] text-[#78350f] leading-5">
+                {TRACKING_TUTORIAL_BY_APP[missingTrackingApp].steps}
+              </Text>
+            </View>
+          )}
 
           {/* Next Button */}
           <TouchableOpacity
