@@ -141,7 +141,7 @@ export async function callOpenRouterWithImage(
         content: [
           {
             type: "input_image",
-            imageUrl: normalizeImageInput(req.imageUrl),
+            image_url: normalizeImageInput(req.imageUrl),
             detail: req.detail ?? "auto",
           },
         ],

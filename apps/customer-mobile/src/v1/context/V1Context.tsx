@@ -694,11 +694,10 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
         ticketCode: res.ticketCode,
         imageUrl,
         recipientName: autofill?.recipientName || defaultRecipient,
-        ...(autofill?.trackingId ? { trackingId: autofill.trackingId } : {}),
-        ...(autofill?.productName ? { productName: autofill.productName } : {}),
-        ...(typeof autofill?.price === 'number'
-          ? { price: autofill.price, totalAmount: String(autofill.price) }
-          : {}),
+        trackingId: autofill?.trackingId || '',
+        productName: autofill?.productName || '',
+        price: typeof autofill?.price === 'number' ? autofill.price : undefined,
+        totalAmount: typeof autofill?.price === 'number' ? String(autofill.price) : '',
         trackingIdLocked: Boolean(autofill?.trackingIdLocked && autofill?.trackingId),
         sourceApp: autofill?.sourceApp,
       });
