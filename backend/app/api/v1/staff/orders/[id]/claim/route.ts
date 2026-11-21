@@ -43,7 +43,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     //    e. Update order to CLAIMED and append to statusTimeline
     // ---------------------------------------------------------
     const order = await db.query.orders.findFirst({
-      where: or(eq(orders.id, lookupId), eq(orders.ticketCode, lookupId)),
+      where: or(eq(orders.id, lookupId), eq(orders.ticketCode, lookupId.toUpperCase())),
       columns: ORDER_NON_IMAGE_COLUMNS,
     });
 
@@ -136,8 +136,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     return jsonSuccess(response);
   } catch (err: unknown) {
-    const errorMsg =
-      err instanceof Error ? err.message : "Internal server error claiming order";
-    return jsonError(errorMsg, 500);
+    console.error("[Staff Claim Order Error]:", err);
+    return jsonError("Internal server error claiming order", 500, "Internal Server Error");
   }
 }

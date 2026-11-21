@@ -85,7 +85,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       })
       .from(orders)
       .leftJoin(staff, eq(orders.courierPaidBy, staff.id))
-      .where(or(eq(orders.id, lookupId), eq(orders.ticketCode, lookupId)))
+      .where(or(eq(orders.id, lookupId), eq(orders.ticketCode, lookupId.toUpperCase())))
       .limit(1);
 
     if (!order) {
@@ -138,8 +138,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const response: StaffGetOrderRes = orderDetail;
     return jsonSuccess(response);
   } catch (err: unknown) {
-    const errorMsg =
-      err instanceof Error ? err.message : "Internal server error fetching order detail";
-    return jsonError(errorMsg, 500);
+    console.error("[Staff Get Order Error]:", err);
+    return jsonError("Internal server error fetching order detail", 500, "Internal Server Error");
   }
 }

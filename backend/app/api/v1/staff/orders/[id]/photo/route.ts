@@ -62,7 +62,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     //    the requested photo column(s) from the database.
     //    Screenshots live exclusively in order_screenshots.image_url.
     // ---------------------------------------------------------
-    const whereClause = or(eq(orders.id, lookupId), eq(orders.ticketCode, lookupId));
+    const whereClause = or(eq(orders.id, lookupId), eq(orders.ticketCode, lookupId.toUpperCase()));
 
     let orderId: string;
     let imageUrl: string | null = null;
@@ -130,9 +130,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     return jsonSuccess(response);
   } catch (err: unknown) {
-    const errorMsg =
-      err instanceof Error ? err.message : "Internal server error fetching order photo(s)";
-    return jsonError(errorMsg, 500);
+    console.error("[Staff Get Order Photo Error]:", err);
+    return jsonError("Internal server error fetching order photo(s)", 500, "Internal Server Error");
   }
 }
 

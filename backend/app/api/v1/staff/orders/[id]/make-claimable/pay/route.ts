@@ -50,7 +50,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       })
       .from(orders)
       .leftJoin(staff, eq(orders.courierPaidBy, staff.id))
-      .where(or(eq(orders.id, lookupId), eq(orders.ticketCode, lookupId)))
+      .where(or(eq(orders.id, lookupId), eq(orders.ticketCode, lookupId.toUpperCase())))
       .limit(1);
 
     if (!order) {
@@ -116,8 +116,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     return jsonSuccess(response);
   } catch (err: unknown) {
-    const errorMsg =
-      err instanceof Error ? err.message : "Internal server error recording courier payment";
-    return jsonError(errorMsg, 500);
+    console.error("[Staff Pay Courier Error]:", err);
+    return jsonError("Internal server error recording courier payment", 500, "Internal Server Error");
   }
 }

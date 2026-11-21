@@ -76,10 +76,11 @@ export async function GET(request: NextRequest) {
       conditions.push(eq(orders.status, statusFilter));
     }
     if (searchFilter) {
+      const escapedSearch = searchFilter.replace(/[\\%_]/g, "\\$&");
       conditions.push(
         or(
-          ilike(orders.trackingId, `%${searchFilter}%`),
-          ilike(orders.ticketCode, `%${searchFilter}%`)
+          ilike(orders.trackingId, `%${escapedSearch}%`),
+          ilike(orders.ticketCode, `%${escapedSearch}%`)
         )!
       );
     }
@@ -188,8 +189,7 @@ export async function GET(request: NextRequest) {
 
     return jsonSuccess(response);
   } catch (err: unknown) {
-    const errorMsg =
-      err instanceof Error ? err.message : "Internal server error fetching orders";
-    return jsonError(errorMsg, 500);
+    console.error("[Staff List Orders Error]:", err);
+    return jsonError("Internal server error fetching orders", 500, "Internal Server Error");
   }
 }

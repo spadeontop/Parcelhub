@@ -63,7 +63,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     //    d. Update order to AWAITING_PARCEL and calculate change
     // ---------------------------------------------------------
     const order = await db.query.orders.findFirst({
-      where: or(eq(orders.id, lookupId), eq(orders.ticketCode, lookupId)),
+      where: or(eq(orders.id, lookupId), eq(orders.ticketCode, lookupId.toUpperCase())),
       columns: ORDER_NON_IMAGE_COLUMNS,
     });
 
@@ -178,8 +178,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     return jsonSuccess(response);
   } catch (err: unknown) {
-    const errorMsg =
-      err instanceof Error ? err.message : "Internal server error activating order";
-    return jsonError(errorMsg, 500);
+    console.error("[Staff Activate Order Error]:", err);
+    return jsonError("Internal server error activating order", 500, "Internal Server Error");
   }
 }

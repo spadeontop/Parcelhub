@@ -87,8 +87,7 @@ export async function POST(request: NextRequest) {
 
     return jsonSuccess(response);
   } catch (err: unknown) {
-    const errorMsg =
-      err instanceof Error ? err.message : "Internal server error saving FCM token";
-    return jsonError(errorMsg, 500);
+    console.error("[Notification Upload Token Error]:", err);
+    return jsonError("Internal server error saving FCM token", 500, "Internal Server Error");
   }
 }
