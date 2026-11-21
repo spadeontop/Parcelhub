@@ -1,11 +1,17 @@
-import { eq } from "drizzle-orm";
+import { and, count, eq, gt } from "drizzle-orm";
 import { db } from "@/db";
-import { orderScreenshots, type OrderScreenshotChecks } from "@/db/schema";
+import {
+  aiVerificationLogs,
+  orderScreenshots,
+  type AiVerificationOutcome,
+  type OrderScreenshotChecks,
+} from "@/db/schema";
 import type {
   AiTrackingIdMode,
   CustomerOrderAutofill,
   ScreenshotSourceApp,
 } from "@/app/types/v1/api";
+import { normalizeTrackingId } from "./orders";
 import { buildParcelVerificationContext } from "./ai-context";
 import {
   callOpenRouterWithImage,
@@ -16,12 +22,19 @@ import {
   type OpenRouterUsage,
 } from "./openrouter";
 
+export type AiVerificationStatus =
+  | "OK"
+  | "INVALID_SCREENSHOT"
+  | "PROVIDER_ERROR"
+  | "DISABLED";
+
 export type AiVerificationInput = {
   readonly imageUrl: string;
   readonly customerFullName: string;
 };
 
 export type AiVerificationResult = {
+  readonly status: AiVerificationStatus;
   readonly isVerified: boolean;
   readonly checks: OrderScreenshotChecks | null;
   readonly model: string | null;
@@ -29,6 +42,7 @@ export type AiVerificationResult = {
   readonly usage?: OpenRouterUsage;
   readonly autofill: CustomerOrderAutofill | null;
   readonly sourceApp: ScreenshotSourceApp;
+  readonly latencyMs: number;
   readonly reason?: string;
 };
 
@@ -165,13 +179,17 @@ function getOpenRouterReasoningConfig(): OpenRouterReasoningConfig | undefined {
 export async function verifyOrderScreenshot(
   input: AiVerificationInput
 ): Promise<AiVerificationResult> {
+  const startedAt = Date.now();
+
   if (!isAiVerificationEnabled()) {
     return {
+      status: "DISABLED",
       isVerified: false,
       checks: null,
       model: null,
       autofill: null,
       sourceApp: "unknown",
+      latencyMs: Date.now() - startedAt,
       reason: "AI_VERIFICATION is disabled",
     };
   }
@@ -179,11 +197,13 @@ export async function verifyOrderScreenshot(
   const model = process.env.OPENROUTER_MODEL?.trim();
   if (!model) {
     return {
+      status: "PROVIDER_ERROR",
       isVerified: false,
       checks: null,
       model: null,
       autofill: null,
       sourceApp: "unknown",
+      latencyMs: Date.now() - startedAt,
       reason: "OPENROUTER_MODEL is not configured",
     };
   }
@@ -200,11 +220,13 @@ export async function verifyOrderScreenshot(
 
   if (!response.ok) {
     return {
+      status: "PROVIDER_ERROR",
       isVerified: false,
       checks: null,
       model,
       autofill: null,
       sourceApp: "unknown",
+      latencyMs: Date.now() - startedAt,
       reason: response.error,
     };
   }
@@ -214,16 +236,21 @@ export async function verifyOrderScreenshot(
     parsed = JSON.parse(response.text) as RawVerificationPayload;
   } catch {
     return {
+      status: "PROVIDER_ERROR",
       isVerified: false,
       checks: null,
       model: response.model,
+      provider: response.provider,
+      usage: response.usage,
       autofill: null,
       sourceApp: "unknown",
+      latencyMs: Date.now() - startedAt,
       reason: "Failed to parse structured JSON from OpenRouter",
     };
   }
 
-  const trackingId = parsed.trackingId_strict?.trim() || null;
+  const rawTrackingId = parsed.trackingId_strict?.trim();
+  const trackingId = rawTrackingId ? normalizeTrackingId(rawTrackingId) : null;
   const productName = parsed.productName?.trim() || null;
   const recipientName = parsed.recipientName?.trim() || input.customerFullName;
   const price =
@@ -231,6 +258,7 @@ export async function verifyOrderScreenshot(
       ? parsed.price
       : null;
   const mode = getAiTrackingIdMode();
+  const trackingIdLocked = mode === "strict" && Boolean(trackingId);
 
   const checks: OrderScreenshotChecks = {
     isParcel: parsed.isParcel,
@@ -238,6 +266,7 @@ export async function verifyOrderScreenshot(
     sourceApp: parsed.sourceApp,
     trackingId_strict: trackingId ?? undefined,
     trackingId_similar: parsed.trackingId_similar?.trim() || undefined,
+    trackingIdLocked,
   };
 
   const autofill: CustomerOrderAutofill = {
@@ -245,13 +274,14 @@ export async function verifyOrderScreenshot(
     productName,
     recipientName,
     price,
-    trackingIdLocked: mode === "strict",
+    trackingIdLocked,
     sourceApp: parsed.sourceApp,
   };
 
   const isVerified = Boolean(parsed.isParcel && parsed.hasRealMetadata);
 
   return {
+    status: isVerified ? "OK" : "INVALID_SCREENSHOT",
     isVerified,
     checks,
     model: response.model,
@@ -259,8 +289,80 @@ export async function verifyOrderScreenshot(
     usage: response.usage,
     autofill,
     sourceApp: parsed.sourceApp,
+    latencyMs: Date.now() - startedAt,
     reason: isVerified ? undefined : "Screenshot did not pass parcel verification",
   };
+}
+
+const DEFAULT_AI_RATE_LIMIT_MAX_PER_MINUTE = 5;
+
+function resolveAiRateLimitMaxPerMinute(explicitLimit?: number): number {
+  if (typeof explicitLimit === "number" && explicitLimit > 0) {
+    return explicitLimit;
+  }
+  const envVal = process.env.AI_RATE_LIMIT_MAX_PER_MINUTE?.trim();
+  const parsed = envVal ? parseInt(envVal, 10) : NaN;
+  return Number.isFinite(parsed) && parsed > 0
+    ? parsed
+    : DEFAULT_AI_RATE_LIMIT_MAX_PER_MINUTE;
+}
+
+/**
+ * Checks whether a customer has reached the per-minute AI verification attempt limit
+ * using `ai_verification_logs` (throttles both accepted and rejected screenshot spam).
+ */
+export async function isCustomerAiRateLimited(
+  customerId: string,
+  maxPerMinute?: number
+): Promise<boolean> {
+  const limit = resolveAiRateLimitMaxPerMinute(maxPerMinute);
+  const windowStart = new Date(Date.now() - 60_000);
+  const [row] = await db
+    .select({ total: count() })
+    .from(aiVerificationLogs)
+    .where(
+      and(
+        eq(aiVerificationLogs.customerId, customerId),
+        gt(aiVerificationLogs.createdAt, windowStart)
+      )
+    );
+  return Number(row?.total ?? 0) >= limit;
+}
+
+/**
+ * Non-fatal telemetry writer for `ai_verification_logs`.
+ * Never throws so logging issues cannot block a valid customer order.
+ */
+export async function logAiVerificationAttempt(params: {
+  customerId: string;
+  orderId?: string | null;
+  outcome: AiVerificationOutcome;
+  trackingIdMode: AiTrackingIdMode;
+  result: AiVerificationResult;
+  errorReason?: string;
+}): Promise<void> {
+  try {
+    await db.insert(aiVerificationLogs).values({
+      customerId: params.customerId,
+      orderId: params.orderId ?? null,
+      outcome: params.outcome,
+      trackingIdMode: params.trackingIdMode,
+      sourceApp: params.result.sourceApp,
+      model: params.result.model,
+      provider: params.result.provider ?? null,
+      inputTokens: params.result.usage?.inputTokens ?? null,
+      outputTokens: params.result.usage?.outputTokens ?? null,
+      totalTokens: params.result.usage?.totalTokens ?? null,
+      costUsd: params.result.usage?.cost ?? null,
+      latencyMs: params.result.latencyMs,
+      errorReason: params.errorReason ?? params.result.reason ?? null,
+    });
+  } catch (err: unknown) {
+    console.warn(
+      "[AI Verification Log Error]:",
+      err instanceof Error ? err.message : err
+    );
+  }
 }
 
 /**
