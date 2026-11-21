@@ -158,16 +158,7 @@ export const ConfirmationSubmitSection: React.FC<ConfirmationSubmitSectionProps>
 
       {/* Inline Validation Error Message */}
       {hasError && (
-        <View className="flex-row items-center gap-1.5 px-1 -mt-1">
-          <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
-            <Path
-              d="M12 9v4m0 4h.01M12 3a9 9 0 100 18 9 9 0 000-18z"
-              stroke="#dc2626"
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </Svg>
+        <View className="px-1 -mt-1">
           <Text className="text-[12px] font-semibold text-[#dc2626]">
             {errorMessage}
           </Text>
