@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { and, eq, inArray, ne, or } from "drizzle-orm";
+import { and, eq, inArray, ne, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { orders, orderScreenshots } from "@/db/schema";
 import { authenticateCustomerRequest, customerAuthErrorResponse } from "@/app/lib/v1/auth";
@@ -204,9 +204,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       );
     }
 
+    const normalizedTrackingId = trackingId.replace(/\s+/g, "").toLowerCase();
     const paidDuplicate = await db.query.orders.findFirst({
       where: and(
-        eq(orders.trackingId, trackingId),
+        sql`lower(regexp_replace(${orders.trackingId}, '[[:space:]]+', '', 'g')) = ${normalizedTrackingId}`,
         ne(orders.id, order.id),
         inArray(orders.status, [
           "AWAITING_PARCEL",
