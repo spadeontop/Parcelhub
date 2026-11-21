@@ -20,6 +20,7 @@ export const ConfirmOrderScreen: React.FC = () => {
     updateOrderDraft,
     confirmCustomerOrder,
     navigateTo,
+    goBack,
     showToast,
   } = useV1();
 
@@ -112,7 +113,7 @@ export const ConfirmOrderScreen: React.FC = () => {
         title="Confirm Order Details"
         showBackButton
         centerTitle
-        onBack={() => navigateTo('create_order')}
+        onBack={goBack}
       />
 
       {/* Main Sheet with Curved Transition */}

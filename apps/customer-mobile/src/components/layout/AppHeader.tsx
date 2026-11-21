@@ -29,7 +29,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   centerTitle = false,
   backgroundColor,
 }) => {
-  const { navigateTo } = useV1();
+  const { navigateTo, goBack } = useV1();
   const { height } = useWindowDimensions();
   const isCompact = height < 700;
 
@@ -52,7 +52,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             {showBackButton ? (
               <TouchableOpacity
                 activeOpacity={0.7}
-                onPress={onBack || (() => navigateTo('home'))}
+                onPress={onBack || goBack}
                 className="w-10 h-10 rounded-full bg-white/20 items-center justify-center border border-white/20"
                 accessibilityLabel="Back"
               >
@@ -137,7 +137,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           {showBackButton && (
             <TouchableOpacity
               activeOpacity={0.7}
-              onPress={onBack || (() => navigateTo('home'))}
+              onPress={onBack || goBack}
               className="w-9 h-9 rounded-full bg-white/20 items-center justify-center border border-white/20 mr-3"
               accessibilityLabel="Back"
             >
