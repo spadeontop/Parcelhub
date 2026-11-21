@@ -9,7 +9,11 @@ This guide covers deploying the ParcelHub Next.js backend to **Vercel** with a r
 ### 1. Database Setup (Supabase)
 1. In your [Supabase Dashboard](https://supabase.com/dashboard), open your project.
 2. Go to the **SQL Editor** tab (`>_` on the left sidebar) -> **New query**.
-3. Copy and run the SQL migration located at [`backend/db/migrations/0000_thick_phil_sheldon.sql`](file:///c:/Users/JV/Desktop/Parcelhub-spade/Parcelhub/backend/db/migrations/0000_thick_phil_sheldon.sql).
+3. Run the SQL migrations in `backend/db/migrations/` **in order** (or run `npx drizzle-kit migrate` with `DATABASE_URL` configured):
+   - [`0000_thick_phil_sheldon.sql`](file:///c:/Users/JV/Desktop/Parcelhub-spade/Parcelhub/backend/db/migrations/0000_thick_phil_sheldon.sql)
+   - [`0001_drop_orders_image_url.sql`](file:///c:/Users/JV/Desktop/Parcelhub-spade/Parcelhub/backend/db/migrations/0001_drop_orders_image_url.sql)
+   - [`0002_add_orders_query_indexes.sql`](file:///c:/Users/JV/Desktop/Parcelhub-spade/Parcelhub/backend/db/migrations/0002_add_orders_query_indexes.sql)
+   - [`0003_normalize_tracking_ids_and_indexes.sql`](file:///c:/Users/JV/Desktop/Parcelhub-spade/Parcelhub/backend/db/migrations/0003_normalize_tracking_ids_and_indexes.sql) *(Before running on an existing DB, verify zero case/whitespace duplicates exist on paid orders.)*
 4. Go to **Project Settings** -> **Database** -> **Connection string** -> select **URI** and choose **Transaction pooler**.
 5. Copy the connection URI:
    ```text
