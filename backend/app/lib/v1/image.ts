@@ -75,6 +75,19 @@ export function getImageMaxLimitKb(role: "CUSTOMER" | "STAFF"): number {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_STAFF_IMAGE_MAX_KB;
 }
 
+const VALID_IMAGE_DATA_URI_REGEX = /^data:image\/(webp|jpeg|png);base64,[A-Za-z0-9+/=\s]+$/i;
+
+/**
+ * Validates that an image string is strictly a base64 data URI of an allowed raster type
+ * (`webp`, `jpeg`, or `png`). Blocks external HTTP(S) URLs to prevent SSRF / vision token drain.
+ */
+export function isValidImageDataUri(imageStr: string): boolean {
+  if (!imageStr || typeof imageStr !== "string") {
+    return false;
+  }
+  return VALID_IMAGE_DATA_URI_REGEX.test(imageStr.trim());
+}
+
 /**
  * Validates an image attachment against configured threshold for the given role.
  */

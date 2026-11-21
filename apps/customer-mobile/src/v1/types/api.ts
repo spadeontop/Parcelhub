@@ -36,16 +36,21 @@ export type StandardSuccessResponse<TMessage extends string = string> = {
   readonly statusMessage: TMessage;
 };
 
+export type ScreenshotSourceApp = "shopee" | "lazada" | "tiktok" | "unknown";
+
 export type ApiErrorResponse = {
   readonly success: false;
   readonly error: string;
   readonly message: string;
   readonly statusCode: number;
+  readonly sourceApp?: ScreenshotSourceApp;
 };
 
 export type OrderScreenshotChecks = {
   readonly trackingId_strict?: string;
   readonly trackingId_similar?: string;
+  readonly trackingIdLocked?: boolean;
+  readonly sourceApp?: ScreenshotSourceApp;
   readonly isParcel?: boolean;
   readonly hasRealMetadata?: boolean;
   readonly [key: string]: unknown;
@@ -197,6 +202,15 @@ export type CustomerGetOrderPhotoRes = StandardSuccessResponse & {
 };
 
 // POST /api/v1/customer/orders/initialize
+export type CustomerOrderAutofill = {
+  readonly trackingId: string | null;
+  readonly productName: string | null;
+  readonly recipientName: string;
+  readonly price: number | null;
+  readonly trackingIdLocked: boolean;
+  readonly sourceApp: ScreenshotSourceApp;
+};
+
 export type CustomerInitOrderReq = {
   readonly imageUrl: string;
 };
@@ -204,6 +218,7 @@ export type CustomerInitOrderReq = {
 export type CustomerInitOrderRes = StandardSuccessResponse & {
   readonly orderId: OrderId;
   readonly ticketCode: string;
+  readonly autofill?: CustomerOrderAutofill;
 };
 
 // PUT /api/v1/customer/orders/{id}

@@ -1,5 +1,14 @@
 const OPENROUTER_RESPONSES_URL = "https://openrouter.ai/api/v1/responses";
-const DEFAULT_TIMEOUT_MS = 20_000;
+const DEFAULT_TIMEOUT_MS = 8_000; // Fits within Vercel Hobby 10s limit; override via OPENROUTER_TIMEOUT_MS
+
+function resolveTimeoutMs(explicitTimeoutMs?: number): number {
+  if (typeof explicitTimeoutMs === "number" && explicitTimeoutMs > 0) {
+    return explicitTimeoutMs;
+  }
+  const envVal = process.env.OPENROUTER_TIMEOUT_MS?.trim();
+  const parsed = envVal ? parseInt(envVal, 10) : NaN;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_TIMEOUT_MS;
+}
 
 export type OpenRouterJsonSchemaFormat = {
   readonly type: "json_schema";
@@ -124,9 +133,12 @@ export async function callOpenRouterWithImage(
     model: req.model,
     input: [
       {
+        role: "system",
+        content: [{ type: "input_text", text: req.prompt }],
+      },
+      {
         role: "user",
         content: [
-          { type: "input_text", text: req.prompt },
           {
             type: "input_image",
             imageUrl: normalizeImageInput(req.imageUrl),
@@ -156,7 +168,7 @@ export async function callOpenRouterWithImage(
       method: "POST",
       headers,
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(req.timeoutMs ?? DEFAULT_TIMEOUT_MS),
+      signal: AbortSignal.timeout(resolveTimeoutMs(req.timeoutMs)),
     });
   } catch (err: unknown) {
     return {

@@ -3,7 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { orders } from "@/db/schema";
 import { authenticateStaffRequest } from "@/app/lib/v1/auth";
-import { sendFcmNotification } from "@/app/lib/v1/fcm";
+import { scheduleFcmNotification } from "@/app/lib/v1/fcm";
 import { validateImageSize } from "@/app/lib/v1/image";
 import {
   appendStatusTimelineSql,
@@ -104,7 +104,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    sendFcmNotification({
+    scheduleFcmNotification({
       userId: order.customerId,
       title: "Parcel Ready for Claim",
       body: `Your parcel (${order.trackingId || order.productName || "parcel"}) has arrived at Lily’s Catering Hub and is ready for pickup!`,
@@ -114,7 +114,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         ticketCode: order.ticketCode,
         status: "READY_TO_CLAIM",
       },
-    }).catch(() => {});
+    });
 
     const response: StaffAttachPhotoRes = {
       statusMessage: "Proof photo attached. Order is now claimable.",

@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { orders } from "@/db/schema";
 import { authenticateStaffRequest } from "@/app/lib/v1/auth";
 import { isUniqueViolation } from "@/app/lib/v1/db-errors";
-import { sendFcmNotification } from "@/app/lib/v1/fcm";
+import { scheduleFcmNotification } from "@/app/lib/v1/fcm";
 import {
   appendStatusTimelineSql,
   hasActivePaidTrackingId,
@@ -126,7 +126,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    sendFcmNotification({
+    scheduleFcmNotification({
       userId: order.customerId,
       title: "Payment Verified",
       body: `Payment received for ${normalizedTrackingId || order.productName || "your parcel"}. Now awaiting courier arrival.`,
@@ -136,7 +136,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         ticketCode: order.ticketCode,
         status: "AWAITING_PARCEL",
       },
-    }).catch(() => {});
+    });
 
     const response: StaffActivateOrderRes = {
       statusMessage: "Order activated and awaiting parcel delivery",

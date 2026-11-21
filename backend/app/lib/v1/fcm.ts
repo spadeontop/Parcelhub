@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import { App, initializeApp, getApps, getApp, cert, applicationDefault } from "firebase-admin/app";
 import { getMessaging, Message } from "firebase-admin/messaging";
 import { eq } from "drizzle-orm";
@@ -230,5 +231,22 @@ export async function sendFcmNotification(
       success: false,
       error: errorMsg,
     };
+  }
+}
+
+/**
+ * Schedules a non-fatal FCM push notification using Next.js `after()` so Vercel Serverless
+ * keeps the function alive until delivery finishes. Falls back to fire-and-forget outside
+ * Next.js request contexts (e.g. standalone `tsx` test scripts).
+ */
+export function scheduleFcmNotification(params: SendFcmNotificationParams): void {
+  const dispatch = () => {
+    void sendFcmNotification(params).catch(() => {});
+  };
+
+  try {
+    after(dispatch);
+  } catch {
+    dispatch();
   }
 }

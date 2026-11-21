@@ -3,7 +3,7 @@ import { and, eq, gte } from "drizzle-orm";
 import { db } from "@/db";
 import { orders } from "@/db/schema";
 import { authenticateStaffRequest } from "@/app/lib/v1/auth";
-import { sendFcmNotification } from "@/app/lib/v1/fcm";
+import { scheduleFcmNotification } from "@/app/lib/v1/fcm";
 import {
   appendStatusTimelineSql,
   matchOrderByIdOrTicket,
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    sendFcmNotification({
+    scheduleFcmNotification({
       userId: order.customerId,
       title: "Parcel Claimed",
       body: `Parcel (${order.trackingId || order.productName || "order"}) was successfully claimed. Thank you for using ParcelHub!`,
@@ -103,7 +103,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         ticketCode: order.ticketCode,
         status: "CLAIMED",
       },
-    }).catch(() => {});
+    });
 
     const response: StaffClaimOrderRes = {
       statusMessage: "Order successfully claimed",
