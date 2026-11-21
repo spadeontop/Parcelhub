@@ -63,6 +63,7 @@ export const orderApi = {
       method: 'POST',
       token: authToken,
       body: JSON.stringify({ imageUrl }),
+      timeoutMs: 30000,
     });
   },
 

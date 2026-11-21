@@ -1,22 +1,30 @@
-import { ApiErrorResponse } from '../types/api';
+import { ApiErrorResponse, ScreenshotSourceApp } from '../types/api';
 import { getDetectedApiUrl } from '../../config/env';
 
 export class V1ApiError extends Error {
   readonly statusCode: number;
   readonly error: string;
   readonly isNetworkError: boolean;
+  readonly sourceApp?: ScreenshotSourceApp;
+  readonly data?: Record<string, unknown>;
 
   constructor(
     message: string,
     statusCode: number = 500,
     error: string = 'ApiError',
-    isNetworkError: boolean = false
+    isNetworkError: boolean = false,
+    extra?: {
+      readonly sourceApp?: ScreenshotSourceApp;
+      readonly data?: Record<string, unknown>;
+    }
   ) {
     super(message);
     this.name = 'V1ApiError';
     this.statusCode = statusCode;
     this.error = error;
     this.isNetworkError = isNetworkError;
+    this.sourceApp = extra?.sourceApp;
+    this.data = extra?.data;
   }
 }
 
@@ -90,5 +98,8 @@ export async function v1Fetch<T>(
   const errorType = errorEnvelope?.error || 'ApiError';
   const statusCode = errorEnvelope?.statusCode || response.status;
 
-  throw new V1ApiError(message, statusCode, errorType, false);
+  throw new V1ApiError(message, statusCode, errorType, false, {
+    sourceApp: errorEnvelope?.sourceApp,
+    data: data && typeof data === 'object' ? (data as Record<string, unknown>) : undefined,
+  });
 }

@@ -41,13 +41,14 @@ export const ConfirmOrderScreen: React.FC = () => {
   const totalAmount = orderDraft.totalAmount || '';
   const trackingId = orderDraft.trackingId || '';
 
-  // Amount validation logic
+  // Amount validation logic (supports >= 0 for prepaid/non-COD parcels as well as COD)
   const rawAmountNumber = parseCurrency(totalAmount);
   const isAmountValid =
-    totalAmount.trim().length > 0 && rawAmountNumber > 0 && !isNaN(rawAmountNumber);
+    totalAmount.trim().length > 0 && rawAmountNumber >= 0 && !isNaN(rawAmountNumber);
   const isAmountFilled = totalAmount.trim().length > 0;
   const amountError =
-    isAmountFilled && !isAmountValid ? 'Please enter a valid amount (e.g. 500)' : '';
+    isAmountFilled && !isAmountValid ? 'Please enter a valid amount (e.g. 0 or 500)' : '';
+  const isTrackingIdLocked = Boolean(orderDraft.trackingIdLocked && trackingId.trim());
 
   const validateForm = (): boolean => {
     const errors: {
@@ -212,13 +213,22 @@ export const ConfirmOrderScreen: React.FC = () => {
                 value={trackingId}
                 error={fieldErrors.trackingId || trackingError || undefined}
                 autoCapitalize="characters"
+                editable={!isTrackingIdLocked}
                 onChangeText={(text) => {
+                  if (isTrackingIdLocked) return;
                   if (fieldErrors.trackingId) {
                     setFieldErrors((prev) => ({ ...prev, trackingId: undefined }));
                   }
                   if (trackingError) setTrackingError(null);
                   updateOrderDraft({ trackingId: text });
                 }}
+                rightElement={
+                  isTrackingIdLocked ? (
+                    <View className="bg-[#eff6ff] border border-[#bfdbfe] px-2 py-0.5 rounded-full">
+                      <Text className="text-[10px] font-bold text-[#2563eb]">Verified</Text>
+                    </View>
+                  ) : undefined
+                }
               />
             </View>
           </View>
