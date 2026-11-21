@@ -182,7 +182,7 @@ export const AuthInput: React.FC<AuthInputProps> = ({
             style={{
               fontSize: labelFontSize,
               color: labelColor,
-              fontWeight: '700',
+              fontWeight: '400',
               includeFontPadding: false,
             }}
           >
@@ -212,9 +212,10 @@ export const AuthInput: React.FC<AuthInputProps> = ({
               if (onBlur) onBlur(e);
             }}
             secureTextEntry={isPassword ? !showPassword : secureTextEntry}
-            className="w-full font-bold text-[#1e293b] p-0 m-0"
+            className="w-full font-normal text-[#1e293b] p-0 m-0"
             style={{
               fontSize: isCompact ? 13.5 : 14.5,
+              fontWeight: '400',
               includeFontPadding: false,
               height: isCompact ? 22 : 24,
               outline: 'none' as any,
