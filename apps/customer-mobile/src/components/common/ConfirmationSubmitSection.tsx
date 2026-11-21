@@ -23,6 +23,8 @@ export interface ConfirmationSubmitSectionProps {
   onCheckedChange?: (checked: boolean) => void;
   /** Callback invoked when the button is pressed and confirmation is valid */
   onSubmit: () => void | Promise<void>;
+  /** Optional form validation check called on submit attempt */
+  onValidate?: () => boolean;
   /** Loading state indicator */
   isLoading?: boolean;
   /** Optional container class or style */
@@ -39,6 +41,7 @@ export const ConfirmationSubmitSection: React.FC<ConfirmationSubmitSectionProps>
   isChecked: controlledChecked,
   onCheckedChange,
   onSubmit,
+  onValidate,
   isLoading = false,
   className = '',
   themeColor = '#215cd4',
@@ -85,8 +88,17 @@ export const ConfirmationSubmitSection: React.FC<ConfirmationSubmitSectionProps>
   const handlePressSubmit = () => {
     if (isLoading) return;
 
+    let isFormValid = true;
+    if (onValidate) {
+      isFormValid = onValidate();
+    }
+
     if (!isChecked) {
       triggerShake();
+      return;
+    }
+
+    if (!isFormValid) {
       return;
     }
 

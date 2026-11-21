@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -24,9 +24,16 @@ export const ConfirmOrderScreen: React.FC = () => {
     showToast,
   } = useV1();
 
+  const scrollViewRef = useRef<any>(null);
   const [isConfirmed, setIsConfirmed] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [trackingError, setTrackingError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{
+    product?: string;
+    recipient?: string;
+    amount?: string;
+    trackingId?: string;
+  }>({});
 
   const product = orderDraft.productName || '';
   const recipient = orderDraft.recipientName || '';
@@ -41,13 +48,41 @@ export const ConfirmOrderScreen: React.FC = () => {
   const amountError =
     isAmountFilled && !isAmountValid ? 'Please enter a valid amount (e.g. 500)' : '';
 
-  // Form validity for submission
-  const isFormValid =
-    isConfirmed &&
-    isAmountValid &&
-    product.trim().length > 0 &&
-    recipient.trim().length > 0 &&
-    trackingId.trim().length > 0;
+  const validateForm = (): boolean => {
+    const errors: {
+      product?: string;
+      recipient?: string;
+      amount?: string;
+      trackingId?: string;
+    } = {};
+
+    if (!product.trim()) {
+      errors.product = 'Please enter the product name.';
+    }
+
+    if (!recipient.trim()) {
+      errors.recipient = "Please enter the receiver's name.";
+    }
+
+    if (!totalAmount.trim()) {
+      errors.amount = 'Please enter the total amount.';
+    } else if (!isAmountValid) {
+      errors.amount = 'Please enter a valid amount (e.g. 500)';
+    }
+
+    if (!trackingId.trim()) {
+      errors.trackingId = 'Please enter the tracking ID.';
+    }
+
+    setFieldErrors(errors);
+
+    const hasErrors = Object.keys(errors).length > 0;
+    if (hasErrors) {
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+      return false;
+    }
+    return true;
+  };
 
   const handleSubmit = async () => {
     if (!orderDraft.orderId) {
@@ -55,24 +90,10 @@ export const ConfirmOrderScreen: React.FC = () => {
       navigateTo('create_order');
       return;
     }
+    if (!validateForm()) {
+      return;
+    }
     if (!isConfirmed) {
-      showToast('Please check the confirmation box to proceed.');
-      return;
-    }
-    if (!product.trim()) {
-      showToast('Please enter the product name.');
-      return;
-    }
-    if (!recipient.trim()) {
-      showToast("Please enter the receiver's name.");
-      return;
-    }
-    if (!isAmountValid) {
-      showToast('Please enter a valid total amount before submitting.');
-      return;
-    }
-    if (!trackingId.trim()) {
-      showToast('Please enter the tracking ID.');
       return;
     }
 
@@ -119,6 +140,7 @@ export const ConfirmOrderScreen: React.FC = () => {
       {/* Main Sheet with Curved Transition */}
       <View className="flex-1 bg-[#f8fafc] rounded-t-[32px] pt-4 overflow-hidden">
         <ScrollView
+          ref={scrollViewRef}
           showsVerticalScrollIndicator={false}
           className="flex-1 px-4"
           contentContainerStyle={{ paddingBottom: 40 }}
@@ -147,7 +169,13 @@ export const ConfirmOrderScreen: React.FC = () => {
               <AuthInput
                 label="Product"
                 value={product}
-                onChangeText={(text) => updateOrderDraft({ productName: text })}
+                error={fieldErrors.product}
+                onChangeText={(text) => {
+                  if (fieldErrors.product) {
+                    setFieldErrors((prev) => ({ ...prev, product: undefined }));
+                  }
+                  updateOrderDraft({ productName: text });
+                }}
                 showSuccessCheck={false}
               />
 
@@ -155,7 +183,13 @@ export const ConfirmOrderScreen: React.FC = () => {
               <AuthInput
                 label="Receiver's Name"
                 value={recipient}
-                onChangeText={(text) => updateOrderDraft({ recipientName: text })}
+                error={fieldErrors.recipient}
+                onChangeText={(text) => {
+                  if (fieldErrors.recipient) {
+                    setFieldErrors((prev) => ({ ...prev, recipient: undefined }));
+                  }
+                  updateOrderDraft({ recipientName: text });
+                }}
                 showSuccessCheck={false}
               />
 
@@ -163,10 +197,15 @@ export const ConfirmOrderScreen: React.FC = () => {
               <AuthInput
                 label="Total Amount"
                 value={totalAmount}
-                onChangeText={(text) => updateOrderDraft({ totalAmount: text })}
-                keyboardType="numeric"
-                error={amountError}
+                error={fieldErrors.amount || amountError}
                 isValid={isAmountValid}
+                onChangeText={(text) => {
+                  if (fieldErrors.amount) {
+                    setFieldErrors((prev) => ({ ...prev, amount: undefined }));
+                  }
+                  updateOrderDraft({ totalAmount: text });
+                }}
+                keyboardType="numeric"
                 showSuccessCheck={false}
               />
 
@@ -174,8 +213,11 @@ export const ConfirmOrderScreen: React.FC = () => {
               <AuthInput
                 label="Tracking ID"
                 value={trackingId}
-                error={trackingError || undefined}
+                error={fieldErrors.trackingId || trackingError || undefined}
                 onChangeText={(text) => {
+                  if (fieldErrors.trackingId) {
+                    setFieldErrors((prev) => ({ ...prev, trackingId: undefined }));
+                  }
                   if (trackingError) setTrackingError(null);
                   updateOrderDraft({ trackingId: text });
                 }}
@@ -270,6 +312,7 @@ export const ConfirmOrderScreen: React.FC = () => {
             errorMessage="Please check the confirmation box before submitting."
             isChecked={isConfirmed}
             onCheckedChange={setIsConfirmed}
+            onValidate={validateForm}
             onSubmit={handleSubmit}
             isLoading={isSubmitting}
             themeColor="#2563eb"
