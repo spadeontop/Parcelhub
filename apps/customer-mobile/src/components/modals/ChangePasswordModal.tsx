@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { useApp } from '../../context/AppContext';
-import { AuthInput } from '../common/AuthInput';
+import { FloatingInput } from '../common/FloatingInput';
 
 interface ChangePasswordModalProps {
   visible: boolean;
@@ -188,25 +188,22 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                 </TouchableOpacity>
               </View>
 
-              {/* Form Fields using Register AuthInput components */}
+              {/* Form Fields using FloatingInput */}
               <View className="pt-[14px]">
                 {/* Field 1: Current Password */}
-                <AuthInput
+                <FloatingInput
                   label="Current Password"
                   value={currentPassword}
                   onChangeText={setCurrentPassword}
-                  isPassword
-                  showSuccessCheck={false}
+                  secureTextEntry
                 />
 
                 {/* Field 2: New Password */}
-                <AuthInput
+                <FloatingInput
                   label="New Password"
                   value={newPassword}
                   onChangeText={setNewPassword}
-                  isPassword
-                  isValid={isNewPasswordValid}
-                  showSuccessCheck
+                  secureTextEntry
                 />
 
                 {/* Password Strength Requirement Indicators (shown while typing new password) */}
@@ -251,24 +248,21 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                 )}
 
                 {/* Field 3: Confirm Password */}
-                <AuthInput
+                <FloatingInput
                   label="Confirm Password"
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
-                  isPassword
+                  secureTextEntry
                   error={isConfirmMismatch ? 'Passwords do not match' : undefined}
-                  isValid={isConfirmPasswordMatch}
-                  showSuccessCheck
                 />
 
                 {/* Field 4: Verification Code */}
-                <AuthInput
+                <FloatingInput
                   label="Verification Code"
                   value={verificationCode}
                   onChangeText={setVerificationCode}
                   keyboardType="number-pad"
                   maxLength={6}
-                  showSuccessCheck={false}
                   rightElement={
                     isTimerRunning && timerSeconds > 0 ? (
                       <TouchableOpacity
