@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, BackHandler } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import * as Clipboard from 'expo-clipboard';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -16,11 +16,22 @@ export const QrScreen: React.FC = () => {
     orders,
     fetchOrderDetail,
     navigateTo,
+    goBack,
     showToast,
   } = useV1();
   const [orderDetail, setOrderDetail] = useState<CustomerOrderDetail | null>(null);
   const [isSavingPass, setIsSavingPass] = useState(false);
   const qrSvgRef = useRef<any>(null);
+
+  // Handle hardware back on Android: return to previous screen
+  useEffect(() => {
+    const onBackPress = () => {
+      goBack();
+      return true;
+    };
+    const backSubscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => backSubscription.remove();
+  }, [goBack]);
 
   const cachedSummary = orders.find(
     (o) => o.id === selectedOrderId || o.ticketCode === selectedOrderId
@@ -142,7 +153,7 @@ export const QrScreen: React.FC = () => {
           {/* Button - Go Back */}
           <TouchableOpacity
             activeOpacity={0.7}
-            onPress={() => navigateTo('home')}
+            onPress={goBack}
             style={{
               width: 40,
               height: 40,

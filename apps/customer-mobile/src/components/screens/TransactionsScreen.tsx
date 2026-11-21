@@ -49,8 +49,13 @@ const getFilterLabel = (filter: TransactionFilter): string => {
 };
 
 export const TransactionsScreen: React.FC = () => {
-  const { orders, navigateTo, refetchOrders } = useV1();
-  const [transactionFilter, setTransactionFilter] = useState<TransactionFilter>('ALL');
+  const {
+    orders,
+    navigateTo,
+    refetchOrders,
+    transactionFilter,
+    setTransactionFilter,
+  } = useV1();
   const [refreshing, setRefreshing] = useState(false);
   const { height } = useWindowDimensions();
   const isCompact = height < 700;

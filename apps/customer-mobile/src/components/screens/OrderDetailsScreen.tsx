@@ -29,6 +29,7 @@ export const OrderDetailsScreen: React.FC = () => {
     claimCustomerOrder,
     openPodModal,
     navigateTo,
+    goBack,
     showToast,
   } = useV1();
 
@@ -180,18 +181,20 @@ export const OrderDetailsScreen: React.FC = () => {
     }
   }, [isFocusedPassView]);
 
-  // Handle hardware back on Android: dismiss the pass and return to Complete Details
+  // Handle hardware back on Android: dismiss the pass and return to Complete Details or previous screen
   useEffect(() => {
-    if (!isFocusedPassView) return;
-
     const onBackPress = () => {
-      handleCloseFocusedPass();
+      if (isFocusedPassView) {
+        handleCloseFocusedPass();
+        return true;
+      }
+      goBack();
       return true;
     };
 
     const backSubscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
     return () => backSubscription.remove();
-  }, [isFocusedPassView]);
+  }, [isFocusedPassView, goBack]);
 
   const handleInitiateClaim = async () => {
     if (!claimConfirmed) {
@@ -425,7 +428,7 @@ export const OrderDetailsScreen: React.FC = () => {
           subtitle={headerSubtitle}
           showBackButton
           centerTitle
-          onBack={() => navigateTo('home')}
+          onBack={goBack}
         />
       )}
 

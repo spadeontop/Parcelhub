@@ -156,7 +156,7 @@ export interface FaqScreenProps {
 }
 
 export const FaqScreen: React.FC<FaqScreenProps> = ({ onBack }) => {
-  const { navigateTo } = useV1();
+  const { navigateTo, goBack } = useV1();
   const [selectedCategory, setSelectedCategory] = useState<FaqCategory>('All');
   const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({});
 
@@ -164,7 +164,7 @@ export const FaqScreen: React.FC<FaqScreenProps> = ({ onBack }) => {
     if (onBack) {
       onBack();
     } else {
-      navigateTo('home');
+      goBack();
     }
   };
 

@@ -40,6 +40,7 @@ import {
 } from '../services/fcmService';
 import { v1Storage } from '../utils/storage';
 import { formatOrderDate } from '../utils/date';
+import { TransactionFilter } from '../../types';
 
 export type CustomerNotification = {
   readonly id: string;
@@ -65,6 +66,20 @@ export type ScreenId =
   | 'notifications'
   | 'profile'
   | 'faq';
+
+export type NavigationStackEntry = {
+  readonly screen: ScreenId;
+  readonly orderId?: string | null;
+  readonly ticketCode?: string | null;
+  readonly filter?: TransactionFilter;
+};
+
+const TOP_LEVEL_SCREENS: readonly ScreenId[] = [
+  'home',
+  'transactions',
+  'notifications',
+  'profile',
+];
 
 export type RegistrationDraft = {
   readonly currentStep: 1 | 2;
@@ -123,8 +138,15 @@ export type V1ContextType = {
   readonly activeScreen: ScreenId;
   readonly navigateTo: (
     screen: ScreenId,
-    params?: { orderId?: string | null; ticketCode?: string | null }
+    params?: {
+      orderId?: string | null;
+      ticketCode?: string | null;
+      filter?: TransactionFilter;
+    }
   ) => void;
+  readonly goBack: () => void;
+  readonly transactionFilter: TransactionFilter;
+  readonly setTransactionFilter: (filter: TransactionFilter) => void;
   readonly toast: ToastState;
   readonly showToast: (message: string) => void;
   readonly preAuthToken: JWTToken | null;
@@ -168,6 +190,10 @@ const V1Context = createContext<V1ContextType | undefined>(undefined);
 export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
   // Default entry screen: 'login'
   const [activeScreen, setActiveScreen] = useState<ScreenId>('login');
+  const [navigationHistory, setNavigationHistory] = useState<readonly NavigationStackEntry[]>([]);
+  const navigationHistoryRef = useRef<readonly NavigationStackEntry[]>(navigationHistory);
+  navigationHistoryRef.current = navigationHistory;
+  const [transactionFilter, setTransactionFilter] = useState<TransactionFilter>('ALL');
   const [preAuthToken, setPreAuthToken] = useState<JWTToken | null>(null);
   const [authToken, setAuthToken] = useState<JWTToken | null>(null);
   const [customer, setCustomer] = useState<Partial<CustomerProfile> | null>(null);
@@ -179,6 +205,19 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
     DEFAULT_REGISTRATION_DRAFT
   );
   const [orderDraft, setOrderDraft] = useState<OrderDraft>(DEFAULT_ORDER_DRAFT);
+
+  // References to keep navigation callbacks fresh without recreating them
+  const activeScreenRef = useRef<ScreenId>(activeScreen);
+  activeScreenRef.current = activeScreen;
+
+  const selectedOrderIdRef = useRef<string | null>(selectedOrderId);
+  selectedOrderIdRef.current = selectedOrderId;
+
+  const selectedOrderTicketCodeRef = useRef<string | null>(selectedOrderTicketCode);
+  selectedOrderTicketCodeRef.current = selectedOrderTicketCode;
+
+  const transactionFilterRef = useRef<TransactionFilter>(transactionFilter);
+  transactionFilterRef.current = transactionFilter;
 
   // Toast notification state
   const [toast, setToast] = useState<ToastState>({ show: false, message: '' });
@@ -195,7 +234,49 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
   }, []);
 
   const navigateTo = useCallback(
-    (screen: ScreenId, params?: { orderId?: string | null; ticketCode?: string | null }) => {
+    (
+      screen: ScreenId,
+      params?: {
+        orderId?: string | null;
+        ticketCode?: string | null;
+        filter?: TransactionFilter;
+      }
+    ) => {
+      const currentScreen = activeScreenRef.current;
+      const currentOrderId = selectedOrderIdRef.current;
+      const currentTicketCode = selectedOrderTicketCodeRef.current;
+      const currentFilter = transactionFilterRef.current;
+
+      if (screen === currentScreen) {
+        if (params?.orderId !== undefined) {
+          setSelectedOrderId(params.orderId);
+        }
+        if (params?.ticketCode !== undefined) {
+          setSelectedOrderTicketCode(params.ticketCode);
+        }
+        if (params?.filter !== undefined) {
+          setTransactionFilter(params.filter);
+        }
+        return;
+      }
+
+      // If returning to a top-level tab (home, transactions, notifications, profile),
+      // reset the sub-screen navigation history stack
+      if (TOP_LEVEL_SCREENS.includes(screen)) {
+        setNavigationHistory([]);
+      } else {
+        // Navigating to a sub-screen / modal: push current screen and context onto stack
+        setNavigationHistory((prev) => [
+          ...prev,
+          {
+            screen: currentScreen,
+            orderId: currentOrderId,
+            ticketCode: currentTicketCode,
+            filter: currentFilter,
+          },
+        ]);
+      }
+
       setActiveScreen(screen);
       if (params?.orderId !== undefined) {
         setSelectedOrderId(params.orderId);
@@ -203,9 +284,37 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
       if (params?.ticketCode !== undefined) {
         setSelectedOrderTicketCode(params.ticketCode);
       }
+      if (params?.filter !== undefined) {
+        setTransactionFilter(params.filter);
+      }
     },
     []
   );
+
+  const goBack = useCallback(() => {
+    const history = navigationHistoryRef.current;
+    if (history.length === 0) {
+      setActiveScreen('home');
+      setSelectedOrderId(null);
+      setSelectedOrderTicketCode(null);
+      return;
+    }
+
+    const nextHistory = [...history];
+    const target = nextHistory.pop()!;
+
+    setNavigationHistory(nextHistory);
+    setActiveScreen(target.screen);
+    if (target.orderId !== undefined) {
+      setSelectedOrderId(target.orderId);
+    }
+    if (target.ticketCode !== undefined) {
+      setSelectedOrderTicketCode(target.ticketCode);
+    }
+    if (target.filter !== undefined) {
+      setTransactionFilter(target.filter);
+    }
+  }, []);
 
   const updateRegistrationDraft = useCallback(
     (partial: Partial<RegistrationDraft>) => {
@@ -585,10 +694,10 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
 
       setSelectedOrderTicketCode(res.ticketCode);
       showToast(res.statusMessage || 'Order initialized');
-      setActiveScreen('confirm_order');
+      navigateTo('confirm_order');
       return res;
     },
-    [authToken, customer, showToast, updateOrderDraft, setSelectedOrderTicketCode]
+    [authToken, customer, showToast, updateOrderDraft, setSelectedOrderTicketCode, navigateTo]
   );
 
   const confirmCustomerOrder = useCallback(
@@ -734,6 +843,8 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
     setSelectedOrderTicketCode(null);
     clearRegistrationDraft();
     clearOrderDraft();
+    setNavigationHistory([]);
+    setTransactionFilter('ALL');
     setActiveScreen('login');
     showToast('Signed out successfully');
   }, [authToken, clearRegistrationDraft, clearOrderDraft, showToast]);
@@ -741,6 +852,9 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const value: V1ContextType = {
     activeScreen,
     navigateTo,
+    goBack,
+    transactionFilter,
+    setTransactionFilter,
     toast,
     showToast,
     preAuthToken,

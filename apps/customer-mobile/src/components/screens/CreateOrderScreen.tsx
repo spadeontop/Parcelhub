@@ -14,6 +14,7 @@ export const CreateOrderScreen: React.FC = () => {
     updateOrderDraft,
     initializeCustomerOrder,
     showToast,
+    goBack,
     customer,
   } = useV1();
 
@@ -95,7 +96,7 @@ export const CreateOrderScreen: React.FC = () => {
         title="Create an Order"
         showBackButton
         centerTitle
-        onBack={() => navigateTo('home')}
+        onBack={goBack}
       />
 
       {/* Main Sheet with Curved Transition */}
