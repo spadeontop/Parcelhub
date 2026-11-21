@@ -5,17 +5,8 @@
  */
 
 // ==========================================
-// 1. Drizzle Schema Integration & Exports
+// 1. Drizzle Schema Type Exports
 // ==========================================
-
-export {
-  customers,
-  staff,
-  orders,
-  orderScreenshots,
-  fcmTokens,
-  appConfig,
-} from "@/db/schema";
 
 export type {
   CustomerRow,
@@ -39,9 +30,9 @@ export type NewAppConfigRow = typeof import("@/db/schema").appConfig.$inferInser
 // ==========================================
 
 export type ISO8601Timestamp = string;
-export type OrderId = `ORD-${string}`;
-export type StaffId = `STF-${string}`;
-export type CustomerId = `CST-${string}`;
+export type OrderId = string; // UUIDv7 primary key from orders.id
+export type StaffId = string; // UUIDv7 primary key from staff.id
+export type CustomerId = string; // UUIDv7 primary key from customers.id
 export type JWTToken = string;
 export type MPIN = `${number}${number}${number}${number}`;
 
@@ -487,7 +478,6 @@ export type AdminOcrConfigRes = StandardSuccessResponse;
 // POST /api/v1/notification/upload-token
 export type NotificationUploadTokenReq = {
   readonly fcmToken: string;
-  readonly userId?: string;
 };
 
 export type NotificationUploadTokenRes = StandardSuccessResponse;
@@ -499,16 +489,8 @@ export type NotificationDeleteTokenReq = {
 
 export type NotificationDeleteTokenRes = StandardSuccessResponse;
 
-// POST /api/v1/notification/send-notification
-export type NotificationSendReq = {
-  readonly notificationBody: string;
-  readonly fcmToken: string;
-};
-
-export type NotificationSendRes = StandardSuccessResponse;
-
 // ==========================================
-// 7. Route Map & Method Unions
+// 7. Route Map & Method Unions (Implemented v1 Routes)
 // ==========================================
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
@@ -520,13 +502,13 @@ export type ApiRoutes =
   | readonly ["POST", "/api/v1/customer/login"]
   | readonly ["POST", "/api/v1/customer/create-mpin"]
   | readonly ["POST", "/api/v1/customer/mpin"]
+  | readonly ["POST", "/api/v1/customer/refresh"]
   | readonly ["GET", "/api/v1/customer/profile"]
   | readonly ["GET", "/api/v1/customer/orders"]
   | readonly ["GET", `/api/v1/customer/orders/${string}`]
   | readonly ["GET", `/api/v1/customer/orders/${string}/photo`]
   | readonly ["POST", "/api/v1/customer/orders/initialize"]
   | readonly ["PUT", `/api/v1/customer/orders/${string}`]
-  | readonly ["DELETE", `/api/v1/customer/orders/${string}`]
   | readonly ["POST", `/api/v1/customer/orders/${string}/claim`]
   | readonly ["POST", "/api/v1/staff/login"]
   | readonly ["GET", "/api/v1/staff/orders"]
@@ -536,14 +518,5 @@ export type ApiRoutes =
   | readonly ["POST", `/api/v1/staff/orders/${string}/make-claimable/pay`]
   | readonly ["POST", `/api/v1/staff/orders/${string}/make-claimable/attach-photo`]
   | readonly ["POST", `/api/v1/staff/orders/${string}/claim`]
-  | readonly ["POST", "/api/v1/admin/create-staff"]
-  | readonly ["GET", "/api/v1/admin/staffs"]
-  | readonly ["PUT", `/api/v1/admin/staffs/${string}`]
-  | readonly ["DELETE", `/api/v1/admin/staffs/${string}`]
-  | readonly ["GET", "/api/v1/admin/orders"]
-  | readonly ["GET", `/api/v1/admin/orders/${string}`]
-  | readonly ["POST", `/api/v1/admin/blacklist/customer/${string}`]
-  | readonly ["POST", `/api/v1/admin/config/${AdminOcrConfigTarget}/ai-ocr-verify/${AdminOcrConfigAction}`]
   | readonly ["POST", "/api/v1/notification/upload-token"]
-  | readonly ["DELETE", "/api/v1/notification/token"]
-  | readonly ["POST", "/api/v1/notification/send-notification"];
+  | readonly ["DELETE", "/api/v1/notification/token"];

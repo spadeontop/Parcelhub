@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { customers, CustomerRow, staff, StaffRow } from "@/db/schema";
+import { jsonError } from "@/app/lib/response";
 import {
   authenticateV1Request,
   V1TokenPayload,
@@ -75,6 +76,27 @@ export async function authenticateCustomerRequest(
       status: 500,
     };
   }
+}
+
+/**
+ * Maps an unsuccessful `authenticateCustomerRequest` result to the standardized HTTP error response,
+ * preserving 500 DB errors instead of misreporting them as 401 session expirations.
+ */
+export function customerAuthErrorResponse(auth: AuthenticatedCustomerResult) {
+  if (auth.status === 403) {
+    return jsonError("Access denied", 403, "Forbidden");
+  }
+  if (auth.status === 404) {
+    return jsonError("Account not found", 404, "Not Found");
+  }
+  if (auth.status >= 500) {
+    return jsonError(
+      "Service temporarily unavailable. Please try again.",
+      500,
+      "Internal Server Error"
+    );
+  }
+  return jsonError("Please log in again", 401, "Unauthorized");
 }
 
 /**
@@ -190,13 +212,13 @@ export async function authenticateAnyV1User(
 
   const token = parts[1];
 
-  // 1. Try Customer/Admin token
-  const customerAuth = await verifyV1Token(token, "AUTH");
-  if (customerAuth.payload && !customerAuth.payload.isPreAuth) {
-    if (customerAuth.payload.role === "CUSTOMER") {
+  // 1. Verify HS256 AUTH token and enforce DB existence per role
+  const authResult = await verifyV1Token(token, "AUTH");
+  if (authResult.payload && !authResult.payload.isPreAuth) {
+    if (authResult.payload.role === "CUSTOMER") {
       try {
         const existingCustomer = await db.query.customers.findFirst({
-          where: eq(customers.id, customerAuth.payload.userId),
+          where: eq(customers.id, authResult.payload.userId),
           columns: { id: true },
         });
         if (!existingCustomer) {
@@ -211,42 +233,30 @@ export async function authenticateAnyV1User(
           err instanceof Error ? err.message : "Database error verifying customer account";
         return { session: null, error: errorMsg, status: 500 };
       }
-    }
-
-    return {
-      session: {
-        userId: customerAuth.payload.userId,
-        role: customerAuth.payload.role,
-      },
-      status: 200,
-    };
-  }
-
-  // 2. Try Staff token
-  const staffAuth = await verifyStaffToken(token, "AUTH");
-  if (staffAuth.payload) {
-    try {
-      const existingStaff = await db.query.staff.findFirst({
-        where: eq(staff.id, staffAuth.payload.userId),
-        columns: { id: true },
-      });
-      if (!existingStaff) {
-        return {
-          session: null,
-          error: "Unauthorized: Staff account no longer exists in database",
-          status: 401,
-        };
+    } else if (authResult.payload.role === "STAFF") {
+      try {
+        const existingStaff = await db.query.staff.findFirst({
+          where: eq(staff.id, authResult.payload.userId),
+          columns: { id: true },
+        });
+        if (!existingStaff) {
+          return {
+            session: null,
+            error: "Unauthorized: Staff account no longer exists in database",
+            status: 401,
+          };
+        }
+      } catch (err: unknown) {
+        const errorMsg =
+          err instanceof Error ? err.message : "Database error verifying staff account";
+        return { session: null, error: errorMsg, status: 500 };
       }
-    } catch (err: unknown) {
-      const errorMsg =
-        err instanceof Error ? err.message : "Database error verifying staff account";
-      return { session: null, error: errorMsg, status: 500 };
     }
 
     return {
       session: {
-        userId: staffAuth.payload.userId,
-        role: staffAuth.payload.role,
+        userId: authResult.payload.userId,
+        role: authResult.payload.role,
       },
       status: 200,
     };
@@ -254,7 +264,7 @@ export async function authenticateAnyV1User(
 
   return {
     session: null,
-    error: customerAuth.error || staffAuth.error || "Invalid or expired token",
+    error: authResult.error || "Invalid or expired token",
     status: 401,
   };
 }

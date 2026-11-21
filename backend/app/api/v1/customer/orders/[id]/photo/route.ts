@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { and, eq, or } from "drizzle-orm";
 import { db } from "@/db";
 import { orders, orderScreenshots } from "@/db/schema";
-import { authenticateCustomerRequest } from "@/app/lib/v1/auth";
+import { authenticateCustomerRequest, customerAuthErrorResponse } from "@/app/lib/v1/auth";
 import { jsonError, jsonSuccess } from "@/app/lib/response";
 import {
   CustomerGetOrderPhotoRes,
@@ -28,13 +28,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     // ---------------------------------------------------------
     const auth = await authenticateCustomerRequest(request);
     if (!auth.session) {
-      if (auth.status === 403) {
-        return jsonError("Access denied", 403, "Forbidden");
-      }
-      if (auth.status === 404) {
-        return jsonError("Account not found", 404, "Not Found");
-      }
-      return jsonError("Please log in again", 401, "Unauthorized");
+      return customerAuthErrorResponse(auth);
     }
 
     // ---------------------------------------------------------
