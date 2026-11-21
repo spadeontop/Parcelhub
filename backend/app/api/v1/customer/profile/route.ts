@@ -1,15 +1,14 @@
 import { NextRequest } from "next/server";
-import { authenticateCustomerRequest, customerAuthErrorResponse } from "@/app/lib/v1/auth";
+import {
+  authenticateCustomerRequest,
+  customerAuthErrorResponse,
+  serializeCustomerProfile,
+} from "@/app/lib/v1/auth";
 import { jsonError, jsonSuccess } from "@/app/lib/response";
-import { CustomerId, CustomerProfileRes } from "@/app/types/v1/api";
+import { CustomerProfileRes } from "@/app/types/v1/api";
 
 export async function GET(request: NextRequest) {
   try {
-    // ---------------------------------------------------------
-    // 1. Auth Validation:
-    //    Verify Authorization: Bearer <authToken> (HS256, 15m TTL)
-    //    Ensure strictly 'CUSTOMER' role and check DB user existence
-    // ---------------------------------------------------------
     const auth = await authenticateCustomerRequest(request);
     if (!auth.session || !auth.customer) {
       return customerAuthErrorResponse(auth);
@@ -25,24 +24,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // ---------------------------------------------------------
-    // 4. Response:
-    //    Return sanitized profile without passwordHash or MPIN
-    // ---------------------------------------------------------
     const response: CustomerProfileRes = {
       statusMessage: "Profile retrieved successfully",
-      customer: {
-        id: customer.id as CustomerId,
-        email: customer.email,
-        firstName: customer.firstName,
-        lastName: customer.lastName,
-        middleInitial: customer.middleInitial ?? undefined,
-        phoneNumber: customer.phoneNumber,
-        blacklisted: customer.blacklisted,
-        blacklistReason: customer.blacklistReason,
-        createdAt: customer.createdAt.toISOString(),
-        updatedAt: customer.updatedAt.toISOString(),
-      },
+      customer: serializeCustomerProfile(customer),
     };
 
     return jsonSuccess(response);
@@ -50,4 +34,3 @@ export async function GET(request: NextRequest) {
     return jsonError("Unable to retrieve profile. Please try again.", 500);
   }
 }
-

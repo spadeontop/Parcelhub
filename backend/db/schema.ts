@@ -11,13 +11,17 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { uuidv7 } from "uuidv7";
-import type { OrderStatus, StatusTimelineEntry } from "@/app/types/api";
+import type {
+  OrderStatus,
+  ScreenshotSourceApp,
+  StatusTimelineEntry,
+} from "@/app/types/v1/api";
 
 export type OrderScreenshotChecks = {
   trackingId_strict?: string;
   trackingId_similar?: string;
   trackingIdLocked?: boolean;
-  sourceApp?: "shopee" | "lazada" | "tiktok" | "unknown";
+  sourceApp?: ScreenshotSourceApp;
   isParcel?: boolean;
   hasRealMetadata?: boolean;
   [key: string]: unknown;

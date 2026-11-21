@@ -1,17 +1,22 @@
 import { NextRequest } from "next/server";
-import { and, eq, inArray, ne, or, sql } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { orders } from "@/db/schema";
 import { authenticateStaffRequest } from "@/app/lib/v1/auth";
 import { isUniqueViolation } from "@/app/lib/v1/db-errors";
 import { sendFcmNotification } from "@/app/lib/v1/fcm";
-import { normalizeTrackingId, ORDER_NON_IMAGE_COLUMNS } from "@/app/lib/v1/orders";
+import {
+  appendStatusTimelineSql,
+  hasActivePaidTrackingId,
+  matchOrderByIdOrTicket,
+  normalizeTrackingId,
+  ORDER_NON_IMAGE_COLUMNS,
+} from "@/app/lib/v1/orders";
+import { parseJsonBody } from "@/app/lib/v1/request";
 import { jsonError, jsonSuccess } from "@/app/lib/response";
 import {
-  OrderStatus,
   StaffActivateOrderReq,
   StaffActivateOrderRes,
-  StatusTimelineEntry,
 } from "@/app/types/v1/api";
 
 interface RouteParams {
@@ -20,19 +25,11 @@ interface RouteParams {
 
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
-    // ---------------------------------------------------------
-    // 1. Auth Validation:
-    //    Ensure Bearer token is present, valid HS256 JWT, and role is strictly STAFF
-    // ---------------------------------------------------------
     const auth = await authenticateStaffRequest(request, ["STAFF"]);
     if (!auth.session) {
       return jsonError(auth.error || "Unauthorized", auth.status, "Unauthorized");
     }
 
-    // ---------------------------------------------------------
-    // 2. Request Validation:
-    //    Extract route parameter {id} and body {amountReceived}
-    // ---------------------------------------------------------
     const { id } = await params;
     const lookupId = id?.trim();
 
@@ -40,12 +37,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return jsonError("Order ID or Ticket Code is required", 400);
     }
 
-    let body: StaffActivateOrderReq;
-    try {
-      body = (await request.json()) as StaffActivateOrderReq;
-    } catch {
-      return jsonError("Invalid JSON request body", 400);
+    const parsedBody = await parseJsonBody<StaffActivateOrderReq>(
+      request,
+      "Invalid JSON request body"
+    );
+    if (!parsedBody.ok) {
+      return parsedBody.response;
     }
+    const body = parsedBody.data;
 
     if (
       typeof body.amountReceived !== "number" ||
@@ -55,15 +54,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return jsonError("Valid numeric amountReceived is required", 400);
     }
 
-    // ---------------------------------------------------------
-    // 3. Business Logic:
-    //    a. Fetch order from DB by ID or ticketCode
-    //    b. Ensure order status is PAYMENT_REQUIRED
-    //    c. Ensure amountReceived >= order.price
-    //    d. Update order to AWAITING_PARCEL and calculate change
-    // ---------------------------------------------------------
     const order = await db.query.orders.findFirst({
-      where: or(eq(orders.id, lookupId), eq(orders.ticketCode, lookupId.toUpperCase())),
+      where: matchOrderByIdOrTicket(lookupId),
       columns: ORDER_NON_IMAGE_COLUMNS,
     });
 
@@ -85,45 +77,20 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // ---------------------------------------------------------
-    // Unique Tracking ID Enforcement:
-    // Ensure another active parcel (AWAITING_PARCEL, READY_TO_CLAIM, CLAIMED)
-    // doesn't already hold the same trackingId before activating this order.
-    // ---------------------------------------------------------
     const normalizedTrackingId = order.trackingId
       ? normalizeTrackingId(order.trackingId)
       : null;
 
-    if (normalizedTrackingId) {
-      const activePaidDuplicate = await db.query.orders.findFirst({
-        where: and(
-          eq(orders.trackingId, normalizedTrackingId),
-          ne(orders.id, order.id),
-          inArray(orders.status, [
-            "AWAITING_PARCEL",
-            "READY_TO_CLAIM",
-            "CLAIMED",
-          ] as OrderStatus[])
-        ),
-        columns: { id: true },
-      });
-
-      if (activePaidDuplicate) {
-        return jsonError(
-          `Tracking ID "${normalizedTrackingId}" is already registered to another active parcel. Cannot activate duplicate parcel.`,
-          409,
-          "Conflict"
-        );
-      }
+    if (normalizedTrackingId && (await hasActivePaidTrackingId(normalizedTrackingId, order.id))) {
+      return jsonError(
+        `Tracking ID "${normalizedTrackingId}" is already registered to another active parcel. Cannot activate duplicate parcel.`,
+        409,
+        "Conflict"
+      );
     }
 
     const change = Math.max(0, body.amountReceived - order.price);
     const now = new Date();
-    const nowIso = now.toISOString();
-    const timelineEntry: StatusTimelineEntry = {
-      status: "AWAITING_PARCEL",
-      timestamp: nowIso,
-    };
 
     let updatedOrder: { id: string } | undefined;
     try {
@@ -134,7 +101,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           amountReceived: body.amountReceived,
           change,
           status: "AWAITING_PARCEL",
-          statusTimeline: sql<StatusTimelineEntry[]>`coalesce(${orders.statusTimeline}, '[]'::jsonb) || ${JSON.stringify([timelineEntry])}::jsonb`,
+          statusTimeline: appendStatusTimelineSql("AWAITING_PARCEL", now.toISOString()),
           modifiedBy: auth.session.userId,
           timestamp: now,
         })
@@ -143,7 +110,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     } catch (updateErr: unknown) {
       if (isUniqueViolation(updateErr, "orders_paid_tracking_id_unique")) {
         return jsonError(
-          `Tracking ID "${order.trackingId}" is already registered to another active parcel. Cannot activate duplicate parcel.`,
+          `Tracking ID "${normalizedTrackingId ?? order.trackingId}" is already registered to another active parcel. Cannot activate duplicate parcel.`,
           409,
           "Conflict"
         );
@@ -159,11 +126,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Non-fatal FCM push to customer
     sendFcmNotification({
       userId: order.customerId,
       title: "Payment Verified",
-      body: `Payment received for ${order.trackingId || order.productName || "your parcel"}. Now awaiting courier arrival.`,
+      body: `Payment received for ${normalizedTrackingId || order.productName || "your parcel"}. Now awaiting courier arrival.`,
       notifId: order.id,
       data: {
         orderId: order.id,
@@ -172,10 +138,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       },
     }).catch(() => {});
 
-    // ---------------------------------------------------------
-    // 4. Response:
-    //    Return 200 OK conforming to StaffActivateOrderRes
-    // ---------------------------------------------------------
     const response: StaffActivateOrderRes = {
       statusMessage: "Order activated and awaiting parcel delivery",
       change,

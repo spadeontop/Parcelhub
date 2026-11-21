@@ -3,6 +3,11 @@ import { desc, eq, ne, count, and, or, ilike, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { orders, staff } from "@/db/schema";
 import { authenticateStaffRequest } from "@/app/lib/v1/auth";
+import {
+  computeClaimWindow,
+  formatStaffFullName,
+  getStaffOrderStatusMessage,
+} from "@/app/lib/v1/orders";
 import { parsePagination } from "@/app/lib/pagination";
 import { jsonError, jsonSuccess } from "@/app/lib/response";
 import {
@@ -21,40 +26,13 @@ const VALID_ORDER_STATUSES: OrderStatus[] = [
   "CANCELLED",
 ];
 
-function getStatusMessage(status: OrderStatus): string {
-  switch (status) {
-    case "AWAITING_PARCEL":
-      return "Awaiting parcel arrival";
-    case "READY_TO_CLAIM":
-      return "Ready for customer pickup";
-    case "PAYMENT_REQUIRED":
-      return "Awaiting customer cash deposit";
-    case "PENDING_INITIALIZATION":
-      return "Pending initialization";
-    case "CLAIMED":
-      return "Parcel claimed";
-    case "CANCELLED":
-      return "Order cancelled";
-    default:
-      return status;
-  }
-}
-
 export async function GET(request: NextRequest) {
   try {
-    // ---------------------------------------------------------
-    // 1. Auth Validation:
-    //    Ensure Bearer token is present, valid HS256 JWT, and role is strictly STAFF
-    // ---------------------------------------------------------
     const auth = await authenticateStaffRequest(request, ["STAFF"]);
     if (!auth.session) {
       return jsonError(auth.error || "Unauthorized", auth.status, "Unauthorized");
     }
 
-    // ---------------------------------------------------------
-    // 2. Request Validation:
-    //    Parse query params (status, search, limit, offset)
-    // ---------------------------------------------------------
     const { searchParams } = new URL(request.url);
     const rawStatus = searchParams.get("status");
     const rawSearch = searchParams.get("search")?.trim();
@@ -70,7 +48,6 @@ export async function GET(request: NextRequest) {
 
     const { limit, offset } = parsePagination(searchParams, 20, 20);
 
-    // Build filter expressions strictly scoped to non-draft orders, status, and (trackingId OR ticketCode)
     const conditions = [ne(orders.status, "PENDING_INITIALIZATION")];
     if (statusFilter) {
       conditions.push(eq(orders.status, statusFilter));
@@ -86,12 +63,6 @@ export async function GET(request: NextRequest) {
     }
     const whereClause = and(...conditions);
 
-    // ---------------------------------------------------------
-    // 3. Business Logic:
-    //    a. Fetch paginated orders (LEFT JOIN staff for courierPaidByName) and totalCount
-    //       in a single query using COUNT(*) OVER() to halve DB pool concurrency under bursts
-    //    b. Compute live claim statuses and format summaries
-    // ---------------------------------------------------------
     const dbOrders = await db
       .select({
         id: orders.id,
@@ -134,22 +105,11 @@ export async function GET(request: NextRequest) {
     const nowMs = Date.now();
 
     const formattedOrders: StaffOrderSummary[] = dbOrders.map((o: (typeof dbOrders)[number]) => {
-      let isClaimActive = false;
-      let claimRemainingSeconds = 0;
-
-      if (o.claimRequested && o.claimExpiresAt) {
-        const expiresMs = new Date(o.claimExpiresAt).getTime();
-        const diffSec = Math.floor((expiresMs - nowMs) / 1000);
-        if (diffSec > 0) {
-          isClaimActive = true;
-          claimRemainingSeconds = diffSec;
-        }
-      }
-
-      const courierPaidByName =
-        o.courierPaidByFirstName || o.courierPaidByLastName
-          ? `${o.courierPaidByFirstName ?? ""} ${o.courierPaidByLastName ?? ""}`.trim()
-          : undefined;
+      const { isClaimActive, claimRemainingSeconds } = computeClaimWindow(
+        o.claimRequested,
+        o.claimExpiresAt,
+        nowMs
+      );
 
       return {
         id: o.id as OrderId,
@@ -161,22 +121,21 @@ export async function GET(request: NextRequest) {
         change: o.change || 0,
         timestamp: o.timestamp.toISOString(),
         status: o.status,
-        statusMessage: getStatusMessage(o.status),
+        statusMessage: getStaffOrderStatusMessage(o.status),
         isClaimActive,
         claimRemainingSeconds,
         courierPaid: o.courierPaid,
         courierPaidBy: (o.courierPaidBy as StaffId) || null,
-        courierPaidByName,
+        courierPaidByName: formatStaffFullName(
+          o.courierPaidByFirstName,
+          o.courierPaidByLastName
+        ),
         courierPaidAt: o.courierPaidAt ? o.courierPaidAt.toISOString() : null,
         createdAt: o.statusTimeline?.[0]?.timestamp || o.timestamp.toISOString(),
         statusTimeline: o.statusTimeline,
       };
     });
 
-    // ---------------------------------------------------------
-    // 4. Response:
-    //    Return 200 OK with orders and pagination metadata
-    // ---------------------------------------------------------
     const response: StaffListOrdersRes = {
       orders: formattedOrders,
       pagination: {

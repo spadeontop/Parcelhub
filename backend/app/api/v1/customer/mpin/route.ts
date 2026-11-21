@@ -3,28 +3,25 @@ import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { customers } from "@/db/schema";
+import { serializeCustomerProfile } from "@/app/lib/v1/auth";
 import {
   verifyV1Token,
   signAuthToken,
   signRefreshToken,
 } from "@/app/lib/v1/jwt";
+import { parseJsonBody } from "@/app/lib/v1/request";
 import { jsonError, jsonSuccess } from "@/app/lib/response";
 import {
   CustomerVerifyMpinReq,
   CustomerVerifyMpinRes,
-  CustomerId,
 } from "@/app/types/v1/api";
 
 export async function POST(request: NextRequest) {
-  let body: CustomerVerifyMpinReq;
-  try {
-    // ---------------------------------------------------------
-    // 2. Request Validation: Parse body & validate format
-    // ---------------------------------------------------------
-    body = (await request.json()) as CustomerVerifyMpinReq;
-  } catch {
-    return jsonError("Invalid request body", 400);
+  const parsedBody = await parseJsonBody<CustomerVerifyMpinReq>(request);
+  if (!parsedBody.ok) {
+    return parsedBody.response;
   }
+  const body = parsedBody.data;
 
   try {
     if (!body?.preAuthToken || !body?.mpin) {
@@ -95,18 +92,7 @@ export async function POST(request: NextRequest) {
       statusMessage: "MPIN verified",
       authToken,
       refreshToken,
-      customer: {
-        id: customer.id as CustomerId,
-        email: customer.email,
-        firstName: customer.firstName,
-        lastName: customer.lastName,
-        middleInitial: customer.middleInitial ?? undefined,
-        phoneNumber: customer.phoneNumber,
-        blacklisted: customer.blacklisted,
-        blacklistReason: customer.blacklistReason,
-        createdAt: customer.createdAt.toISOString(),
-        updatedAt: customer.updatedAt.toISOString(),
-      },
+      customer: serializeCustomerProfile(customer),
     };
 
     return jsonSuccess(response);

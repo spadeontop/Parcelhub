@@ -3,6 +3,7 @@ import { and, desc, eq, ne } from "drizzle-orm";
 import { db } from "@/db";
 import { OrderRow, orders } from "@/db/schema";
 import { authenticateCustomerRequest, customerAuthErrorResponse } from "@/app/lib/v1/auth";
+import { computeClaimWindow, ORDER_NON_IMAGE_COLUMNS } from "@/app/lib/v1/orders";
 import { parsePagination } from "@/app/lib/pagination";
 import { jsonError, jsonSuccess } from "@/app/lib/response";
 import {
@@ -64,12 +65,10 @@ export async function GET(request: NextRequest) {
       orderBy: [desc(orders.timestamp)],
       limit,
       offset,
-      columns: {
-        proofImageUrl: false,
-      },
+      columns: ORDER_NON_IMAGE_COLUMNS,
     });
 
-    const now = new Date();
+    const nowMs = Date.now();
 
     const orderSummaries: CustomerOrderSummary[] = rows.map((row: Omit<OrderRow, "proofImageUrl">) => ({
       id: row.id as OrderId,
@@ -78,10 +77,7 @@ export async function GET(request: NextRequest) {
       productName: row.productName,
       status: row.status,
       timestamp: row.timestamp.toISOString(),
-      isClaimActive:
-        row.claimRequested &&
-        row.claimExpiresAt !== null &&
-        new Date(row.claimExpiresAt) > now,
+      isClaimActive: computeClaimWindow(row.claimRequested, row.claimExpiresAt, nowMs).isClaimActive,
     }));
 
     // ---------------------------------------------------------

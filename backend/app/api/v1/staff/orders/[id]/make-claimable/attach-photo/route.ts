@@ -1,16 +1,20 @@
 import { NextRequest } from "next/server";
-import { and, eq, or, sql } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { orders } from "@/db/schema";
 import { authenticateStaffRequest } from "@/app/lib/v1/auth";
 import { sendFcmNotification } from "@/app/lib/v1/fcm";
 import { validateImageSize } from "@/app/lib/v1/image";
-import { ORDER_NON_IMAGE_COLUMNS } from "@/app/lib/v1/orders";
+import {
+  appendStatusTimelineSql,
+  matchOrderByIdOrTicket,
+  ORDER_NON_IMAGE_COLUMNS,
+} from "@/app/lib/v1/orders";
+import { parseJsonBody } from "@/app/lib/v1/request";
 import { jsonError, jsonSuccess } from "@/app/lib/response";
 import {
   StaffAttachPhotoReq,
   StaffAttachPhotoRes,
-  StatusTimelineEntry,
 } from "@/app/types/v1/api";
 
 interface RouteParams {
@@ -19,19 +23,11 @@ interface RouteParams {
 
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
-    // ---------------------------------------------------------
-    // 1. Auth Validation:
-    //    Ensure Bearer token is present, valid HS256 JWT, and role is strictly STAFF
-    // ---------------------------------------------------------
     const auth = await authenticateStaffRequest(request, ["STAFF"]);
     if (!auth.session) {
       return jsonError(auth.error || "Unauthorized", auth.status, "Unauthorized");
     }
 
-    // ---------------------------------------------------------
-    // 2. Request Validation:
-    //    Extract route parameter {id} and body {imageUrl}
-    // ---------------------------------------------------------
     const { id } = await params;
     const lookupId = id?.trim();
 
@@ -39,33 +35,26 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return jsonError("Order ID or Ticket Code is required", 400);
     }
 
-    let body: StaffAttachPhotoReq;
-    try {
-      body = (await request.json()) as StaffAttachPhotoReq;
-    } catch {
-      return jsonError("Invalid JSON request body", 400);
+    const parsedBody = await parseJsonBody<StaffAttachPhotoReq>(
+      request,
+      "Invalid JSON request body"
+    );
+    if (!parsedBody.ok) {
+      return parsedBody.response;
     }
 
-    const imageUrl = body.imageUrl?.trim();
+    const imageUrl = parsedBody.data.imageUrl?.trim();
     if (!imageUrl) {
       return jsonError("imageUrl is required", 400);
     }
 
-    // 2b. Image Attachment Size Validation (<= STAFF_IMAGE_MAX_KB, default 200KB)
     const sizeCheck = validateImageSize(imageUrl, "STAFF");
     if (!sizeCheck.valid) {
       return jsonError(sizeCheck.error || "Image exceeds size limit", 400, "ImagePayloadTooLarge");
     }
 
-    // ---------------------------------------------------------
-    // 3. Business Logic:
-    //    a. Fetch order from DB by ID or ticketCode
-    //    b. Ensure order status is AWAITING_PARCEL
-    //    c. Ensure courier payment is already completed (courierPaid === true)
-    //    d. Update proofImageUrl, set status to READY_TO_CLAIM, and append timeline
-    // ---------------------------------------------------------
     const order = await db.query.orders.findFirst({
-      where: or(eq(orders.id, lookupId), eq(orders.ticketCode, lookupId.toUpperCase())),
+      where: matchOrderByIdOrTicket(lookupId),
       columns: ORDER_NON_IMAGE_COLUMNS,
     });
 
@@ -89,18 +78,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     const now = new Date();
-    const nowIso = now.toISOString();
-    const timelineEntry: StatusTimelineEntry = {
-      status: "READY_TO_CLAIM",
-      timestamp: nowIso,
-    };
-
     const [updatedOrder] = await db
       .update(orders)
       .set({
         proofImageUrl: imageUrl,
         status: "READY_TO_CLAIM",
-        statusTimeline: sql<StatusTimelineEntry[]>`coalesce(${orders.statusTimeline}, '[]'::jsonb) || ${JSON.stringify([timelineEntry])}::jsonb`,
+        statusTimeline: appendStatusTimelineSql("READY_TO_CLAIM", now.toISOString()),
         modifiedBy: auth.session.userId,
         timestamp: now,
       })
@@ -121,7 +104,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Non-fatal FCM push to customer
     sendFcmNotification({
       userId: order.customerId,
       title: "Parcel Ready for Claim",
@@ -134,10 +116,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       },
     }).catch(() => {});
 
-    // ---------------------------------------------------------
-    // 4. Response:
-    //    Return 200 OK conforming to StaffAttachPhotoRes
-    // ---------------------------------------------------------
     const response: StaffAttachPhotoRes = {
       statusMessage: "Proof photo attached. Order is now claimable.",
       imageUrl,
