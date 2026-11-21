@@ -12,6 +12,7 @@ import Svg, { Path } from 'react-native-svg';
 import { useV1 } from '../../v1/context/V1Context';
 import { AppHeader } from '../layout/AppHeader';
 import { AuthInput } from '../common/AuthInput';
+import { ConfirmationSubmitSection } from '../common/ConfirmationSubmitSection';
 import { parseCurrency } from '../../v1/utils/currency';
 
 export const ConfirmOrderScreen: React.FC = () => {
@@ -261,70 +262,19 @@ export const ConfirmOrderScreen: React.FC = () => {
             </View>
           </View>
 
-          {/* Confirmation Checkbox Row */}
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => setIsConfirmed(!isConfirmed)}
-            className="flex-row items-center justify-center py-2 px-1 mb-4"
-          >
-            <View
-              className={`w-5 h-5 rounded-[6px] border items-center justify-center mr-2.5 ${
-                isConfirmed
-                  ? 'bg-[#2563eb] border-[#2563eb]'
-                  : 'bg-white border-[#cbd5e1]'
-              }`}
-            >
-              {isConfirmed && (
-                <Svg width={12} height={12} viewBox="0 0 24 24" fill="none">
-                  <Path
-                    d="M20 6L9 17l-5-5"
-                    stroke="#ffffff"
-                    strokeWidth={3}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </Svg>
-              )}
-            </View>
-            <Text className="text-[13px] font-bold text-[#334155]">
-              I confirm that these order details are correct
-            </Text>
-          </TouchableOpacity>
-
-          {/* Submit Order Button */}
-          <TouchableOpacity
-            activeOpacity={isFormValid && !isSubmitting ? 0.8 : 1}
-            disabled={!isFormValid || isSubmitting}
-            onPress={handleSubmit}
-            className={`w-full h-[52px] rounded-[16px] items-center justify-center flex-row shadow-sm ${
-              isFormValid && !isSubmitting
-                ? 'bg-[#2563eb]'
-                : 'bg-[#cbd5e1]'
-            }`}
-            style={
-              isFormValid && !isSubmitting
-                ? {
-                    shadowColor: '#2563eb',
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.25,
-                    shadowRadius: 10,
-                    elevation: 4,
-                  }
-                : undefined
-            }
-          >
-            {isSubmitting ? (
-              <ActivityIndicator color="#ffffff" />
-            ) : (
-              <Text
-                className={`font-bold text-[14px] tracking-wide ${
-                  isFormValid && !isSubmitting ? 'text-white' : 'text-[#64748b]'
-                }`}
-              >
-                Submit Order &amp; Proceed to Payment
-              </Text>
-            )}
-          </TouchableOpacity>
+          {/* Confirmation & Submit Action Section */}
+          <ConfirmationSubmitSection
+            title="I confirm that these order details are correct"
+            subtitle="Please ensure parcel amount and tracking number match your delivery receipt."
+            buttonLabel="Submit Order & Proceed to Payment"
+            errorMessage="Please check the confirmation box before submitting."
+            isChecked={isConfirmed}
+            onCheckedChange={setIsConfirmed}
+            onSubmit={handleSubmit}
+            isLoading={isSubmitting}
+            themeColor="#2563eb"
+            className="mb-4"
+          />
         </ScrollView>
       </View>
     </View>
