@@ -1,5 +1,17 @@
 import { NextResponse } from "next/server";
-import { ApiErrorResponse, StandardSuccessResponse } from "@/app/types/api";
+import { ApiErrorResponse, StandardSuccessResponse } from "@/app/types/v1/api";
+
+const DEFAULT_ERROR_LABELS: Record<number, string> = {
+  400: "Bad Request",
+  401: "Unauthorized",
+  403: "Forbidden",
+  404: "Not Found",
+  409: "Conflict",
+  422: "Unprocessable Entity",
+  429: "Too Many Requests",
+  500: "Internal Server Error",
+  503: "Service Unavailable",
+};
 
 export function jsonSuccess<T extends StandardSuccessResponse | Record<string, unknown>>(
   data: T,
@@ -11,11 +23,16 @@ export function jsonSuccess<T extends StandardSuccessResponse | Record<string, u
 export function jsonError(
   message: string,
   statusCode = 400,
-  error = "Bad Request"
+  error?: string,
+  extra?: Record<string, unknown>
 ): NextResponse<ApiErrorResponse> {
-  const body: ApiErrorResponse = {
+  const resolvedError =
+    error ?? DEFAULT_ERROR_LABELS[statusCode] ?? (statusCode >= 500 ? "Internal Server Error" : "Bad Request");
+
+  const body: ApiErrorResponse & Record<string, unknown> = {
+    ...(extra ?? {}),
     success: false,
-    error,
+    error: resolvedError,
     message,
     statusCode,
   };

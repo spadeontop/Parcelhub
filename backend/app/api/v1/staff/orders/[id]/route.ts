@@ -1,12 +1,17 @@
 import { NextRequest } from "next/server";
-import { eq, or } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { orders, staff } from "@/db/schema";
 import { authenticateStaffRequest } from "@/app/lib/v1/auth";
+import {
+  computeClaimWindow,
+  formatStaffFullName,
+  getStaffOrderStatusMessage,
+  matchOrderByIdOrTicket,
+} from "@/app/lib/v1/orders";
 import { jsonError, jsonSuccess } from "@/app/lib/response";
 import {
   OrderId,
-  OrderStatus,
   StaffGetOrderRes,
   StaffId,
   StaffOrderDetail,
@@ -16,40 +21,13 @@ interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
-function getStatusMessage(status: OrderStatus): string {
-  switch (status) {
-    case "AWAITING_PARCEL":
-      return "Awaiting parcel arrival";
-    case "READY_TO_CLAIM":
-      return "Ready for customer pickup";
-    case "PAYMENT_REQUIRED":
-      return "Ready for staff verification";
-    case "PENDING_INITIALIZATION":
-      return "Pending initialization";
-    case "CLAIMED":
-      return "Parcel claimed";
-    case "CANCELLED":
-      return "Order cancelled";
-    default:
-      return status;
-  }
-}
-
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    // ---------------------------------------------------------
-    // 1. Auth Validation:
-    //    Ensure Bearer token is present, valid HS256 JWT, and role is strictly STAFF
-    // ---------------------------------------------------------
     const auth = await authenticateStaffRequest(request, ["STAFF"]);
     if (!auth.session) {
       return jsonError(auth.error || "Unauthorized", auth.status, "Unauthorized");
     }
 
-    // ---------------------------------------------------------
-    // 2. Request Validation:
-    //    Extract and validate route parameter {id}
-    // ---------------------------------------------------------
     const { id } = await params;
     const lookupId = id?.trim();
 
@@ -57,12 +35,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return jsonError("Order ID or Ticket Code is required", 400);
     }
 
-    // ---------------------------------------------------------
-    // 3. Business Logic:
-    //    a. Find order by primary ID or human-facing ticketCode with LEFT JOIN staff
-    //       (omits base64 image columns and avoids a second DB query for courierPaidByName)
-    //    b. Compute live isClaimActive and claimRemainingSeconds
-    // ---------------------------------------------------------
     const [order] = await db
       .select({
         id: orders.id,
@@ -85,30 +57,17 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       })
       .from(orders)
       .leftJoin(staff, eq(orders.courierPaidBy, staff.id))
-      .where(or(eq(orders.id, lookupId), eq(orders.ticketCode, lookupId.toUpperCase())))
+      .where(matchOrderByIdOrTicket(lookupId))
       .limit(1);
 
     if (!order) {
       return jsonError("Order not found", 404, "Not Found");
     }
 
-    const courierPaidByName =
-      order.courierPaidByFirstName || order.courierPaidByLastName
-        ? `${order.courierPaidByFirstName ?? ""} ${order.courierPaidByLastName ?? ""}`.trim()
-        : undefined;
-
-    const nowMs = Date.now();
-    let isClaimActive = false;
-    let claimRemainingSeconds = 0;
-
-    if (order.claimRequested && order.claimExpiresAt) {
-      const expiresMs = new Date(order.claimExpiresAt).getTime();
-      const diffSec = Math.floor((expiresMs - nowMs) / 1000);
-      if (diffSec > 0) {
-        isClaimActive = true;
-        claimRemainingSeconds = diffSec;
-      }
-    }
+    const { isClaimActive, claimRemainingSeconds } = computeClaimWindow(
+      order.claimRequested,
+      order.claimExpiresAt
+    );
 
     const orderDetail: StaffOrderDetail = {
       orderId: order.id as OrderId,
@@ -120,21 +79,20 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       change: order.change ?? 0,
       timestamp: order.timestamp.toISOString(),
       status: order.status,
-      statusMessage: getStatusMessage(order.status),
+      statusMessage: getStaffOrderStatusMessage(order.status),
       isClaimActive,
       claimRemainingSeconds,
       courierPaid: order.courierPaid,
       courierPaidBy: (order.courierPaidBy as StaffId) || null,
-      courierPaidByName,
+      courierPaidByName: formatStaffFullName(
+        order.courierPaidByFirstName,
+        order.courierPaidByLastName
+      ),
       courierPaidAt: order.courierPaidAt ? order.courierPaidAt.toISOString() : null,
       createdAt: order.statusTimeline?.[0]?.timestamp || order.timestamp.toISOString(),
       statusTimeline: order.statusTimeline,
     };
 
-    // ---------------------------------------------------------
-    // 4. Response:
-    //    Return 200 OK conforming to StaffGetOrderRes
-    // ---------------------------------------------------------
     const response: StaffGetOrderRes = orderDetail;
     return jsonSuccess(response);
   } catch (err: unknown) {

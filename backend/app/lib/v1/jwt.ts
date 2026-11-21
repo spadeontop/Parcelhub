@@ -1,5 +1,5 @@
 import { SignJWT, jwtVerify, JWTPayload } from "jose";
-import { Role } from "@/app/types/api";
+import { Role } from "@/app/types/v1/api";
 
 function getJwtSecret(): Uint8Array {
   const secret = process.env.JWT_SECRET;
@@ -114,24 +114,37 @@ export async function verifyV1Token(
 }
 
 /**
+ * Extracts a Bearer token from the Authorization header.
+ */
+export function extractBearerToken(
+  request: Request
+): { token: string; error?: undefined } | { token: null; error: string } {
+  const authHeader = request.headers.get("Authorization");
+  if (!authHeader) {
+    return { token: null, error: "Missing Authorization Bearer token" };
+  }
+
+  const parts = authHeader.split(" ");
+  if (parts.length !== 2 || parts[0].toLowerCase() !== "bearer" || !parts[1]) {
+    return { token: null, error: "Invalid Authorization header format" };
+  }
+
+  return { token: parts[1] };
+}
+
+/**
  * Extracts and verifies Bearer token from Request Authorization header.
  */
 export async function authenticateV1Request(
   request: Request,
   allowedRoles?: Role[]
 ): Promise<{ session: V1TokenPayload | null; error?: string; status: number }> {
-  const authHeader = request.headers.get("Authorization");
-  if (!authHeader) {
-    return { session: null, error: "Missing Authorization Bearer token", status: 401 };
+  const extracted = extractBearerToken(request);
+  if (!extracted.token) {
+    return { session: null, error: extracted.error, status: 401 };
   }
 
-  const parts = authHeader.split(" ");
-  if (parts.length !== 2 || parts[0].toLowerCase() !== "bearer") {
-    return { session: null, error: "Invalid Authorization header format", status: 401 };
-  }
-
-  const token = parts[1];
-  const { payload, error } = await verifyV1Token(token, "AUTH");
+  const { payload, error } = await verifyV1Token(extracted.token, "AUTH");
 
   if (error || !payload) {
     return { session: null, error: error || "Invalid or expired token", status: 401 };

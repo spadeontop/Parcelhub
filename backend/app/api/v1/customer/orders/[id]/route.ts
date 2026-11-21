@@ -1,9 +1,17 @@
 import { NextRequest } from "next/server";
-import { and, eq, inArray, ne, or } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { orders, orderScreenshots } from "@/db/schema";
 import { authenticateCustomerRequest, customerAuthErrorResponse } from "@/app/lib/v1/auth";
-import { normalizeTrackingId } from "@/app/lib/v1/orders";
+import {
+  appendStatusTimelineSql,
+  computeClaimWindow,
+  hasActivePaidTrackingId,
+  matchOrderByIdOrTicket,
+  normalizeTrackingId,
+  ORDER_NON_IMAGE_COLUMNS,
+} from "@/app/lib/v1/orders";
+import { parseJsonBody } from "@/app/lib/v1/request";
 import { jsonError, jsonSuccess } from "@/app/lib/response";
 import {
   CustomerGetOrderRes,
@@ -11,9 +19,7 @@ import {
   CustomerUpdateOrderReq,
   CustomerUpdateOrderRes,
   OrderId,
-  OrderStatus,
   OrderStatusHistoryTuple,
-  StatusTimelineEntry,
 } from "@/app/types/v1/api";
 
 interface RouteParams {
@@ -22,19 +28,11 @@ interface RouteParams {
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    // ---------------------------------------------------------
-    // 1. Auth Validation:
-    //    Require valid 15-minute authToken, strictly CUSTOMER role & valid DB user
-    // ---------------------------------------------------------
     const auth = await authenticateCustomerRequest(request);
     if (!auth.session) {
       return customerAuthErrorResponse(auth);
     }
 
-    // ---------------------------------------------------------
-    // 2. Request Validation:
-    //    Resolve and validate id param
-    // ---------------------------------------------------------
     const { id: rawId } = await params;
     const identifier = rawId?.trim();
 
@@ -42,37 +40,22 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return jsonError("Order identifier is required", 400);
     }
 
-    // ---------------------------------------------------------
-    // 3. Logic:
-    //    a. Find order by either UUID (id) or ticketCode
-    //    b. Verify ownership: must match auth.session.userId
-    //    c. Compute isClaimActive and claimRemainingSeconds
-    // ---------------------------------------------------------
     const order = await db.query.orders.findFirst({
       where: and(
-        or(eq(orders.id, identifier), eq(orders.ticketCode, identifier.toUpperCase())),
+        matchOrderByIdOrTicket(identifier),
         eq(orders.customerId, auth.session.userId)
       ),
-      columns: {
-        proofImageUrl: false,
-      },
+      columns: ORDER_NON_IMAGE_COLUMNS,
     });
 
     if (!order) {
       return jsonError("Order not found", 404, "Not Found");
     }
 
-    const now = Date.now();
-    let isClaimActive = false;
-    let claimRemainingSeconds = 0;
-
-    if (order.claimRequested && order.claimExpiresAt) {
-      const expiresAtMs = new Date(order.claimExpiresAt).getTime();
-      if (expiresAtMs > now) {
-        isClaimActive = true;
-        claimRemainingSeconds = Math.max(0, Math.floor((expiresAtMs - now) / 1000));
-      }
-    }
+    const { isClaimActive, claimRemainingSeconds } = computeClaimWindow(
+      order.claimRequested,
+      order.claimExpiresAt
+    );
 
     const orderDetail: CustomerOrderDetail = {
       id: order.id as OrderId,
@@ -90,10 +73,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       claimRemainingSeconds,
     };
 
-    // ---------------------------------------------------------
-    // 4. Response:
-    //    Return 200 OK with order details
-    // ---------------------------------------------------------
     const response: CustomerGetOrderRes = {
       statusMessage: "Order details retrieved",
       order: orderDetail,
@@ -107,19 +86,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
-    // ---------------------------------------------------------
-    // 1. Auth Validation:
-    //    Require valid 15-minute authToken, strictly CUSTOMER role & valid DB user
-    // ---------------------------------------------------------
     const auth = await authenticateCustomerRequest(request);
     if (!auth.session) {
       return customerAuthErrorResponse(auth);
     }
 
-    // ---------------------------------------------------------
-    // 2. Request Validation:
-    //    Resolve {id} and strictly require all confirmation fields
-    // ---------------------------------------------------------
     const { id: rawId } = await params;
     const identifier = rawId?.trim();
 
@@ -127,12 +98,11 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       return jsonError("Order identifier is required", 400);
     }
 
-    let body: CustomerUpdateOrderReq;
-    try {
-      body = (await request.json()) as CustomerUpdateOrderReq;
-    } catch {
-      return jsonError("Invalid request body", 400);
+    const parsedBody = await parseJsonBody<CustomerUpdateOrderReq>(request);
+    if (!parsedBody.ok) {
+      return parsedBody.response;
     }
+    const body = parsedBody.data;
 
     if (!body?.order || typeof body.order !== "object") {
       return jsonError("Order payload is required", 400);
@@ -160,26 +130,17 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // ---------------------------------------------------------
-    // 3. Logic:
-    //    a. Fetch order metadata + screenshot verification flag in one joined query
-    //    b. Enforce one-shot continuation strictly from PENDING_INITIALIZATION
-    //    c. Enforce AI_VERIFICATION gate when enabled in environment
-    //    d. Check trackingId uniqueness against paid non-cancelled orders
-    //    e. Update order details and transition status -> PAYMENT_REQUIRED
-    // ---------------------------------------------------------
     const [order] = await db
       .select({
         id: orders.id,
         status: orders.status,
-        statusTimeline: orders.statusTimeline,
         screenshotVerified: orderScreenshots.isVerified,
       })
       .from(orders)
       .leftJoin(orderScreenshots, eq(orderScreenshots.orderId, orders.id))
       .where(
         and(
-          or(eq(orders.id, identifier), eq(orders.ticketCode, identifier.toUpperCase())),
+          matchOrderByIdOrTicket(identifier),
           eq(orders.customerId, auth.session.userId)
         )
       )
@@ -206,20 +167,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     const normalizedTrackingId = normalizeTrackingId(trackingId);
-    const paidDuplicate = await db.query.orders.findFirst({
-      where: and(
-        eq(orders.trackingId, normalizedTrackingId),
-        ne(orders.id, order.id),
-        inArray(orders.status, [
-          "AWAITING_PARCEL",
-          "READY_TO_CLAIM",
-          "CLAIMED",
-        ] as OrderStatus[])
-      ),
-      columns: { id: true },
-    });
-
-    if (paidDuplicate) {
+    if (await hasActivePaidTrackingId(normalizedTrackingId, order.id)) {
       return jsonError(
         "Tracking number is already registered to a paid active parcel",
         409,
@@ -228,15 +176,6 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     const now = new Date();
-    const currentTimeline = (order.statusTimeline ?? []) as StatusTimelineEntry[];
-    const updatedTimeline: StatusTimelineEntry[] = [
-      ...currentTimeline,
-      {
-        status: "PAYMENT_REQUIRED",
-        timestamp: now.toISOString(),
-      },
-    ];
-
     const [updatedOrder] = await db
       .update(orders)
       .set({
@@ -245,7 +184,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         recipientName,
         price,
         status: "PAYMENT_REQUIRED",
-        statusTimeline: updatedTimeline,
+        statusTimeline: appendStatusTimelineSql("PAYMENT_REQUIRED", now.toISOString()),
         modifiedBy: auth.session.userId,
         timestamp: now,
       })
@@ -262,10 +201,6 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // ---------------------------------------------------------
-    // 4. Response:
-    //    Return 200 OK confirming transition to PAYMENT_REQUIRED
-    // ---------------------------------------------------------
     const response: CustomerUpdateOrderRes = {
       statusMessage: "Order updated successfully",
     };
@@ -275,4 +210,3 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     return jsonError("Unable to update order. Please try again.", 500);
   }
 }
-

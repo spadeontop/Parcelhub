@@ -2,8 +2,10 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { customers, CustomerRow, staff, StaffRow } from "@/db/schema";
 import { jsonError } from "@/app/lib/response";
+import type { CustomerId, CustomerProfile } from "@/app/types/v1/api";
 import {
   authenticateV1Request,
+  extractBearerToken,
   V1TokenPayload,
   verifyStaffToken,
   V1StaffTokenPayload,
@@ -12,6 +14,24 @@ import {
 
 export type SafeCustomerRow = Omit<CustomerRow, "passwordHash" | "mpin">;
 export type SafeStaffRow = Omit<StaffRow, "passwordHash">;
+
+/**
+ * Serializes a sanitized DB customer row into the public v1 `CustomerProfile` contract.
+ */
+export function serializeCustomerProfile(customer: SafeCustomerRow): CustomerProfile {
+  return {
+    id: customer.id as CustomerId,
+    email: customer.email,
+    firstName: customer.firstName,
+    lastName: customer.lastName,
+    middleInitial: customer.middleInitial ?? undefined,
+    phoneNumber: customer.phoneNumber,
+    blacklisted: customer.blacklisted,
+    blacklistReason: customer.blacklistReason,
+    createdAt: customer.createdAt.toISOString(),
+    updatedAt: customer.updatedAt.toISOString(),
+  };
+}
 
 export interface AuthenticatedCustomerResult {
   session: V1TokenPayload | null;
@@ -108,18 +128,12 @@ export async function authenticateStaffRequest(
   request: Request,
   allowedRoles: ("STAFF")[] = ["STAFF"]
 ): Promise<AuthenticatedStaffResult> {
-  const authHeader = request.headers.get("Authorization");
-  if (!authHeader) {
-    return { session: null, error: "Missing Authorization Bearer token", status: 401 };
+  const extracted = extractBearerToken(request);
+  if (!extracted.token) {
+    return { session: null, error: extracted.error, status: 401 };
   }
 
-  const parts = authHeader.split(" ");
-  if (parts.length !== 2 || parts[0].toLowerCase() !== "bearer") {
-    return { session: null, error: "Invalid Authorization header format", status: 401 };
-  }
-
-  const token = parts[1];
-  const { payload, error } = await verifyStaffToken(token, "AUTH");
+  const { payload, error } = await verifyStaffToken(extracted.token, "AUTH");
 
   if (error || !payload) {
     return { session: null, error: error || "Invalid or expired token", status: 401 };
@@ -165,30 +179,6 @@ export async function authenticateStaffRequest(
   }
 }
 
-/**
- * Checks whether the customer is marked as blacklisted in the DB.
- */
-export async function checkCustomerBlacklisted(
-  customerId: string
-): Promise<BlacklistCheckResult> {
-  const customer = await db.query.customers.findFirst({
-    where: eq(customers.id, customerId),
-    columns: {
-      blacklisted: true,
-      blacklistReason: true,
-    },
-  });
-
-  if (!customer) {
-    return { isBlacklisted: false };
-  }
-
-  return {
-    isBlacklisted: !!customer.blacklisted,
-    reason: customer.blacklistReason,
-  };
-}
-
 export interface AnyV1Session {
   userId: string;
   role: "CUSTOMER" | "STAFF" | "ADMIN";
@@ -200,20 +190,13 @@ export interface AnyV1Session {
 export async function authenticateAnyV1User(
   request: Request
 ): Promise<{ session: AnyV1Session | null; error?: string; status: number }> {
-  const authHeader = request.headers.get("Authorization");
-  if (!authHeader) {
-    return { session: null, error: "Missing Authorization Bearer token", status: 401 };
+  const extracted = extractBearerToken(request);
+  if (!extracted.token) {
+    return { session: null, error: extracted.error, status: 401 };
   }
-
-  const parts = authHeader.split(" ");
-  if (parts.length !== 2 || parts[0].toLowerCase() !== "bearer") {
-    return { session: null, error: "Invalid Authorization header format", status: 401 };
-  }
-
-  const token = parts[1];
 
   // 1. Verify HS256 AUTH token and enforce DB existence per role
-  const authResult = await verifyV1Token(token, "AUTH");
+  const authResult = await verifyV1Token(extracted.token, "AUTH");
   if (authResult.payload && !authResult.payload.isPreAuth) {
     if (authResult.payload.role === "CUSTOMER") {
       try {
