@@ -11,7 +11,7 @@ import {
 import { useV1 } from '../../v1/context/V1Context';
 import { AuthBrandHeader } from '../layout/AuthBrandHeader';
 import { FormCardHeader } from '../common/FormCardHeader';
-import { AuthInput } from '../common/AuthInput';
+import { FloatingInput } from '../common/FloatingInput';
 import { AuthButton } from '../common/AuthButton';
 
 export const RegisterScreen: React.FC = () => {
@@ -225,25 +225,23 @@ export const RegisterScreen: React.FC = () => {
                       subtitle="Enter your name for deliveries"
                     />
 
-                    <AuthInput
+                    <FloatingInput
                       label="First name"
                       value={firstName}
                       onChangeText={setFirstName}
                       autoCapitalize="words"
                       returnKeyType="next"
-                      isValid={isFirstNameValid}
                     />
 
-                    <AuthInput
+                    <FloatingInput
                       label="Last name"
                       value={lastName}
                       onChangeText={setLastName}
                       autoCapitalize="words"
                       returnKeyType="next"
-                      isValid={isLastNameValid}
                     />
 
-                    <AuthInput
+                    <FloatingInput
                       label="Middle initial (optional)"
                       value={middleInitial}
                       onChangeText={setMiddleInitial}
@@ -262,9 +260,10 @@ export const RegisterScreen: React.FC = () => {
                       subtitle="Set up your login credentials and contact info"
                     />
 
-                    <AuthInput
+                    <FloatingInput
                       label="Email"
-                      type="email"
+                      keyboardType="email-address"
+                      autoCapitalize="none"
                       value={email}
                       onChangeText={(val) => {
                         setEmail(val);
@@ -274,23 +273,22 @@ export const RegisterScreen: React.FC = () => {
                       returnKeyType="next"
                     />
 
-                    <AuthInput
+                    <FloatingInput
                       label="Phone number"
-                      type="phone"
+                      keyboardType="phone-pad"
                       value={phone}
                       onChangeText={setPhone}
                       returnKeyType="next"
                     />
 
-                    <AuthInput
+                    <FloatingInput
                       label="Password"
                       value={password}
                       onChangeText={(val) => {
                         setPassword(val);
                         if (passwordError) setPasswordError('');
                       }}
-                      isPassword
-                      isValid={isPasswordValid}
+                      secureTextEntry
                       error={passwordError}
                       returnKeyType="next"
                     />
@@ -336,15 +334,14 @@ export const RegisterScreen: React.FC = () => {
                       </View>
                     )}
 
-                    <AuthInput
+                    <FloatingInput
                       label="Confirm password"
                       value={confirmPassword}
                       onChangeText={(val) => {
                         setConfirmPassword(val);
                         if (confirmPasswordError) setConfirmPasswordError('');
                       }}
-                      isPassword
-                      isValid={isConfirmPasswordValid}
+                      secureTextEntry
                       error={confirmPasswordError}
                       returnKeyType="done"
                       onSubmitEditing={Keyboard.dismiss}

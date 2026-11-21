@@ -11,7 +11,7 @@ import { StatusBar } from 'expo-status-bar';
 import Svg, { Path } from 'react-native-svg';
 import { useV1 } from '../../v1/context/V1Context';
 import { AppHeader } from '../layout/AppHeader';
-import { AuthInput } from '../common/AuthInput';
+import { FloatingInput } from '../common/FloatingInput';
 import { ConfirmationSubmitSection } from '../common/ConfirmationSubmitSection';
 import { parseCurrency } from '../../v1/utils/currency';
 
@@ -164,10 +164,10 @@ export const ConfirmOrderScreen: React.FC = () => {
               </Text>
             </View>
 
-            {/* Floating AuthInput components with reactive animation & states */}
+            {/* Form Fields with Apple Minimalist FloatingInput */}
             <View className="space-y-1">
               {/* 1. Product Field */}
-              <AuthInput
+              <FloatingInput
                 label="Product"
                 value={product}
                 error={fieldErrors.product}
@@ -177,11 +177,10 @@ export const ConfirmOrderScreen: React.FC = () => {
                   }
                   updateOrderDraft({ productName: text });
                 }}
-                showSuccessCheck={false}
               />
 
               {/* 2. Receiver's Name Field */}
-              <AuthInput
+              <FloatingInput
                 label="Receiver's Name"
                 value={recipient}
                 error={fieldErrors.recipient}
@@ -191,15 +190,13 @@ export const ConfirmOrderScreen: React.FC = () => {
                   }
                   updateOrderDraft({ recipientName: text });
                 }}
-                showSuccessCheck={false}
               />
 
               {/* 3. Total Amount Field with Validation */}
-              <AuthInput
+              <FloatingInput
                 label="Total Amount"
                 value={totalAmount}
                 error={fieldErrors.amount || amountError}
-                isValid={isAmountValid}
                 onChangeText={(text) => {
                   if (fieldErrors.amount) {
                     setFieldErrors((prev) => ({ ...prev, amount: undefined }));
@@ -207,14 +204,14 @@ export const ConfirmOrderScreen: React.FC = () => {
                   updateOrderDraft({ totalAmount: text });
                 }}
                 keyboardType="numeric"
-                showSuccessCheck={false}
               />
 
               {/* 4. Tracking ID Field */}
-              <AuthInput
+              <FloatingInput
                 label="Tracking ID"
                 value={trackingId}
                 error={fieldErrors.trackingId || trackingError || undefined}
+                autoCapitalize="characters"
                 onChangeText={(text) => {
                   if (fieldErrors.trackingId) {
                     setFieldErrors((prev) => ({ ...prev, trackingId: undefined }));
@@ -222,8 +219,6 @@ export const ConfirmOrderScreen: React.FC = () => {
                   if (trackingError) setTrackingError(null);
                   updateOrderDraft({ trackingId: text });
                 }}
-                autoCapitalize="characters"
-                showSuccessCheck={false}
               />
             </View>
           </View>

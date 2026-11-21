@@ -12,7 +12,7 @@ import {
 import { useV1 } from '../../v1/context/V1Context';
 import { AuthBrandHeader } from '../layout/AuthBrandHeader';
 import { LoginNarrationHeader } from '../common/LoginNarrationHeader';
-import { AuthInput } from '../common/AuthInput';
+import { FloatingInput } from '../common/FloatingInput';
 import { AuthButton } from '../common/AuthButton';
 
 export const LoginScreen: React.FC = () => {
@@ -111,10 +111,10 @@ export const LoginScreen: React.FC = () => {
                 {/* Input Fields */}
                 <View>
                   {/* Email Input */}
-                  <AuthInput
+                  <FloatingInput
                     label="Email"
-                    type="email"
-                    showSuccessCheck={false}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
                     value={email}
                     onChangeText={(val) => {
                       setEmail(val);
@@ -125,10 +125,9 @@ export const LoginScreen: React.FC = () => {
                   />
 
                   {/* Password Input */}
-                  <AuthInput
+                  <FloatingInput
                     label="Password"
-                    type="password"
-                    showSuccessCheck={false}
+                    secureTextEntry
                     value={password}
                     onChangeText={(val) => {
                       setPassword(val);

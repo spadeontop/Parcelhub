@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { useApp } from '../../context/AppContext';
-import { AuthInput } from '../common/AuthInput';
+import { FloatingInput } from '../common/FloatingInput';
 
 interface EditContactModalProps {
   visible: boolean;
@@ -176,61 +176,55 @@ export const EditContactModal: React.FC<EditContactModalProps> = ({
                 </TouchableOpacity>
               </View>
 
-              {/* Form Fields using AuthInput */}
+              {/* Form Fields using FloatingInput */}
               <View className="pt-[14px]">
                 {/* Row 1: First Name & M.I. */}
                 <View className="flex-row items-center gap-[10px]">
                   {/* First Name */}
                   <View className="flex-1">
-                    <AuthInput
+                    <FloatingInput
                       label="First name"
                       value={firstName}
                       onChangeText={setFirstName}
                       autoCapitalize="words"
-                      showSuccessCheck={false}
                     />
                   </View>
 
                   {/* M.I. */}
                   <View className="w-[80px]">
-                    <AuthInput
+                    <FloatingInput
                       label="M.I."
                       value={middleInitial}
                       onChangeText={setMiddleInitial}
                       maxLength={2}
                       autoCapitalize="characters"
-                      showSuccessCheck={false}
                     />
                   </View>
                 </View>
 
                 {/* Row 2: Last Name */}
-                <AuthInput
+                <FloatingInput
                   label="Last name"
                   value={lastName}
                   onChangeText={setLastName}
                   autoCapitalize="words"
-                  showSuccessCheck={false}
                 />
 
                 {/* Row 3: Phone number */}
-                <AuthInput
+                <FloatingInput
                   label="Phone number"
-                  type="phone"
                   value={phoneNumber}
                   onChangeText={setPhoneNumber}
                   keyboardType="phone-pad"
-                  showSuccessCheck={false}
                 />
 
                 {/* Row 4: Verification Code */}
-                <AuthInput
+                <FloatingInput
                   label="Verification Code"
                   value={verificationCode}
                   onChangeText={setVerificationCode}
                   keyboardType="number-pad"
                   maxLength={6}
-                  showSuccessCheck={false}
                   rightElement={
                     isTimerRunning && timerSeconds > 0 ? (
                       <TouchableOpacity

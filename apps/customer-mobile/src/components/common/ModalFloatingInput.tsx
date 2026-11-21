@@ -109,7 +109,7 @@ export const ModalFloatingInput: React.FC<ModalFloatingInputProps> = ({
           style={{
             fontSize: labelFontSize,
             color: labelColor,
-            fontWeight: '600',
+            fontWeight: '400',
             includeFontPadding: false,
           }}
         >
@@ -136,9 +136,10 @@ export const ModalFloatingInput: React.FC<ModalFloatingInputProps> = ({
             setIsFocused(false);
             if (onBlur) onBlur(e);
           }}
-          className="flex-1 font-bold text-[#1e293b] p-0 m-0"
+          className="flex-1 font-normal text-[#1e293b] p-0 m-0"
           style={{
             fontSize: 14,
+            fontWeight: '400',
             includeFontPadding: false,
             height: 22,
             outline: 'none' as any,
