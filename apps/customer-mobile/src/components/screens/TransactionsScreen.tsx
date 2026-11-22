@@ -191,7 +191,7 @@ export const TransactionsScreen: React.FC = () => {
         </View>
 
         {/* Scrollable Content Container */}
-        <View className="mx-5 mb-24 bg-white border border-[#e4e4e7] rounded-[24px] overflow-hidden" style={{ flexShrink: 1 }}>
+        <View className="mx-5 mb-24 bg-white border border-[#e5eaf3] rounded-[24px] overflow-hidden" style={{ flexShrink: 1 }}>
         <ScrollView
           showsVerticalScrollIndicator={false}
           style={{ flexGrow: 0 }}
