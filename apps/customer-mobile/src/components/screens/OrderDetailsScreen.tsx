@@ -919,7 +919,7 @@ export const OrderDetailsScreen: React.FC = () => {
                           : 'text-[#475569]'
                       }`}
                     >
-                      Awaiting Parcel
+                      Awaiting
                     </Text>
                     {(isStep2Done || isStep2Active) && (
                       <Text
@@ -955,7 +955,7 @@ export const OrderDetailsScreen: React.FC = () => {
                           : 'text-[#475569]'
                       }`}
                     >
-                      Ready to Claim
+                      Claimable
                     </Text>
                     {(isStep3Done || isStep3Active) && (
                       <Text
