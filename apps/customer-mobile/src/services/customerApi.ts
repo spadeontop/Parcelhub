@@ -22,90 +22,95 @@ const LIVE_MODE_KEY = 'parcelhub_is_live_mode';
 const isBusinessClientError = (status: number) =>
   status >= 400 && status < 500 && status !== 404 && status !== 405;
 
-export const customerApi = {
-  async getStoredRefreshToken(): Promise<string | null> {
+const isWeb = typeof window !== 'undefined' && Boolean(window.localStorage);
+
+const storageAdapter = {
+  async getItem(key: string): Promise<string | null> {
     try {
-      return await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
+      if (isWeb) {
+        return window.localStorage.getItem(key);
+      }
+      return await SecureStore.getItemAsync(key);
     } catch {
       return null;
     }
+  },
+
+  async setItem(key: string, value: string): Promise<void> {
+    try {
+      if (isWeb) {
+        window.localStorage.setItem(key, value);
+        return;
+      }
+      await SecureStore.setItemAsync(key, value);
+    } catch {}
+  },
+
+  async deleteItem(key: string): Promise<void> {
+    try {
+      if (isWeb) {
+        window.localStorage.removeItem(key);
+        return;
+      }
+      await SecureStore.deleteItemAsync(key);
+    } catch {}
+  },
+};
+
+export const customerApi = {
+  async getStoredRefreshToken(): Promise<string | null> {
+    return await storageAdapter.getItem(REFRESH_TOKEN_KEY);
   },
 
   async setStoredRefreshToken(token: string): Promise<void> {
-    try {
-      await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, token);
-    } catch {}
+    await storageAdapter.setItem(REFRESH_TOKEN_KEY, token);
   },
 
   async getStoredAuthToken(): Promise<string | null> {
-    try {
-      return await SecureStore.getItemAsync(AUTH_TOKEN_KEY);
-    } catch {
-      return null;
-    }
+    return await storageAdapter.getItem(AUTH_TOKEN_KEY);
   },
 
   async setStoredAuthToken(token: string): Promise<void> {
-    try {
-      await SecureStore.setItemAsync(AUTH_TOKEN_KEY, token);
-    } catch {}
+    await storageAdapter.setItem(AUTH_TOKEN_KEY, token);
   },
 
   async getStoredPreAuthToken(): Promise<string | null> {
-    try {
-      return await SecureStore.getItemAsync(PRE_AUTH_TOKEN_KEY);
-    } catch {
-      return null;
-    }
+    return await storageAdapter.getItem(PRE_AUTH_TOKEN_KEY);
   },
 
   async setStoredPreAuthToken(token: string): Promise<void> {
-    try {
-      await SecureStore.setItemAsync(PRE_AUTH_TOKEN_KEY, token);
-    } catch {}
+    await storageAdapter.setItem(PRE_AUTH_TOKEN_KEY, token);
   },
 
   async getStoredApiUrl(): Promise<string | null> {
-    try {
-      return await SecureStore.getItemAsync(API_URL_KEY);
-    } catch {
-      return null;
-    }
+    return await storageAdapter.getItem(API_URL_KEY);
   },
 
   async setStoredApiUrl(url: string): Promise<void> {
-    try {
-      await SecureStore.setItemAsync(API_URL_KEY, url);
-    } catch {}
+    await storageAdapter.setItem(API_URL_KEY, url);
   },
 
   async getStoredIsLiveMode(): Promise<boolean | null> {
-    try {
-      const val = await SecureStore.getItemAsync(LIVE_MODE_KEY);
-      return val !== null ? val === 'true' : null;
-    } catch {
-      return null;
-    }
+    const val = await storageAdapter.getItem(LIVE_MODE_KEY);
+    return val !== null ? val === 'true' : null;
   },
 
   async setStoredIsLiveMode(isLive: boolean): Promise<void> {
-    try {
-      await SecureStore.setItemAsync(LIVE_MODE_KEY, isLive ? 'true' : 'false');
-    } catch {}
+    await storageAdapter.setItem(LIVE_MODE_KEY, isLive ? 'true' : 'false');
   },
 
   async clearTokens(): Promise<void> {
-    try {
-      await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
-      await SecureStore.deleteItemAsync(AUTH_TOKEN_KEY);
-      await SecureStore.deleteItemAsync(PRE_AUTH_TOKEN_KEY);
-      await SecureStore.deleteItemAsync(PROFILE_KEY);
-    } catch {}
+    await Promise.all([
+      storageAdapter.deleteItem(REFRESH_TOKEN_KEY),
+      storageAdapter.deleteItem(AUTH_TOKEN_KEY),
+      storageAdapter.deleteItem(PRE_AUTH_TOKEN_KEY),
+      storageAdapter.deleteItem(PROFILE_KEY),
+    ]);
   },
 
   async getStoredProfile(): Promise<any | null> {
     try {
-      const raw = await SecureStore.getItemAsync(PROFILE_KEY);
+      const raw = await storageAdapter.getItem(PROFILE_KEY);
       return raw ? JSON.parse(raw) : null;
     } catch {
       return null;
@@ -113,9 +118,7 @@ export const customerApi = {
   },
 
   async setStoredProfile(profile: any): Promise<void> {
-    try {
-      await SecureStore.setItemAsync(PROFILE_KEY, JSON.stringify(profile));
-    } catch {}
+    await storageAdapter.setItem(PROFILE_KEY, JSON.stringify(profile));
   },
 
   /**

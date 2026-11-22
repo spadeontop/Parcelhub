@@ -7,70 +7,81 @@ const V1_REFRESH_TOKEN_KEY = 'parcelhub_v1_refresh_token';
 const V1_PROFILE_KEY = 'parcelhub_v1_customer_profile';
 const V1_PUSH_ENABLED_KEY = 'parcelhub_v1_push_notifications_enabled';
 
-export const v1Storage = {
-  async getPreAuthToken(): Promise<JWTToken | null> {
+const isWeb = typeof window !== 'undefined' && Boolean(window.localStorage);
+
+const storageAdapter = {
+  async getItem(key: string): Promise<string | null> {
     try {
-      return await SecureStore.getItemAsync(V1_PRE_AUTH_TOKEN_KEY);
+      if (isWeb) {
+        return window.localStorage.getItem(key);
+      }
+      return await SecureStore.getItemAsync(key);
     } catch {
       return null;
     }
+  },
+
+  async setItem(key: string, value: string): Promise<void> {
+    try {
+      if (isWeb) {
+        window.localStorage.setItem(key, value);
+        return;
+      }
+      await SecureStore.setItemAsync(key, value);
+    } catch {}
+  },
+
+  async deleteItem(key: string): Promise<void> {
+    try {
+      if (isWeb) {
+        window.localStorage.removeItem(key);
+        return;
+      }
+      await SecureStore.deleteItemAsync(key);
+    } catch {}
+  },
+};
+
+export const v1Storage = {
+  async getPreAuthToken(): Promise<JWTToken | null> {
+    return (await storageAdapter.getItem(V1_PRE_AUTH_TOKEN_KEY)) as JWTToken | null;
   },
 
   async setPreAuthToken(token: JWTToken): Promise<void> {
-    try {
-      await SecureStore.setItemAsync(V1_PRE_AUTH_TOKEN_KEY, token);
-    } catch {}
+    await storageAdapter.setItem(V1_PRE_AUTH_TOKEN_KEY, token);
   },
 
   async clearPreAuthToken(): Promise<void> {
-    try {
-      await SecureStore.deleteItemAsync(V1_PRE_AUTH_TOKEN_KEY);
-    } catch {}
+    await storageAdapter.deleteItem(V1_PRE_AUTH_TOKEN_KEY);
   },
 
   async getAuthToken(): Promise<JWTToken | null> {
-    try {
-      return await SecureStore.getItemAsync(V1_AUTH_TOKEN_KEY);
-    } catch {
-      return null;
-    }
+    return (await storageAdapter.getItem(V1_AUTH_TOKEN_KEY)) as JWTToken | null;
   },
 
   async setAuthToken(token: JWTToken): Promise<void> {
-    try {
-      await SecureStore.setItemAsync(V1_AUTH_TOKEN_KEY, token);
-    } catch {}
+    await storageAdapter.setItem(V1_AUTH_TOKEN_KEY, token);
   },
 
   async clearAuthToken(): Promise<void> {
-    try {
-      await SecureStore.deleteItemAsync(V1_AUTH_TOKEN_KEY);
-    } catch {}
+    await storageAdapter.deleteItem(V1_AUTH_TOKEN_KEY);
   },
 
   async getRefreshToken(): Promise<JWTToken | null> {
-    try {
-      return await SecureStore.getItemAsync(V1_REFRESH_TOKEN_KEY);
-    } catch {
-      return null;
-    }
+    return (await storageAdapter.getItem(V1_REFRESH_TOKEN_KEY)) as JWTToken | null;
   },
 
   async setRefreshToken(token: JWTToken): Promise<void> {
-    try {
-      await SecureStore.setItemAsync(V1_REFRESH_TOKEN_KEY, token);
-    } catch {}
+    await storageAdapter.setItem(V1_REFRESH_TOKEN_KEY, token);
   },
 
   async clearRefreshToken(): Promise<void> {
-    try {
-      await SecureStore.deleteItemAsync(V1_REFRESH_TOKEN_KEY);
-    } catch {}
+    await storageAdapter.deleteItem(V1_REFRESH_TOKEN_KEY);
   },
 
   async getCustomerProfile(): Promise<CustomerProfile | null> {
     try {
-      const raw = await SecureStore.getItemAsync(V1_PROFILE_KEY);
+      const raw = await storageAdapter.getItem(V1_PROFILE_KEY);
       return raw ? JSON.parse(raw) : null;
     } catch {
       return null;
@@ -78,38 +89,28 @@ export const v1Storage = {
   },
 
   async setCustomerProfile(profile: CustomerProfile): Promise<void> {
-    try {
-      await SecureStore.setItemAsync(V1_PROFILE_KEY, JSON.stringify(profile));
-    } catch {}
+    await storageAdapter.setItem(V1_PROFILE_KEY, JSON.stringify(profile));
   },
 
   async clearCustomerProfile(): Promise<void> {
-    try {
-      await SecureStore.deleteItemAsync(V1_PROFILE_KEY);
-    } catch {}
+    await storageAdapter.deleteItem(V1_PROFILE_KEY);
   },
 
   async getPushNotificationsEnabled(): Promise<boolean> {
-    try {
-      const val = await SecureStore.getItemAsync(V1_PUSH_ENABLED_KEY);
-      return val === null ? true : val === 'true';
-    } catch {
-      return true;
-    }
+    const val = await storageAdapter.getItem(V1_PUSH_ENABLED_KEY);
+    return val === null ? true : val === 'true';
   },
 
   async setPushNotificationsEnabled(enabled: boolean): Promise<void> {
-    try {
-      await SecureStore.setItemAsync(V1_PUSH_ENABLED_KEY, enabled ? 'true' : 'false');
-    } catch {}
+    await storageAdapter.setItem(V1_PUSH_ENABLED_KEY, enabled ? 'true' : 'false');
   },
 
   async clearAllTokens(): Promise<void> {
-    try {
-      await SecureStore.deleteItemAsync(V1_PRE_AUTH_TOKEN_KEY);
-      await SecureStore.deleteItemAsync(V1_AUTH_TOKEN_KEY);
-      await SecureStore.deleteItemAsync(V1_REFRESH_TOKEN_KEY);
-      await SecureStore.deleteItemAsync(V1_PROFILE_KEY);
-    } catch {}
+    await Promise.all([
+      storageAdapter.deleteItem(V1_PRE_AUTH_TOKEN_KEY),
+      storageAdapter.deleteItem(V1_AUTH_TOKEN_KEY),
+      storageAdapter.deleteItem(V1_REFRESH_TOKEN_KEY),
+      storageAdapter.deleteItem(V1_PROFILE_KEY),
+    ]);
   },
 };
