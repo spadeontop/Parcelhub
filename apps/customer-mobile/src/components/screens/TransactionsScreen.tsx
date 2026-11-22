@@ -7,6 +7,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import Animated, { FadeInDown, FadeOutUp, ReduceMotion } from 'react-native-reanimated';
 import { StatusBar } from 'expo-status-bar';
 import { useV1 } from '../../v1/context/V1Context';
 import { BottomNav } from '../layout/BottomNav';
@@ -28,6 +29,16 @@ const FILTERS: TransactionFilter[] = [
   'PAYMENT_REQUIRED',
   'CLAIMED',
 ];
+
+const dropdownEnter = FadeInDown.springify()
+  .damping(18)
+  .stiffness(260)
+  .mass(0.7)
+  .withInitialValues({ opacity: 0, translateY: -8 })
+  .reduceMotion(ReduceMotion.System);
+const dropdownExit = FadeOutUp.duration(140)
+  .withTargetValues({ opacity: 0, translateY: -6 })
+  .reduceMotion(ReduceMotion.System);
 
 const getFilterLabel = (filter: TransactionFilter): string => {
   switch (filter) {
@@ -118,7 +129,7 @@ export const TransactionsScreen: React.FC = () => {
               </View>
             </TouchableOpacity>
             {filterOpen && (
-              <View className="absolute top-[56px] left-0 right-0 bg-white border border-[#e5eaf3] rounded-2xl py-2"
+              <Animated.View entering={dropdownEnter} exiting={dropdownExit} className="absolute top-[56px] left-0 right-0 bg-white border border-[#e5eaf3] rounded-2xl py-2"
                 style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.14, shadowRadius: 10, elevation: 8 }}>
                 {FILTERS.map((f) => {
                   const selected = transactionFilter === f;
@@ -136,7 +147,7 @@ export const TransactionsScreen: React.FC = () => {
                     </TouchableOpacity>
                   );
                 })}
-              </View>
+              </Animated.View>
             )}
           </View>
 
