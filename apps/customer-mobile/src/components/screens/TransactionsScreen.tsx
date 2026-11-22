@@ -71,13 +71,14 @@ export const TransactionsScreen: React.FC = () => {
   } = useV1();
   const [refreshing, setRefreshing] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
-  const dropdownOffset = useSharedValue(-108);
+  const dropdownOffset = useSharedValue(0);
   const dropdownStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: `${dropdownOffset.value}%` as const }],
+    transformOrigin: 'top',
+    transform: [{ scaleY: dropdownOffset.value }],
   }));
 
   useEffect(() => {
-    dropdownOffset.value = withTiming(filterOpen ? 0 : -108, {
+    dropdownOffset.value = withTiming(filterOpen ? 1 : 0, {
       duration: filterOpen ? 220 : 180,
       easing: filterOpen ? Easing.out(Easing.cubic) : Easing.in(Easing.cubic),
       reduceMotion: ReduceMotion.System,
@@ -132,8 +133,7 @@ export const TransactionsScreen: React.FC = () => {
 
         <View
           pointerEvents="box-none"
-          className="absolute top-[76px] left-3 right-3 z-10 overflow-hidden px-2 pb-4"
-          style={{ borderTopLeftRadius: 24, borderTopRightRadius: 24 }}
+          className="absolute top-[76px] left-5 right-5 z-10"
           collapsable={false}
         >
           <Animated.View
@@ -150,7 +150,7 @@ export const TransactionsScreen: React.FC = () => {
               elevation: 4,
             }, dropdownStyle]}
           >
-            <View className="bg-white border border-[#e5eaf3] rounded-2xl py-2 overflow-hidden"
+            <View className="bg-white border border-[#e5eaf3] rounded-2xl overflow-hidden"
               style={{ backgroundColor: '#fff', borderWidth: 1, borderColor: '#e5eaf3', borderRadius: 16, overflow: 'hidden' }}>
             {FILTERS.map((f) => {
               const selected = transactionFilter === f;
