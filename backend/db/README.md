@@ -139,6 +139,8 @@ npm run db:seed
 # Generate new SQL migration after editing db/schema.ts
 npx drizzle-kit generate
 
-# Run API route automated test suite
-npm run test:routes
+# Run V1 API route automated test suites
+npm run test:v1:customer
+npm run test:v1:staff
+npm run test:v1:notification
 ```
