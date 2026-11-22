@@ -493,6 +493,33 @@ export type NotificationDeleteTokenReq = {
 export type NotificationDeleteTokenRes = StandardSuccessResponse;
 
 // ==========================================
+// 6b. Realtime Broadcast Types (v1)
+// ==========================================
+
+export type RealtimeOrderEventType =
+  | "ORDER_CREATED"
+  | "ORDER_ACTIVATED"
+  | "COURIER_PAID"
+  | "ORDER_READY"
+  | "CLAIM_INITIATED"
+  | "ORDER_CLAIMED";
+
+export type RealtimeOrderSignal = {
+  readonly event: RealtimeOrderEventType;
+  readonly orderId: OrderId;
+  readonly ticketCode: string | null;
+  readonly status: OrderStatus;
+  readonly updatedAt: ISO8601Timestamp;
+};
+
+// POST /api/v1/realtime/token
+export type RealtimeTokenRes = StandardSuccessResponse & {
+  readonly token: JWTToken;
+  readonly channel: string;
+  readonly expiresAt: ISO8601Timestamp;
+};
+
+// ==========================================
 // 7. Route Map & Method Unions (Implemented v1 Routes)
 // ==========================================
 
@@ -522,4 +549,5 @@ export type ApiRoutes =
   | readonly ["POST", `/api/v1/staff/orders/${string}/make-claimable/attach-photo`]
   | readonly ["POST", `/api/v1/staff/orders/${string}/claim`]
   | readonly ["POST", "/api/v1/notification/upload-token"]
-  | readonly ["DELETE", "/api/v1/notification/token"];
+  | readonly ["DELETE", "/api/v1/notification/token"]
+  | readonly ["POST", "/api/v1/realtime/token"];

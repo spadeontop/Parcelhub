@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { orders, staff } from "@/db/schema";
 import { authenticateStaffRequest } from "@/app/lib/v1/auth";
 import { formatStaffFullName, matchOrderByIdOrTicket } from "@/app/lib/v1/orders";
+import { publishOrderSignal } from "@/app/lib/v1/realtime";
 import { jsonError, jsonSuccess } from "@/app/lib/response";
 import { StaffPayCourierRes } from "@/app/types/v1/api";
 
@@ -28,6 +29,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const [order] = await db
       .select({
         id: orders.id,
+        ticketCode: orders.ticketCode,
         status: orders.status,
         courierPaid: orders.courierPaid,
         courierPaidBy: orders.courierPaidBy,
@@ -90,6 +92,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         "Conflict"
       );
     }
+
+    publishOrderSignal(["staff:orders"], {
+      event: "COURIER_PAID",
+      orderId: order.id,
+      ticketCode: order.ticketCode ?? null,
+      status: "AWAITING_PARCEL",
+      updatedAt: now.toISOString(),
+    });
 
     const response: StaffPayCourierRes = {
       statusMessage: "Courier payment recorded",

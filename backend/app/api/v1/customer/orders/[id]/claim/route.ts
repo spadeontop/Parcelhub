@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { orders } from "@/db/schema";
 import { authenticateCustomerRequest, customerAuthErrorResponse } from "@/app/lib/v1/auth";
 import { matchOrderByIdOrTicket } from "@/app/lib/v1/orders";
+import { publishOrderSignal } from "@/app/lib/v1/realtime";
 import { jsonError, jsonSuccess } from "@/app/lib/response";
 import { CustomerClaimOrderRes } from "@/app/types/v1/api";
 
@@ -54,6 +55,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       ),
       columns: {
         id: true,
+        ticketCode: true,
         status: true,
       },
     });
@@ -87,6 +89,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     if (!updatedOrder) {
       return jsonError("Parcel is no longer ready for pickup", 409, "Conflict");
     }
+
+    publishOrderSignal(["staff:orders", `customer:${auth.session.userId}`], {
+      event: "CLAIM_INITIATED",
+      orderId: order.id,
+      ticketCode: order.ticketCode ?? null,
+      status: "READY_TO_CLAIM",
+      updatedAt: initiatedAt.toISOString(),
+    });
 
     // ---------------------------------------------------------
     // 4. Response:
