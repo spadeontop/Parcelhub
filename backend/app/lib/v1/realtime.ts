@@ -56,6 +56,40 @@ export async function signRealtimeToken(
   };
 }
 
+async function getBroadcastBearerToken(
+  supabaseUrl: string,
+  serviceKey: string
+): Promise<string> {
+  // Legacy service_role JWTs can be passed directly; new sb_secret_ keys require
+  // a short-lived service_role JWT signed with SUPABASE_JWT_SECRET for Realtime HTTP Broadcast.
+  if (serviceKey.startsWith("eyJ")) {
+    return serviceKey;
+  }
+
+  const secret = process.env.SUPABASE_JWT_SECRET?.trim();
+  if (!secret) {
+    return serviceKey;
+  }
+
+  let ref: string | undefined;
+  try {
+    ref = new URL(supabaseUrl).hostname.split(".")[0];
+  } catch {
+    ref = undefined;
+  }
+
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  return new SignJWT({
+    role: "service_role",
+    iss: "supabase",
+    ...(ref ? { ref } : {}),
+  })
+    .setProtectedHeader({ alg: "HS256", typ: "JWT" })
+    .setIssuedAt(nowSeconds)
+    .setExpirationTime(nowSeconds + 60)
+    .sign(new TextEncoder().encode(secret));
+}
+
 /**
  * Publishes a thin (~120 byte) refetch signal to Supabase Realtime Broadcast.
  * Strictly non-fatal: never throws and never fails a committed order mutation.
@@ -72,12 +106,13 @@ export async function broadcastOrderSignal(
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!.trim();
 
   try {
+    const bearerToken = await getBroadcastBearerToken(supabaseUrl, serviceKey);
     const res = await fetch(`${supabaseUrl}/realtime/v1/api/broadcast`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         apikey: serviceKey,
-        Authorization: `Bearer ${serviceKey}`,
+        Authorization: `Bearer ${bearerToken}`,
       },
       body: JSON.stringify({
         messages: topics.map((topic) => ({
