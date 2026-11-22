@@ -115,7 +115,7 @@ export const TransactionsScreen: React.FC = () => {
         >
           <Text className="text-[14px] font-semibold text-[#111827]">{getFilterLabel(transactionFilter)}</Text>
           <View className="flex-row items-center gap-2">
-            <Text className="text-[14px] font-semibold text-[#111827]">{filteredOrders.length} {filteredOrders.length === 1 ? 'Order' : 'Orders'}</Text>
+            <Text className="text-[12px] font-medium text-[#2563eb]">{filteredOrders.length} {filteredOrders.length === 1 ? 'Order' : 'Orders'}</Text>
             <Svg width={20} height={20} viewBox="0 0 20 20" fill="none">
               <Path d="M5 7.5L10 12.5L15 7.5" stroke="#64748b" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" />
             </Svg>
