@@ -11,10 +11,13 @@ module.exports = {
         sans: ['GoogleSans-Regular'],
         normal: ['GoogleSans-Regular'],
         medium: ['GoogleSans-Medium'],
-        semibold: ['GoogleSans-Medium'],
+        semibold: ['GoogleSans-SemiBold'],
         bold: ['GoogleSans-Bold'],
         extrabold: ['GoogleSans-Bold'],
         italic: ['GoogleSans-Italic'],
+      },
+      fontWeight: {
+        semibold: 'normal',
       },
       colors: {
         primary: {

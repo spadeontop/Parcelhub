@@ -196,7 +196,7 @@ export const TransactionsScreen: React.FC = () => {
                     {/* Left: Product Name & Date */}
                     <View className="flex-1 pr-3">
                       <Text
-                        className="text-[13px] font-bold text-[#1e293b] leading-[18px]"
+                        className="text-[13px] font-semibold text-[#1e293b] leading-[18px]"
                         numberOfLines={1}
                         ellipsizeMode="tail"
                       >

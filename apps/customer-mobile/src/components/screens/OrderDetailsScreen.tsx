@@ -642,7 +642,7 @@ export const OrderDetailsScreen: React.FC = () => {
                       <Text className="text-[12px] font-normal text-[#64748b]">Item</Text>
                       <Text
                         numberOfLines={1}
-                        className="text-[13px] font-bold text-[#1e293b] flex-1 text-right ml-4"
+                        className="text-[13px] font-semibold text-[#1e293b] flex-1 text-right ml-4"
                       >
                         {productName}
                       </Text>
@@ -724,7 +724,7 @@ export const OrderDetailsScreen: React.FC = () => {
                 {/* 1. Product */}
                 <View className="flex-row items-center justify-between py-[2px]">
                   <Text className="text-[14px] text-[#64748b] font-normal">Product</Text>
-                  <Text className="text-[14px] font-bold text-[#111827] tracking-[-0.35px]">
+                  <Text className="text-[14px] font-semibold text-[#111827] tracking-[-0.35px]">
                     {productName}
                   </Text>
                 </View>
