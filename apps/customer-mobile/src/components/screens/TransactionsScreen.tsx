@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,14 +6,7 @@ import {
   ScrollView,
   RefreshControl,
 } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
-import Animated, {
-  Easing,
-  ReduceMotion,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
+import { FilterDropdown } from '../common/FilterDropdown';
 import { StatusBar } from 'expo-status-bar';
 import { useV1 } from '../../v1/context/V1Context';
 import { BottomNav } from '../layout/BottomNav';
@@ -70,25 +63,6 @@ export const TransactionsScreen: React.FC = () => {
     setTransactionFilter,
   } = useV1();
   const [refreshing, setRefreshing] = useState(false);
-  const [filterOpen, setFilterOpen] = useState(false);
-  const dropdownOffset = useSharedValue(0);
-  const dropdownHeight = useSharedValue(0);
-  const dropdownStyle = useAnimatedStyle(() => ({
-    height: dropdownHeight.value * dropdownOffset.value,
-    borderWidth: dropdownOffset.value > 0 ? 1 : 0,
-  }));
-  const dropdownContentStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: -dropdownHeight.value * (1 - dropdownOffset.value) }],
-  }));
-
-  useEffect(() => {
-    dropdownOffset.value = withTiming(filterOpen ? 1 : 0, {
-      duration: filterOpen ? 220 : 180,
-      easing: filterOpen ? Easing.out(Easing.cubic) : Easing.in(Easing.cubic),
-      reduceMotion: ReduceMotion.System,
-    });
-  }, [dropdownOffset, filterOpen]);
-
   const onRefresh = async () => {
     setRefreshing(true);
     try {
@@ -118,77 +92,18 @@ export const TransactionsScreen: React.FC = () => {
 
       {/* Main Sheet with Curved Transition */}
       <View className="flex-1 bg-white rounded-t-[32px] pt-5 relative">
-        <TouchableOpacity
-          activeOpacity={1}
-          accessibilityRole="button"
+        <FilterDropdown
+          value={transactionFilter}
+          onChange={setTransactionFilter}
           accessibilityLabel="Filter orders"
-          accessibilityState={{ expanded: filterOpen }}
-          onPress={() => setFilterOpen((open) => !open)}
-          className="mx-5 mb-3 h-[50px] border border-[#e5eaf3] rounded-2xl flex-row items-center justify-between px-4 bg-white"
-        >
-          <Text className="text-[14px] font-semibold text-[#111827]">{getFilterLabel(transactionFilter)}</Text>
-          <View className="flex-row items-center gap-2">
-            <Text className="text-[12px] font-medium text-[#2563eb]">{filteredOrders.length} {filteredOrders.length === 1 ? 'Order' : 'Orders'}</Text>
-            <Svg width={20} height={20} viewBox="0 0 20 20" fill="none">
-              <Path d="M5 7.5L10 12.5L15 7.5" stroke="#64748b" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" />
-            </Svg>
-          </View>
-        </TouchableOpacity>
-
-        <View
-          pointerEvents="box-none"
-          className="absolute top-[76px] left-5 right-5 z-10"
-          collapsable={false}
-        >
-          <Animated.View
-            pointerEvents={filterOpen ? 'auto' : 'none'}
-            accessibilityElementsHidden={!filterOpen}
-            importantForAccessibility={filterOpen ? 'auto' : 'no-hide-descendants'}
-            style={[{
-              backgroundColor: '#fff',
-              borderRadius: 16,
-              borderColor: '#e5eaf3',
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 5 },
-              shadowOpacity: 0.1,
-              shadowRadius: 8,
-              elevation: 4,
-            }, dropdownStyle]}
-          >
-            <Animated.View style={{ flex: 1, overflow: 'hidden', borderRadius: 16, borderColor: '#e5eaf3' }}>
-            <Animated.View
-              onLayout={(event) => { dropdownHeight.value = event.nativeEvent.layout.height; }}
-              style={[{ position: 'absolute', top: 0, left: 0, right: 0, backgroundColor: '#fff' }, dropdownContentStyle]}
-            >
-            {FILTERS.map((f) => {
-              const selected = transactionFilter === f;
-              const count = f === 'ALL' ? orders.length : orders.filter((order) => order.status === f).length;
-              const dotColor = f === 'ALL' ? '#4b5563' : getStatusTheme(f).dotColor;
-              return (
-                <TouchableOpacity
-                  key={f}
-                  disabled={!filterOpen}
-                  activeOpacity={1}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected }}
-                  onPress={() => {
-                    setTransactionFilter(f);
-                    setFilterOpen(false);
-                  }}
-                  className={`flex-row items-center justify-between px-4 py-3 ${selected ? 'bg-[#eff6ff]' : 'bg-white'}`}
-                >
-                  <View className="flex-row items-center gap-2.5">
-                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: dotColor }} />
-                    <Text className={`text-[13px] text-[#111827] ${selected ? 'font-semibold' : 'font-medium'}`}>{getFilterLabel(f)}</Text>
-                  </View>
-                  <Text className="text-[12px] text-[#4b5563]">{count}</Text>
-                </TouchableOpacity>
-              );
-            })}
-            </Animated.View>
-            </Animated.View>
-          </Animated.View>
-        </View>
+          countLabel={`${filteredOrders.length} ${filteredOrders.length === 1 ? 'Order' : 'Orders'}`}
+          options={FILTERS.map((filter) => ({
+            value: filter,
+            label: getFilterLabel(filter),
+            count: filter === 'ALL' ? orders.length : orders.filter((order) => order.status === filter).length,
+            color: filter === 'ALL' ? '#4b5563' : getStatusTheme(filter).dotColor,
+          }))}
+        />
 
         {/* Scrollable Content Container */}
         <View className="mx-5 mb-24 bg-white border border-[#e5eaf3] rounded-[24px] overflow-hidden" style={{ flexShrink: 1 }}>
