@@ -14,6 +14,8 @@ export function getStatusLabel(status: OrderStatus): string {
       return 'Claimed';
     case 'CANCELLED':
       return 'Cancelled';
+    case 'REFUNDED':
+      return 'Refunded';
     default:
       return status;
   }
@@ -62,6 +64,12 @@ export function getStatusTheme(status: OrderStatus): StatusTheme {
         label: 'Cancelled',
         dotColor: '#dc2626',
         textColor: '#dc2626',
+      };
+    case 'REFUNDED':
+      return {
+        label: 'Refunded',
+        dotColor: '#0d9488',
+        textColor: '#0d9488',
       };
     default:
       return {

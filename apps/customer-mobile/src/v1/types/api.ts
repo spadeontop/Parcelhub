@@ -21,7 +21,8 @@ export type OrderStatus =
   | "AWAITING_PARCEL"
   | "READY_TO_CLAIM"
   | "CLAIMED"
-  | "CANCELLED";
+  | "CANCELLED"
+  | "REFUNDED";
 
 export type Role = "CUSTOMER" | "STAFF" | "ADMIN";
 

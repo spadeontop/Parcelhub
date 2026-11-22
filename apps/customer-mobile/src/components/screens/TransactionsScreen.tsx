@@ -26,7 +26,9 @@ export type TransactionFilter =
   | 'READY_TO_CLAIM'
   | 'AWAITING_PARCEL'
   | 'PAYMENT_REQUIRED'
-  | 'CLAIMED';
+  | 'CLAIMED'
+  | 'CANCELLED'
+  | 'REFUNDED';
 
 const FILTERS: TransactionFilter[] = [
   'ALL',
@@ -34,6 +36,8 @@ const FILTERS: TransactionFilter[] = [
   'AWAITING_PARCEL',
   'PAYMENT_REQUIRED',
   'CLAIMED',
+  'CANCELLED',
+  'REFUNDED',
 ];
 
 const getFilterLabel = (filter: TransactionFilter): string => {
@@ -48,6 +52,10 @@ const getFilterLabel = (filter: TransactionFilter): string => {
       return 'Payment Required';
     case 'CLAIMED':
       return 'Claimed';
+    case 'CANCELLED':
+      return 'Cancelled';
+    case 'REFUNDED':
+      return 'Refunded';
     default:
       return filter;
   }
