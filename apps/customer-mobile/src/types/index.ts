@@ -15,14 +15,17 @@ export type OrderStatus =
   | 'AWAITING_PARCEL'
   | 'READY_TO_CLAIM'
   | 'CLAIMED'
-  | 'CANCELLED';
+  | 'CANCELLED'
+  | 'REFUNDED';
 
 export type TransactionFilter =
   | 'ALL'
   | 'READY_TO_CLAIM'
   | 'AWAITING_PARCEL'
   | 'PAYMENT_REQUIRED'
-  | 'CLAIMED';
+  | 'CLAIMED'
+  | 'CANCELLED'
+  | 'REFUNDED';
 
 export type StatusTimelineEntry = {
   readonly status: OrderStatus;

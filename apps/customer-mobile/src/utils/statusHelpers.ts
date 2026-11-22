@@ -5,15 +5,17 @@ export function getStatusLabel(status: OrderStatus): string {
     case 'PENDING_INITIALIZATION':
       return 'Pending Initialization';
     case 'READY_TO_CLAIM':
-      return 'Ready to Claim';
+      return 'Claimable';
     case 'AWAITING_PARCEL':
-      return 'Awaiting Parcel';
+      return 'Awaiting';
     case 'PAYMENT_REQUIRED':
-      return 'Payment Required';
+      return 'Unpaid';
     case 'CLAIMED':
       return 'Claimed';
     case 'CANCELLED':
       return 'Cancelled';
+    case 'REFUNDED':
+      return 'Refunded';
     default:
       return status;
   }
@@ -35,19 +37,19 @@ export function getStatusTheme(status: OrderStatus): StatusTheme {
       };
     case 'PAYMENT_REQUIRED':
       return {
-        label: 'Payment Required',
+        label: 'Unpaid',
         dotColor: '#d97706',
         textColor: '#d97706',
       };
     case 'AWAITING_PARCEL':
       return {
-        label: 'Awaiting Parcel',
+        label: 'Awaiting',
         dotColor: '#2563eb',
         textColor: '#2563eb',
       };
     case 'READY_TO_CLAIM':
       return {
-        label: 'Ready to Claim',
+        label: 'Claimable',
         dotColor: '#059669',
         textColor: '#059669',
       };
@@ -62,6 +64,12 @@ export function getStatusTheme(status: OrderStatus): StatusTheme {
         label: 'Cancelled',
         dotColor: '#dc2626',
         textColor: '#dc2626',
+      };
+    case 'REFUNDED':
+      return {
+        label: 'Refunded',
+        dotColor: '#4D7499',
+        textColor: '#4D7499',
       };
     default:
       return {
