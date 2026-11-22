@@ -134,7 +134,7 @@ export const TransactionsScreen: React.FC = () => {
             accessibilityElementsHidden={!filterOpen}
             importantForAccessibility={filterOpen ? 'auto' : 'no-hide-descendants'}
             className="bg-white border border-[#e5eaf3] rounded-2xl py-2"
-            style={[{ shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.14, shadowRadius: 10, elevation: 8 }, dropdownStyle]}
+            style={[{ backgroundColor: '#fff', shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.14, shadowRadius: 10, elevation: 8 }, dropdownStyle]}
           >
             {FILTERS.map((f) => {
               const selected = transactionFilter === f;
@@ -144,6 +144,7 @@ export const TransactionsScreen: React.FC = () => {
                 <TouchableOpacity
                   key={f}
                   disabled={!filterOpen}
+                  activeOpacity={1}
                   accessibilityRole="button"
                   accessibilityState={{ selected }}
                   onPress={() => {
