@@ -43,7 +43,7 @@ const FAQS_DATA: readonly FaqItem[] = [
     category: 'Ordering',
     question: 'Can I change or update my order after submitting?',
     answer:
-      'You can update your order details as long as the counter staff has not yet accepted payment. Once counter payment is recorded and the order enters "Awaiting Parcel", details are locked for security.',
+      'You can update your order details as long as the counter staff has not yet accepted payment. Once counter payment is recorded and the order enters "Awaiting", details are locked for security.',
   },
   {
     id: 'faq-ord-4',
@@ -57,9 +57,9 @@ const FAQS_DATA: readonly FaqItem[] = [
   {
     id: 'faq-pay-1',
     category: 'Payment',
-    question: 'Why does my order say "Payment Required"?',
+    question: 'Why does my order say "Unpaid"?',
     answer:
-      'When you create an order, it is marked as "Payment Required" until you deposit the courier cash at Lily’s Catering Hub counter. Once our staff receives and verifies your payment, the status advances to "Awaiting Parcel".',
+      'When you create an order, it is marked as "Unpaid" until you deposit the courier cash at Lily’s Catering Hub counter. Once our staff receives and verifies your payment, the status advances to "Awaiting".',
   },
   {
     id: 'faq-pay-2',
@@ -89,7 +89,7 @@ const FAQS_DATA: readonly FaqItem[] = [
     category: 'Claiming',
     question: 'How do I know when my parcel is ready for pickup?',
     answer:
-      'When the courier drops off your package at Lily’s Catering Hub, our staff inspects the pouch and logs it into the system. You will receive an immediate update in your Activity Updates inbox, and the status changes to "Ready to Claim".',
+      'When the courier drops off your package at Lily’s Catering Hub, our staff inspects the pouch and logs it into the system. You will receive an immediate update in your Activity Updates inbox, and the status changes to "Claimable".',
   },
   {
     id: 'faq-clm-2',

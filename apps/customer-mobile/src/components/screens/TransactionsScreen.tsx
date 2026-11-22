@@ -45,11 +45,11 @@ const getFilterLabel = (filter: TransactionFilter): string => {
     case 'ALL':
       return 'All Orders';
     case 'READY_TO_CLAIM':
-      return 'Ready to Claim';
+      return 'Claimable';
     case 'AWAITING_PARCEL':
-      return 'Awaiting Parcel';
+      return 'Awaiting';
     case 'PAYMENT_REQUIRED':
-      return 'Payment Required';
+      return 'Unpaid';
     case 'CLAIMED':
       return 'Claimed';
     case 'CANCELLED':
