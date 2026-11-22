@@ -606,15 +606,15 @@ export const OrderDetailsScreen: React.FC = () => {
                   <View className="mt-4 px-3 items-center">
                     {isClaimed || isReleaseExpired ? (
                       <View className="items-center">
-                        <Text className="text-[13px] text-[#6b7280] text-center leading-[21px]">
+                        <Text className="text-[13px] font-normal text-[#6b7280] text-center leading-[21px]">
                           Your order has been successfully claimed
                         </Text>
-                        <Text className="text-[13px] text-[#6b7280] text-center leading-[21px]">
+                        <Text className="text-[13px] font-normal text-[#6b7280] text-center leading-[21px]">
                           You can safely exit this page
                         </Text>
                       </View>
                     ) : (
-                      <Text className="text-[13px] text-[#6b7280] text-center leading-[21px] max-w-[280px]">
+                      <Text className="text-[13px] font-normal text-[#6b7280] text-center leading-[21px] max-w-[280px]">
                         Please wait by the counter. Show this screen only if requested by staff.
                       </Text>
                     )}
@@ -639,10 +639,10 @@ export const OrderDetailsScreen: React.FC = () => {
                   <View className="pt-3 gap-3">
                     {/* Item Row */}
                     <View className="flex-row items-center justify-between">
-                      <Text className="text-[12px] text-[#64748b]">Item</Text>
+                      <Text className="text-[12px] font-normal text-[#64748b]">Item</Text>
                       <Text
                         numberOfLines={1}
-                        className="text-[13px] font-bold text-[#1e293b] flex-1 text-right ml-4"
+                        className="text-[13px] font-semibold text-[#1e293b] flex-1 text-right ml-4"
                       >
                         {productName}
                       </Text>
@@ -650,7 +650,7 @@ export const OrderDetailsScreen: React.FC = () => {
 
                     {/* Cash Change Row */}
                     <View className="flex-row items-center justify-between pt-0.5">
-                      <Text className="text-[12px] text-[#64748b]">Cash Change</Text>
+                      <Text className="text-[12px] font-normal text-[#64748b]">Cash Change</Text>
                       <View className="bg-[#eff6ff] px-3 py-1 rounded-[8px] items-center justify-center">
                         <Text className="text-[13px] font-bold text-[#2563eb]">
                           {`₱${change.toLocaleString('en-US')}`}
@@ -724,7 +724,7 @@ export const OrderDetailsScreen: React.FC = () => {
                 {/* 1. Product */}
                 <View className="flex-row items-center justify-between py-[2px]">
                   <Text className="text-[14px] text-[#64748b] font-normal">Product</Text>
-                  <Text className="text-[14px] font-bold text-[#111827] tracking-[-0.35px]">
+                  <Text className="text-[14px] font-semibold text-[#111827] tracking-[-0.35px]">
                     {productName}
                   </Text>
                 </View>
@@ -1081,7 +1081,7 @@ export const OrderDetailsScreen: React.FC = () => {
                   </View>
                 ) : (
                   <View className="gap-2">
-                    <Text className="text-[12px] text-[#64748b] text-center">
+                    <Text className="text-[12px] font-normal text-[#64748b] text-center">
                       Only initiate claim when you’re physically claiming at the hub
                     </Text>
                     <View className="w-full h-[48px] rounded-[12px] bg-[#94a3b8] opacity-75 items-center justify-center">

@@ -469,7 +469,7 @@ export const ProofOfDeliveryModal: React.FC = () => {
                   <Text className="text-sm font-mono text-[#10b780] font-bold">
                     MATCH: {trackingNumber}
                   </Text>
-                  <Text className="text-xs text-gray-400 mt-1">
+                  <Text className="text-xs font-normal text-gray-400 mt-1">
                     Hub Counter Camera • Verified Intact
                   </Text>
                 </View>
@@ -492,7 +492,7 @@ export const ProofOfDeliveryModal: React.FC = () => {
                   borderColor: 'rgba(255, 255, 255, 0.2)',
                 }}
               >
-                <Text style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: 12, fontWeight: '500' }}>
+                <Text style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: 12, fontFamily: 'GoogleSans-Medium', fontWeight: '500' }}>
                   Pinch or double-tap to zoom
                 </Text>
               </View>
@@ -531,7 +531,7 @@ export const ProofOfDeliveryModal: React.FC = () => {
                   }}
                   accessibilityLabel="Zoom Out"
                 >
-                  <Text style={{ color: '#FFFFFF', fontWeight: 'bold', fontSize: 16, lineHeight: 18 }}>-</Text>
+                  <Text style={{ color: '#FFFFFF', fontFamily: 'GoogleSans-Bold', fontWeight: 'bold', fontSize: 16, lineHeight: 18 }}>-</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -540,8 +540,8 @@ export const ProofOfDeliveryModal: React.FC = () => {
                   style={{ paddingHorizontal: 6, alignItems: 'center', justifyContent: 'center' }}
                   accessibilityLabel="Reset Zoom"
                 >
-                  <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>
-                    {displayScale}x <Text style={{ fontWeight: '400', color: 'rgba(255, 255, 255, 0.7)' }}>(Reset)</Text>
+                  <Text style={{ color: '#FFFFFF', fontSize: 13, fontFamily: 'GoogleSans-Bold', fontWeight: '700' }}>
+                    {displayScale}x <Text style={{ fontFamily: 'GoogleSans-Regular', fontWeight: '400', color: 'rgba(255, 255, 255, 0.7)' }}>(Reset)</Text>
                   </Text>
                 </TouchableOpacity>
 
@@ -560,7 +560,7 @@ export const ProofOfDeliveryModal: React.FC = () => {
                   }}
                   accessibilityLabel="Zoom In"
                 >
-                  <Text style={{ color: '#FFFFFF', fontWeight: 'bold', fontSize: 16, lineHeight: 18 }}>+</Text>
+                  <Text style={{ color: '#FFFFFF', fontFamily: 'GoogleSans-Bold', fontWeight: 'bold', fontSize: 16, lineHeight: 18 }}>+</Text>
                 </TouchableOpacity>
               </View>
             )}

@@ -215,6 +215,7 @@ export const AuthInput: React.FC<AuthInputProps> = ({
             className="w-full font-normal text-[#1e293b] p-0 m-0"
             style={{
               fontSize: isCompact ? 13.5 : 14.5,
+              fontFamily: 'GoogleSans-Regular',
               fontWeight: '400',
               includeFontPadding: false,
               height: isCompact ? 22 : 24,
@@ -304,6 +305,7 @@ export const AuthInput: React.FC<AuthInputProps> = ({
           <Text
             style={{
               fontSize: 11,
+              fontFamily: 'GoogleSans-Regular',
               color: '#dc2626',
               fontWeight: '400',
             }}

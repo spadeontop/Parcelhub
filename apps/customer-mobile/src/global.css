@@ -3,5 +3,12 @@
 @tailwind utilities;
 
 :root {
-  --font-display: Spline Sans, Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'GoogleSans-Regular', ui-sans-serif, system-ui, sans-serif;
+  font-family: 'GoogleSans-Regular';
+}
+
+@layer base {
+  * {
+    font-family: 'GoogleSans-Regular';
+  }
 }

@@ -107,82 +107,81 @@ export const TransactionsScreen: React.FC = () => {
 
         {/* Scrollable Content Container */}
         <View className="mx-5 mb-24 bg-white border border-[#e5eaf3] rounded-[24px] overflow-hidden" style={{ flexShrink: 1 }}>
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          style={{ flexGrow: 0 }}
-          contentContainerStyle={{ paddingHorizontal: 16 }}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              colors={['#2563eb']}
-            />
-          }
-        >
-          {/* Transactions Container - Full Width */}
-          <View>
-            {/* Header */}
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            style={{ flexGrow: 0 }}
+            contentContainerStyle={{ paddingHorizontal: 16 }}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={['#2563eb']}
+              />
+            }
+          >
+            {/* Transactions Container - Full Width */}
+            <View>
+              {/* Header */}
 
-            {/* List Rows */}
-            {filteredOrders.length === 0 ? (
-              <View className="py-14 items-center justify-center px-4">
-                <Text className="text-sm font-medium text-[#94a3b8] text-center">
-                  No orders found matching this filter.
-                </Text>
-              </View>
-            ) : (
-              filteredOrders.map((order, idx) => {
-                const statusTheme = getStatusTheme(order.status);
-                const isLast = idx === filteredOrders.length - 1;
+              {/* List Rows */}
+              {filteredOrders.length === 0 ? (
+                <View className="py-14 items-center justify-center px-4">
+                  <Text className="text-sm font-medium text-[#94a3b8] text-center">
+                    No orders found matching this filter.
+                  </Text>
+                </View>
+              ) : (
+                filteredOrders.map((order, idx) => {
+                  const statusTheme = getStatusTheme(order.status);
+                  const isLast = idx === filteredOrders.length - 1;
 
-                return (
-                  <TouchableOpacity
-                    key={order.id}
-                    activeOpacity={0.7}
-                    onPress={() =>
-                      navigateTo('order_details', {
-                        orderId: order.id,
-                        ticketCode: order.ticketCode,
-                      })
-                    }
-                    className={`flex-row items-center justify-between ${
-                      !isLast ? 'border-b border-[#e8ebf2]' : ''
-                    }`}
-                    style={{
-                      minHeight: 60,
-                      paddingVertical: 8,
-                      paddingRight: 12,
-                    }}
-                  >
-                    {/* Left: Product Name & Date */}
-                    <View className="flex-1 pr-3">
-                      <Text
-                        className="text-[13px] font-semibold text-[#172033] leading-[18px]"
-                        numberOfLines={1}
-                        ellipsizeMode="tail"
-                      >
-                        {order.productName || 'Unknown Package'}
-                      </Text>
-                      <Text className="text-[10px] font-normal text-[#667184] leading-[15px] mt-1">
-                        {formatOrderDate(order.timestamp) || 'Recent Order'}
-                      </Text>
-                    </View>
+                  return (
+                    <TouchableOpacity
+                      key={order.id}
+                      activeOpacity={0.7}
+                      onPress={() =>
+                        navigateTo('order_details', {
+                          orderId: order.id,
+                          ticketCode: order.ticketCode,
+                        })
+                      }
+                      className={`flex-row items-center justify-between ${!isLast ? 'border-b border-[#e8ebf2]' : ''
+                        }`}
+                      style={{
+                        minHeight: 60,
+                        paddingVertical: 8,
+                        paddingRight: 12,
+                      }}
+                    >
+                      {/* Left: Product Name & Date */}
+                      <View className="flex-1 pr-3">
+                        <Text
+                          className="text-[13px] font-semibold text-[#172033] leading-[18px]"
+                          numberOfLines={1}
+                          ellipsizeMode="tail"
+                        >
+                          {order.productName || 'Unknown Package'}
+                        </Text>
+                        <Text className="text-[10px] font-normal text-[#667184] leading-[15px] mt-1">
+                          {formatOrderDate(order.timestamp) || 'Recent Order'}
+                        </Text>
+                      </View>
 
-                    {/* Right: Status Dot + Label + Chevron */}
-                    <View className="flex-row items-center gap-2 shrink-0">
-                      <Text
-                        className="text-[11.5px] text-[#18181b] leading-[16px]"
-                      >
-                        {statusTheme.label}
-                      </Text>
-                      <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: statusTheme.dotColor }} />
-                    </View>
-                  </TouchableOpacity>
-                );
-              })
-            )}
-          </View>
-        </ScrollView>
+                      {/* Right: Status Dot + Label + Chevron */}
+                      <View className="flex-row items-center gap-2 shrink-0">
+                        <Text
+                          className="text-[11.5px] font-medium text-[#18181b] leading-[16px]"
+                        >
+                          {statusTheme.label}
+                        </Text>
+                        <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: statusTheme.dotColor }} />
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })
+              )}
+            </View>
+          </ScrollView>
         </View>
 
         {/* Floating Bottom Nav inside the Main Sheet */}

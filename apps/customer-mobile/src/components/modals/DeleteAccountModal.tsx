@@ -36,7 +36,7 @@ export const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
           </Text>
 
           {/* Description */}
-          <Text className="text-xs text-gray-600 mt-3 leading-relaxed">
+          <Text className="text-xs font-normal text-gray-600 mt-3 leading-relaxed">
             Are you sure you want to delete your account? This action is permanent and cannot be reversed.
           </Text>
 
