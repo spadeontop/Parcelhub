@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,13 @@ import {
   RefreshControl,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import Animated, { FadeInDown, FadeOutUp, ReduceMotion } from 'react-native-reanimated';
+import Animated, {
+  Easing,
+  ReduceMotion,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { StatusBar } from 'expo-status-bar';
 import { useV1 } from '../../v1/context/V1Context';
 import { BottomNav } from '../layout/BottomNav';
@@ -29,16 +35,6 @@ const FILTERS: TransactionFilter[] = [
   'PAYMENT_REQUIRED',
   'CLAIMED',
 ];
-
-const dropdownEnter = FadeInDown.springify()
-  .damping(18)
-  .stiffness(260)
-  .mass(0.7)
-  .withInitialValues({ opacity: 0, translateY: -8 })
-  .reduceMotion(ReduceMotion.System);
-const dropdownExit = FadeOutUp.duration(140)
-  .withTargetValues({ opacity: 0, translateY: -6 })
-  .reduceMotion(ReduceMotion.System);
 
 const getFilterLabel = (filter: TransactionFilter): string => {
   switch (filter) {
@@ -67,6 +63,18 @@ export const TransactionsScreen: React.FC = () => {
   } = useV1();
   const [refreshing, setRefreshing] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
+  const dropdownOffset = useSharedValue(-108);
+  const dropdownStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: `${dropdownOffset.value}%` as const }],
+  }));
+
+  useEffect(() => {
+    dropdownOffset.value = withTiming(filterOpen ? 0 : -108, {
+      duration: filterOpen ? 220 : 180,
+      easing: filterOpen ? Easing.out(Easing.cubic) : Easing.in(Easing.cubic),
+      reduceMotion: ReduceMotion.System,
+    });
+  }, [dropdownOffset, filterOpen]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -97,6 +105,64 @@ export const TransactionsScreen: React.FC = () => {
 
       {/* Main Sheet with Curved Transition */}
       <View className="flex-1 bg-white rounded-t-[32px] pt-5 relative">
+        <TouchableOpacity
+          activeOpacity={1}
+          accessibilityRole="button"
+          accessibilityLabel="Filter orders"
+          accessibilityState={{ expanded: filterOpen }}
+          onPress={() => setFilterOpen((open) => !open)}
+          className="mx-5 mb-3 h-[50px] border border-[#e5eaf3] rounded-2xl flex-row items-center justify-between px-4 bg-white"
+        >
+          <Text className="text-[14px] font-semibold text-[#111827]">{getFilterLabel(transactionFilter)}</Text>
+          <View className="flex-row items-center gap-2">
+            <View className="bg-[#eff6ff] rounded-full px-4 py-1">
+              <Text className="text-[12px] text-[#2563eb]">{filteredOrders.length} {filteredOrders.length === 1 ? 'Order' : 'Orders'}</Text>
+            </View>
+            <Svg width={20} height={20} viewBox="0 0 20 20" fill="none">
+              <Path d="M5 7.5L10 12.5L15 7.5" stroke="#64748b" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" />
+            </Svg>
+          </View>
+        </TouchableOpacity>
+
+        <View
+          collapsable={false}
+          pointerEvents="box-none"
+          className="absolute top-[76px] left-3 right-3 z-10 overflow-hidden px-2 pb-4"
+        >
+          <Animated.View
+            pointerEvents={filterOpen ? 'auto' : 'none'}
+            accessibilityElementsHidden={!filterOpen}
+            importantForAccessibility={filterOpen ? 'auto' : 'no-hide-descendants'}
+            className="bg-white border border-[#e5eaf3] rounded-2xl py-2"
+            style={[{ shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.14, shadowRadius: 10, elevation: 8 }, dropdownStyle]}
+          >
+            {FILTERS.map((f) => {
+              const selected = transactionFilter === f;
+              const count = f === 'ALL' ? orders.length : orders.filter((order) => order.status === f).length;
+              const dotColor = f === 'ALL' ? '#4b5563' : getStatusTheme(f).dotColor;
+              return (
+                <TouchableOpacity
+                  key={f}
+                  disabled={!filterOpen}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                  onPress={() => {
+                    setTransactionFilter(f);
+                    setFilterOpen(false);
+                  }}
+                  className={`flex-row items-center justify-between px-4 py-3 ${selected ? 'bg-[#eff6ff]' : 'bg-white'}`}
+                >
+                  <View className="flex-row items-center gap-2.5">
+                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: dotColor }} />
+                    <Text className={`text-[13px] text-[#111827] ${selected ? 'font-semibold' : 'font-medium'}`}>{getFilterLabel(f)}</Text>
+                  </View>
+                  <Text className="text-[12px] text-[#4b5563]">{count}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </Animated.View>
+        </View>
+
         {/* Scrollable Content Container */}
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -110,47 +176,6 @@ export const TransactionsScreen: React.FC = () => {
             />
           }
         >
-          <View className="mx-5 mb-3 relative" style={{ zIndex: 10, elevation: filterOpen ? 10 : 0 }}>
-            <TouchableOpacity
-              accessibilityRole="button"
-              accessibilityLabel="Filter orders"
-              accessibilityState={{ expanded: filterOpen }}
-              onPress={() => setFilterOpen(!filterOpen)}
-              className="h-[50px] border border-[#e5eaf3] rounded-2xl flex-row items-center justify-between px-4 bg-white"
-            >
-              <Text className="text-[14px] font-semibold text-[#111827]">{getFilterLabel(transactionFilter)}</Text>
-              <View className="flex-row items-center gap-2">
-                <View className="bg-[#eff6ff] rounded-full px-4 py-1">
-                  <Text className="text-[12px] text-[#2563eb]">{filteredOrders.length} {filteredOrders.length === 1 ? 'Order' : 'Orders'}</Text>
-                </View>
-                <Svg width={20} height={20} viewBox="0 0 20 20" fill="none">
-                  <Path d="M5 7.5L10 12.5L15 7.5" stroke="#64748b" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" />
-                </Svg>
-              </View>
-            </TouchableOpacity>
-            {filterOpen && (
-              <Animated.View entering={dropdownEnter} exiting={dropdownExit} className="absolute top-[56px] left-0 right-0 bg-white border border-[#e5eaf3] rounded-2xl py-2"
-                style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.14, shadowRadius: 10, elevation: 8 }}>
-                {FILTERS.map((f) => {
-                  const selected = transactionFilter === f;
-                  const count = f === 'ALL' ? orders.length : orders.filter((order) => order.status === f).length;
-                  const dotColor = f === 'ALL' ? '#4b5563' : getStatusTheme(f).dotColor;
-                  return (
-                    <TouchableOpacity key={f} accessibilityRole="button" accessibilityState={{ selected }}
-                      onPress={() => { setTransactionFilter(f); setFilterOpen(false); }}
-                      className={`flex-row items-center justify-between px-4 py-3 ${selected ? 'bg-[#eff6ff]' : 'bg-white'}`}>
-                      <View className="flex-row items-center gap-2.5">
-                        <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: dotColor }} />
-                        <Text className={`text-[13px] text-[#111827] ${selected ? 'font-semibold' : 'font-medium'}`}>{getFilterLabel(f)}</Text>
-                      </View>
-                      <Text className="text-[12px] text-[#4b5563]">{count}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </Animated.View>
-            )}
-          </View>
-
           {/* Transactions Container - Full Width */}
           <View className="mx-5 bg-white border border-[#e4e4e7] rounded-[24px] px-4 mb-4">
             {/* Header */}
