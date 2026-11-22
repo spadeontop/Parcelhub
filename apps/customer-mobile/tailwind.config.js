@@ -7,6 +7,15 @@ module.exports = {
   presets: [require("nativewind/preset")],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['GoogleSans-Regular'],
+        normal: ['GoogleSans-Regular'],
+        medium: ['GoogleSans-Medium'],
+        semibold: ['GoogleSans-Medium'],
+        bold: ['GoogleSans-Bold'],
+        extrabold: ['GoogleSans-Bold'],
+        italic: ['GoogleSans-Italic'],
+      },
       colors: {
         primary: {
           DEFAULT: '#215cd4',

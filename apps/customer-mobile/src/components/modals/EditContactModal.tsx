@@ -272,7 +272,7 @@ export const EditContactModal: React.FC<EditContactModalProps> = ({
                       strokeLinejoin="round"
                     />
                   </Svg>
-                  <Text className="text-[11px] text-[#64748b] leading-[15px] ml-2 flex-1">
+                  <Text className="text-[11px] font-normal text-[#64748b] leading-[15px] ml-2 flex-1">
                     A 6-digit verification code will be sent to your email to confirm changes.
                   </Text>
                 </View>

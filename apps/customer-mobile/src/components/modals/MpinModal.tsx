@@ -53,7 +53,7 @@ export const MpinModal: React.FC = () => {
               <Text className="text-lg font-bold text-gray-900">
                 Authorize Release
               </Text>
-              <Text className="text-xs text-gray-500">
+              <Text className="text-xs font-normal text-gray-500">
                 Enter your 4-digit MPIN to confirm handover
               </Text>
             </View>

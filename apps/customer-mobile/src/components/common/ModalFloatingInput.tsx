@@ -139,6 +139,7 @@ export const ModalFloatingInput: React.FC<ModalFloatingInputProps> = ({
           className="flex-1 font-normal text-[#1e293b] p-0 m-0"
           style={{
             fontSize: 14,
+            fontFamily: 'GoogleSans-Regular',
             fontWeight: '400',
             includeFontPadding: false,
             height: 22,

@@ -151,7 +151,7 @@ export const NotificationsScreen: React.FC = () => {
                             {item.title}
                           </Text>
                         </View>
-                        <Text className="text-[12px] text-[#64748b] mt-1 leading-[18px]">
+                        <Text className="text-[12px] font-normal text-[#64748b] mt-1 leading-[18px]">
                           {item.body}
                         </Text>
                       </View>

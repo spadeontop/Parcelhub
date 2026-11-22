@@ -160,7 +160,7 @@ export const ConfirmationSubmitSection: React.FC<ConfirmationSubmitSectionProps>
               {title}
             </Text>
             {subtitle ? (
-              <Text className="text-[11.5px] text-[#71717a] mt-1 leading-[15px]">
+              <Text className="text-[11.5px] font-normal text-[#71717a] mt-1 leading-[15px]">
                 {subtitle}
               </Text>
             ) : null}

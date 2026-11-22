@@ -61,9 +61,9 @@ export const NotificationsModal: React.FC = () => {
               >
                 <View className="flex-row items-center justify-between">
                   <Text className="text-xs font-bold text-gray-900">{item.title}</Text>
-                  <Text className="text-[10px] text-gray-400">{item.time}</Text>
+                  <Text className="text-[10px] font-normal text-gray-400">{item.time}</Text>
                 </View>
-                <Text className="text-xs text-gray-600 mt-1 leading-relaxed">
+                <Text className="text-xs font-normal text-gray-600 mt-1 leading-relaxed">
                   {item.body}
                 </Text>
               </View>

@@ -256,7 +256,7 @@ export const CreateOrderScreen: React.FC = () => {
               <Text className="text-[13px] font-bold text-[#92400e] mb-1">
                 {TRACKING_TUTORIAL_BY_APP[missingTrackingApp].title}
               </Text>
-              <Text className="text-[12px] text-[#78350f] leading-5">
+              <Text className="text-[12px] font-normal text-[#78350f] leading-5">
                 {TRACKING_TUTORIAL_BY_APP[missingTrackingApp].steps}
               </Text>
             </View>

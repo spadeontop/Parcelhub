@@ -415,11 +415,11 @@ export const FaqScreen: React.FC<FaqScreenProps> = ({ onBack }) => {
                   backgroundColor: '#10b981',
                 }}
               />
-              <Text style={{ fontSize: 12, fontWeight: '700', color: '#1e293b' }}>
+              <Text style={{ fontSize: 12, fontFamily: 'GoogleSans-Bold', fontWeight: '700', color: '#1e293b' }}>
                 Lily’s Catering Hub Counter
               </Text>
             </View>
-            <Text style={{ fontSize: 12, color: '#64748b', lineHeight: 18 }}>
+            <Text style={{ fontSize: 12, fontFamily: 'GoogleSans-Regular', color: '#64748b', lineHeight: 18 }}>
               Location: Yati, Liloan, Cebu{'\n'}
               Hours: Monday to Saturday, 8:00 AM – 6:00 PM{'\n'}
               Closed on Sundays and Hub Holidays
