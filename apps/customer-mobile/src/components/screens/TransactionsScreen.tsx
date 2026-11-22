@@ -126,29 +126,26 @@ export const TransactionsScreen: React.FC = () => {
 
         <View
           pointerEvents="box-none"
-          className="absolute top-[76px] left-5 right-5 z-10"
-          style={filterOpen ? {
-            borderRadius: 16,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 5 },
-            shadowOpacity: 0.1,
-            shadowRadius: 8,
-            elevation: 4,
-          } : undefined}
-        >
-        <View
+          className="absolute top-[76px] left-3 right-3 z-10 overflow-hidden px-2 pb-4"
+          style={{ borderTopLeftRadius: 24, borderTopRightRadius: 24 }}
           collapsable={false}
-          pointerEvents="box-none"
-          className="overflow-hidden rounded-2xl"
-          style={{ borderRadius: 16 }}
         >
           <Animated.View
             pointerEvents={filterOpen ? 'auto' : 'none'}
             accessibilityElementsHidden={!filterOpen}
             importantForAccessibility={filterOpen ? 'auto' : 'no-hide-descendants'}
-            className="bg-white border border-[#e5eaf3] rounded-2xl py-2 overflow-hidden"
-            style={[{ backgroundColor: '#fff', borderWidth: 1, borderColor: '#e5eaf3', borderRadius: 16, overflow: 'hidden' }, dropdownStyle]}
+            style={[{
+              backgroundColor: '#fff',
+              borderRadius: 16,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 5 },
+              shadowOpacity: 0.1,
+              shadowRadius: 8,
+              elevation: 4,
+            }, dropdownStyle]}
           >
+            <View className="bg-white border border-[#e5eaf3] rounded-2xl py-2 overflow-hidden"
+              style={{ backgroundColor: '#fff', borderWidth: 1, borderColor: '#e5eaf3', borderRadius: 16, overflow: 'hidden' }}>
             {FILTERS.map((f) => {
               const selected = transactionFilter === f;
               const count = f === 'ALL' ? orders.length : orders.filter((order) => order.status === f).length;
@@ -174,8 +171,8 @@ export const TransactionsScreen: React.FC = () => {
                 </TouchableOpacity>
               );
             })}
+            </View>
           </Animated.View>
-        </View>
         </View>
 
         {/* Scrollable Content Container */}
