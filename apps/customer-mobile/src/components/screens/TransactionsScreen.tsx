@@ -115,9 +115,7 @@ export const TransactionsScreen: React.FC = () => {
         >
           <Text className="text-[14px] font-semibold text-[#111827]">{getFilterLabel(transactionFilter)}</Text>
           <View className="flex-row items-center gap-2">
-            <View className="bg-[#eff6ff] rounded-full px-4 py-1">
-              <Text className="text-[12px] text-[#2563eb]">{filteredOrders.length} {filteredOrders.length === 1 ? 'Order' : 'Orders'}</Text>
-            </View>
+            <Text className="text-[14px] font-semibold text-[#111827]">{filteredOrders.length} {filteredOrders.length === 1 ? 'Order' : 'Orders'}</Text>
             <Svg width={20} height={20} viewBox="0 0 20 20" fill="none">
               <Path d="M5 7.5L10 12.5L15 7.5" stroke="#64748b" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" />
             </Svg>
@@ -176,10 +174,11 @@ export const TransactionsScreen: React.FC = () => {
         </View>
 
         {/* Scrollable Content Container */}
+        <View className="mx-5 mb-24 bg-white border border-[#e4e4e7] rounded-[24px] overflow-hidden" style={{ flexShrink: 1 }}>
         <ScrollView
           showsVerticalScrollIndicator={false}
-          className="flex-1"
-          contentContainerStyle={{ paddingBottom: 96 }}
+          style={{ flexGrow: 0 }}
+          contentContainerStyle={{ paddingHorizontal: 16 }}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -189,7 +188,7 @@ export const TransactionsScreen: React.FC = () => {
           }
         >
           {/* Transactions Container - Full Width */}
-          <View className="mx-5 bg-white border border-[#e4e4e7] rounded-[24px] px-4 mb-4">
+          <View>
             {/* Header */}
 
             {/* List Rows */}
@@ -252,6 +251,7 @@ export const TransactionsScreen: React.FC = () => {
             )}
           </View>
         </ScrollView>
+        </View>
 
         {/* Floating Bottom Nav inside the Main Sheet */}
         <BottomNav activeTab="transactions" />
