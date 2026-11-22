@@ -133,8 +133,8 @@ export const TransactionsScreen: React.FC = () => {
             pointerEvents={filterOpen ? 'auto' : 'none'}
             accessibilityElementsHidden={!filterOpen}
             importantForAccessibility={filterOpen ? 'auto' : 'no-hide-descendants'}
-            className="bg-white border border-[#e5eaf3] rounded-2xl py-2"
-            style={[{ backgroundColor: '#fff', shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.14, shadowRadius: 10, elevation: 8 }, dropdownStyle]}
+            className="bg-white border border-[#e5eaf3] rounded-2xl py-2 overflow-hidden"
+            style={[{ backgroundColor: '#fff', borderRadius: 16, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.14, shadowRadius: 10, elevation: 8 }, dropdownStyle]}
           >
             {FILTERS.map((f) => {
               const selected = transactionFilter === f;
