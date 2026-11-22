@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { orders } from "@/db/schema";
 import { authenticateStaffRequest } from "@/app/lib/v1/auth";
 import { sendFcmNotification } from "@/app/lib/v1/fcm";
+import { publishOrderSignal } from "@/app/lib/v1/realtime";
 import {
   appendStatusTimelineSql,
   matchOrderByIdOrTicket,
@@ -104,6 +105,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         status: "CLAIMED",
       },
     }).catch(() => {});
+
+    publishOrderSignal(["staff:orders", `customer:${order.customerId}`], {
+      event: "ORDER_CLAIMED",
+      orderId: order.id,
+      ticketCode: order.ticketCode ?? null,
+      status: "CLAIMED",
+      updatedAt: now.toISOString(),
+    });
 
     const response: StaffClaimOrderRes = {
       statusMessage: "Order successfully claimed",

@@ -12,6 +12,7 @@ import {
   ORDER_NON_IMAGE_COLUMNS,
 } from "@/app/lib/v1/orders";
 import { parseJsonBody } from "@/app/lib/v1/request";
+import { publishOrderSignal } from "@/app/lib/v1/realtime";
 import { jsonError, jsonSuccess } from "@/app/lib/response";
 import {
   CustomerGetOrderRes,
@@ -205,7 +206,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       .where(
         and(eq(orders.id, order.id), eq(orders.status, "PENDING_INITIALIZATION"))
       )
-      .returning({ id: orders.id });
+      .returning({ id: orders.id, ticketCode: orders.ticketCode });
 
     if (!updatedOrder) {
       return jsonError(
@@ -214,6 +215,14 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         "OrderNotEditable"
       );
     }
+
+    publishOrderSignal(["staff:orders", `customer:${auth.session.userId}`], {
+      event: "ORDER_CREATED",
+      orderId: updatedOrder.id,
+      ticketCode: updatedOrder.ticketCode ?? null,
+      status: "PAYMENT_REQUIRED",
+      updatedAt: now.toISOString(),
+    });
 
     const response: CustomerUpdateOrderRes = {
       statusMessage: "Order updated successfully",

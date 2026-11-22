@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { orders } from "@/db/schema";
 import { authenticateStaffRequest } from "@/app/lib/v1/auth";
 import { sendFcmNotification } from "@/app/lib/v1/fcm";
+import { publishOrderSignal } from "@/app/lib/v1/realtime";
 import { validateImageSize } from "@/app/lib/v1/image";
 import {
   appendStatusTimelineSql,
@@ -115,6 +116,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         status: "READY_TO_CLAIM",
       },
     }).catch(() => {});
+
+    publishOrderSignal(["staff:orders", `customer:${order.customerId}`], {
+      event: "ORDER_READY",
+      orderId: order.id,
+      ticketCode: order.ticketCode ?? null,
+      status: "READY_TO_CLAIM",
+      updatedAt: now.toISOString(),
+    });
 
     const response: StaffAttachPhotoRes = {
       statusMessage: "Proof photo attached. Order is now claimable.",

@@ -12,6 +12,8 @@
     "test:v1:customer": "node --import tsx scripts/test-v1-customer-routes.ts",
     "test:v1:staff": "tsx scripts/test-v1-staff-routes.ts",
     "test:v1:notification": "tsx scripts/test-v1-notification.ts",
+    "test:v1:realtime": "tsx scripts/test-v1-realtime.ts",
+    "test:v1:realtime:live": "tsx scripts/test-v1-realtime-live.ts",
     "test:ai:health": "tsx scripts/test-ai-health.ts",
     "test:ai:accuracy": "tsx scripts/test-ai-accuracy.ts",
     "test:spam": "tsx scripts/spam-test.ts",

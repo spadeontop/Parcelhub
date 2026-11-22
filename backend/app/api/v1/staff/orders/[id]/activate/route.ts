@@ -5,6 +5,7 @@ import { orders } from "@/db/schema";
 import { authenticateStaffRequest } from "@/app/lib/v1/auth";
 import { isUniqueViolation } from "@/app/lib/v1/db-errors";
 import { sendFcmNotification } from "@/app/lib/v1/fcm";
+import { publishOrderSignal } from "@/app/lib/v1/realtime";
 import {
   appendStatusTimelineSql,
   hasActivePaidTrackingId,
@@ -137,6 +138,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         status: "AWAITING_PARCEL",
       },
     }).catch(() => {});
+
+    publishOrderSignal(["staff:orders", `customer:${order.customerId}`], {
+      event: "ORDER_ACTIVATED",
+      orderId: order.id,
+      ticketCode: order.ticketCode ?? null,
+      status: "AWAITING_PARCEL",
+      updatedAt: now.toISOString(),
+    });
 
     const response: StaffActivateOrderRes = {
       statusMessage: "Order activated and awaiting parcel delivery",
