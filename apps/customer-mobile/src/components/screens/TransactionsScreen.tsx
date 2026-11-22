@@ -72,9 +72,13 @@ export const TransactionsScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const dropdownOffset = useSharedValue(0);
+  const dropdownHeight = useSharedValue(0);
   const dropdownStyle = useAnimatedStyle(() => ({
-    transformOrigin: 'top',
-    transform: [{ scaleY: dropdownOffset.value }],
+    height: dropdownHeight.value * dropdownOffset.value,
+    borderWidth: dropdownOffset.value > 0 ? 1 : 0,
+  }));
+  const dropdownContentStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: -dropdownHeight.value * (1 - dropdownOffset.value) }],
   }));
 
   useEffect(() => {
@@ -143,6 +147,7 @@ export const TransactionsScreen: React.FC = () => {
             style={[{
               backgroundColor: '#fff',
               borderRadius: 16,
+              borderColor: '#e5eaf3',
               shadowColor: '#000',
               shadowOffset: { width: 0, height: 5 },
               shadowOpacity: 0.1,
@@ -150,8 +155,11 @@ export const TransactionsScreen: React.FC = () => {
               elevation: 4,
             }, dropdownStyle]}
           >
-            <View className="bg-white border border-[#e5eaf3] rounded-2xl overflow-hidden"
-              style={{ backgroundColor: '#fff', borderWidth: 1, borderColor: '#e5eaf3', borderRadius: 16, overflow: 'hidden' }}>
+            <Animated.View style={{ flex: 1, overflow: 'hidden', borderRadius: 16, borderColor: '#e5eaf3' }}>
+            <Animated.View
+              onLayout={(event) => { dropdownHeight.value = event.nativeEvent.layout.height; }}
+              style={[{ position: 'absolute', top: 0, left: 0, right: 0, backgroundColor: '#fff' }, dropdownContentStyle]}
+            >
             {FILTERS.map((f) => {
               const selected = transactionFilter === f;
               const count = f === 'ALL' ? orders.length : orders.filter((order) => order.status === f).length;
@@ -177,7 +185,8 @@ export const TransactionsScreen: React.FC = () => {
                 </TouchableOpacity>
               );
             })}
-            </View>
+            </Animated.View>
+            </Animated.View>
           </Animated.View>
         </View>
 
