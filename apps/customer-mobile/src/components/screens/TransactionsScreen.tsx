@@ -127,7 +127,8 @@ export const TransactionsScreen: React.FC = () => {
         <View
           collapsable={false}
           pointerEvents="box-none"
-          className="absolute top-[76px] left-3 right-3 z-10 overflow-hidden px-2 pb-4"
+          className="absolute top-[76px] left-5 right-5 z-10 overflow-hidden rounded-2xl"
+          style={{ borderRadius: 16 }}
         >
           <Animated.View
             pointerEvents={filterOpen ? 'auto' : 'none'}
