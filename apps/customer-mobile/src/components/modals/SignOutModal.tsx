@@ -35,7 +35,7 @@ export const SignOutModal: React.FC<SignOutModalProps> = ({
           </Text>
 
           {/* Description */}
-          <Text className="text-xs text-gray-600 mt-3 leading-relaxed">
+          <Text className="text-xs font-normal text-gray-600 mt-3 leading-relaxed">
             Are you sure you want to sign out of your account?
           </Text>
 

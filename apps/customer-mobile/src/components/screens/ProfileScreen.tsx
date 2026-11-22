@@ -111,7 +111,7 @@ export const ProfileScreen: React.FC = () => {
 
             {/* Full Name Row */}
             <View className="flex-row items-center justify-between py-3 border-b border-[#f8fafc]">
-              <Text className="text-[12px] text-[#64748b]">
+              <Text className="text-[12px] font-normal text-[#64748b]">
                 Full Name
               </Text>
               <Text className="text-[14px] font-bold text-[#1e293b]">
@@ -121,7 +121,7 @@ export const ProfileScreen: React.FC = () => {
 
             {/* Email Address Row */}
             <View className="flex-row items-center justify-between py-3 border-b border-[#f8fafc]">
-              <Text className="text-[12px] text-[#64748b]">
+              <Text className="text-[12px] font-normal text-[#64748b]">
                 Email Address
               </Text>
               <Text className="text-[12px] font-bold font-mono text-[#1e293b]">
@@ -131,7 +131,7 @@ export const ProfileScreen: React.FC = () => {
 
             {/* Phone Number Row */}
             <View className="flex-row items-center justify-between py-3">
-              <Text className="text-[12px] text-[#64748b]">
+              <Text className="text-[12px] font-normal text-[#64748b]">
                 Phone Number
               </Text>
               <Text className="text-[14px] font-bold text-[#1e293b] tracking-[0.7px]">
@@ -161,7 +161,7 @@ export const ProfileScreen: React.FC = () => {
             {/* Password Row */}
             <View className="flex-row items-center justify-between py-3.5">
               <View>
-                <Text className="text-[12px] text-[#64748b]">
+                <Text className="text-[12px] font-normal text-[#64748b]">
                   Password
                 </Text>
                 <Text className="text-[12px] font-bold text-[#1e293b] tracking-[1.2px] mt-0.5">
@@ -206,7 +206,7 @@ export const ProfileScreen: React.FC = () => {
                 <Text className="text-[12px] text-[#334155] font-medium">
                   Push Notifications
                 </Text>
-                <Text className="text-[11px] text-[#94a3b8] mt-0.5">
+                <Text className="text-[11px] font-normal text-[#94a3b8] mt-0.5">
                   Receive parcel arrivals and claim status updates
                 </Text>
               </View>
@@ -229,7 +229,7 @@ export const ProfileScreen: React.FC = () => {
                 <Text className="text-[12px] text-[#334155] font-medium">
                   Privacy & Data Rights
                 </Text>
-                <Text className="text-[11px] text-[#94a3b8] mt-0.5">
+                <Text className="text-[11px] font-normal text-[#94a3b8] mt-0.5">
                   Download data, deactivate or close account
                 </Text>
               </View>

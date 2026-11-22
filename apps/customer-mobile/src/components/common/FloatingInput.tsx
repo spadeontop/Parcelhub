@@ -203,6 +203,7 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
               {
                 fontSize: isCompact ? 14 : 15,
                 color: textColor,
+                fontFamily: 'GoogleSans-Regular',
                 fontWeight: '400',
                 height: isCompact ? 22 : 24,
                 padding: 0,
@@ -294,6 +295,7 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
           <Text
             style={{
               fontSize: 12,
+              fontFamily: 'GoogleSans-Regular',
               color: errorColor,
               fontWeight: '400',
             }}

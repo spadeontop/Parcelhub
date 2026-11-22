@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { Slot } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
+import { useFonts } from 'expo-font';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { V1Provider, useV1 } from '../v1/context/V1Context';
 import { AppProvider, useApp } from '../context/AppContext';
@@ -18,11 +19,6 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 function RootAppContent() {
   const { toast: legacyToast } = useApp();
   const { toast: v1Toast } = useV1();
-
-  useEffect(() => {
-    // Hide splash screen once Root layout mounts
-    SplashScreen.hideAsync().catch(() => {});
-  }, []);
 
   const activeToast = v1Toast.show ? v1Toast : legacyToast;
 
@@ -49,6 +45,24 @@ function RootAppContent() {
 }
 
 export default function RootLayout() {
+  const [fontsLoaded, fontError] = useFonts({
+    'GoogleSans-Regular': require('../../assets/fonts/GoogleSans-Regular.ttf'),
+    'GoogleSans-Medium': require('../../assets/fonts/GoogleSans-Medium.ttf'),
+    'GoogleSans-SemiBold': require('../../assets/fonts/GoogleSans-SemiBold.ttf'),
+    'GoogleSans-Bold': require('../../assets/fonts/GoogleSans-Bold.ttf'),
+    'GoogleSans-Italic': require('../../assets/fonts/GoogleSans-Italic.ttf'),
+  });
+
+  useEffect(() => {
+    if (fontsLoaded || fontError) {
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [fontsLoaded, fontError]);
+
+  if (!fontsLoaded && !fontError) {
+    return null;
+  }
+
   return (
     <SafeAreaProvider style={{ flex: 1 }}>
       <V1Provider>
