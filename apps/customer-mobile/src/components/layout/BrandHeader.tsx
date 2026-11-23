@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { ScreenId, useNavigationUi } from '../../v1/context/NavigationAndUiContext';
+import { ScreenId, useNavigationUi } from '../../context/NavigationAndUiContext';
 import { BackArrowIcon, ParcelHubLogoSvg, HelpIcon } from '../common/Icons';
 
 interface BrandHeaderProps {

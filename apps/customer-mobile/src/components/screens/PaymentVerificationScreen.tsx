@@ -2,8 +2,8 @@ import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import Svg, { Path } from 'react-native-svg';
-import { useNavigationUi } from '../../v1/context/NavigationAndUiContext';
-import { useCustomerOrders } from '../../v1/hooks/useCustomerOrders';
+import { useNavigationUi } from '../../context/NavigationAndUiContext';
+import { useCustomerOrders } from '../../hooks/useCustomerOrders';
 import { AppHeader } from '../layout/AppHeader';
 
 export const PaymentVerificationScreen: React.FC = () => {

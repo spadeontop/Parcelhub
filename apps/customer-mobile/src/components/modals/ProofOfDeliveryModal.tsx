@@ -11,11 +11,11 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigationUi } from '../../v1/context/NavigationAndUiContext';
-import { useAuthSession } from '../../v1/context/AuthSessionContext';
-import { useCustomerOrders } from '../../v1/hooks/useCustomerOrders';
-import { orderApi } from '../../v1/services/orderApi';
-import { v1Storage } from '../../v1/utils/storage';
+import { useNavigationUi } from '../../context/NavigationAndUiContext';
+import { useAuthSession } from '../../context/AuthSessionContext';
+import { useCustomerOrders } from '../../hooks/useCustomerOrders';
+import { orderApi } from '../../services/orderApi';
+import { v1Storage } from '../../utils/storage';
 import { CloseIcon } from '../common/Icons';
 
 export const ProofOfDeliveryModal: React.FC = () => {

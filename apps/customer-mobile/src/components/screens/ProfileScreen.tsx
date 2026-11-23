@@ -4,14 +4,13 @@ import {
   Text,
   TouchableOpacity,
   ScrollView,
-  useWindowDimensions,
   Switch,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { StatusBar } from 'expo-status-bar';
-import { useNavigationUi } from '../../v1/context/NavigationAndUiContext';
-import { useAuthSession } from '../../v1/context/AuthSessionContext';
-import { useNotifications } from '../../v1/context/NotificationsContext';
+import { useNavigationUi } from '../../context/NavigationAndUiContext';
+import { useAuthSession } from '../../context/AuthSessionContext';
+import { useNotifications } from '../../context/NotificationsContext';
 import { BottomNav } from '../layout/BottomNav';
 import { AppHeader } from '../layout/AppHeader';
 import { EditContactModal } from '../modals/EditContactModal';
@@ -43,8 +42,6 @@ export const ProfileScreen: React.FC = () => {
   const { navigateTo } = useNavigationUi();
   const { customer, refetchProfile } = useAuthSession();
   const { notificationsEnabled, togglePushNotifications } = useNotifications();
-  const { height } = useWindowDimensions();
-  const isCompact = height < 700;
 
   // Refetch profile on mount
   useEffect(() => {

@@ -5,10 +5,10 @@ import * as Clipboard from 'expo-clipboard';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as MediaLibrary from 'expo-media-library';
 import { StatusBar } from 'expo-status-bar';
-import { useNavigationUi } from '../../v1/context/NavigationAndUiContext';
-import { useToast } from '../../v1/context/ToastContext';
-import { useCustomerOrders, useCustomerOrderActions } from '../../v1/hooks/useCustomerOrders';
-import { CustomerOrderDetail } from '../../v1/types/api';
+import { useNavigationUi } from '../../context/NavigationAndUiContext';
+import { useToast } from '../../context/ToastContext';
+import { useCustomerOrders, useCustomerOrderActions } from '../../hooks/useCustomerOrders';
+import { CustomerOrderDetail } from '../../types/api';
 import { ArrowLeftIcon, DownloadIcon } from '../common/Icons';
 
 export const QrScreen: React.FC = () => {

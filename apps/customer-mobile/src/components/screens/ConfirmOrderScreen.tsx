@@ -9,14 +9,14 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import Svg, { Path } from 'react-native-svg';
-import { useNavigationUi } from '../../v1/context/NavigationAndUiContext';
-import { useToast } from '../../v1/context/ToastContext';
-import { useOrderDraft } from '../../v1/context/OrderDraftContext';
-import { useCustomerOrderActions } from '../../v1/hooks/useCustomerOrders';
+import { useNavigationUi } from '../../context/NavigationAndUiContext';
+import { useToast } from '../../context/ToastContext';
+import { useOrderDraft } from '../../context/OrderDraftContext';
+import { useCustomerOrderActions } from '../../hooks/useCustomerOrders';
 import { AppHeader } from '../layout/AppHeader';
 import { FloatingInput } from '../common/FloatingInput';
 import { ConfirmationSubmitSection } from '../common/ConfirmationSubmitSection';
-import { parseCurrency } from '../../v1/utils/currency';
+import { parseCurrency } from '../../utils/currency';
 
 export const ConfirmOrderScreen: React.FC = () => {
   const { navigateTo, goBack } = useNavigationUi();

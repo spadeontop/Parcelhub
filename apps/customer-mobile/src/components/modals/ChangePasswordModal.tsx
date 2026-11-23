@@ -10,7 +10,7 @@ import {
   Keyboard,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { useToast } from '../../v1/context/ToastContext';
+import { useToast } from '../../context/ToastContext';
 import { FloatingInput } from '../common/FloatingInput';
 
 interface ChangePasswordModalProps {

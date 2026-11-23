@@ -8,12 +8,12 @@ import {
 } from 'react-native';
 import { FilterDropdown } from '../common/FilterDropdown';
 import { StatusBar } from 'expo-status-bar';
-import { useNavigationUi } from '../../v1/context/NavigationAndUiContext';
-import { useCustomerOrders } from '../../v1/hooks/useCustomerOrders';
+import { useNavigationUi } from '../../context/NavigationAndUiContext';
+import { useCustomerOrders } from '../../hooks/useCustomerOrders';
 import { BottomNav } from '../layout/BottomNav';
 import { AppHeader } from '../layout/AppHeader';
 import { getStatusTheme } from '../../utils/statusHelpers';
-import { formatOrderDate } from '../../v1/utils/date';
+import { formatOrderDate } from '../../utils/date';
 
 export type TransactionFilter =
   | 'ALL'

@@ -8,9 +8,9 @@ import {
   Keyboard,
   useWindowDimensions,
 } from 'react-native';
-import { useNavigationUi } from '../../v1/context/NavigationAndUiContext';
-import { useToast } from '../../v1/context/ToastContext';
-import { useAuthSession } from '../../v1/context/AuthSessionContext';
+import { useNavigationUi } from '../../context/NavigationAndUiContext';
+import { useToast } from '../../context/ToastContext';
+import { useAuthSession } from '../../context/AuthSessionContext';
 import { AuthBrandHeader } from '../layout/AuthBrandHeader';
 import { FormCardHeader } from '../common/FormCardHeader';
 import { FloatingInput } from '../common/FloatingInput';

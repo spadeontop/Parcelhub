@@ -1,7 +1,7 @@
 import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { OrderStatus, OrderStatusHistoryTuple } from '../../v1/types/api';
+import { OrderStatus, OrderStatusHistoryTuple } from '../../types/api';
 
 interface OrderTimelineStepperProps {
   readonly status: OrderStatus;

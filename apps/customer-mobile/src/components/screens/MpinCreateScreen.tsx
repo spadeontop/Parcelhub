@@ -1,8 +1,8 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
-import { useNavigationUi } from '../../v1/context/NavigationAndUiContext';
-import { useToast } from '../../v1/context/ToastContext';
-import { useAuthSession } from '../../v1/context/AuthSessionContext';
+import { useNavigationUi } from '../../context/NavigationAndUiContext';
+import { useToast } from '../../context/ToastContext';
+import { useAuthSession } from '../../context/AuthSessionContext';
 import { ParcelHubLogoSvg, ArrowLeftIcon } from '../common/Icons';
 import { NumericKeypad } from '../common/NumericKeypad';
 

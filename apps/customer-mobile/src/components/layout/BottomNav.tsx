@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, TouchableOpacity, Text } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { useNavigationUi } from '../../v1/context/NavigationAndUiContext';
-import { useNotifications } from '../../v1/context/NotificationsContext';
+import { useNavigationUi } from '../../context/NavigationAndUiContext';
+import { useNotifications } from '../../context/NotificationsContext';
 
 interface BottomNavProps {
   activeTab?: 'home' | 'transactions' | 'notifications' | 'profile';

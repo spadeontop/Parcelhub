@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import Svg, { Path } from 'react-native-svg';
-import { useNavigationUi } from '../../v1/context/NavigationAndUiContext';
+import { useNavigationUi } from '../../context/NavigationAndUiContext';
 import { AppHeader } from '../layout/AppHeader';
 
 export type FaqCategory = 'All' | 'Ordering' | 'Payment' | 'Claiming' | 'Safety & Account';
