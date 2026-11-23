@@ -4,7 +4,14 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { customers } from "@/db/schema";
 import { isUniqueViolation } from "@/app/lib/v1/db-errors";
-import { signPreAuthToken } from "@/app/lib/v1/jwt";
+import { sendOtpEmail } from "@/app/lib/v1/email";
+import {
+  getOtpConfig,
+  isValidEmailFormat,
+  issueEmailOtp,
+  normalizeEmail,
+  revokeUnsentOtp,
+} from "@/app/lib/v1/otp";
 import { jsonError, jsonSuccess } from "@/app/lib/response";
 import { CustomerRegisterReq, CustomerRegisterRes } from "@/app/types/v1/api";
 
@@ -24,7 +31,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const email = body?.email?.trim().toLowerCase();
+    const email = body?.email ? normalizeEmail(body.email) : "";
     const password = body?.password;
     const firstName = body?.firstName?.trim();
     const lastName = body?.lastName?.trim();
@@ -35,7 +42,7 @@ export async function POST(request: NextRequest) {
       return jsonError("Missing required registration fields", 400);
     }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (!isValidEmailFormat(email)) {
       return jsonError("Invalid email format", 400);
     }
 
@@ -55,10 +62,17 @@ export async function POST(request: NextRequest) {
     // ---------------------------------------------------------
     const existing = await db.query.customers.findFirst({
       where: eq(customers.email, email),
-      columns: { id: true },
+      columns: { id: true, emailVerified: true },
     });
 
     if (existing) {
+      if (!existing.emailVerified) {
+        return jsonError(
+          "An account with this email is pending verification. Please check your email or request a new verification code.",
+          409,
+          "EmailPendingVerification"
+        );
+      }
       return jsonError("Customer with this email already exists", 409, "Conflict");
     }
 
@@ -85,18 +99,43 @@ export async function POST(request: NextRequest) {
     }
 
     // ---------------------------------------------------------
-    // 4. Response:
-    //    Generate real signed pre-auth token (5m TTL) & return 201
+    // 4. Issue VERIFY_EMAIL OTP & dispatch verification email
+    //    (Hard-locked: NO preAuthToken returned until email is verified)
     // ---------------------------------------------------------
-    const preAuthToken = await signPreAuthToken({
-      userId: newCustomer.id,
-      role: "CUSTOMER",
+    const otpConfig = getOtpConfig();
+    const otpResult = await issueEmailOtp({
+      customerId: newCustomer.id,
       email: newCustomer.email,
+      purpose: "VERIFY_EMAIL",
+      bypassRateLimit: true,
     });
 
+    let verificationEmailSent = false;
+    if (otpResult.ok) {
+      try {
+        await sendOtpEmail({
+          to: newCustomer.email,
+          purpose: "VERIFY_EMAIL",
+          code: otpResult.code,
+          firstName: newCustomer.firstName,
+          ttlMinutes: otpResult.ttlMinutes,
+        });
+        verificationEmailSent = true;
+      } catch (mailErr: unknown) {
+        console.error("[Customer Register Email Send Error]:", mailErr);
+        await revokeUnsentOtp(otpResult.otpId).catch(() => undefined);
+      }
+    }
+
     const response: CustomerRegisterRes = {
-      statusMessage: "Registration successful",
-      preAuthToken,
+      statusMessage: verificationEmailSent
+        ? "Registration successful. Please verify your email address."
+        : "Account created, but we could not send the verification email. Please request a new code.",
+      emailVerificationRequired: true,
+      email: newCustomer.email,
+      verificationEmailSent,
+      expiresInSeconds: otpConfig.ttlSeconds,
+      retryAfterSeconds: otpConfig.cooldownSeconds,
     };
 
     return jsonSuccess(response, 201);

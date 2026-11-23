@@ -31,6 +31,8 @@ export async function seedDatabase() {
         middleInitial: "D",
         phoneNumber: "+639123456789",
         mpin: customerMpinHash,
+        emailVerified: true,
+        emailVerifiedAt: new Date("2026-10-18T00:00:00Z"),
         blacklisted: false,
       },
       {
@@ -42,6 +44,8 @@ export async function seedDatabase() {
         middleInitial: "C",
         phoneNumber: "+639987654321",
         mpin: customerMpinHash,
+        emailVerified: true,
+        emailVerifiedAt: new Date("2026-10-18T00:00:00Z"),
         blacklisted: false,
       },
     ])
@@ -135,7 +139,7 @@ export async function seedDatabase() {
       recipientName: "John Doe",
       price: 480,
       change: 0,
-      amountReceived: 0,
+      amountReceived: null,
       status: "PAYMENT_REQUIRED" as const,
       statusTimeline: [
         { status: "PENDING_INITIALIZATION" as const, timestamp: "2026-10-18T08:30:00Z" },
@@ -154,7 +158,7 @@ export async function seedDatabase() {
       recipientName: "John Doe",
       price: 1250,
       change: 0,
-      amountReceived: 0,
+      amountReceived: null,
       status: "PAYMENT_REQUIRED" as const,
       statusTimeline: [
         { status: "PENDING_INITIALIZATION" as const, timestamp: "2026-10-18T09:15:00Z" },
@@ -366,7 +370,7 @@ export async function seedDatabase() {
       recipientName: "Maria Santos",
       price: 990,
       change: 0,
-      amountReceived: 0,
+      amountReceived: null,
       status: "PAYMENT_REQUIRED" as const,
       statusTimeline: [
         { status: "PENDING_INITIALIZATION" as const, timestamp: "2026-10-18T09:00:00Z" },
@@ -385,7 +389,7 @@ export async function seedDatabase() {
       recipientName: "Maria Santos",
       price: 1899,
       change: 0,
-      amountReceived: 0,
+      amountReceived: null,
       status: "PAYMENT_REQUIRED" as const,
       statusTimeline: [
         { status: "PENDING_INITIALIZATION" as const, timestamp: "2026-10-18T09:15:00Z" },

@@ -40,7 +40,7 @@ This guide covers deploying the ParcelHub Next.js backend to **Vercel** with a r
      -H "Content-Type: application/json" \
      -d '{"email":"test@example.com","password":"test"}'
    ```
-   *Receiving `404 Email is not registered` confirms your Vercel deployment is successfully talking to your live database.*
+   *Receiving `401 Invalid email or password` confirms your Vercel deployment is successfully talking to your live database.*
 
 ---
 

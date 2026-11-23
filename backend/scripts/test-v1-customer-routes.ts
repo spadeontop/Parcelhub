@@ -19,15 +19,19 @@ if (!process.env.JWT_SECRET) {
 if (!process.env.JWT_SECRET) {
   process.env.JWT_SECRET = "186f119c25ef504b47594fb1747672fd13542abc4b0c0a1767dd3b34745c3f2f";
 }
+process.env.EMAIL_ENABLED = "false";
+process.env.EMAIL_TEST_SINK = "true";
 
 import { NextRequest } from "next/server";
 import assert from "node:assert";
 import { eq } from "drizzle-orm";
 import { db } from "../db";
 import { customers, orders, orderScreenshots } from "../db/schema";
+import { clearCapturedTestEmails, getCapturedTestEmails } from "../app/lib/v1/email";
 
 // v1 Customer Route Handlers
 import { POST as registerCustomer } from "../app/api/v1/customer/register/route";
+import { POST as verifyCustomerEmail } from "../app/api/v1/customer/email/verify/route";
 import { POST as loginCustomer } from "../app/api/v1/customer/login/route";
 import { POST as createMpin } from "../app/api/v1/customer/create-mpin/route";
 import { POST as verifyMpin } from "../app/api/v1/customer/mpin/route";
@@ -77,8 +81,9 @@ async function runV1CustomerTests() {
 
   try {
     // ==========================================
-    // 1. Customer Registration
+    // 1. Customer Registration + Hard-Locked Email Verification
     // ==========================================
+    clearCapturedTestEmails();
     console.log("1. Testing Registration (POST /api/v1/customer/register)...");
     const regReq = makeReq("http://localhost:3000/api/v1/customer/register", {
       method: "POST",
@@ -93,9 +98,27 @@ async function runV1CustomerTests() {
     const regRes = await registerCustomer(regReq);
     const regJson = await regRes.json();
     assert.strictEqual(regRes.status, 201, `Expected 201 Created, got ${regRes.status}: ${JSON.stringify(regJson)}`);
-    assert.ok(regJson.preAuthToken, "preAuthToken must be returned on register");
-    preAuthToken = regJson.preAuthToken;
-    console.log("   ✅ Registration successful. Received preAuthToken.");
+    assert.strictEqual(regJson.emailVerificationRequired, true, "emailVerificationRequired must be true");
+    assert.strictEqual(regJson.preAuthToken, undefined, "preAuthToken must NOT be returned before email verification");
+
+    const captured = getCapturedTestEmails();
+    const otpEmail = captured.find((m) => m.to === testEmail);
+    assert.ok(otpEmail, "Verification OTP email must be captured by test sink");
+    const otpMatch = otpEmail.text.match(/Your verification code:\s*(\d{6})/);
+    assert.ok(otpMatch, "6-digit OTP code must be present in verification email");
+
+    const verifyEmailReq = makeReq("http://localhost:3000/api/v1/customer/email/verify", {
+      method: "POST",
+      body: { email: testEmail, code: otpMatch[1] },
+    });
+    const verifyEmailRes = await verifyCustomerEmail(verifyEmailReq);
+    const verifyEmailJson = await verifyEmailRes.json();
+    assert.strictEqual(verifyEmailRes.status, 200, `Expected 200 OK on email/verify, got ${verifyEmailRes.status}`);
+    assert.strictEqual(verifyEmailJson.emailVerified, true);
+    assert.strictEqual(verifyEmailJson.hasMpin, false);
+    assert.ok(verifyEmailJson.preAuthToken, "preAuthToken must be returned after email verification");
+    preAuthToken = verifyEmailJson.preAuthToken;
+    console.log("   ✅ Registration + hard-locked email verification successful. Received preAuthToken.");
 
     // ==========================================
     // 2. MPIN Setup

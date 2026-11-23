@@ -97,6 +97,7 @@ async function runV1StaffSuite() {
       firstName: "Test",
       lastName: "Customer",
       phoneNumber: "+639123456789",
+      emailVerified: true,
       blacklisted: false,
     });
 

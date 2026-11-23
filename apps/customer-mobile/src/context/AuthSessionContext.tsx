@@ -162,7 +162,7 @@ export const AuthSessionProvider: React.FC<{ children: ReactNode }> = ({ childre
     async (payload: CustomerRegisterReq): Promise<CustomerRegisterRes> => {
       const res = await authApi.register(payload);
 
-      setPreAuthToken(res.preAuthToken);
+      setPreAuthToken(res.preAuthToken ?? null);
       setCustomer({
         email: payload.email,
         firstName: payload.firstName,
