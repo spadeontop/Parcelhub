@@ -39,7 +39,10 @@ import { POST as attachPhoto } from "../app/api/v1/staff/orders/[id]/make-claima
 import { POST as releaseOrder } from "../app/api/v1/staff/orders/[id]/claim/route";
 
 // v1 Customer Route Handler (used to test real claim pass handoff)
+import { POST as refundOrder } from "../app/api/v1/staff/orders/[id]/refund/route";
 import { POST as initiateCustomerClaim } from "../app/api/v1/customer/orders/[id]/claim/route";
+import { POST as cancelCustomerOrder } from "../app/api/v1/customer/orders/[id]/cancel/route";
+import { POST as initiateCustomerRefund } from "../app/api/v1/customer/orders/[id]/refund/route";
 
 function makeReq(
   url: string,
@@ -72,6 +75,11 @@ async function runV1StaffSuite() {
   const testOrderId = `ORD-TEST-${suffix}`;
   const testTicketCode = `TST-${suffix.slice(-4)}`;
   const testTrackingId = `PH-TEST-${suffix}`;
+  const autoWinOrderId = `ORD-AUTOWIN-${suffix}`;
+  const autoDraftOrderId = `ORD-AUTODRAFT-${suffix}`;
+  const autoPayOrderId = `ORD-AUTOPAY-${suffix}`;
+  const unrelatedOrderId = `ORD-UNREL-${suffix}`;
+  const sharedTrackingId = `SPXSHARED${suffix}`;
 
   try {
     // ---------------------------------------------------------
@@ -448,10 +456,199 @@ async function runV1StaffSuite() {
     assert.strictEqual(finalOrder?.claimRequested, false, "claimRequested flag must be cleared");
     console.log("   ✅ Uninitiated guard (403), expired window guard (403), and active claim completion -> CLAIMED (200) verified.");
 
+    // ---------------------------------------------------------
+    // 8. Testing Staff Activation Transactional Auto-Cancel
+    // ---------------------------------------------------------
+    console.log("\n8. Testing Staff Activation Auto-Cancel (same trackingId only)...");
+    const baseTimeline = [{ status: "PENDING_INITIALIZATION" as const, timestamp: new Date().toISOString() }];
+    await db.insert(orders).values([
+      {
+        id: autoWinOrderId,
+        ticketCode: `WIN-${suffix.slice(-4)}`,
+        trackingId: sharedTrackingId,
+        productName: "Winning Order",
+        recipientName: "Test Customer",
+        price: 480,
+        change: 0,
+        amountReceived: null,
+        status: "PAYMENT_REQUIRED",
+        statusTimeline: [...baseTimeline, { status: "PAYMENT_REQUIRED", timestamp: new Date().toISOString() }],
+        customerId: testCustomerId,
+        modifiedBy: testStaffId,
+        courierPaid: false,
+      },
+      {
+        id: autoDraftOrderId,
+        ticketCode: `DRF-${suffix.slice(-4)}`,
+        trackingId: sharedTrackingId,
+        productName: "Competing Draft",
+        recipientName: "Test Customer",
+        price: 0,
+        change: 0,
+        status: "PENDING_INITIALIZATION",
+        statusTimeline: baseTimeline,
+        customerId: testCustomerId,
+        modifiedBy: testCustomerId,
+        courierPaid: false,
+      },
+      {
+        id: autoPayOrderId,
+        ticketCode: `PAY-${suffix.slice(-4)}`,
+        trackingId: sharedTrackingId,
+        productName: "Competing Payment Required",
+        recipientName: "Test Customer",
+        price: 480,
+        change: 0,
+        amountReceived: null,
+        status: "PAYMENT_REQUIRED",
+        statusTimeline: [...baseTimeline, { status: "PAYMENT_REQUIRED", timestamp: new Date().toISOString() }],
+        customerId: testCustomerId,
+        modifiedBy: testStaffId,
+        courierPaid: false,
+      },
+      {
+        id: unrelatedOrderId,
+        ticketCode: `UNR-${suffix.slice(-4)}`,
+        trackingId: `UNRELATED${suffix}`,
+        productName: "Unrelated Order",
+        recipientName: "Test Customer",
+        price: 300,
+        change: 0,
+        amountReceived: null,
+        status: "PAYMENT_REQUIRED",
+        statusTimeline: [...baseTimeline, { status: "PAYMENT_REQUIRED", timestamp: new Date().toISOString() }],
+        customerId: testCustomerId,
+        modifiedBy: testStaffId,
+        courierPaid: false,
+      },
+    ]);
+
+    const autoActivateRes = await activateOrder(
+      makeReq(`/api/v1/staff/orders/${autoWinOrderId}/activate`, {
+        method: "POST",
+        token: authToken,
+        body: { amountReceived: 500 },
+      }),
+      { params: Promise.resolve({ id: autoWinOrderId }) }
+    );
+    const autoActivateJson = await autoActivateRes.json();
+    assert.strictEqual(autoActivateRes.status, 200);
+    assert.strictEqual(autoActivateJson.autoCancelledCount, 2, "Must auto-cancel 2 competing orders");
+
+    const [draftAfter, payAfter, unrelatedAfter] = await Promise.all([
+      db.query.orders.findFirst({ where: eq(orders.id, autoDraftOrderId) }),
+      db.query.orders.findFirst({ where: eq(orders.id, autoPayOrderId) }),
+      db.query.orders.findFirst({ where: eq(orders.id, unrelatedOrderId) }),
+    ]);
+    assert.strictEqual(draftAfter?.status, "CANCELLED");
+    assert.strictEqual(draftAfter?.cancelledByRole, "SYSTEM");
+    assert.strictEqual(draftAfter?.cancelReasonCode, "SYSTEM_DUPLICATE_TRACKING_ACTIVATED");
+    assert.strictEqual(payAfter?.status, "CANCELLED");
+    assert.strictEqual(payAfter?.cancelledBy, "SYSTEM");
+    assert.strictEqual(unrelatedAfter?.status, "PAYMENT_REQUIRED", "Unrelated order must remain untouched");
+    console.log("   ✅ Activation auto-cancelled competing same-trackingId orders and left unrelated order untouched.");
+
+    // ---------------------------------------------------------
+    // 9. Testing Staff Refund Lifecycle (CANCELLED -> REFUNDED)
+    // ---------------------------------------------------------
+    console.log("\n9. Testing Staff Refund Pass Guards & CANCELLED -> REFUNDED...");
+    const custCancelRes = await cancelCustomerOrder(
+      makeReq(`/api/v1/customer/orders/${autoWinOrderId}/cancel`, {
+        method: "POST",
+        token: customerAuthToken,
+        body: { reasonCode: "SELLER_CANCELLED" },
+      }),
+      { params: Promise.resolve({ id: autoWinOrderId }) }
+    );
+    const custCancelJson = await custCancelRes.json();
+    assert.strictEqual(custCancelRes.status, 200);
+    assert.strictEqual(custCancelJson.isRefundEligible, true);
+    assert.strictEqual(custCancelJson.refundableAmount, 480);
+
+    // A) Uninitiated refund pass -> 403
+    const uninitRefundRes = await refundOrder(
+      makeReq(`/api/v1/staff/orders/${autoWinOrderId}/refund`, {
+        method: "POST",
+        token: authToken,
+      }),
+      { params: Promise.resolve({ id: autoWinOrderId }) }
+    );
+    assert.strictEqual(uninitRefundRes.status, 403);
+
+    // B) Expired refund pass -> 403
+    await db
+      .update(orders)
+      .set({
+        refundRequested: true,
+        refundInitiatedAt: new Date(Date.now() - 360_000),
+        refundExpiresAt: new Date(Date.now() - 60_000),
+      })
+      .where(eq(orders.id, autoWinOrderId));
+
+    const expiredRefundRes = await refundOrder(
+      makeReq(`/api/v1/staff/orders/${autoWinOrderId}/refund`, {
+        method: "POST",
+        token: authToken,
+      }),
+      { params: Promise.resolve({ id: autoWinOrderId }) }
+    );
+    assert.strictEqual(expiredRefundRes.status, 403);
+
+    // C) Customer initiates valid refund pass -> Staff completes refund -> 200 REFUNDED
+    const custRefundPassRes = await initiateCustomerRefund(
+      makeReq(`/api/v1/customer/orders/${autoWinOrderId}/refund`, {
+        method: "POST",
+        token: customerAuthToken,
+      }),
+      { params: Promise.resolve({ id: autoWinOrderId }) }
+    );
+    assert.strictEqual(custRefundPassRes.status, 200);
+
+    const staffRefundRes = await refundOrder(
+      makeReq(`/api/v1/staff/orders/${autoWinOrderId}/refund`, {
+        method: "POST",
+        token: authToken,
+      }),
+      { params: Promise.resolve({ id: autoWinOrderId }) }
+    );
+    const staffRefundJson = await staffRefundRes.json();
+    assert.strictEqual(staffRefundRes.status, 200);
+    assert.strictEqual(staffRefundJson.status, "REFUNDED");
+    assert.strictEqual(staffRefundJson.refundAmount, 480);
+
+    // D) Double-refund guard -> 409 OrderAlreadyRefunded
+    const doubleRefundRes = await refundOrder(
+      makeReq(`/api/v1/staff/orders/${autoWinOrderId}/refund`, {
+        method: "POST",
+        token: authToken,
+      }),
+      { params: Promise.resolve({ id: autoWinOrderId }) }
+    );
+    assert.strictEqual(doubleRefundRes.status, 409);
+
+    // E) GET /staff/orders?status=REFUNDED returns refunded order with refundedByName
+    const listRefundedStaffRes = await listStaffOrders(
+      makeReq("/api/v1/staff/orders?status=REFUNDED", { token: authToken })
+    );
+    const listRefundedStaffJson = await listRefundedStaffRes.json();
+    assert.strictEqual(listRefundedStaffRes.status, 200);
+    const refundedEntry = listRefundedStaffJson.orders.find(
+      (o: { id: string }) => o.id === autoWinOrderId
+    );
+    assert.ok(refundedEntry, "Refunded order must appear in ?status=REFUNDED");
+    assert.strictEqual(refundedEntry.isRefunded, true);
+    assert.strictEqual(refundedEntry.refundAmount, 480);
+    assert.strictEqual(refundedEntry.refundedByName, "Test Staff");
+    console.log("   ✅ Staff refund pass guards, CANCELLED -> REFUNDED, double-refund 409, and ?status=REFUNDED verified.");
+
     console.log("\n🎉 ALL V1 STAFF API TESTS PASSED SUCCESSFULLY (100% GREEN)!\n");
   } finally {
     console.log("🧹 Cleaning up ephemeral test database records...");
     await db.delete(orders).where(eq(orders.id, testOrderId));
+    await db.delete(orders).where(eq(orders.id, autoWinOrderId));
+    await db.delete(orders).where(eq(orders.id, autoDraftOrderId));
+    await db.delete(orders).where(eq(orders.id, autoPayOrderId));
+    await db.delete(orders).where(eq(orders.id, unrelatedOrderId));
     await db.delete(customers).where(eq(customers.id, testCustomerId));
     await db.delete(staff).where(eq(staff.id, testStaffId));
     console.log("   ✅ Ephemeral test records cleaned up.");

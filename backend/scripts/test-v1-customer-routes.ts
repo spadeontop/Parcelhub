@@ -45,6 +45,8 @@ import {
 } from "../app/api/v1/customer/orders/[id]/route";
 import { GET as getCustomerOrderPhoto } from "../app/api/v1/customer/orders/[id]/photo/route";
 import { POST as claimCustomerOrder } from "../app/api/v1/customer/orders/[id]/claim/route";
+import { POST as cancelCustomerOrder } from "../app/api/v1/customer/orders/[id]/cancel/route";
+import { POST as refundCustomerOrder } from "../app/api/v1/customer/orders/[id]/refund/route";
 
 function makeReq(
   url: string,
@@ -605,6 +607,83 @@ async function runV1CustomerTests() {
     assert.ok(claimValidJson.claimInitiatedAt, "claimInitiatedAt should be set");
     assert.ok(claimValidJson.claimExpiresAt, "claimExpiresAt should be set");
     console.log("   ✅ Claim initiated successfully when order is READY_TO_CLAIM.");
+
+    // ==========================================
+    // 10b. Cancel Order & Refund Pass Lifecycle
+    // ==========================================
+    console.log("10b. Testing Customer Cancel & Refund Pass Lifecycle...");
+    // A) Cancel unpaid PAYMENT_REQUIRED order with empty body -> isRefundEligible: false
+    const cancelUnpaidRes = await cancelCustomerOrder(
+      makeReq(`http://localhost:3000/api/v1/customer/orders/${secondOrderId}/cancel`, {
+        method: "POST",
+        token: authToken,
+      }),
+      { params: Promise.resolve({ id: secondOrderId }) }
+    );
+    const cancelUnpaidJson = await cancelUnpaidRes.json();
+    assert.strictEqual(cancelUnpaidRes.status, 200, `Expected 200 on cancel unpaid, got ${cancelUnpaidRes.status}`);
+    assert.strictEqual(cancelUnpaidJson.status, "CANCELLED");
+    assert.strictEqual(cancelUnpaidJson.isRefundEligible, false);
+    assert.strictEqual(cancelUnpaidJson.refundableAmount, 0);
+
+    const unpaidRefundRes = await refundCustomerOrder(
+      makeReq(`http://localhost:3000/api/v1/customer/orders/${secondOrderId}/refund`, {
+        method: "POST",
+        token: authToken,
+      }),
+      { params: Promise.resolve({ id: secondOrderId }) }
+    );
+    const unpaidRefundJson = await unpaidRefundRes.json();
+    assert.strictEqual(unpaidRefundRes.status, 400);
+    assert.strictEqual(unpaidRefundJson.error, "OrderNotRefundEligible");
+
+    // B) Cancel activated AWAITING_PARCEL (price=480, amountReceived=500, change=20) -> refundableAmount=480
+    await db
+      .update(orders)
+      .set({
+        status: "AWAITING_PARCEL",
+        price: 480,
+        amountReceived: 500,
+        change: 20,
+        activatedAt: new Date(),
+        activatedBy: "STF-TEST",
+        courierPaid: false,
+      })
+      .where(eq(orders.id, thirdOrderId));
+
+    const cancelPaidRes = await cancelCustomerOrder(
+      makeReq(`http://localhost:3000/api/v1/customer/orders/${thirdOrderId}/cancel`, {
+        method: "POST",
+        token: authToken,
+        body: { reasonCode: "CHANGED_MIND", reason: "Found a closer pickup point" },
+      }),
+      { params: Promise.resolve({ id: thirdOrderId }) }
+    );
+    const cancelPaidJson = await cancelPaidRes.json();
+    assert.strictEqual(cancelPaidRes.status, 200);
+    assert.strictEqual(cancelPaidJson.isRefundEligible, true);
+    assert.strictEqual(cancelPaidJson.refundableAmount, 480);
+
+    const initRefundRes = await refundCustomerOrder(
+      makeReq(`http://localhost:3000/api/v1/customer/orders/${thirdOrderId}/refund`, {
+        method: "POST",
+        token: authToken,
+      }),
+      { params: Promise.resolve({ id: thirdOrderId }) }
+    );
+    const initRefundJson = await initRefundRes.json();
+    assert.strictEqual(initRefundRes.status, 200);
+    assert.strictEqual(initRefundJson.refundAmount, 480);
+
+    // C) Filter ?type=REFUNDED accepted (200)
+    const listRefundedRes = await listCustomerOrders(
+      makeReq("http://localhost:3000/api/v1/customer/orders?type=REFUNDED", {
+        method: "GET",
+        token: authToken,
+      })
+    );
+    assert.strictEqual(listRefundedRes.status, 200);
+    console.log("   ✅ Customer cancel (empty/reason), refund pass (price=480, not amountReceived=500), and REFUNDED filter verified.");
 
     // ==========================================
     // 11. Selective Blacklist Enforcement Test

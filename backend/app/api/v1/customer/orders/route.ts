@@ -3,7 +3,12 @@ import { and, desc, eq, ne } from "drizzle-orm";
 import { db } from "@/db";
 import { OrderRow, orders } from "@/db/schema";
 import { authenticateCustomerRequest, customerAuthErrorResponse } from "@/app/lib/v1/auth";
-import { computeClaimWindow, ORDER_NON_IMAGE_COLUMNS } from "@/app/lib/v1/orders";
+import {
+  computeClaimWindow,
+  computeRefundableAmount,
+  computeRefundWindow,
+  ORDER_NON_IMAGE_COLUMNS,
+} from "@/app/lib/v1/orders";
 import { parsePagination } from "@/app/lib/pagination";
 import { jsonError, jsonSuccess } from "@/app/lib/response";
 import {
@@ -19,6 +24,7 @@ const VALID_ORDER_STATUSES: readonly OrderStatus[] = [
   "READY_TO_CLAIM",
   "CLAIMED",
   "CANCELLED",
+  "REFUNDED",
 ] as const;
 
 export async function GET(request: NextRequest) {
@@ -70,15 +76,29 @@ export async function GET(request: NextRequest) {
 
     const nowMs = Date.now();
 
-    const orderSummaries: CustomerOrderSummary[] = rows.map((row: Omit<OrderRow, "proofImageUrl">) => ({
-      id: row.id as OrderId,
-      ticketCode: row.ticketCode,
-      trackingId: row.trackingId,
-      productName: row.productName,
-      status: row.status,
-      timestamp: row.timestamp.toISOString(),
-      isClaimActive: computeClaimWindow(row.claimRequested, row.claimExpiresAt, nowMs).isClaimActive,
-    }));
+    const orderSummaries: CustomerOrderSummary[] = rows.map((row: Omit<OrderRow, "proofImageUrl">) => {
+      const refundableAmount = computeRefundableAmount(row);
+      const { isRefundActive } = computeRefundWindow(
+        row.refundRequested,
+        row.refundExpiresAt,
+        nowMs
+      );
+      return {
+        id: row.id as OrderId,
+        ticketCode: row.ticketCode,
+        trackingId: row.trackingId,
+        productName: row.productName,
+        status: row.status,
+        timestamp: row.timestamp.toISOString(),
+        isClaimActive: computeClaimWindow(row.claimRequested, row.claimExpiresAt, nowMs).isClaimActive,
+        isRefundEligible: refundableAmount > 0,
+        refundableAmount,
+        isRefundActive,
+        isRefunded: row.isRefunded,
+        cancelReasonCode: row.cancelReasonCode ?? null,
+        cancelReason: row.cancelReason ?? null,
+      };
+    });
 
     // ---------------------------------------------------------
     // 4. Response:

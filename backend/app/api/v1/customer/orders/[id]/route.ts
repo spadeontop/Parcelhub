@@ -6,6 +6,8 @@ import { authenticateCustomerRequest, customerAuthErrorResponse } from "@/app/li
 import {
   appendStatusTimelineSql,
   computeClaimWindow,
+  computeRefundableAmount,
+  computeRefundWindow,
   hasActivePaidTrackingId,
   matchOrderByIdOrTicket,
   normalizeTrackingId,
@@ -57,6 +59,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       order.claimRequested,
       order.claimExpiresAt
     );
+    const refundableAmount = computeRefundableAmount(order);
+    const { isRefundActive, refundRemainingSeconds } = computeRefundWindow(
+      order.refundRequested,
+      order.refundExpiresAt
+    );
 
     const orderDetail: CustomerOrderDetail = {
       id: order.id as OrderId,
@@ -72,6 +79,23 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       claimExpiresAt: order.claimExpiresAt ? order.claimExpiresAt.toISOString() : null,
       isClaimActive,
       claimRemainingSeconds,
+      cancelledBy: order.cancelledBy ?? null,
+      cancelledByRole: order.cancelledByRole ?? null,
+      cancelReasonCode: order.cancelReasonCode ?? null,
+      cancelReason: order.cancelReason ?? null,
+      cancelledAt: order.cancelledAt ? order.cancelledAt.toISOString() : null,
+      isRefundEligible: refundableAmount > 0,
+      refundableAmount,
+      refundRequested: order.refundRequested,
+      refundInitiatedAt: order.refundInitiatedAt ? order.refundInitiatedAt.toISOString() : null,
+      refundExpiresAt: order.refundExpiresAt ? order.refundExpiresAt.toISOString() : null,
+      isRefundActive,
+      refundRemainingSeconds,
+      refundReasonCode: order.refundReasonCode ?? null,
+      refundReason: order.refundReason ?? null,
+      isRefunded: order.isRefunded,
+      refundAmount: order.refundAmount ?? null,
+      refundedAt: order.refundedAt ? order.refundedAt.toISOString() : null,
     };
 
     const response: CustomerGetOrderRes = {
