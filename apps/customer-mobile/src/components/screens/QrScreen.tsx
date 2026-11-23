@@ -1,17 +1,27 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, BackHandler } from 'react-native';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  ActivityIndicator,
+  BackHandler,
+  RefreshControl,
+} from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import * as Clipboard from 'expo-clipboard';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as MediaLibrary from 'expo-media-library';
 import { StatusBar } from 'expo-status-bar';
+import { useAuthSession } from '../../context/AuthSessionContext';
 import { useNavigationUi } from '../../context/NavigationAndUiContext';
 import { useToast } from '../../context/ToastContext';
-import { useCustomerOrders, useCustomerOrderActions } from '../../hooks/useCustomerOrders';
-import { CustomerOrderDetail } from '../../types/api';
+import { useCustomerOrders } from '../../hooks/useCustomerOrders';
+import { useCustomerOrderDetailQuery } from '../../query/useCustomerQueries';
 import { ArrowLeftIcon, DownloadIcon } from '../common/Icons';
 
 export const QrScreen: React.FC = () => {
+  const { authToken } = useAuthSession();
   const {
     selectedOrderId,
     selectedOrderTicketCode,
@@ -20,9 +30,9 @@ export const QrScreen: React.FC = () => {
   } = useNavigationUi();
   const { showToast } = useToast();
   const { orders } = useCustomerOrders();
-  const { fetchOrderDetail } = useCustomerOrderActions();
-  const [orderDetail, setOrderDetail] = useState<CustomerOrderDetail | null>(null);
+  const { data: orderDetail, refetch } = useCustomerOrderDetailQuery(authToken, selectedOrderId);
   const [isSavingPass, setIsSavingPass] = useState(false);
+  const [isPullRefreshing, setIsPullRefreshing] = useState(false);
   const qrSvgRef = useRef<any>(null);
 
   // Handle hardware back on Android: return to previous screen
@@ -39,21 +49,14 @@ export const QrScreen: React.FC = () => {
     (o) => o.id === selectedOrderId || o.ticketCode === selectedOrderId
   );
 
-  useEffect(() => {
-    let isMounted = true;
-    if (selectedOrderId) {
-      fetchOrderDetail(selectedOrderId)
-        .then((detail) => {
-          if (isMounted) setOrderDetail(detail);
-        })
-        .catch(() => {
-          // If network fetch fails, fallback to cached summary
-        });
+  const handlePullRefresh = useCallback(async () => {
+    setIsPullRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setIsPullRefreshing(false);
     }
-    return () => {
-      isMounted = false;
-    };
-  }, [selectedOrderId, fetchOrderDetail]);
+  }, [refetch]);
 
   const ticketCode =
     selectedOrderTicketCode || orderDetail?.ticketCode || cachedSummary?.ticketCode;
@@ -221,6 +224,13 @@ export const QrScreen: React.FC = () => {
       >
         <ScrollView
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isPullRefreshing}
+              onRefresh={handlePullRefresh}
+              tintColor="#215CD4"
+            />
+          }
           contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, paddingTop: 20, paddingBottom: 32 }}
         >
           {/* Section - Elevated Verification Card (White Surface, 24px Radius) */}

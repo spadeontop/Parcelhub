@@ -13,12 +13,16 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://parcelhub-spade.vercel.app"
+        "EXPO_PUBLIC_API_URL": "https://parcelhub-spade.vercel.app",
+        "EXPO_PUBLIC_SUPABASE_URL": "",
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": ""
       }
     },
     "production": {
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://parcelhub-spade.vercel.app"
+        "EXPO_PUBLIC_API_URL": "https://parcelhub-spade.vercel.app",
+        "EXPO_PUBLIC_SUPABASE_URL": "",
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": ""
       }
     }
   },

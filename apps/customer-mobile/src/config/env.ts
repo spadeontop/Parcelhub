@@ -34,4 +34,10 @@ export const ENV = {
   HANDOFF_CUTOFF_TIME_MINS: 5,
   API_BASE_URL: getDetectedApiUrl(),
   DEFAULT_POLL_INTERVAL_SEC: 5,
+  SUPABASE_URL: (process.env.EXPO_PUBLIC_SUPABASE_URL || '').trim(),
+  SUPABASE_ANON_KEY: (
+    process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
+    ''
+  ).trim(),
 };

@@ -20,15 +20,14 @@ import { useOrderDraft } from '../context/OrderDraftContext';
 
 /**
  * Subscribes to the customer's orders list via TanStack Query and provides `refetchOrders`.
- * Polls every 5 seconds only while the user is authenticated and viewing `'home'`.
+ * Live updates are driven by Supabase Realtime WebSockets (no periodic polling).
  */
 export const useCustomerOrders = () => {
   const { authToken } = useAuthSession();
-  const { activeScreen } = useNavigationUi();
   const queryClient = useQueryClient();
 
   const ordersQuery = useCustomerOrdersQuery(authToken, undefined, {
-    refetchInterval: activeScreen === 'home' && authToken ? 5000 : false,
+    refetchInterval: false,
   });
 
   const orders = useMemo<readonly CustomerOrderSummary[]>(

@@ -62,4 +62,7 @@ export type CustomerApiRoutes =
 
   // Push Notifications Registration & Deregistration
   | readonly ["POST", "/api/v1/notification/upload-token"]
-  | readonly ["DELETE", "/api/v1/notification/token"];
+  | readonly ["DELETE", "/api/v1/notification/token"]
+
+  // Realtime Broadcast Token Minting
+  | readonly ["POST", "/api/v1/realtime/token"];
