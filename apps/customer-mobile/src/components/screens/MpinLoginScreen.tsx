@@ -7,12 +7,16 @@ import {
   ScrollView,
   useWindowDimensions,
 } from 'react-native';
-import { useV1 } from '../../v1/context/V1Context';
+import { useNavigationUi } from '../../v1/context/NavigationAndUiContext';
+import { useToast } from '../../v1/context/ToastContext';
+import { useAuthSession } from '../../v1/context/AuthSessionContext';
 import { AuthBrandHeader } from '../layout/AuthBrandHeader';
 import { NumericKeypad } from '../common/NumericKeypad';
 
 export const MpinLoginScreen: React.FC = () => {
-  const { customer, verifyCustomerMpin, navigateTo, switchAccount, showToast } = useV1();
+  const { navigateTo } = useNavigationUi();
+  const { showToast } = useToast();
+  const { customer, verifyCustomerMpin, switchAccount } = useAuthSession();
   const { height } = useWindowDimensions();
   const isCompact = height < 700;
 

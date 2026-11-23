@@ -12,7 +12,10 @@ import { StatusBar } from 'expo-status-bar';
 import Svg, { Path } from 'react-native-svg';
 import QRCode from 'react-native-qrcode-svg';
 import * as Clipboard from 'expo-clipboard';
-import { useV1 } from '../../v1/context/V1Context';
+import { useNavigationUi } from '../../v1/context/NavigationAndUiContext';
+import { useToast } from '../../v1/context/ToastContext';
+import { useAuthSession } from '../../v1/context/AuthSessionContext';
+import { useCustomerOrders, useCustomerOrderActions } from '../../v1/hooks/useCustomerOrders';
 import { CustomerOrderDetail } from '../../v1/types/api';
 import { CopyIcon, QrCodeIcon, ClockIcon } from '../common/Icons';
 import { AppHeader } from '../layout/AppHeader';
@@ -23,15 +26,14 @@ export const OrderDetailsScreen: React.FC = () => {
   const {
     selectedOrderId,
     selectedOrderTicketCode,
-    orders,
-    customer,
-    fetchOrderDetail,
-    claimCustomerOrder,
     openPodModal,
     navigateTo,
     goBack,
-    showToast,
-  } = useV1();
+  } = useNavigationUi();
+  const { showToast } = useToast();
+  const { customer } = useAuthSession();
+  const { orders } = useCustomerOrders();
+  const { fetchOrderDetail, claimCustomerOrder } = useCustomerOrderActions();
 
   const [orderDetail, setOrderDetail] = useState<CustomerOrderDetail | null>(null);
   const [claimConfirmed, setClaimConfirmed] = useState<boolean>(false);

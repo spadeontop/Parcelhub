@@ -8,7 +8,8 @@ import {
 } from 'react-native';
 import { FilterDropdown } from '../common/FilterDropdown';
 import { StatusBar } from 'expo-status-bar';
-import { useV1 } from '../../v1/context/V1Context';
+import { useNavigationUi } from '../../v1/context/NavigationAndUiContext';
+import { useCustomerOrders } from '../../v1/hooks/useCustomerOrders';
 import { BottomNav } from '../layout/BottomNav';
 import { AppHeader } from '../layout/AppHeader';
 import { getStatusTheme } from '../../utils/statusHelpers';
@@ -56,12 +57,11 @@ const getFilterLabel = (filter: TransactionFilter): string => {
 
 export const TransactionsScreen: React.FC = () => {
   const {
-    orders,
     navigateTo,
-    refetchOrders,
     transactionFilter,
     setTransactionFilter,
-  } = useV1();
+  } = useNavigationUi();
+  const { orders, refetchOrders } = useCustomerOrders();
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = async () => {
     setRefreshing(true);

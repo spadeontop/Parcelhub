@@ -9,7 +9,9 @@ import {
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { StatusBar } from 'expo-status-bar';
-import { useV1 } from '../../v1/context/V1Context';
+import { useNavigationUi } from '../../v1/context/NavigationAndUiContext';
+import { useAuthSession } from '../../v1/context/AuthSessionContext';
+import { useNotifications } from '../../v1/context/NotificationsContext';
 import { BottomNav } from '../layout/BottomNav';
 import { AppHeader } from '../layout/AppHeader';
 import { EditContactModal } from '../modals/EditContactModal';
@@ -38,7 +40,9 @@ function getMaskedPhone(phone?: string): string {
 }
 
 export const ProfileScreen: React.FC = () => {
-  const { customer, refetchProfile, navigateTo, notificationsEnabled, togglePushNotifications } = useV1();
+  const { navigateTo } = useNavigationUi();
+  const { customer, refetchProfile } = useAuthSession();
+  const { notificationsEnabled, togglePushNotifications } = useNotifications();
   const { height } = useWindowDimensions();
   const isCompact = height < 700;
 

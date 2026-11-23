@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Modal } from 'react-native';
-import { useV1 } from '../../v1/context/V1Context';
+import { useToast } from '../../v1/context/ToastContext';
 
 interface DeleteAccountModalProps {
   visible: boolean;
@@ -11,7 +11,7 @@ export const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
   visible,
   onClose,
 }) => {
-  const { showToast } = useV1();
+  const { showToast } = useToast();
 
   const handleConfirmDelete = () => {
     // Per requirement 1: Only the modal for visuals, no delete account backend function attached

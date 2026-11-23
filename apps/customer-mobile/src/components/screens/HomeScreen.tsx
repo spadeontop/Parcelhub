@@ -8,14 +8,20 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { useV1 } from '../../v1/context/V1Context';
+import { useNavigationUi } from '../../v1/context/NavigationAndUiContext';
+import { useToast } from '../../v1/context/ToastContext';
+import { useAuthSession } from '../../v1/context/AuthSessionContext';
+import { useCustomerOrders } from '../../v1/hooks/useCustomerOrders';
 import { formatOrderDate } from '../../v1/utils/date';
 import { BottomNav } from '../layout/BottomNav';
 import { AppHeader } from '../layout/AppHeader';
 import { getStatusLabel, getStatusPillStyles } from '../../utils/statusHelpers';
 
 export const HomeScreen: React.FC = () => {
-  const { orders, navigateTo, refetchOrders, refetchProfile, customer, showToast } = useV1();
+  const { navigateTo } = useNavigationUi();
+  const { showToast } = useToast();
+  const { customer, refetchProfile } = useAuthSession();
+  const { orders, refetchOrders } = useCustomerOrders();
   const [refreshing, setRefreshing] = useState(false);
   const { height } = useWindowDimensions();
   const isCompact = height < 700;

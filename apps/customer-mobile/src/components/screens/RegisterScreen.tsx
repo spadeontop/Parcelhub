@@ -8,65 +8,36 @@ import {
   Keyboard,
   useWindowDimensions,
 } from 'react-native';
-import { useV1 } from '../../v1/context/V1Context';
+import { useNavigationUi } from '../../v1/context/NavigationAndUiContext';
+import { useToast } from '../../v1/context/ToastContext';
+import { useAuthSession } from '../../v1/context/AuthSessionContext';
 import { AuthBrandHeader } from '../layout/AuthBrandHeader';
 import { FormCardHeader } from '../common/FormCardHeader';
 import { FloatingInput } from '../common/FloatingInput';
 import { AuthButton } from '../common/AuthButton';
 
 export const RegisterScreen: React.FC = () => {
-  const {
-    navigateTo,
-    registerCustomer,
-    showToast,
-    registrationDraft,
-    updateRegistrationDraft,
-    clearRegistrationDraft,
-  } = useV1();
+  const { navigateTo } = useNavigationUi();
+  const { showToast } = useToast();
+  const { registerCustomer } = useAuthSession();
 
   const { height } = useWindowDimensions();
   const isCompact = height < 700;
 
-  const [currentStep, setCurrentStep] = useState<1 | 2>(registrationDraft.currentStep);
+  const [currentStep, setCurrentStep] = useState<1 | 2>(1);
 
-  // Form states matching CustomerRegisterReq - initialized from V1 draft
-  const [firstName, setFirstName] = useState(registrationDraft.firstName);
-  const [lastName, setLastName] = useState(registrationDraft.lastName);
-  const [middleInitial, setMiddleInitial] = useState(registrationDraft.middleInitial);
-  const [email, setEmail] = useState(registrationDraft.email);
-  const [phone, setPhone] = useState(registrationDraft.phone);
-  const [password, setPassword] = useState(registrationDraft.password);
-  const [confirmPassword, setConfirmPassword] = useState(registrationDraft.confirmPassword);
-  const [emailError, setEmailError] = useState(registrationDraft.emailError || '');
+  // Form states matching CustomerRegisterReq
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [middleInitial, setMiddleInitial] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [confirmPasswordError, setConfirmPasswordError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-
-  // Synchronize form draft changes into V1 context
-  useEffect(() => {
-    updateRegistrationDraft({
-      currentStep,
-      firstName,
-      lastName,
-      middleInitial,
-      email,
-      phone,
-      password,
-      confirmPassword,
-      emailError,
-    });
-  }, [
-    currentStep,
-    firstName,
-    lastName,
-    middleInitial,
-    email,
-    phone,
-    password,
-    confirmPassword,
-    emailError,
-    updateRegistrationDraft,
-  ]);
 
   // Validation rules for Step 1
   const isFirstNameValid = firstName.trim().length >= 1;
@@ -102,7 +73,6 @@ export const RegisterScreen: React.FC = () => {
 
   const handleBackToLogin = () => {
     Keyboard.dismiss();
-    clearRegistrationDraft();
     setCurrentStep(1);
     setFirstName('');
     setLastName('');

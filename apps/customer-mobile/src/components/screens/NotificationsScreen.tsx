@@ -8,12 +8,14 @@ import {
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { StatusBar } from 'expo-status-bar';
-import { useV1 } from '../../v1/context/V1Context';
+import { useNavigationUi } from '../../v1/context/NavigationAndUiContext';
+import { useNotifications } from '../../v1/context/NotificationsContext';
 import { BottomNav } from '../layout/BottomNav';
 import { AppHeader } from '../layout/AppHeader';
 
 export const NotificationsScreen: React.FC = () => {
-  const { notifications, markAllNotificationsAsRead, navigateTo } = useV1();
+  const { navigateTo } = useNavigationUi();
+  const { notifications, markAllNotificationsAsRead } = useNotifications();
   const unreadCount = notifications.filter((n) => n.unread).length;
   const { height } = useWindowDimensions();
   const isCompact = height < 700;

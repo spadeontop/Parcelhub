@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Modal } from 'react-native';
-import { useV1 } from '../../v1/context/V1Context';
+import { useAuthSession } from '../../v1/context/AuthSessionContext';
 
 interface SignOutModalProps {
   visible: boolean;
@@ -11,7 +11,7 @@ export const SignOutModal: React.FC<SignOutModalProps> = ({
   visible,
   onClose,
 }) => {
-  const { signOutCustomer } = useV1();
+  const { signOutCustomer } = useAuthSession();
 
   const handleConfirmSignOut = () => {
     onClose();

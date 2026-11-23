@@ -10,7 +10,7 @@ import {
   Keyboard,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { useV1 } from '../../v1/context/V1Context';
+import { useToast } from '../../v1/context/ToastContext';
 import { FloatingInput } from '../common/FloatingInput';
 
 interface ChangePasswordModalProps {
@@ -24,7 +24,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
   onClose,
   maskedEmail,
 }) => {
-  const { showToast } = useV1();
+  const { showToast } = useToast();
 
   const [currentPassword, setCurrentPassword] = useState<string>('');
   const [newPassword, setNewPassword] = useState<string>('');

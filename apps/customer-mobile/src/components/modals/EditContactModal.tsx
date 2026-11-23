@@ -10,7 +10,8 @@ import {
   Keyboard,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { useV1 } from '../../v1/context/V1Context';
+import { useAuthSession } from '../../v1/context/AuthSessionContext';
+import { useToast } from '../../v1/context/ToastContext';
 import { FloatingInput } from '../common/FloatingInput';
 
 interface EditContactModalProps {
@@ -25,7 +26,8 @@ export const EditContactModal: React.FC<EditContactModalProps> = ({
   onClose,
   maskedEmail,
 }) => {
-  const { customer, showToast } = useV1();
+  const { customer } = useAuthSession();
+  const { showToast } = useToast();
 
   const [firstName, setFirstName] = useState<string>(customer?.firstName || '');
   const [middleInitial, setMiddleInitial] = useState<string>(customer?.middleInitial || '');
