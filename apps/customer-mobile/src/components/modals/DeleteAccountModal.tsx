@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Modal } from 'react-native';
-import { useToast } from '../../v1/context/ToastContext';
+import { useToast } from '../../context/ToastContext';
 
 interface DeleteAccountModalProps {
   visible: boolean;

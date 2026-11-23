@@ -3,13 +3,13 @@ import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Image } fr
 import { StatusBar } from 'expo-status-bar';
 import Svg, { Path } from 'react-native-svg';
 import * as ImagePicker from 'expo-image-picker';
-import { useNavigationUi } from '../../v1/context/NavigationAndUiContext';
-import { useToast } from '../../v1/context/ToastContext';
-import { useAuthSession } from '../../v1/context/AuthSessionContext';
-import { useOrderDraft } from '../../v1/context/OrderDraftContext';
-import { useCustomerOrderActions } from '../../v1/hooks/useCustomerOrders';
-import { compressCustomerScreenshot } from '../../v1/utils/imageCompression';
-import { ScreenshotSourceApp } from '../../v1/types/api';
+import { useNavigationUi } from '../../context/NavigationAndUiContext';
+import { useToast } from '../../context/ToastContext';
+import { useAuthSession } from '../../context/AuthSessionContext';
+import { useOrderDraft } from '../../context/OrderDraftContext';
+import { useCustomerOrderActions } from '../../hooks/useCustomerOrders';
+import { compressCustomerScreenshot } from '../../utils/imageCompression';
+import { ScreenshotSourceApp } from '../../types/api';
 import { AppHeader } from '../layout/AppHeader';
 
 const TRACKING_TUTORIAL_BY_APP: Record<

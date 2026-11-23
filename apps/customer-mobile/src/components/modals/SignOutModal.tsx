@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Modal } from 'react-native';
-import { useAuthSession } from '../../v1/context/AuthSessionContext';
+import { useAuthSession } from '../../context/AuthSessionContext';
 
 interface SignOutModalProps {
   visible: boolean;

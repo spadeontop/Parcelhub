@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigationUi } from '../v1/context/NavigationAndUiContext';
+import { useNavigationUi } from '../context/NavigationAndUiContext';
 import { HomeScreen } from '../components/screens/HomeScreen';
 import { CreateOrderScreen } from '../components/screens/CreateOrderScreen';
 import { ConfirmOrderScreen } from '../components/screens/ConfirmOrderScreen';

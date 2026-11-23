@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, useWindowDimensions } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { useNavigationUi } from '../../v1/context/NavigationAndUiContext';
+import { useNavigationUi } from '../../context/NavigationAndUiContext';
 import { ParcelHubLogoSvg } from '../common/Icons';
 
 interface AppHeaderProps {

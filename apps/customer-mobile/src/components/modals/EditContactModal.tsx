@@ -10,8 +10,8 @@ import {
   Keyboard,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { useAuthSession } from '../../v1/context/AuthSessionContext';
-import { useToast } from '../../v1/context/ToastContext';
+import { useAuthSession } from '../../context/AuthSessionContext';
+import { useToast } from '../../context/ToastContext';
 import { FloatingInput } from '../common/FloatingInput';
 
 interface EditContactModalProps {

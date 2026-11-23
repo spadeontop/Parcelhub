@@ -5,14 +5,13 @@ import {
   TouchableOpacity,
   ScrollView,
   RefreshControl,
-  useWindowDimensions,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { useNavigationUi } from '../../v1/context/NavigationAndUiContext';
-import { useToast } from '../../v1/context/ToastContext';
-import { useAuthSession } from '../../v1/context/AuthSessionContext';
-import { useCustomerOrders } from '../../v1/hooks/useCustomerOrders';
-import { formatOrderDate } from '../../v1/utils/date';
+import { useNavigationUi } from '../../context/NavigationAndUiContext';
+import { useToast } from '../../context/ToastContext';
+import { useAuthSession } from '../../context/AuthSessionContext';
+import { useCustomerOrders } from '../../hooks/useCustomerOrders';
+import { formatOrderDate } from '../../utils/date';
 import { BottomNav } from '../layout/BottomNav';
 import { AppHeader } from '../layout/AppHeader';
 import { getStatusLabel, getStatusPillStyles } from '../../utils/statusHelpers';
@@ -23,8 +22,6 @@ export const HomeScreen: React.FC = () => {
   const { customer, refetchProfile } = useAuthSession();
   const { orders, refetchOrders } = useCustomerOrders();
   const [refreshing, setRefreshing] = useState(false);
-  const { height } = useWindowDimensions();
-  const isCompact = height < 700;
 
   const onRefresh = async () => {
     setRefreshing(true);

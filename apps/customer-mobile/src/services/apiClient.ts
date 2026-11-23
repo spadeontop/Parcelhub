@@ -1,5 +1,5 @@
 import { ApiErrorResponse, ScreenshotSourceApp } from '../types/api';
-import { getDetectedApiUrl } from '../../config/env';
+import { getDetectedApiUrl } from '../config/env';
 
 export class V1ApiError extends Error {
   readonly statusCode: number;

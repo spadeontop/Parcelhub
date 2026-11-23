@@ -5,11 +5,10 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   ScrollView,
-  useWindowDimensions,
 } from 'react-native';
-import { useNavigationUi } from '../../v1/context/NavigationAndUiContext';
-import { useToast } from '../../v1/context/ToastContext';
-import { useAuthSession } from '../../v1/context/AuthSessionContext';
+import { useNavigationUi } from '../../context/NavigationAndUiContext';
+import { useToast } from '../../context/ToastContext';
+import { useAuthSession } from '../../context/AuthSessionContext';
 import { AuthBrandHeader } from '../layout/AuthBrandHeader';
 import { NumericKeypad } from '../common/NumericKeypad';
 
@@ -17,8 +16,6 @@ export const MpinLoginScreen: React.FC = () => {
   const { navigateTo } = useNavigationUi();
   const { showToast } = useToast();
   const { customer, verifyCustomerMpin, switchAccount } = useAuthSession();
-  const { height } = useWindowDimensions();
-  const isCompact = height < 700;
 
   const [pin, setPin] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string>('');
