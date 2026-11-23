@@ -72,7 +72,54 @@ export class StaffApiError extends Error {
   }
 }
 
+export type StaffQrLookupResult =
+  | { kind: 'found'; order: StaffOrder; hasDetails: boolean }
+  | { kind: 'not-found' | 'ambiguous' };
+
 export const staffApi = {
+  async findOrderByQrCode(
+    code: string,
+    token: string,
+    signal: AbortSignal
+  ): Promise<StaffQrLookupResult> {
+    const normalizedCode = code.trim().toLowerCase();
+    if (!normalizedCode) return { kind: 'not-found' };
+
+    // Customer QR codes fall back to the order UUID when there is no ticket code.
+    if (/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/.test(normalizedCode)) {
+      try {
+        const order = await this.getOrder(normalizedCode, token, signal);
+        if (order.id.toLowerCase() === normalizedCode && order.status !== 'PENDING_INITIALIZATION') {
+          return { kind: 'found', order, hasDetails: true };
+        }
+      } catch (error) {
+        if (!(error instanceof StaffApiError && error.statusCode === 404)) throw error;
+      }
+    }
+
+    const pageSize = 20;
+    let offset = 0;
+    let match: StaffOrder | undefined;
+    // Staff search returns partial matches, and an exact tracking ID can belong to multiple orders.
+    while (!signal.aborted) {
+      const { orders, pagination } = await this.getOrders(
+        undefined, pageSize, offset, token, normalizedCode, signal
+      );
+      for (const order of orders) {
+        const isExactMatch = [order.ticketCode, order.trackingId].some(
+          (value) => value?.trim().toLowerCase() === normalizedCode
+        );
+        if (!isExactMatch) continue;
+        if (match && match.id !== order.id) return { kind: 'ambiguous' };
+        match = order;
+      }
+      if (!pagination.hasMore || orders.length === 0) break;
+      offset += orders.length;
+    }
+
+    return match ? { kind: 'found', order: match, hasDetails: false } : { kind: 'not-found' };
+  },
+
   async getStoredAuthToken(): Promise<string | null> {
     if (memoryAuthToken) return memoryAuthToken;
     const stored = await storage.getItem(AUTH_TOKEN_KEY);
@@ -253,13 +300,16 @@ export const staffApi = {
   async getOrderPhoto(
     orderId: string,
     type: 'proof' | 'screenshot' | 'all' = 'proof',
-    explicitToken?: string
+    explicitToken?: string,
+    signal?: AbortSignal
   ): Promise<{ imageUrl: string | null; proofImageUrl: string | null }> {
     const token = explicitToken || (await this.getStoredAuthToken());
-    if (!token) return { imageUrl: null, proofImageUrl: null };
+    if (!token || signal?.aborted) return { imageUrl: null, proofImageUrl: null };
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const abort = () => controller.abort();
+    signal?.addEventListener('abort', abort);
+    const timeoutId = setTimeout(abort, 10000);
 
     try {
       const res = await fetch(
@@ -283,10 +333,11 @@ export const staffApi = {
       return { imageUrl: null, proofImageUrl: null };
     } finally {
       clearTimeout(timeoutId);
+      signal?.removeEventListener('abort', abort);
     }
   },
 
-  async getOrder(orderId: string, explicitToken?: string): Promise<StaffOrder> {
+  async getOrder(orderId: string, explicitToken?: string, signal?: AbortSignal): Promise<StaffOrder> {
     const token = explicitToken || (await this.getStoredAuthToken());
     if (!token) {
       throw new StaffApiError('Missing staff authorization token. Please sign in.', 401);
@@ -299,6 +350,7 @@ export const staffApi = {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
+        signal,
       });
 
       const data = await res.json().catch(() => null);
@@ -317,7 +369,7 @@ export const staffApi = {
       let proofImageUrl = o.proofImageUrl;
       if (!proofImageUrl) {
         try {
-          const photoData = await this.getOrderPhoto(orderId, 'proof', token);
+          const photoData = await this.getOrderPhoto(orderId, 'proof', token, signal);
           proofImageUrl = photoData.proofImageUrl || photoData.imageUrl || undefined;
         } catch {}
       }

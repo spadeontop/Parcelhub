@@ -54,6 +54,7 @@ export const StaffTerminalScreen: React.FC = () => {
     selectedOrder,
     isDetailsOpen,
     openOrderDetails,
+    findOrderByQrCode,
     closeOrderDetails,
     isLookupOpen,
     setIsLookupOpen,
@@ -65,9 +66,9 @@ export const StaffTerminalScreen: React.FC = () => {
     setJustUpdatedOrder,
   } = useStaff();
 
-  const handleOpenOrderDetails = (order: StaffOrder) => {
+  const handleOpenOrderDetails = (order: StaffOrder, hasDetails = false) => {
     if (justUpdatedOrder) setJustUpdatedOrder(null);
-    openOrderDetails(order);
+    openOrderDetails(order, hasDetails);
   };
 
   // 20 items per page (server-side paginated)
@@ -337,13 +338,9 @@ export const StaffTerminalScreen: React.FC = () => {
         {/* In-sheet QR Scanner View (Figma node 1355:3) */}
         <StaffManualLookupModal
           isOpen={isLookupOpen}
-          orders={allCachedOrders.length > 0 ? allCachedOrders : orders}
           onClose={() => setIsLookupOpen(false)}
-          onSelectOrder={openOrderDetails}
-          onOpenAccount={() => setIsDeskInfoOpen(true)}
-          onNotFound={(query) => {
-            console.warn(`No order found matching "${query}"`);
-          }}
+          onSelectOrder={handleOpenOrderDetails}
+          findOrderByQrCode={findOrderByQrCode}
         />
       </View>
 
