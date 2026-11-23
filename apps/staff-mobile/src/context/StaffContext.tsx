@@ -16,6 +16,7 @@ import {
   JustUpdatedOrderInfo,
 } from '../types';
 import { staffApi, StaffApiError } from '../services/staffApi';
+import type { StaffQrLookupResult } from '../services/staffApi';
 import { ENV } from '../config/env';
 
 export const STAFF_TABS: StaffTab[] = ['all', 'ready', 'active', 'unpaid', 'claimed'];
@@ -49,7 +50,8 @@ interface StaffContextType {
   badgeCounts: StaffBadgeCounts;
   selectedOrder: StaffOrder | null;
   isDetailsOpen: boolean;
-  openOrderDetails: (order: StaffOrder) => void;
+  openOrderDetails: (order: StaffOrder, hasDetails?: boolean) => void;
+  findOrderByQrCode: (code: string, signal: AbortSignal) => Promise<StaffQrLookupResult>;
   closeOrderDetails: () => void;
   isLookupOpen: boolean;
   setIsLookupOpen: (open: boolean) => void;
@@ -619,9 +621,24 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [staffUser, performSearch, fetchAllTabs]);
 
   // Order Details Modal helpers
-  const openOrderDetails = async (order: StaffOrder) => {
+  const findOrderByQrCode = async (code: string, signal: AbortSignal) => {
+    const token = userRef.current?.token;
+    if (!token) throw new StaffApiError('Please sign in to look up orders.', 401);
+
+    try {
+      return await staffApi.findOrderByQrCode(code, token, signal);
+    } catch (error) {
+      if (error instanceof StaffApiError && error.statusCode === 401 && userRef.current?.token === token) {
+        setStaffUser(null);
+      }
+      throw error;
+    }
+  };
+
+  const openOrderDetails = async (order: StaffOrder, hasDetails = false) => {
     setSelectedOrder(order);
     setIsDetailsOpen(true);
+    if (hasDetails) return;
     try {
       const token = userRef.current?.token;
       if (token) {
@@ -951,6 +968,7 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         selectedOrder,
         isDetailsOpen,
         openOrderDetails,
+        findOrderByQrCode,
         closeOrderDetails,
         isLookupOpen,
         setIsLookupOpen,

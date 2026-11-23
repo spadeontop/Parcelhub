@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,23 +6,26 @@ import {
   ScrollView,
   Animated,
   Easing,
-  Alert,
+  AppState,
+  Linking,
   ActivityIndicator,
   Platform,
+  BackHandler,
   StyleSheet,
   Dimensions,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import * as ImagePicker from 'expo-image-picker';
-import { StaffOrder } from '../../types';
+import { Camera, CameraView, scanFromURLAsync } from 'expo-camera';
+import type { BarcodeType } from 'expo-camera';
+import type { StaffQrLookupResult } from '../../services/staffApi';
+import type { StaffOrder } from '../../types';
 
 export interface StaffScanQrModalProps {
   isOpen: boolean;
-  orders: StaffOrder[];
   onClose: () => void;
-  onSelectOrder: (order: StaffOrder) => void;
-  onNotFound: (query: string) => void;
-  onOpenAccount?: () => void;
+  onSelectOrder: (order: StaffOrder, hasDetails: boolean) => void;
+  findOrderByQrCode: (code: string, signal: AbortSignal) => Promise<StaffQrLookupResult>;
 }
 
 /**
@@ -57,6 +60,11 @@ const ReticleWatermarkIcon: React.FC<{ size?: number }> = ({ size = 55.5 }) => (
 );
 
 const SCREEN_HEIGHT = Dimensions.get('window').height || 800;
+const QR_TYPES: BarcodeType[] = ['qr'];
+const QR_SCANNER_SETTINGS = { barcodeTypes: QR_TYPES };
+const IS_ANDROID = Platform.OS === 'android';
+const CAN_UPLOAD_QR = IS_ANDROID || Platform.OS === 'web';
+type CameraPermission = Awaited<ReturnType<typeof Camera.getCameraPermissionsAsync>>;
 
 /**
  * Inline Content Sheet QR Scanner conforming to Figma node 1407:3
@@ -64,23 +72,66 @@ const SCREEN_HEIGHT = Dimensions.get('window').height || 800;
  */
 export const StaffScanQrModal: React.FC<StaffScanQrModalProps> = ({
   isOpen,
-  orders,
   onClose,
   onSelectOrder,
-  onNotFound,
+  findOrderByQrCode,
 }) => {
-  const [rendered, setRendered] = useState<boolean>(isOpen);
-  const [isUploadingQr, setIsUploadingQr] = useState<boolean>(false);
+  const [rendered, setRendered] = useState(isOpen);
+  const [isClosing, setIsClosing] = useState(false);
+  const [appState, setAppState] = useState(AppState.currentState);
+  const [permission, setPermission] = useState<CameraPermission | null>(null);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [activity, setActivity] = useState<'uploading' | 'searching' | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const scanLineAnim = useRef(new Animated.Value(0)).current;
   const sheetSlideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
   const scanLoopRef = useRef<Animated.CompositeAnimation | null>(null);
-  const isClosingRef = useRef<boolean>(false);
+  const isClosingRef = useRef(false);
+  const attemptRef = useRef<AbortController | null>(null);
+  const cameraIsVisible =
+    IS_ANDROID && isOpen && !isClosing && appState === 'active' &&
+    !!permission?.granted && !cameraError && !activity && !notice;
+
+  useLayoutEffect(() => {
+    if (!isOpen) return;
+    setActivity(null);
+    setNotice(null);
+    setCameraError(null);
+    return () => {
+      attemptRef.current?.abort();
+      attemptRef.current = null;
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!IS_ANDROID || !isOpen) return;
+    setAppState(AppState.currentState);
+    const subscription = AppState.addEventListener('change', setAppState);
+    return () => subscription.remove();
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!IS_ANDROID || !isOpen || appState !== 'active') return;
+    let current = true;
+    Camera.getCameraPermissionsAsync().then(
+      (status) => {
+        if (current) setPermission(status);
+      },
+      () => {
+        if (current) setCameraError('Could not check camera access.');
+      }
+    );
+    return () => {
+      current = false;
+    };
+  }, [isOpen, appState]);
 
   // Synchronize opening & closing animations with native driver
   useEffect(() => {
     if (isOpen) {
       isClosingRef.current = false;
+      setIsClosing(false);
       setRendered(true);
       sheetSlideAnim.setValue(SCREEN_HEIGHT);
       Animated.timing(sheetSlideAnim, {
@@ -95,16 +146,19 @@ export const StaffScanQrModal: React.FC<StaffScanQrModalProps> = ({
         duration: 200,
         easing: Easing.in(Easing.cubic),
         useNativeDriver: true,
-      }).start(() => {
-        setRendered(false);
+      }).start(({ finished }) => {
+        if (finished) setRendered(false);
       });
     }
   }, [isOpen]);
 
   // Clean close transition without frame drops
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     if (isClosingRef.current) return;
     isClosingRef.current = true;
+    setIsClosing(true);
+    attemptRef.current?.abort();
+    attemptRef.current = null;
 
     if (scanLoopRef.current) {
       scanLoopRef.current.stop();
@@ -122,17 +176,20 @@ export const StaffScanQrModal: React.FC<StaffScanQrModalProps> = ({
         onClose();
       }
     });
-  };
+  }, [onClose, sheetSlideAnim]);
+
+  useEffect(() => {
+    if (!IS_ANDROID || !isOpen) return;
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      handleClose();
+      return true;
+    });
+    return () => subscription.remove();
+  }, [isOpen, handleClose]);
 
   // Laser beam loop: runs only while open and automatically cleans up
   useEffect(() => {
-    if (!isOpen) {
-      if (scanLoopRef.current) {
-        scanLoopRef.current.stop();
-        scanLoopRef.current = null;
-      }
-      return;
-    }
+    if (!cameraIsVisible) return;
 
     scanLineAnim.setValue(1);
     scanLoopRef.current = Animated.loop(
@@ -159,143 +216,113 @@ export const StaffScanQrModal: React.FC<StaffScanQrModalProps> = ({
         scanLoopRef.current = null;
       }
     };
-  }, [isOpen]);
+  }, [cameraIsVisible, scanLineAnim]);
 
   const translateY = scanLineAnim.interpolate({
     inputRange: [0, 1],
     outputRange: [52, 140],
   });
 
-  const findOrderByCode = (rawCode: string): StaffOrder | undefined => {
-    const q = rawCode.trim().toLowerCase();
-    if (!q) return undefined;
-
-    return orders.find((o) => {
-      const id = o.id.toLowerCase();
-      const track = o.trackingId.toLowerCase();
-      const ticket = (o.ticketCode || '').toLowerCase();
-      return (
-        id === q ||
-        track === q ||
-        ticket === q ||
-        id.includes(q) ||
-        track.includes(q) ||
-        (ticket.length > 0 && ticket.includes(q))
-      );
-    });
-  };
-
-  const findOrderFromFilename = (fileName?: string | null): StaffOrder | undefined => {
-    if (!fileName) return undefined;
-    const lower = fileName.toLowerCase();
-    return orders.find((o) => {
-      const ticket = (o.ticketCode || '').toLowerCase();
-      const track = o.trackingId.toLowerCase();
-      const id = o.id.toLowerCase();
-      return (
-        (ticket.length > 0 && lower.includes(ticket)) ||
-        (track.length > 0 && lower.includes(track)) ||
-        lower.includes(id)
-      );
-    });
-  };
-
-  const tryDecodeQrOnWeb = async (uri: string): Promise<string | null | undefined> => {
-    if (Platform.OS !== 'web' || typeof window === 'undefined') return undefined;
-    const BarcodeDetectorCtor = (
-      window as unknown as {
-        BarcodeDetector?: new (opts: { formats: string[] }) => {
-          detect: (source: unknown) => Promise<Array<{ rawValue?: string }>>;
-        };
-      }
-    ).BarcodeDetector;
-    if (!BarcodeDetectorCtor) return undefined;
-
+  const handleCameraAccess = async () => {
     try {
-      const detector = new BarcodeDetectorCtor({ formats: ['qr_code'] });
-      const img = new window.Image();
-      img.crossOrigin = 'anonymous';
-      await new Promise<void>((resolve, reject) => {
-        img.onload = () => resolve();
-        img.onerror = () => reject(new Error('Failed to load QR image'));
-        img.src = uri;
-      });
-      const barcodes = await detector.detect(img);
-      const firstValue = barcodes.find((b) => b.rawValue)?.rawValue;
-      return firstValue ? firstValue.trim() : null;
+      setCameraError(null);
+      if (permission?.canAskAgain === false && !permission.granted) {
+        await Linking.openSettings();
+        return;
+      }
+      const status = permission?.granted
+        ? await Camera.getCameraPermissionsAsync()
+        : await Camera.requestCameraPermissionsAsync();
+      setPermission(status);
     } catch {
-      return undefined;
+      setCameraError('Could not access the camera.');
     }
+  };
+
+  const searchScannedCode = async (code: string, attempt: AbortController) => {
+    setActivity('searching');
+    try {
+      const result = await findOrderByQrCode(code, attempt.signal);
+      if (attempt.signal.aborted) return;
+      if (result.kind === 'found') {
+        handleClose();
+        onSelectOrder(result.order, result.hasDetails);
+        return;
+      }
+      setNotice(result.kind === 'ambiguous'
+        ? 'Multiple orders match this QR code. Use manual search to choose an order.'
+        : 'No order matches this QR code.');
+    } catch {
+      if (!attempt.signal.aborted) {
+        setNotice('Could not search for the order. Check your connection and try again.');
+      }
+    } finally {
+      if (!attempt.signal.aborted) setActivity(null);
+    }
+  };
+
+  const beginAttempt = () => {
+    if (!isOpen || isClosingRef.current || attemptRef.current) return null;
+    const attempt = new AbortController();
+    attemptRef.current = attempt;
+    return attempt;
+  };
+
+  const handleScan = (value: string) => {
+    const code = value.trim();
+    if (!cameraIsVisible || AppState.currentState !== 'active' || !code) return;
+    const attempt = beginAttempt();
+    if (attempt) void searchScannedCode(code, attempt);
   };
 
   const handleUploadQrImage = async () => {
-    if (isUploadingQr) return;
-    setIsUploadingQr(true);
+    const attempt = beginAttempt();
+    if (!attempt) return;
+    setActivity('uploading');
     try {
-      const pickerResult = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        allowsEditing: false,
-        quality: 1,
-      });
-
-      if (pickerResult.canceled || !pickerResult.assets?.length) {
+      const selection = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'] });
+      if (attempt.signal.aborted) return;
+      if (selection.canceled || !selection.assets[0]) {
+        attemptRef.current = null;
         return;
       }
 
-      const asset = pickerResult.assets[0];
-      const decoded = await tryDecodeQrOnWeb(asset.uri);
+      const barcodes = await scanFromURLAsync(selection.assets[0].uri, QR_TYPES);
+      if (attempt.signal.aborted) return;
 
-      if (typeof decoded === 'string' && decoded.length > 0) {
-        const matched = findOrderByCode(decoded);
-        if (matched) {
-          onSelectOrder(matched);
-          handleClose();
-        } else {
-          onNotFound(decoded);
-        }
+      const codes = [...new Set(barcodes.map(({ data }) => data.trim()).filter(Boolean))];
+      if (codes.length === 1) {
+        await searchScannedCode(codes[0], attempt);
         return;
       }
-
-      const filenameMatched = findOrderFromFilename(asset.fileName);
-      if (filenameMatched) {
-        onSelectOrder(filenameMatched);
-        handleClose();
-        return;
-      }
-
-      if (decoded === null) {
-        onNotFound('Uploaded image');
-        return;
-      }
-
-      if (orders.length > 0) {
-        onSelectOrder(orders[0]);
-        handleClose();
-      } else {
-        Alert.alert('No Orders Available', 'Queue is currently empty.');
-      }
+      setNotice(codes.length === 0
+        ? 'No readable QR code was found. Choose a clear image of the code.'
+        : 'Multiple QR codes were found. Choose an image with one code.');
     } catch {
-      Alert.alert('Upload Failed', 'Unable to open image library. Please try again.');
+      if (!attempt.signal.aborted) setNotice('Could not read the selected image. Try another image.');
     } finally {
-      setIsUploadingQr(false);
+      if (!attempt.signal.aborted) setActivity(null);
     }
   };
 
-  const handleSimulatedScan = () => {
-    if (orders.length > 0) {
-      const target = orders[0];
-      onSelectOrder(target);
-      handleClose();
-    } else {
-      Alert.alert('No Orders Available', 'Queue is currently empty.');
-    }
+  const resetScanner = () => {
+    attemptRef.current = null;
+    setNotice(null);
   };
 
   if (!rendered) return null;
 
+  const needsPermission = permission && !permission.granted;
+  let previewMessage = 'Getting the camera ready…';
+  if (!IS_ANDROID) {
+    previewMessage = CAN_UPLOAD_QR ? 'Choose a QR image to look up an order.' : 'Use manual search to find an order.';
+  } else if (needsPermission) {
+    previewMessage = 'Allow camera access to scan parcel QR codes.';
+  }
+
   return (
     <Animated.View
-      pointerEvents={isOpen ? 'auto' : 'none'}
+      pointerEvents={isOpen && !isClosing ? 'auto' : 'none'}
       style={[
         StyleSheet.absoluteFill,
         {
@@ -328,6 +355,15 @@ export const StaffScanQrModal: React.FC<StaffScanQrModalProps> = ({
 
         {/* 2. Camera Preview Box (Figma 1407:29) */}
         <View className="bg-[#111827] h-[340px] rounded-[24px] overflow-hidden items-center justify-between pt-[20px] pb-[16px] mb-[20px]">
+          {cameraIsVisible && (
+            <CameraView
+              style={StyleSheet.absoluteFill}
+              facing="back"
+              barcodeScannerSettings={QR_SCANNER_SETTINGS}
+              onBarcodeScanned={({ data }) => handleScan(data)}
+              onMountError={() => setCameraError('Could not start the camera.')}
+            />
+          )}
           {/* Camera Preview Label Pill (Figma 1407:30) */}
           <View className="bg-[#1E293B] h-[28px] w-[152px] rounded-[14px] items-center justify-center">
             <Text className="text-[10px] font-semibold text-[#CBD5E1] leading-[16px] text-center uppercase">
@@ -336,76 +372,85 @@ export const StaffScanQrModal: React.FC<StaffScanQrModalProps> = ({
           </View>
 
           {/* QR Alignment Guide Viewfinder (Figma 1407:32) */}
-          <TouchableOpacity
-            activeOpacity={0.9}
-            onPress={handleSimulatedScan}
-            accessibilityRole="button"
-            accessibilityLabel="Camera viewfinder. Tap to simulate QR code scan."
-            className="w-[240px] h-[224px] rounded-[20px] bg-[#182235] items-center relative overflow-hidden"
-          >
-            {/* Corner Brackets (Figma 1407:33 / 1407:34) */}
-            <View
-              pointerEvents="none"
-              className="absolute inset-0 items-center justify-center"
-            >
-              <ScanningCorners width={240} height={224} />
+          {cameraIsVisible ? (
+            <View className="w-[240px] h-[224px] rounded-[20px] items-center relative overflow-hidden">
+              <View pointerEvents="none" className="absolute inset-0 items-center justify-center">
+                <ScanningCorners width={240} height={224} />
+              </View>
+              <View
+                pointerEvents="none"
+                style={{ position: 'absolute', top: 71, opacity: 0.2 }}
+                className="items-center justify-center"
+              >
+                <ReticleWatermarkIcon size={55.5} />
+              </View>
+              <Animated.View
+                pointerEvents="none"
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 16,
+                  right: 16,
+                  transform: [{ translateY }],
+                }}
+                className="h-[2px] bg-[#60A5FA]"
+              />
+              <Text
+                style={{ position: 'absolute', top: 166 }}
+                className="text-[12px] font-medium text-white leading-[18px] text-center bg-[#1E293B] rounded-lg px-4 py-1"
+              >
+                Position QR code here
+              </Text>
             </View>
-
-            {/* Reticle Watermark Icon (Figma 1406:270 / 1406:271) */}
-            <View
-              pointerEvents="none"
-              style={{ position: 'absolute', top: 71, opacity: 0.2 }}
-              className="items-center justify-center"
-            >
-              <ReticleWatermarkIcon size={55.5} />
+          ) : (
+            <View className="w-full flex-1 justify-center items-center px-6 gap-3">
+              {!!activity && <ActivityIndicator color="#60A5FA" />}
+              <Text accessibilityLiveRegion="polite" className="text-sm text-center text-[#E2E8F0]">
+                {activity === 'uploading' && 'Reading QR image…'}
+                {activity === 'searching' && 'Searching for the order…'}
+                {!activity && (notice || cameraError || previewMessage)}
+              </Text>
+              {!activity && notice && (
+                <TouchableOpacity accessibilityRole="button" onPress={resetScanner} className="px-4 py-2">
+                  <Text className="font-semibold text-[#93C5FD]">Scan again</Text>
+                </TouchableOpacity>
+              )}
+              {IS_ANDROID && !activity && !notice && (cameraError || needsPermission) && (
+                <TouchableOpacity accessibilityRole="button" onPress={handleCameraAccess} className="px-4 py-2">
+                  <Text className="font-semibold text-[#93C5FD]">
+                    {needsPermission && !permission.canAskAgain
+                      ? 'Open Android settings'
+                      : cameraError ? 'Retry camera' : 'Allow camera access'}
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
-
-            {/* Animated Horizontal Laser Scan Line (Figma 1407:39) */}
-            <Animated.View
-              pointerEvents="none"
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 16,
-                right: 16,
-                transform: [{ translateY }],
-              }}
-              className="h-[2px] bg-[#60A5FA]"
-            />
-
-            {/* Viewfinder Subtext (Figma 1407:40) */}
-            <Text
-              style={{ position: 'absolute', top: 166 }}
-              className="text-[12px] font-medium text-[#CBD5E1] leading-[18px] text-center px-4"
-            >
-              Position QR code here
-            </Text>
-          </TouchableOpacity>
+          )}
 
           {/* Bottom Camera Note (Figma 1407:41) */}
-          <Text className="text-[11px] font-normal text-[#CBD5E1] leading-[17px] text-center">
-            Scanning starts when a code is in view
-          </Text>
+          {cameraIsVisible && (
+            <Text className="text-[11px] font-normal text-white leading-[17px] text-center bg-[#1E293B] rounded-lg px-3 py-1">
+              Scanning starts when a code is in view
+            </Text>
+          )}
         </View>
 
         {/* 3. Upload QR Image Outlined Button (Figma 1407:44 / 1407:45) */}
-        <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={handleUploadQrImage}
-          disabled={isUploadingQr}
-          accessibilityRole="button"
-          accessibilityLabel="Upload QR Image"
-          style={{ opacity: isUploadingQr ? 0.6 : 1 }}
-          className="w-full h-[48px] rounded-[14px] border border-[#2563EB] items-center justify-center mb-[26px]"
-        >
-          {isUploadingQr ? (
-            <ActivityIndicator size="small" color="#2563EB" />
-          ) : (
+        {CAN_UPLOAD_QR && (
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={handleUploadQrImage}
+            disabled={!!activity || !!notice}
+            accessibilityRole="button"
+            accessibilityLabel="Upload QR Image"
+            style={{ opacity: activity || notice ? 0.6 : 1 }}
+            className="w-full h-[48px] rounded-[14px] border border-[#2563EB] items-center justify-center mb-[26px]"
+          >
             <Text className="text-[14px] font-semibold text-[#2563EB] leading-[20px] text-center">
               Upload QR Image
             </Text>
-          )}
-        </TouchableOpacity>
+          </TouchableOpacity>
+        )}
 
         {/* 4. Scanning Guidance (Figma 1407:42 / 1407:43) */}
         <View className="mb-[20px] items-center">
