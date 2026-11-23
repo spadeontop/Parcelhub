@@ -12,7 +12,7 @@ import { AuthBrandHeader } from '../layout/AuthBrandHeader';
 import { NumericKeypad } from '../common/NumericKeypad';
 
 export const MpinLoginScreen: React.FC = () => {
-  const { customer, verifyCustomerMpin, navigateTo, showToast } = useV1();
+  const { customer, verifyCustomerMpin, navigateTo, switchAccount, showToast } = useV1();
   const { height } = useWindowDimensions();
   const isCompact = height < 700;
 
@@ -106,7 +106,7 @@ export const MpinLoginScreen: React.FC = () => {
       clearTimeout(autoSubmitTimerRef.current);
       autoSubmitTimerRef.current = null;
     }
-    navigateTo('login');
+    void switchAccount();
   };
 
   const handleForgotMpin = () => {
