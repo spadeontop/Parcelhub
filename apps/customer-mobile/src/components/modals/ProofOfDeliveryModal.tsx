@@ -11,30 +11,24 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useApp } from '../../context/AppContext';
 import { useV1 } from '../../v1/context/V1Context';
 import { orderApi } from '../../v1/services/orderApi';
 import { v1Storage } from '../../v1/utils/storage';
 import { CloseIcon } from '../common/Icons';
 
 export const ProofOfDeliveryModal: React.FC = () => {
-  const { isPodModalOpen: legacyIsOpen, closePodModal: legacyClose, getCurrentOrder } = useApp();
   const {
-    isPodModalOpen: v1IsOpen,
-    closePodModal: v1Close,
+    isPodModalOpen: isOpen,
+    closePodModal: closeModal,
     selectedOrderId,
     orders,
     authToken,
   } = useV1();
 
-  const isOpen = v1IsOpen || legacyIsOpen;
-  const closeModal = v1IsOpen ? v1Close : legacyClose;
-
   const currentV1Order = orders.find(
     (o) => o.id === selectedOrderId || o.ticketCode === selectedOrderId
   );
-  const legacyOrder = getCurrentOrder();
-  const trackingNumber = currentV1Order?.trackingId || legacyOrder.trackingNumber || '—';
+  const trackingNumber = currentV1Order?.trackingId || '—';
 
   const [proofPhotoUrl, setProofPhotoUrl] = useState<string | null>(null);
   const [loadingPhoto, setLoadingPhoto] = useState<boolean>(false);

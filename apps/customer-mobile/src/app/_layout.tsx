@@ -6,10 +6,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { V1Provider, useV1 } from '../v1/context/V1Context';
-import { AppProvider, useApp } from '../context/AppContext';
-import { MpinModal } from '../components/modals/MpinModal';
 import { ProofOfDeliveryModal } from '../components/modals/ProofOfDeliveryModal';
-import { NotificationsModal } from '../components/modals/NotificationsModal';
 import { Toast } from '../components/common/Toast';
 import '../global.css';
 
@@ -17,10 +14,7 @@ import '../global.css';
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 function RootAppContent() {
-  const { toast: legacyToast } = useApp();
-  const { toast: v1Toast } = useV1();
-
-  const activeToast = v1Toast.show ? v1Toast : legacyToast;
+  const { toast } = useV1();
 
   return (
     <SafeAreaView
@@ -34,12 +28,10 @@ function RootAppContent() {
       </View>
 
       {/* Global Interactive Modals */}
-      <MpinModal />
       <ProofOfDeliveryModal />
-      <NotificationsModal />
 
       {/* Global Animated Toast Notification Pill */}
-      <Toast isOpen={activeToast.show} message={activeToast.message} />
+      <Toast isOpen={toast.show} message={toast.message} />
     </SafeAreaView>
   );
 }
@@ -66,9 +58,7 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider style={{ flex: 1 }}>
       <V1Provider>
-        <AppProvider>
-          <RootAppContent />
-        </AppProvider>
+        <RootAppContent />
       </V1Provider>
     </SafeAreaProvider>
   );

@@ -10,7 +10,7 @@ import {
   Keyboard,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { useApp } from '../../context/AppContext';
+import { useV1 } from '../../v1/context/V1Context';
 import { FloatingInput } from '../common/FloatingInput';
 
 interface EditContactModalProps {
@@ -25,12 +25,12 @@ export const EditContactModal: React.FC<EditContactModalProps> = ({
   onClose,
   maskedEmail,
 }) => {
-  const { authCustomer, updateAuthCustomer, showToast } = useApp();
+  const { customer, showToast } = useV1();
 
-  const [firstName, setFirstName] = useState<string>(authCustomer?.firstname || '');
-  const [middleInitial, setMiddleInitial] = useState<string>(authCustomer?.middleinitial || '');
-  const [lastName, setLastName] = useState<string>(authCustomer?.lastname || '');
-  const [phoneNumber, setPhoneNumber] = useState<string>(authCustomer?.phonenumber || '');
+  const [firstName, setFirstName] = useState<string>(customer?.firstName || '');
+  const [middleInitial, setMiddleInitial] = useState<string>(customer?.middleInitial || '');
+  const [lastName, setLastName] = useState<string>(customer?.lastName || '');
+  const [phoneNumber, setPhoneNumber] = useState<string>(customer?.phoneNumber || '');
   const [verificationCode, setVerificationCode] = useState<string>('');
   const [timerSeconds, setTimerSeconds] = useState<number>(299); // 04:59
   const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false);
@@ -39,16 +39,16 @@ export const EditContactModal: React.FC<EditContactModalProps> = ({
   // Sync inputs whenever modal becomes visible
   useEffect(() => {
     if (visible) {
-      setFirstName(authCustomer?.firstname || '');
-      setMiddleInitial(authCustomer?.middleinitial || '');
-      setLastName(authCustomer?.lastname || '');
-      setPhoneNumber(authCustomer?.phonenumber || '');
+      setFirstName(customer?.firstName || '');
+      setMiddleInitial(customer?.middleInitial || '');
+      setLastName(customer?.lastName || '');
+      setPhoneNumber(customer?.phoneNumber || '');
       setVerificationCode('');
       setTimerSeconds(299);
       setIsTimerRunning(false);
       setCodeSent(false);
     }
-  }, [visible, authCustomer]);
+  }, [visible, customer]);
 
   // Countdown timer effect
   useEffect(() => {
@@ -92,14 +92,7 @@ export const EditContactModal: React.FC<EditContactModalProps> = ({
       return;
     }
 
-    updateAuthCustomer({
-      firstname: firstName.trim(),
-      middleinitial: middleInitial.trim(),
-      lastname: lastName.trim(),
-      phonenumber: phoneNumber.trim(),
-    });
-
-    showToast('Contact details updated successfully!');
+    showToast('Profile updates are not yet available in this version.');
     onClose();
   };
 

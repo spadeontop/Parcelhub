@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { useV1 } from '../../v1/context/V1Context';
-import { ScreenId } from '../../types';
+import { ScreenId, useV1 } from '../../v1/context/V1Context';
 import { BackArrowIcon, ParcelHubLogoSvg, HelpIcon } from '../common/Icons';
 
 interface BrandHeaderProps {

@@ -179,12 +179,12 @@ export type ApiErrorResponse = {
 
 | Feature | Target Screens / Components | Priority |
 | :--- | :--- | :---: |
-| **1. Session Refresh via MPIN on 401** | `AppContext`, `MpinLoginScreen` | High |
+| **1. Session Refresh via MPIN on 401** | `V1Context`, `MpinLoginScreen` | High |
 | **2. Server Ticket Code** | `QrScreen`, `OrderDetailsScreen`, `PaymentVerificationScreen` | High |
 | **3. On-Demand Photo Retrieval** | `ProofOfDeliveryModal`, `OrderDetailsScreen` | High |
 | **4. WebP Image Compression (<800px, 50%)** | `CreateOrderScreen`, `IMAGE_COMPRESSION.md` | High |
 | **5. Decoupled Order Creation & Recipient Autofill** | `CreateOrderScreen`, `ConfirmOrderScreen` | High |
 | **6. Duplicate Tracking ID (409) Handling** | `ConfirmOrderScreen` | Medium |
 | **7. Customer Blacklist State Handling** | `HomeScreen`, `ProfileScreen`, `CreateOrderScreen` | Medium |
-| **8. Dynamic Server-Driven Claim Countdown** | `OrderDetailsScreen`, `AppContext` | High |
+| **8. Dynamic Server-Driven Claim Countdown** | `OrderDetailsScreen`, `V1Context` | High |
 | **9. Backend-Authoritative Error Handling** | All API services & UI Toasts | High |
