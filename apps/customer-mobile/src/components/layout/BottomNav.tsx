@@ -1,14 +1,16 @@
 import React from 'react';
 import { View, TouchableOpacity, Text } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { useV1 } from '../../v1/context/V1Context';
+import { useNavigationUi } from '../../v1/context/NavigationAndUiContext';
+import { useNotifications } from '../../v1/context/NotificationsContext';
 
 interface BottomNavProps {
   activeTab?: 'home' | 'transactions' | 'notifications' | 'profile';
 }
 
 export const BottomNav: React.FC<BottomNavProps> = ({ activeTab = 'home' }) => {
-  const { navigateTo, notifications } = useV1();
+  const { navigateTo } = useNavigationUi();
+  const { notifications } = useNotifications();
   const unreadCount = notifications.filter((n) => n.unread).length;
 
   return (

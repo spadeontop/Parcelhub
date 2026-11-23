@@ -7,7 +7,11 @@ import { useFonts } from 'expo-font';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient, setupQueryFocusManager } from '../v1/query/queryClient';
-import { V1Provider, useV1 } from '../v1/context/V1Context';
+import { ToastProvider, useToastState } from '../v1/context/ToastContext';
+import { NavigationAndUiProvider } from '../v1/context/NavigationAndUiContext';
+import { OrderDraftProvider } from '../v1/context/OrderDraftContext';
+import { AuthSessionProvider } from '../v1/context/AuthSessionContext';
+import { NotificationsProvider } from '../v1/context/NotificationsContext';
 import { ProofOfDeliveryModal } from '../components/modals/ProofOfDeliveryModal';
 import { Toast } from '../components/common/Toast';
 import '../global.css';
@@ -16,7 +20,7 @@ import '../global.css';
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 function RootAppContent() {
-  const { toast } = useV1();
+  const toast = useToastState();
 
   return (
     <SafeAreaView
@@ -64,9 +68,17 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider style={{ flex: 1 }}>
       <QueryClientProvider client={queryClient}>
-        <V1Provider>
-          <RootAppContent />
-        </V1Provider>
+        <ToastProvider>
+          <NavigationAndUiProvider>
+            <OrderDraftProvider>
+              <AuthSessionProvider>
+                <NotificationsProvider>
+                  <RootAppContent />
+                </NotificationsProvider>
+              </AuthSessionProvider>
+            </OrderDraftProvider>
+          </NavigationAndUiProvider>
+        </ToastProvider>
       </QueryClientProvider>
     </SafeAreaProvider>
   );

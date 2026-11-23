@@ -3,7 +3,11 @@ import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Image } fr
 import { StatusBar } from 'expo-status-bar';
 import Svg, { Path } from 'react-native-svg';
 import * as ImagePicker from 'expo-image-picker';
-import { useV1 } from '../../v1/context/V1Context';
+import { useNavigationUi } from '../../v1/context/NavigationAndUiContext';
+import { useToast } from '../../v1/context/ToastContext';
+import { useAuthSession } from '../../v1/context/AuthSessionContext';
+import { useOrderDraft } from '../../v1/context/OrderDraftContext';
+import { useCustomerOrderActions } from '../../v1/hooks/useCustomerOrders';
 import { compressCustomerScreenshot } from '../../v1/utils/imageCompression';
 import { ScreenshotSourceApp } from '../../v1/types/api';
 import { AppHeader } from '../layout/AppHeader';
@@ -35,15 +39,11 @@ const TRACKING_TUTORIAL_BY_APP: Record<
 };
 
 export const CreateOrderScreen: React.FC = () => {
-  const {
-    navigateTo,
-    orderDraft,
-    updateOrderDraft,
-    initializeCustomerOrder,
-    showToast,
-    goBack,
-    customer,
-  } = useV1();
+  const { navigateTo, goBack } = useNavigationUi();
+  const { showToast } = useToast();
+  const { customer } = useAuthSession();
+  const { orderDraft, updateOrderDraft } = useOrderDraft();
+  const { initializeCustomerOrder } = useCustomerOrderActions();
 
   const [isInitializing, setIsInitializing] = useState(false);
   const [isPicking, setIsPicking] = useState(false);

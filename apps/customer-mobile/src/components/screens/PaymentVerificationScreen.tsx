@@ -2,11 +2,13 @@ import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import Svg, { Path } from 'react-native-svg';
-import { useV1 } from '../../v1/context/V1Context';
+import { useNavigationUi } from '../../v1/context/NavigationAndUiContext';
+import { useCustomerOrders } from '../../v1/hooks/useCustomerOrders';
 import { AppHeader } from '../layout/AppHeader';
 
 export const PaymentVerificationScreen: React.FC = () => {
-  const { navigateTo, refetchOrders } = useV1();
+  const { navigateTo } = useNavigationUi();
+  const { refetchOrders } = useCustomerOrders();
 
   const handleReturnHome = () => {
     refetchOrders().catch(() => {});

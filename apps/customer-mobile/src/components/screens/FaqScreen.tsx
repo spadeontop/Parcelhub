@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import Svg, { Path } from 'react-native-svg';
-import { useV1 } from '../../v1/context/V1Context';
+import { useNavigationUi } from '../../v1/context/NavigationAndUiContext';
 import { AppHeader } from '../layout/AppHeader';
 
 export type FaqCategory = 'All' | 'Ordering' | 'Payment' | 'Claiming' | 'Safety & Account';
@@ -156,7 +156,7 @@ export interface FaqScreenProps {
 }
 
 export const FaqScreen: React.FC<FaqScreenProps> = ({ onBack }) => {
-  const { navigateTo, goBack } = useV1();
+  const { navigateTo, goBack } = useNavigationUi();
   const [selectedCategory, setSelectedCategory] = useState<FaqCategory>('All');
   const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({});
 

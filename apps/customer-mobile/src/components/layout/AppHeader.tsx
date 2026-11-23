@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, useWindowDimensions } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { useV1 } from '../../v1/context/V1Context';
+import { useNavigationUi } from '../../v1/context/NavigationAndUiContext';
 import { ParcelHubLogoSvg } from '../common/Icons';
 
 interface AppHeaderProps {
@@ -29,7 +29,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   centerTitle = false,
   backgroundColor,
 }) => {
-  const { navigateTo, goBack } = useV1();
+  const { navigateTo, goBack } = useNavigationUi();
   const { height } = useWindowDimensions();
   const isCompact = height < 700;
 

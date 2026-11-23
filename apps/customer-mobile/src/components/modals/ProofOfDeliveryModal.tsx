@@ -11,7 +11,9 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useV1 } from '../../v1/context/V1Context';
+import { useNavigationUi } from '../../v1/context/NavigationAndUiContext';
+import { useAuthSession } from '../../v1/context/AuthSessionContext';
+import { useCustomerOrders } from '../../v1/hooks/useCustomerOrders';
 import { orderApi } from '../../v1/services/orderApi';
 import { v1Storage } from '../../v1/utils/storage';
 import { CloseIcon } from '../common/Icons';
@@ -21,9 +23,9 @@ export const ProofOfDeliveryModal: React.FC = () => {
     isPodModalOpen: isOpen,
     closePodModal: closeModal,
     selectedOrderId,
-    orders,
-    authToken,
-  } = useV1();
+  } = useNavigationUi();
+  const { authToken } = useAuthSession();
+  const { orders } = useCustomerOrders();
 
   const currentV1Order = orders.find(
     (o) => o.id === selectedOrderId || o.ticketCode === selectedOrderId

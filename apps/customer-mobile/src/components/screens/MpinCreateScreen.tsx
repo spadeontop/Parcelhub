@@ -1,11 +1,15 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
-import { useV1 } from '../../v1/context/V1Context';
+import { useNavigationUi } from '../../v1/context/NavigationAndUiContext';
+import { useToast } from '../../v1/context/ToastContext';
+import { useAuthSession } from '../../v1/context/AuthSessionContext';
 import { ParcelHubLogoSvg, ArrowLeftIcon } from '../common/Icons';
 import { NumericKeypad } from '../common/NumericKeypad';
 
 export const MpinCreateScreen: React.FC = () => {
-  const { customer, createCustomerMpin, navigateTo, showToast } = useV1();
+  const { navigateTo } = useNavigationUi();
+  const { showToast } = useToast();
+  const { customer, createCustomerMpin } = useAuthSession();
   const [activeStep, setActiveStep] = useState<1 | 2>(1);
   const [pin1, setPin1] = useState<string>('');
   const [pin2, setPin2] = useState<string>('');

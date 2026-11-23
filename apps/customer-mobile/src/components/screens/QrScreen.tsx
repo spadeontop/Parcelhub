@@ -5,7 +5,9 @@ import * as Clipboard from 'expo-clipboard';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as MediaLibrary from 'expo-media-library';
 import { StatusBar } from 'expo-status-bar';
-import { useV1 } from '../../v1/context/V1Context';
+import { useNavigationUi } from '../../v1/context/NavigationAndUiContext';
+import { useToast } from '../../v1/context/ToastContext';
+import { useCustomerOrders, useCustomerOrderActions } from '../../v1/hooks/useCustomerOrders';
 import { CustomerOrderDetail } from '../../v1/types/api';
 import { ArrowLeftIcon, DownloadIcon } from '../common/Icons';
 
@@ -13,12 +15,12 @@ export const QrScreen: React.FC = () => {
   const {
     selectedOrderId,
     selectedOrderTicketCode,
-    orders,
-    fetchOrderDetail,
     navigateTo,
     goBack,
-    showToast,
-  } = useV1();
+  } = useNavigationUi();
+  const { showToast } = useToast();
+  const { orders } = useCustomerOrders();
+  const { fetchOrderDetail } = useCustomerOrderActions();
   const [orderDetail, setOrderDetail] = useState<CustomerOrderDetail | null>(null);
   const [isSavingPass, setIsSavingPass] = useState(false);
   const qrSvgRef = useRef<any>(null);

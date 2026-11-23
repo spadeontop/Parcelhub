@@ -13,7 +13,10 @@ import { StatusBar } from 'expo-status-bar';
 import Svg, { Path } from 'react-native-svg';
 import * as Clipboard from 'expo-clipboard';
 import { useQueryClient } from '@tanstack/react-query';
-import { useV1 } from '../../v1/context/V1Context';
+import { useNavigationUi } from '../../v1/context/NavigationAndUiContext';
+import { useToast } from '../../v1/context/ToastContext';
+import { useAuthSession } from '../../v1/context/AuthSessionContext';
+import { useCustomerOrders, useCustomerOrderActions } from '../../v1/hooks/useCustomerOrders';
 import { customerQueryKeys } from '../../v1/query/queryClient';
 import { useCustomerOrderDetailQuery } from '../../v1/query/useCustomerQueries';
 import { QrCodeIcon } from '../common/Icons';
@@ -27,17 +30,16 @@ import { OrderTimelineStepper } from '../orders/OrderTimelineStepper';
 
 export const OrderDetailsScreen: React.FC = () => {
   const {
-    authToken,
     selectedOrderId,
     selectedOrderTicketCode,
-    orders,
-    customer,
-    claimCustomerOrder,
     openPodModal,
     navigateTo,
     goBack,
-    showToast,
-  } = useV1();
+  } = useNavigationUi();
+  const { showToast } = useToast();
+  const { authToken, customer } = useAuthSession();
+  const { orders } = useCustomerOrders();
+  const { claimCustomerOrder } = useCustomerOrderActions();
 
   const queryClient = useQueryClient();
   const { data: orderDetail, refetch } = useCustomerOrderDetailQuery(authToken, selectedOrderId, {

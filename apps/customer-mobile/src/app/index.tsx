@@ -1,5 +1,5 @@
 import React from 'react';
-import { useV1 } from '../v1/context/V1Context';
+import { useNavigationUi } from '../v1/context/NavigationAndUiContext';
 import { HomeScreen } from '../components/screens/HomeScreen';
 import { CreateOrderScreen } from '../components/screens/CreateOrderScreen';
 import { ConfirmOrderScreen } from '../components/screens/ConfirmOrderScreen';
@@ -16,7 +16,7 @@ import { ProfileScreen } from '../components/screens/ProfileScreen';
 import { FaqScreen } from '../components/screens/FaqScreen';
 
 export default function IndexPage() {
-  const { activeScreen } = useV1();
+  const { activeScreen } = useNavigationUi();
 
   switch (activeScreen) {
     case 'register':

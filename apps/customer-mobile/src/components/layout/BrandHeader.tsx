@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { ScreenId, useV1 } from '../../v1/context/V1Context';
+import { ScreenId, useNavigationUi } from '../../v1/context/NavigationAndUiContext';
 import { BackArrowIcon, ParcelHubLogoSvg, HelpIcon } from '../common/Icons';
 
 interface BrandHeaderProps {
@@ -26,7 +26,7 @@ export const BrandHeader: React.FC<BrandHeaderProps> = ({
   hideBorder = false,
   hideStatusDot = false,
 }) => {
-  const { navigateTo } = useV1();
+  const { navigateTo } = useNavigationUi();
   const hubOpen = true;
 
   return (

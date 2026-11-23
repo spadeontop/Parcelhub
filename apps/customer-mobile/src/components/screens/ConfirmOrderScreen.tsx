@@ -9,21 +9,20 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import Svg, { Path } from 'react-native-svg';
-import { useV1 } from '../../v1/context/V1Context';
+import { useNavigationUi } from '../../v1/context/NavigationAndUiContext';
+import { useToast } from '../../v1/context/ToastContext';
+import { useOrderDraft } from '../../v1/context/OrderDraftContext';
+import { useCustomerOrderActions } from '../../v1/hooks/useCustomerOrders';
 import { AppHeader } from '../layout/AppHeader';
 import { FloatingInput } from '../common/FloatingInput';
 import { ConfirmationSubmitSection } from '../common/ConfirmationSubmitSection';
 import { parseCurrency } from '../../v1/utils/currency';
 
 export const ConfirmOrderScreen: React.FC = () => {
-  const {
-    orderDraft,
-    updateOrderDraft,
-    confirmCustomerOrder,
-    navigateTo,
-    goBack,
-    showToast,
-  } = useV1();
+  const { navigateTo, goBack } = useNavigationUi();
+  const { showToast } = useToast();
+  const { orderDraft, updateOrderDraft } = useOrderDraft();
+  const { confirmCustomerOrder } = useCustomerOrderActions();
 
   const scrollViewRef = useRef<any>(null);
   const [isConfirmed, setIsConfirmed] = useState<boolean>(false);

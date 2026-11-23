@@ -9,14 +9,18 @@ import {
   TouchableOpacity,
   useWindowDimensions,
 } from 'react-native';
-import { useV1 } from '../../v1/context/V1Context';
+import { useNavigationUi } from '../../v1/context/NavigationAndUiContext';
+import { useToast } from '../../v1/context/ToastContext';
+import { useAuthSession } from '../../v1/context/AuthSessionContext';
 import { AuthBrandHeader } from '../layout/AuthBrandHeader';
 import { LoginNarrationHeader } from '../common/LoginNarrationHeader';
 import { FloatingInput } from '../common/FloatingInput';
 import { AuthButton } from '../common/AuthButton';
 
 export const LoginScreen: React.FC = () => {
-  const { navigateTo, loginCustomer, clearRegistrationDraft, showToast } = useV1();
+  const { navigateTo } = useNavigationUi();
+  const { showToast } = useToast();
+  const { loginCustomer } = useAuthSession();
   const { height } = useWindowDimensions();
   const isCompact = height < 700;
 
@@ -67,7 +71,6 @@ export const LoginScreen: React.FC = () => {
 
   const handleNavigateToRegister = () => {
     Keyboard.dismiss();
-    clearRegistrationDraft();
     navigateTo('register');
   };
 
