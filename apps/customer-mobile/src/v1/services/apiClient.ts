@@ -34,6 +34,17 @@ type V1FetchOptions = RequestInit & {
   readonly timeoutMs?: number;
 };
 
+type UnauthorizedHandler = () => void | Promise<void>;
+
+let unauthorizedHandler: UnauthorizedHandler | null = null;
+
+/**
+ * Registers a centralized handler for 401 responses on authenticated requests.
+ */
+export function setUnauthorizedHandler(handler: UnauthorizedHandler | null): void {
+  unauthorizedHandler = handler;
+}
+
 /**
  * Executes an HTTP request against the ParcelHub V1 Backend.
  * Strictly adheres to V1 Feature #9: Backend-Authoritative Error Response Handling.
@@ -97,6 +108,10 @@ export async function v1Fetch<T>(
     `Request failed with status ${response.status}`;
   const errorType = errorEnvelope?.error || 'ApiError';
   const statusCode = errorEnvelope?.statusCode || response.status;
+
+  if (statusCode === 401 && options.token && unauthorizedHandler) {
+    Promise.resolve(unauthorizedHandler()).catch(() => {});
+  }
 
   throw new V1ApiError(message, statusCode, errorType, false, {
     sourceApp: errorEnvelope?.sourceApp,

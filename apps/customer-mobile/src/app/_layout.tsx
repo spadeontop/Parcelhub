@@ -5,6 +5,8 @@ import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient, setupQueryFocusManager } from '../v1/query/queryClient';
 import { V1Provider, useV1 } from '../v1/context/V1Context';
 import { ProofOfDeliveryModal } from '../components/modals/ProofOfDeliveryModal';
 import { Toast } from '../components/common/Toast';
@@ -46,6 +48,10 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
+    return setupQueryFocusManager();
+  }, []);
+
+  useEffect(() => {
     if (fontsLoaded || fontError) {
       SplashScreen.hideAsync().catch(() => {});
     }
@@ -57,9 +63,11 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider style={{ flex: 1 }}>
-      <V1Provider>
-        <RootAppContent />
-      </V1Provider>
+      <QueryClientProvider client={queryClient}>
+        <V1Provider>
+          <RootAppContent />
+        </V1Provider>
+      </QueryClientProvider>
     </SafeAreaProvider>
   );
 }

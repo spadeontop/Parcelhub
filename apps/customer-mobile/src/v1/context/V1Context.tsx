@@ -27,10 +27,14 @@ import {
   OrderId,
   ScreenshotSourceApp,
 } from '../types/api';
+import { useQueryClient } from '@tanstack/react-query';
+import { setUnauthorizedHandler } from '../services/apiClient';
 import { authApi } from '../services/authApi';
 import { orderApi } from '../services/orderApi';
 import { customerApi } from '../services/customerApi';
 import { notificationApi } from '../services/notificationApi';
+import { customerQueryKeys } from '../query/queryClient';
+import { useCustomerOrdersQuery, useCustomerProfileQuery } from '../query/useCustomerQueries';
 import {
   requestNotificationPermission,
   getFcmDeviceToken,
@@ -41,6 +45,7 @@ import {
   RemoteFcmMessage,
 } from '../services/fcmService';
 import { v1Storage } from '../utils/storage';
+import { isJwtExpired } from '../utils/jwt';
 import { formatOrderDate } from '../utils/date';
 
 export type CustomerNotification = {
@@ -185,6 +190,7 @@ export type V1ContextType = {
   readonly markAllNotificationsAsRead: () => void;
   readonly notificationsEnabled: boolean;
   readonly togglePushNotifications: () => Promise<void>;
+  readonly switchAccount: () => Promise<void>;
   readonly signOutCustomer: () => Promise<void>;
 };
 
@@ -200,7 +206,6 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [preAuthToken, setPreAuthToken] = useState<JWTToken | null>(null);
   const [authToken, setAuthToken] = useState<JWTToken | null>(null);
   const [customer, setCustomer] = useState<Partial<CustomerProfile> | null>(null);
-  const [orders, setOrders] = useState<readonly CustomerOrderSummary[]>([]);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [selectedOrderTicketCode, setSelectedOrderTicketCode] = useState<string | null>(null);
   const [notificationsEnabled, setNotificationsEnabled] = useState<boolean>(true);
@@ -208,6 +213,9 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
     DEFAULT_REGISTRATION_DRAFT
   );
   const [orderDraft, setOrderDraft] = useState<OrderDraft>(DEFAULT_ORDER_DRAFT);
+
+  const queryClient = useQueryClient();
+  const isHandlingUnauthorizedRef = useRef<boolean>(false);
 
   // References to keep navigation callbacks fresh without recreating them
   const activeScreenRef = useRef<ScreenId>(activeScreen);
@@ -338,87 +346,126 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
     setOrderDraft(DEFAULT_ORDER_DRAFT);
   }, []);
 
-  // V1 Profile Refresh with 401 Silent Renewal trigger
+  const profileQuery = useCustomerProfileQuery(authToken);
+  const ordersQuery = useCustomerOrdersQuery(authToken, undefined, {
+    refetchInterval: activeScreen === 'home' && authToken ? 5000 : false,
+  });
+
+  const orders = useMemo<readonly CustomerOrderSummary[]>(
+    () => ordersQuery.data ?? [],
+    [ordersQuery.data]
+  );
+
+  useEffect(() => {
+    if (profileQuery.data) {
+      setCustomer(profileQuery.data);
+    }
+  }, [profileQuery.data]);
+
+  // Centralized single-flight 401 handler registered with apiClient
+  const handleUnauthorized = useCallback(async () => {
+    if (isHandlingUnauthorizedRef.current) return;
+    isHandlingUnauthorizedRef.current = true;
+    try {
+      await v1Storage.clearAuthToken();
+      setAuthToken(null);
+      const refresh = await v1Storage.getRefreshToken();
+      if (refresh) {
+        showToast('Session expired. Enter MPIN to resume.');
+        setNavigationHistory([]);
+        setActiveScreen('mpin_login');
+      } else {
+        queryClient.clear();
+        setCustomer(null);
+        setNavigationHistory([]);
+        setActiveScreen('login');
+      }
+    } finally {
+      isHandlingUnauthorizedRef.current = false;
+    }
+  }, [queryClient, showToast]);
+
+  useEffect(() => {
+    setUnauthorizedHandler(handleUnauthorized);
+    return () => {
+      setUnauthorizedHandler(null);
+    };
+  }, [handleUnauthorized]);
+
+  // V1 Profile Refresh
   const refetchProfile = useCallback(async (): Promise<void> => {
-    let token = authToken;
-    if (!token) token = await v1Storage.getAuthToken();
+    const token = authToken || (await v1Storage.getAuthToken());
     if (!token) return;
 
     try {
-      const res = await customerApi.getProfile(token);
-      if (res?.customer) {
-        setCustomer(res.customer);
-      }
-    } catch (err: any) {
-      // V1 Feature #1: Silent session refresh interceptor on 401
-      if (err?.statusCode === 401) {
-        const refresh = await v1Storage.getRefreshToken();
-        if (refresh) {
-          showToast('Session expired. Enter MPIN to resume.');
-          setActiveScreen('mpin_login');
-        } else {
-          setActiveScreen('login');
-        }
-      }
+      await queryClient.fetchQuery({
+        queryKey: customerQueryKeys.profile(),
+        queryFn: async () => {
+          const res = await customerApi.getProfile(token);
+          return res.customer;
+        },
+        staleTime: 0,
+      });
+    } catch {
+      // 401 is handled centrally by apiClient unauthorizedHandler
     }
-  }, [authToken, showToast]);
+  }, [authToken, queryClient]);
 
-  // V1 Orders Fetch with 401 Silent Renewal trigger
+  // V1 Orders Fetch (filtered queries use separate cache keys so Home orders are never clobbered)
   const refetchOrders = useCallback(
     async (query?: CustomerListOrdersQueryParams): Promise<void> => {
-      let token = authToken;
-      if (!token) token = await v1Storage.getAuthToken();
+      const token = authToken || (await v1Storage.getAuthToken());
       if (!token) return;
 
       try {
-        const res = await orderApi.listOrders(token, query);
-        setOrders(res.orders || []);
-      } catch (err: any) {
-        // V1 Feature #1: Silent session refresh interceptor on 401
-        if (err?.statusCode === 401) {
-          const refresh = await v1Storage.getRefreshToken();
-          if (refresh) {
-            showToast('Session expired. Enter MPIN to resume.');
-            setActiveScreen('mpin_login');
-          } else {
-            setActiveScreen('login');
-          }
-        }
+        await queryClient.fetchQuery({
+          queryKey: customerQueryKeys.ordersList(query),
+          queryFn: async () => {
+            const res = await orderApi.listOrders(token, query);
+            return res.orders || [];
+          },
+          staleTime: 0,
+        });
+      } catch {
+        // 401 is handled centrally by apiClient unauthorizedHandler
       }
     },
-    [authToken, showToast]
+    [authToken, queryClient]
   );
 
-  // Initialize stored tokens on mount
+  // Initialize stored tokens on mount with JWT expiry check
   useEffect(() => {
     const initStorage = async () => {
       try {
-        const [storedPreAuth, storedAuth, storedProfile, storedPushPref] = await Promise.all([
-          v1Storage.getPreAuthToken(),
-          v1Storage.getAuthToken(),
-          v1Storage.getCustomerProfile(),
-          v1Storage.getPushNotificationsEnabled(),
-        ]);
+        const [storedPreAuth, storedAuth, storedRefresh, storedProfile, storedPushPref] =
+          await Promise.all([
+            v1Storage.getPreAuthToken(),
+            v1Storage.getAuthToken(),
+            v1Storage.getRefreshToken(),
+            v1Storage.getCustomerProfile(),
+            v1Storage.getPushNotificationsEnabled(),
+          ]);
         if (storedPreAuth) setPreAuthToken(storedPreAuth);
         if (storedProfile) setCustomer(storedProfile);
         setNotificationsEnabled(storedPushPref);
 
         if (storedAuth) {
-          setAuthToken(storedAuth);
-          setActiveScreen('home');
+          if (!isJwtExpired(storedAuth, 30)) {
+            setAuthToken(storedAuth);
+            setActiveScreen('home');
+          } else {
+            await v1Storage.clearAuthToken();
+            if (storedRefresh) {
+              setActiveScreen('mpin_login');
+            }
+          }
+        } else if (storedRefresh) {
+          setActiveScreen('mpin_login');
         }
       } catch {}
     };
     initStorage();
   }, []);
-
-  // When authToken is set, load fresh profile and orders
-  useEffect(() => {
-    if (authToken) {
-      refetchProfile();
-      refetchOrders();
-    }
-  }, [authToken, refetchProfile, refetchOrders]);
 
   // Push token registration helper
   const registerDevicePushToken = useCallback(async (tokenToAuth: JWTToken) => {
@@ -532,23 +579,6 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
     }
   }, [notificationsEnabled, authToken, showToast]);
 
-  // Interval polling while viewing HomeScreen
-  useEffect(() => {
-    if (activeScreen !== 'home' || !authToken) return;
-
-    let isFetching = false;
-    const intervalTimer = setInterval(async () => {
-      if (isFetching) return;
-      isFetching = true;
-      try {
-        await refetchOrders();
-      } finally {
-        isFetching = false;
-      }
-    }, 5000);
-
-    return () => clearInterval(intervalTimer);
-  }, [activeScreen, authToken, refetchOrders]);
 
   // V1 Register Customer Action
   const registerCustomer = useCallback(
@@ -836,19 +866,19 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
     setReadNotificationIds(allIds);
   }, [notifications]);
 
-  const signOutCustomer = useCallback(async () => {
+  const resetSessionState = useCallback(async () => {
     if (authToken) {
       try {
         await notificationApi.deleteToken(authToken);
       } catch (e) {
-        console.warn('[FCM] Token cleanup warning on signout:', e);
+        console.warn('[FCM] Token cleanup warning:', e);
       }
     }
     await v1Storage.clearAllTokens();
+    queryClient.clear();
     setPreAuthToken(null);
     setAuthToken(null);
     setCustomer(null);
-    setOrders([]);
     setSelectedOrderId(null);
     setSelectedOrderTicketCode(null);
     clearRegistrationDraft();
@@ -856,50 +886,100 @@ export const V1Provider: React.FC<{ children: ReactNode }> = ({ children }) => {
     setNavigationHistory([]);
     setTransactionFilter('ALL');
     setActiveScreen('login');
-    showToast('Signed out successfully');
-  }, [authToken, clearRegistrationDraft, clearOrderDraft, showToast]);
+  }, [authToken, queryClient, clearRegistrationDraft, clearOrderDraft]);
 
-  const value: V1ContextType = {
-    activeScreen,
-    navigateTo,
-    goBack,
-    transactionFilter,
-    setTransactionFilter,
-    toast,
-    showToast,
-    preAuthToken,
-    authToken,
-    customer,
-    orders,
-    selectedOrderId,
-    setSelectedOrderId,
-    selectedOrderTicketCode,
-    setSelectedOrderTicketCode,
-    registrationDraft,
-    updateRegistrationDraft,
-    clearRegistrationDraft,
-    orderDraft,
-    updateOrderDraft,
-    clearOrderDraft,
-    registerCustomer,
-    loginCustomer,
-    createCustomerMpin,
-    verifyCustomerMpin,
-    refetchOrders,
-    refetchProfile,
-    initializeCustomerOrder,
-    confirmCustomerOrder,
-    fetchOrderDetail,
-    claimCustomerOrder,
-    isPodModalOpen,
-    openPodModal,
-    closePodModal,
-    notifications,
-    markAllNotificationsAsRead,
-    notificationsEnabled,
-    togglePushNotifications,
-    signOutCustomer,
-  };
+  const switchAccount = useCallback(async () => {
+    await resetSessionState();
+  }, [resetSessionState]);
+
+  const signOutCustomer = useCallback(async () => {
+    await resetSessionState();
+    showToast('Signed out successfully');
+  }, [resetSessionState, showToast]);
+
+  const value = useMemo<V1ContextType>(
+    () => ({
+      activeScreen,
+      navigateTo,
+      goBack,
+      transactionFilter,
+      setTransactionFilter,
+      toast,
+      showToast,
+      preAuthToken,
+      authToken,
+      customer,
+      orders,
+      selectedOrderId,
+      setSelectedOrderId,
+      selectedOrderTicketCode,
+      setSelectedOrderTicketCode,
+      registrationDraft,
+      updateRegistrationDraft,
+      clearRegistrationDraft,
+      orderDraft,
+      updateOrderDraft,
+      clearOrderDraft,
+      registerCustomer,
+      loginCustomer,
+      createCustomerMpin,
+      verifyCustomerMpin,
+      refetchOrders,
+      refetchProfile,
+      initializeCustomerOrder,
+      confirmCustomerOrder,
+      fetchOrderDetail,
+      claimCustomerOrder,
+      isPodModalOpen,
+      openPodModal,
+      closePodModal,
+      notifications,
+      markAllNotificationsAsRead,
+      notificationsEnabled,
+      togglePushNotifications,
+      switchAccount,
+      signOutCustomer,
+    }),
+    [
+      activeScreen,
+      navigateTo,
+      goBack,
+      transactionFilter,
+      toast,
+      showToast,
+      preAuthToken,
+      authToken,
+      customer,
+      orders,
+      selectedOrderId,
+      selectedOrderTicketCode,
+      registrationDraft,
+      updateRegistrationDraft,
+      clearRegistrationDraft,
+      orderDraft,
+      updateOrderDraft,
+      clearOrderDraft,
+      registerCustomer,
+      loginCustomer,
+      createCustomerMpin,
+      verifyCustomerMpin,
+      refetchOrders,
+      refetchProfile,
+      initializeCustomerOrder,
+      confirmCustomerOrder,
+      fetchOrderDetail,
+      claimCustomerOrder,
+      isPodModalOpen,
+      openPodModal,
+      closePodModal,
+      notifications,
+      markAllNotificationsAsRead,
+      notificationsEnabled,
+      togglePushNotifications,
+      switchAccount,
+      signOutCustomer,
+    ]
+  );
 
   return <V1Context.Provider value={value}>{children}</V1Context.Provider>;
 };
