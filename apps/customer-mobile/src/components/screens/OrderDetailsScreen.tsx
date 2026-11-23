@@ -42,9 +42,7 @@ export const OrderDetailsScreen: React.FC = () => {
   const { claimCustomerOrder } = useCustomerOrderActions();
 
   const queryClient = useQueryClient();
-  const { data: orderDetail, refetch } = useCustomerOrderDetailQuery(authToken, selectedOrderId, {
-    refetchInterval: 5000,
-  });
+  const { data: orderDetail, refetch } = useCustomerOrderDetailQuery(authToken, selectedOrderId);
 
   const [claimConfirmed, setClaimConfirmed] = useState<boolean>(false);
   const [isInitiatingClaim, setIsInitiatingClaim] = useState<boolean>(false);

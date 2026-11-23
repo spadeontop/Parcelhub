@@ -24,6 +24,7 @@ import { useAuthSession } from './AuthSessionContext';
 import { useNavigationUi } from './NavigationAndUiContext';
 import { useToast } from './ToastContext';
 import { useCustomerOrders } from '../hooks/useCustomerOrders';
+import { useOrderRealtimeSync } from '../realtime/useOrderRealtimeSync';
 
 export type CustomerNotification = {
   readonly id: string;
@@ -47,10 +48,17 @@ const NotificationsContext = createContext<NotificationsContextType | undefined>
  * Manages derived in-app order notifications, unread state, and FCM push lifecycle listeners.
  */
 export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { authToken } = useAuthSession();
-  const { navigateTo } = useNavigationUi();
+  const { authToken, sessionStatus, signOutCustomer } = useAuthSession();
+  const { navigateTo, selectedOrderId } = useNavigationUi();
   const { showToast } = useToast();
-  const { orders, refetchOrders } = useCustomerOrders();
+  const { orders } = useCustomerOrders();
+  const { isRealtimeSubscribed, invalidateOrdersListCoalesced } = useOrderRealtimeSync({
+    authToken,
+    isAuthenticated: sessionStatus === 'authenticated',
+    selectedOrderId,
+    orders,
+    onUnauthorized: signOutCustomer,
+  });
 
   const [notificationsEnabled, setNotificationsEnabled] = useState<boolean>(true);
   const [readNotificationIds, setReadNotificationIds] = useState<ReadonlySet<string>>(
@@ -112,7 +120,9 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
       const title = message.notification?.title || 'Order Update';
       const body = message.notification?.body || 'Your order status has been updated';
       showToast(`📦 ${title}: ${body}`);
-      refetchOrders().catch(() => {});
+      if (!isRealtimeSubscribed) {
+        invalidateOrdersListCoalesced();
+      }
     });
 
     const unsubOpened = setupFcmNotificationOpenedListener(handleNotificationRoute);
@@ -133,7 +143,14 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
       unsubOpened();
       unsubRefresh();
     };
-  }, [authToken, notificationsEnabled, showToast, refetchOrders, navigateTo]);
+  }, [
+    authToken,
+    notificationsEnabled,
+    showToast,
+    isRealtimeSubscribed,
+    invalidateOrdersListCoalesced,
+    navigateTo,
+  ]);
 
   const togglePushNotifications = useCallback(async () => {
     const nextVal = !notificationsEnabled;
