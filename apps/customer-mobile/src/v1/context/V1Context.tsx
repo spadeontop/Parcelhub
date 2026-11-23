@@ -22,6 +22,7 @@ import {
   CustomerProfile,
   CustomerOrderSummary,
   CustomerListOrdersQueryParams,
+  TransactionFilter,
   JWTToken,
   OrderId,
   ScreenshotSourceApp,
@@ -41,7 +42,6 @@ import {
 } from '../services/fcmService';
 import { v1Storage } from '../utils/storage';
 import { formatOrderDate } from '../utils/date';
-import { TransactionFilter } from '../../types';
 
 export type CustomerNotification = {
   readonly id: string;

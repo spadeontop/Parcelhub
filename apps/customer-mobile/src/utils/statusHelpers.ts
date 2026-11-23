@@ -1,4 +1,4 @@
-import { OrderStatus } from '../types';
+import { OrderStatus } from '../v1/types/api';
 
 export function getStatusLabel(status: OrderStatus): string {
   switch (status) {

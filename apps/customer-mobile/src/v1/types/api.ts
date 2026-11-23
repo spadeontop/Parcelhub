@@ -24,6 +24,15 @@ export type OrderStatus =
   | "CANCELLED"
   | "REFUNDED";
 
+export type TransactionFilter =
+  | "ALL"
+  | "READY_TO_CLAIM"
+  | "AWAITING_PARCEL"
+  | "PAYMENT_REQUIRED"
+  | "CLAIMED"
+  | "CANCELLED"
+  | "REFUNDED";
+
 export type Role = "CUSTOMER" | "STAFF" | "ADMIN";
 
 export type StatusTimelineEntry = {
