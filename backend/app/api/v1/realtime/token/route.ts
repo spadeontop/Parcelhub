@@ -1,6 +1,10 @@
 import { NextRequest } from "next/server";
 import { authenticateAnyV1User } from "@/app/lib/v1/auth";
-import { signRealtimeToken, type RealtimeRole } from "@/app/lib/v1/realtime";
+import {
+  isRealtimeEnabled,
+  signRealtimeToken,
+  type RealtimeRole,
+} from "@/app/lib/v1/realtime";
 import { jsonError, jsonSuccess } from "@/app/lib/response";
 import type { RealtimeTokenRes } from "@/app/types/v1/api";
 
@@ -19,7 +23,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!process.env.SUPABASE_JWT_SECRET?.trim()) {
+    if (!isRealtimeEnabled()) {
       return jsonError("Realtime service is not configured", 503);
     }
 

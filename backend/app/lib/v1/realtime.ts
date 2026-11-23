@@ -4,7 +4,7 @@ import type { RealtimeOrderSignal } from "@/app/types/v1/api";
 
 export type RealtimeRole = "CUSTOMER" | "STAFF";
 
-const CUSTOMER_REALTIME_TTL_SECONDS = 60 * 60; // 1 hour
+const CUSTOMER_REALTIME_TTL_SECONDS = 15 * 60; // 15 minutes (aligned with authToken)
 const STAFF_REALTIME_TTL_SECONDS = 6 * 60 * 60; // 6 hours
 const BROADCAST_TIMEOUT_MS = 4000;
 
