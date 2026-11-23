@@ -47,7 +47,10 @@ export function useCustomerOrdersQuery(
 
 export function useCustomerOrderDetailQuery(
   authToken: JWTToken | null,
-  orderIdOrCode: string | null
+  orderIdOrCode: string | null,
+  options?: {
+    readonly refetchInterval?: number | false;
+  }
 ) {
   return useQuery<CustomerOrderDetail>({
     queryKey: customerQueryKeys.orderDetail(orderIdOrCode || ''),
@@ -59,6 +62,7 @@ export function useCustomerOrderDetailQuery(
       return res.order;
     },
     enabled: Boolean(authToken && orderIdOrCode),
+    refetchInterval: options?.refetchInterval ?? false,
     placeholderData: () => {
       if (!orderIdOrCode) return undefined;
       const cachedList = queryClient.getQueryData<readonly CustomerOrderSummary[]>(
