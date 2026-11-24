@@ -14,6 +14,10 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
+    "baseUrl": ".",
+    "paths": {
+      "@parcelhub/contracts": ["../packages/contracts/src/index.ts"]
+    },
     "types": ["vitest/globals", "@testing-library/jest-dom/vitest"]
   },
   "include": ["src"],
