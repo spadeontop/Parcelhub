@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { desc, eq, ne, count, and, or, ilike, sql, gt, isNotNull } from "drizzle-orm";
+import { desc, eq, ne, count, and, or, ilike, sql, gt, gte, isNotNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/db";
 import { orders, staff } from "@/db/schema";
@@ -63,6 +63,8 @@ export async function GET(request: NextRequest) {
         eq(orders.isRefunded, false),
         eq(orders.courierPaid, false),
         isNotNull(orders.activatedAt),
+        isNotNull(orders.amountReceived),
+        gte(orders.amountReceived, orders.price),
         gt(orders.price, 0)
       );
     }

@@ -161,7 +161,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         const systemReasonText = `Auto-cancelled: Tracking ID ${normalizedTrackingId} was paid and activated on another order (${order.ticketCode || order.id}).`;
         const competingIds = competingRows.map((r: (typeof competingRows)[number]) => r.id);
 
-        await tx
+        const updatedCompeting = await tx
           .update(orders)
           .set({
             status: "CANCELLED",
@@ -180,16 +180,23 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
               inArray(orders.id, competingIds),
               inArray(orders.status, ["PENDING_INITIALIZATION", "PAYMENT_REQUIRED"])
             )
-          );
+          )
+          .returning({ id: orders.id });
+
+        const updatedIdSet = new Set(
+          updatedCompeting.map((row: (typeof updatedCompeting)[number]) => row.id)
+        );
 
         return {
           activated,
-          autoCancelled: competingRows.map((r: (typeof competingRows)[number]) => ({
-            id: r.id,
-            customerId: r.customerId,
-            ticketCode: r.ticketCode,
-            previousStatus: r.status as "PENDING_INITIALIZATION" | "PAYMENT_REQUIRED",
-          })),
+          autoCancelled: competingRows
+            .filter((r: (typeof competingRows)[number]) => updatedIdSet.has(r.id))
+            .map((r: (typeof competingRows)[number]) => ({
+              id: r.id,
+              customerId: r.customerId,
+              ticketCode: r.ticketCode,
+              previousStatus: r.status as "PENDING_INITIALIZATION" | "PAYMENT_REQUIRED",
+            })),
         };
       });
 

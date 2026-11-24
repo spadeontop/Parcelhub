@@ -194,7 +194,7 @@ export function getStaffOrderStatusMessage(status: OrderStatus): string {
     case "CANCELLED":
       return "Order cancelled";
     case "REFUNDED":
-      return "Refund completed";
+      return "Order refunded";
     default:
       return status;
   }
@@ -212,6 +212,7 @@ export const VALID_CUSTOMER_CANCEL_REASON_CODES: readonly CustomerCancelReasonCo
 export function computeRefundableAmount(order: {
   status: OrderStatus;
   activatedAt?: Date | string | null;
+  amountReceived: number | null;
   price: number;
   courierPaid: boolean;
   isRefunded: boolean;
@@ -219,6 +220,8 @@ export function computeRefundableAmount(order: {
   if (
     order.status === "CANCELLED" &&
     Boolean(order.activatedAt) &&
+    order.amountReceived !== null &&
+    order.amountReceived >= order.price &&
     order.price > 0 &&
     !order.courierPaid &&
     !order.isRefunded

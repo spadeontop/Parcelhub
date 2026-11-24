@@ -565,7 +565,18 @@ async function runV1StaffSuite() {
     assert.strictEqual(custCancelJson.isRefundEligible, true);
     assert.strictEqual(custCancelJson.refundableAmount, 480);
 
-    // A) Uninitiated refund pass -> 403
+    // A0) GET /staff/orders?refundEligible=true includes the cancelled paid order
+    const eligibleBeforeRes = await listStaffOrders(
+      makeReq("/api/v1/staff/orders?refundEligible=true", { token: authToken })
+    );
+    const eligibleBeforeJson = await eligibleBeforeRes.json();
+    assert.strictEqual(eligibleBeforeRes.status, 200);
+    assert.ok(
+      eligibleBeforeJson.orders.some((o: { id: string; refundableAmount?: number }) => o.id === autoWinOrderId && o.refundableAmount === 480),
+      "Cancelled paid order must appear in ?refundEligible=true queue"
+    );
+
+    // A) Uninitiated refund pass -> 403 RefundNotInitiated
     const uninitRefundRes = await refundOrder(
       makeReq(`/api/v1/staff/orders/${autoWinOrderId}/refund`, {
         method: "POST",
@@ -573,9 +584,11 @@ async function runV1StaffSuite() {
       }),
       { params: Promise.resolve({ id: autoWinOrderId }) }
     );
+    const uninitRefundJson = await uninitRefundRes.json();
     assert.strictEqual(uninitRefundRes.status, 403);
+    assert.strictEqual(uninitRefundJson.error, "RefundNotInitiated");
 
-    // B) Expired refund pass -> 403
+    // B) Expired refund pass -> 403 RefundWindowExpired
     await db
       .update(orders)
       .set({
@@ -592,7 +605,9 @@ async function runV1StaffSuite() {
       }),
       { params: Promise.resolve({ id: autoWinOrderId }) }
     );
+    const expiredRefundJson = await expiredRefundRes.json();
     assert.strictEqual(expiredRefundRes.status, 403);
+    assert.strictEqual(expiredRefundJson.error, "RefundWindowExpired");
 
     // C) Customer initiates valid refund pass -> Staff completes refund -> 200 REFUNDED
     const custRefundPassRes = await initiateCustomerRefund(
@@ -616,6 +631,18 @@ async function runV1StaffSuite() {
     assert.strictEqual(staffRefundJson.status, "REFUNDED");
     assert.strictEqual(staffRefundJson.refundAmount, 480);
 
+    const refundedDbRow = await db.query.orders.findFirst({
+      where: eq(orders.id, autoWinOrderId),
+    });
+    assert.strictEqual(refundedDbRow?.status, "REFUNDED");
+    assert.strictEqual(refundedDbRow?.isRefunded, true);
+    assert.strictEqual(refundedDbRow?.refundAmount, 480);
+    assert.strictEqual(refundedDbRow?.refundedBy, testStaffId);
+    assert.ok(
+      refundedDbRow?.statusTimeline?.some((entry: { status: string }) => entry.status === "REFUNDED"),
+      "statusTimeline must include REFUNDED entry"
+    );
+
     // D) Double-refund guard -> 409 OrderAlreadyRefunded
     const doubleRefundRes = await refundOrder(
       makeReq(`/api/v1/staff/orders/${autoWinOrderId}/refund`, {
@@ -624,9 +651,11 @@ async function runV1StaffSuite() {
       }),
       { params: Promise.resolve({ id: autoWinOrderId }) }
     );
+    const doubleRefundJson = await doubleRefundRes.json();
     assert.strictEqual(doubleRefundRes.status, 409);
+    assert.strictEqual(doubleRefundJson.error, "OrderAlreadyRefunded");
 
-    // E) GET /staff/orders?status=REFUNDED returns refunded order with refundedByName
+    // E) GET /staff/orders?status=REFUNDED returns refunded order with refundedByName, and ?refundEligible=true excludes it
     const listRefundedStaffRes = await listStaffOrders(
       makeReq("/api/v1/staff/orders?status=REFUNDED", { token: authToken })
     );
@@ -639,7 +668,27 @@ async function runV1StaffSuite() {
     assert.strictEqual(refundedEntry.isRefunded, true);
     assert.strictEqual(refundedEntry.refundAmount, 480);
     assert.strictEqual(refundedEntry.refundedByName, "Test Staff");
-    console.log("   ✅ Staff refund pass guards, CANCELLED -> REFUNDED, double-refund 409, and ?status=REFUNDED verified.");
+    assert.strictEqual(refundedEntry.statusMessage, "Order refunded");
+
+    const eligibleAfterRes = await listStaffOrders(
+      makeReq("/api/v1/staff/orders?refundEligible=true", { token: authToken })
+    );
+    const eligibleAfterJson = await eligibleAfterRes.json();
+    assert.strictEqual(eligibleAfterRes.status, 200);
+    assert.ok(
+      !eligibleAfterJson.orders.some((o: { id: string }) => o.id === autoWinOrderId),
+      "Refunded order must no longer appear in ?refundEligible=true queue"
+    );
+
+    const staffDetailAfterRefundRes = await getStaffOrder(
+      makeReq(`/api/v1/staff/orders/${autoWinOrderId}`, { token: authToken }),
+      { params: Promise.resolve({ id: autoWinOrderId }) }
+    );
+    const staffDetailAfterRefundJson = await staffDetailAfterRefundRes.json();
+    assert.strictEqual(staffDetailAfterRefundRes.status, 200);
+    assert.strictEqual(staffDetailAfterRefundJson.statusMessage, "Order refunded");
+    assert.strictEqual(staffDetailAfterRefundJson.refundedByName, "Test Staff");
+    console.log("   ✅ Staff refund pass guards, CANCELLED -> REFUNDED, statusTimeline, double-refund 409, ?refundEligible=true, and ?status=REFUNDED verified.");
 
     console.log("\n🎉 ALL V1 STAFF API TESTS PASSED SUCCESSFULLY (100% GREEN)!\n");
   } finally {

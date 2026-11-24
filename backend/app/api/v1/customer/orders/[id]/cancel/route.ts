@@ -116,6 +116,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         ticketCode: orders.ticketCode,
         status: orders.status,
         activatedAt: orders.activatedAt,
+        amountReceived: orders.amountReceived,
         price: orders.price,
         courierPaid: orders.courierPaid,
         isRefunded: orders.isRefunded,

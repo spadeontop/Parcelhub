@@ -103,8 +103,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         refundRequested: true,
         refundInitiatedAt: initiatedAt,
         refundExpiresAt: expiresAt,
-        refundReasonCode: parsedReason.reasonCode ?? order.cancelReasonCode ?? null,
-        refundReason: parsedReason.reason ?? order.cancelReason ?? null,
+        refundReasonCode:
+          parsedReason.reasonCode ?? order.refundReasonCode ?? order.cancelReasonCode ?? null,
+        refundReason: parsedReason.reason ?? order.refundReason ?? order.cancelReason ?? null,
         timestamp: initiatedAt,
       })
       .where(

@@ -612,6 +612,66 @@ async function runV1CustomerTests() {
     // 10b. Cancel Order & Refund Pass Lifecycle
     // ==========================================
     console.log("10b. Testing Customer Cancel & Refund Pass Lifecycle...");
+    // Reset secondOrderId (set to CANCELLED during step 9b) back to unpaid PAYMENT_REQUIRED
+    await db
+      .update(orders)
+      .set({
+        status: "PAYMENT_REQUIRED",
+        price: 480,
+        amountReceived: null,
+        activatedAt: null,
+        activatedBy: null,
+        courierPaid: false,
+        isRefunded: false,
+      })
+      .where(eq(orders.id, secondOrderId));
+
+    // Guard checks: invalid reasonCode / >300-char reason / malformed JSON -> 400
+    const badReasonCodeRes = await cancelCustomerOrder(
+      makeReq(`http://localhost:3000/api/v1/customer/orders/${secondOrderId}/cancel`, {
+        method: "POST",
+        token: authToken,
+        body: { reasonCode: "NOT_A_VALID_CODE" },
+      }),
+      { params: Promise.resolve({ id: secondOrderId }) }
+    );
+    assert.strictEqual(badReasonCodeRes.status, 400, "Invalid reasonCode must return 400");
+
+    const longReasonRes = await cancelCustomerOrder(
+      makeReq(`http://localhost:3000/api/v1/customer/orders/${secondOrderId}/cancel`, {
+        method: "POST",
+        token: authToken,
+        body: { reason: "x".repeat(301) },
+      }),
+      { params: Promise.resolve({ id: secondOrderId }) }
+    );
+    assert.strictEqual(longReasonRes.status, 400, "Reason exceeding 300 chars must return 400");
+
+    const malformedCancelRes = await cancelCustomerOrder(
+      new NextRequest(`http://localhost:3000/api/v1/customer/orders/${secondOrderId}/cancel`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: "{bad-json",
+      }),
+      { params: Promise.resolve({ id: secondOrderId }) }
+    );
+    assert.strictEqual(malformedCancelRes.status, 400, "Malformed JSON body must return 400");
+
+    // Guard check: cancelling READY_TO_CLAIM order -> 400 OrderNotCancellable
+    const readyCancelRes = await cancelCustomerOrder(
+      makeReq(`http://localhost:3000/api/v1/customer/orders/${createdOrderId}/cancel`, {
+        method: "POST",
+        token: authToken,
+      }),
+      { params: Promise.resolve({ id: createdOrderId }) }
+    );
+    const readyCancelJson = await readyCancelRes.json();
+    assert.strictEqual(readyCancelRes.status, 400);
+    assert.strictEqual(readyCancelJson.error, "OrderNotCancellable");
+
     // A) Cancel unpaid PAYMENT_REQUIRED order with empty body -> isRefundEligible: false
     const cancelUnpaidRes = await cancelCustomerOrder(
       makeReq(`http://localhost:3000/api/v1/customer/orders/${secondOrderId}/cancel`, {
@@ -626,6 +686,18 @@ async function runV1CustomerTests() {
     assert.strictEqual(cancelUnpaidJson.isRefundEligible, false);
     assert.strictEqual(cancelUnpaidJson.refundableAmount, 0);
 
+    // Cancelling already-CANCELLED order -> 409 OrderAlreadyCancelled
+    const alreadyCancelledRes = await cancelCustomerOrder(
+      makeReq(`http://localhost:3000/api/v1/customer/orders/${secondOrderId}/cancel`, {
+        method: "POST",
+        token: authToken,
+      }),
+      { params: Promise.resolve({ id: secondOrderId }) }
+    );
+    const alreadyCancelledJson = await alreadyCancelledRes.json();
+    assert.strictEqual(alreadyCancelledRes.status, 409);
+    assert.strictEqual(alreadyCancelledJson.error, "OrderAlreadyCancelled");
+
     const unpaidRefundRes = await refundCustomerOrder(
       makeReq(`http://localhost:3000/api/v1/customer/orders/${secondOrderId}/refund`, {
         method: "POST",
@@ -637,18 +709,63 @@ async function runV1CustomerTests() {
     assert.strictEqual(unpaidRefundRes.status, 400);
     assert.strictEqual(unpaidRefundJson.error, "OrderNotRefundEligible");
 
-    // B) Cancel activated AWAITING_PARCEL (price=480, amountReceived=500, change=20) -> refundableAmount=480
+    // A2) Cancel prepaid AWAITING_PARCEL (price=0) -> isRefundEligible: false
     await db
       .update(orders)
       .set({
+        trackingId: `${trackingNumber}-PREPAID`,
+        status: "AWAITING_PARCEL",
+        price: 0,
+        amountReceived: 0,
+        change: 0,
+        activatedAt: new Date(),
+        activatedBy: "STF-TEST",
+        courierPaid: false,
+      })
+      .where(eq(orders.id, secondOrderId));
+
+    const cancelPrepaidRes = await cancelCustomerOrder(
+      makeReq(`http://localhost:3000/api/v1/customer/orders/${secondOrderId}/cancel`, {
+        method: "POST",
+        token: authToken,
+      }),
+      { params: Promise.resolve({ id: secondOrderId }) }
+    );
+    const cancelPrepaidJson = await cancelPrepaidRes.json();
+    assert.strictEqual(cancelPrepaidRes.status, 200);
+    assert.strictEqual(cancelPrepaidJson.isRefundEligible, false);
+    assert.strictEqual(cancelPrepaidJson.refundableAmount, 0);
+
+    // B) Cancelling AWAITING_PARCEL after courierPaid=true -> 409 CourierAlreadyPaid
+    await db
+      .update(orders)
+      .set({
+        trackingId: `${trackingNumber}-PAID`,
         status: "AWAITING_PARCEL",
         price: 480,
         amountReceived: 500,
         change: 20,
         activatedAt: new Date(),
         activatedBy: "STF-TEST",
-        courierPaid: false,
+        courierPaid: true,
       })
+      .where(eq(orders.id, thirdOrderId));
+
+    const courierPaidCancelRes = await cancelCustomerOrder(
+      makeReq(`http://localhost:3000/api/v1/customer/orders/${thirdOrderId}/cancel`, {
+        method: "POST",
+        token: authToken,
+      }),
+      { params: Promise.resolve({ id: thirdOrderId }) }
+    );
+    const courierPaidCancelJson = await courierPaidCancelRes.json();
+    assert.strictEqual(courierPaidCancelRes.status, 409);
+    assert.strictEqual(courierPaidCancelJson.error, "CourierAlreadyPaid");
+
+    // C) Cancel activated AWAITING_PARCEL (price=480, amountReceived=500, change=20, courierPaid=false) -> refundableAmount=480
+    await db
+      .update(orders)
+      .set({ courierPaid: false })
       .where(eq(orders.id, thirdOrderId));
 
     const cancelPaidRes = await cancelCustomerOrder(
@@ -668,6 +785,7 @@ async function runV1CustomerTests() {
       makeReq(`http://localhost:3000/api/v1/customer/orders/${thirdOrderId}/refund`, {
         method: "POST",
         token: authToken,
+        body: { reasonCode: "OTHER", reason: "Need counter cash refund" },
       }),
       { params: Promise.resolve({ id: thirdOrderId }) }
     );
@@ -675,7 +793,22 @@ async function runV1CustomerTests() {
     assert.strictEqual(initRefundRes.status, 200);
     assert.strictEqual(initRefundJson.refundAmount, 480);
 
-    // C) Filter ?type=REFUNDED accepted (200)
+    // Re-initiating refund pass with empty body preserves existing refundReasonCode/refundReason
+    const refreshRefundRes = await refundCustomerOrder(
+      makeReq(`http://localhost:3000/api/v1/customer/orders/${thirdOrderId}/refund`, {
+        method: "POST",
+        token: authToken,
+      }),
+      { params: Promise.resolve({ id: thirdOrderId }) }
+    );
+    assert.strictEqual(refreshRefundRes.status, 200);
+    const refreshedOrderRow = await db.query.orders.findFirst({
+      where: eq(orders.id, thirdOrderId),
+    });
+    assert.strictEqual(refreshedOrderRow?.refundReasonCode, "OTHER");
+    assert.strictEqual(refreshedOrderRow?.refundReason, "Need counter cash refund");
+
+    // D) Filter ?type=REFUNDED accepted (200)
     const listRefundedRes = await listCustomerOrders(
       makeReq("http://localhost:3000/api/v1/customer/orders?type=REFUNDED", {
         method: "GET",
@@ -683,7 +816,7 @@ async function runV1CustomerTests() {
       })
     );
     assert.strictEqual(listRefundedRes.status, 200);
-    console.log("   ✅ Customer cancel (empty/reason), refund pass (price=480, not amountReceived=500), and REFUNDED filter verified.");
+    console.log("   ✅ Customer cancel guards (unpaid/prepaid/courierPaid/already-cancelled/validation), refund pass (price=480, reason preserved on refresh), and REFUNDED filter verified.");
 
     // ==========================================
     // 11. Selective Blacklist Enforcement Test
@@ -739,11 +872,14 @@ async function runV1CustomerTests() {
       await db.delete(customers).where(eq(customers.email, testEmail));
     }
     console.log("   ✅ Database cleaned up.");
-    process.exit(0);
   }
 }
 
-runV1CustomerTests().catch((err) => {
-  console.error("❌ Test failed with error:", err);
-  process.exit(1);
-});
+runV1CustomerTests()
+  .then(() => {
+    process.exit(0);
+  })
+  .catch((err) => {
+    console.error("❌ Test failed with error:", err);
+    process.exit(1);
+  });
