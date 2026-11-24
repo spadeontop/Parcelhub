@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -11,16 +11,17 @@ import { useNavigationUi } from '../../context/NavigationAndUiContext';
 import { useToast } from '../../context/ToastContext';
 import { useAuthSession } from '../../context/AuthSessionContext';
 import { useCustomerOrders } from '../../hooks/useCustomerOrders';
-import { formatOrderDate } from '../../utils/date';
 import { BottomNav } from '../layout/BottomNav';
 import { AppHeader } from '../layout/AppHeader';
-import { getStatusLabel, getStatusPillStyles } from '../../utils/statusHelpers';
+import { ActiveParcelCard } from '../home/ActiveParcelCard';
+import { getStatusLabel } from '../../utils/statusHelpers';
+import { CustomerOrderSummary } from '../../types/api';
 
 export const HomeScreen: React.FC = () => {
   const { navigateTo } = useNavigationUi();
   const { showToast } = useToast();
   const { customer, refetchProfile } = useAuthSession();
-  const { orders, refetchOrders } = useCustomerOrders();
+  const { orders, isLoading, refetchOrders } = useCustomerOrders();
   const [refreshing, setRefreshing] = useState(false);
 
   const onRefresh = async () => {
@@ -29,25 +30,95 @@ export const HomeScreen: React.FC = () => {
     setRefreshing(false);
   };
 
-  const isOrderListEmpty = !orders || orders.length === 0;
-  const recentOrders = orders.slice(0, 5);
-
-  const displayName = customer?.firstName || 'Customer';
+  const displayName = customer?.firstName?.trim() || 'Customer';
   const isBlacklisted = Boolean(customer?.blacklisted);
+
+  const {
+    activeOrders,
+    spotlightOrder,
+    otherActiveOrders,
+    readyCount,
+    unpaidCount,
+    awaitingCount,
+  } = useMemo(() => {
+    const ready: CustomerOrderSummary[] = [];
+    const unpaid: CustomerOrderSummary[] = [];
+    const awaiting: CustomerOrderSummary[] = [];
+    let activeClaim: CustomerOrderSummary | null = null;
+
+    for (const order of orders) {
+      if (order.status === 'READY_TO_CLAIM') {
+        ready.push(order);
+        if (order.isClaimActive && !activeClaim) {
+          activeClaim = order;
+        }
+      } else if (order.status === 'PAYMENT_REQUIRED') {
+        unpaid.push(order);
+      } else if (order.status === 'AWAITING_PARCEL') {
+        awaiting.push(order);
+      }
+    }
+
+    const active = [...ready, ...unpaid, ...awaiting];
+    const spotlight =
+      activeClaim || ready[0] || unpaid[0] || awaiting[0] || null;
+    const others = spotlight
+      ? active.filter((o) => o.id !== spotlight.id).slice(0, 2)
+      : [];
+
+    return {
+      activeOrders: active,
+      spotlightOrder: spotlight,
+      otherActiveOrders: others,
+      readyCount: ready.length,
+      unpaidCount: unpaid.length,
+      awaitingCount: awaiting.length,
+    };
+  }, [orders]);
+
+  const openOrder = useCallback(
+    (order: CustomerOrderSummary) => {
+      navigateTo('order_details', {
+        orderId: order.id,
+        ticketCode: order.ticketCode,
+      });
+    },
+    [navigateTo]
+  );
 
   const handleCreateOrder = () => {
     if (isBlacklisted) {
       showToast(
-        customer?.blacklistReason || 'Your account is suspended from creating new orders.'
+        customer?.blacklistReason ||
+          'Your account is suspended from creating new orders.'
       );
       return;
     }
     navigateTo('create_order');
   };
 
+  const statusSubtitle = useMemo(() => {
+    if (readyCount > 0) {
+      return readyCount === 1
+        ? '1 parcel ready to claim'
+        : `${readyCount} parcels ready to claim`;
+    }
+    if (unpaidCount > 0) {
+      return unpaidCount === 1
+        ? '1 order awaiting payment'
+        : `${unpaidCount} orders awaiting payment`;
+    }
+    if (awaitingCount > 0) {
+      return awaitingCount === 1
+        ? '1 parcel on the way'
+        : `${awaitingCount} parcels on the way`;
+    }
+    return 'All caught up';
+  }, [awaitingCount, readyCount, unpaidCount]);
+
   return (
     <View className="flex-1 bg-[#2563eb]">
-      {/* Top Header */}
+      {/* Standard Top Header */}
       <AppHeader
         title="ParcelHub"
         subtitle="LILY'S CATERING HUB"
@@ -55,12 +126,12 @@ export const HomeScreen: React.FC = () => {
         statusDotColor="#10b981"
       />
 
-      {/* Main Sheet with Curved Transition */}
-      <View className="flex-1 bg-[#f8fafc] rounded-t-[32px] pt-4 overflow-hidden relative">
+      {/* Main Sheet */}
+      <View className="flex-1 bg-[#f8fafc] rounded-t-[32px] overflow-hidden relative">
         <ScrollView
           showsVerticalScrollIndicator={false}
-          className="flex-1 px-4"
-          contentContainerStyle={{ paddingBottom: 96 }}
+          className="flex-1 px-5"
+          contentContainerStyle={{ paddingTop: 24, paddingBottom: 112 }}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -69,167 +140,144 @@ export const HomeScreen: React.FC = () => {
             />
           }
         >
-          {/* Welcome Card */}
-          <View
-            className="rounded-[20px] bg-[#f8fafc] p-4 mb-4"
-            style={{
-              paddingTop: 12,
-              paddingBottom: 16,
-            }}
-          >
-            {/* Greeting & Subtitle */}
-            <Text className="text-[22px] font-bold text-[#1e1e1e] tracking-tight">
-              Welcome {displayName}!
+          {/* Crisp Editorial Greeting */}
+          <View className="mb-5">
+            <Text className="text-[26px] font-bold text-[#0f172a] tracking-tight">
+              Hi, {displayName}
             </Text>
-            <Text className="text-[13px] font-normal text-[#94a3b8] mt-1 mb-4">
-              Create an order or track existing deliveries
+            <Text className="text-[13px] font-medium text-[#64748b] mt-0.5">
+              {statusSubtitle}
             </Text>
+          </View>
 
-            {/* Create Order Button */}
+          {/* Suspension Notice (only if blacklisted) */}
+          {isBlacklisted && (
+            <View className="rounded-2xl bg-[#fef2f2] border border-[#fecaca] px-4 py-3 mb-4">
+              <Text className="text-[12px] font-medium text-[#b91c1c] leading-[18px]">
+                {customer?.blacklistReason ||
+                  'Your account is currently suspended from creating new orders.'}
+              </Text>
+            </View>
+          )}
+
+          {/* Focal Active Parcel Card */}
+          <ActiveParcelCard
+            order={spotlightOrder}
+            isLoading={isLoading && orders.length === 0}
+            isBlacklisted={isBlacklisted}
+            onPressOrder={openOrder}
+            onCreateOrder={handleCreateOrder}
+          />
+
+          {/* Balanced Action Tile Pair */}
+          <View className="flex-row gap-3 mb-5">
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={handleCreateOrder}
-              className={`w-full h-12 rounded-xl bg-[#2563eb] items-center justify-center flex-row ${
-                isBlacklisted ? 'opacity-60' : ''
-              }`}
+              className="flex-1 rounded-[20px] bg-white border border-[#e2e8f0] p-4 justify-between min-h-[92px]"
+              style={{ opacity: isBlacklisted ? 0.5 : 1 }}
             >
-              <Text className="text-white text-[14px] font-bold">
-                + Create Order
+              <Text className="text-[15px] font-bold text-[#2563eb]">
+                + New Order
+              </Text>
+              <Text className="text-[12px] font-medium text-[#64748b] mt-3">
+                Register parcel
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => navigateTo('transactions', { filter: 'ALL' })}
+              className="flex-1 rounded-[20px] bg-white border border-[#e2e8f0] p-4 justify-between min-h-[92px]"
+            >
+              <View className="flex-row items-center justify-between">
+                <Text className="text-[15px] font-bold text-[#0f172a]">
+                  Orders
+                </Text>
+                <Svg width={6} height={10} viewBox="0 0 6 10" fill="none">
+                  <Path
+                    d="M0.75 0.75L4.85 4.85L0.75 8.95"
+                    stroke="#94a3b8"
+                    strokeWidth={1.7}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </Svg>
+              </View>
+              <Text className="text-[12px] font-medium text-[#64748b] mt-3">
+                {activeOrders.length > 0
+                  ? `${activeOrders.length} active · ${orders.length} total`
+                  : `${orders.length} total`}
               </Text>
             </TouchableOpacity>
           </View>
 
-          {/* Activities Section */}
-          <View className="mb-4">
-            <View className="px-1 mb-2">
-              <Text className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-[0.55px]">
-                RECENT ACTIVITIES
-              </Text>
-            </View>
-
-            {isOrderListEmpty ? (
-              /* Zero Orders Empty State Box */
-              <View className="min-h-[220px] rounded-[16px] bg-white border border-[#f3f4f6] items-center justify-center p-6 shadow-xs">
-                <View className="w-14 h-14 rounded-full bg-blue-50 items-center justify-center mb-3">
-                  <Svg width={28} height={28} viewBox="0 0 24 24" fill="none">
-                    <Path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="1.8"
-                      stroke="#2563eb"
-                      d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                    />
-                  </Svg>
-                </View>
-                <Text className="text-gray-800 text-[13px] font-semibold text-center">
-                  You don’t have any activities yet
+          {/* Other Active Parcels (only if 2+ active parcels exist) */}
+          {otherActiveOrders.length > 0 && (
+            <View>
+              <View className="flex-row items-center justify-between mb-2.5 px-1">
+                <Text className="text-[12px] font-semibold text-[#64748b]">
+                  In Progress
                 </Text>
                 <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={handleCreateOrder}
-                  className={`mt-3 px-4 py-2 rounded-xl bg-[#2563eb] ${
-                    isBlacklisted ? 'opacity-60' : ''
-                  }`}
-                >
-                  <Text className="text-white text-[12px] font-bold">
-                    Create an order
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              /* Elevated Activities List Card Wrapper */
-              <View
-                className="bg-white rounded-[16px] border border-[rgba(243,244,246,0.8)] px-4 pt-3.5 pb-2 mb-2"
-                style={{
-                  shadowColor: '#000000',
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.04,
-                  shadowRadius: 10,
-                  elevation: 2,
-                }}
-              >
-                {recentOrders.map((order, idx) => {
-                  const pillStyles = getStatusPillStyles(order.status);
-                  return (
-                    <TouchableOpacity
-                      key={order.id}
-                      activeOpacity={0.7}
-                      onPress={() =>
-                        navigateTo('order_details', {
-                          orderId: order.id,
-                          ticketCode: order.ticketCode,
-                        })
-                      }
-                      className={`py-3 flex-row items-center justify-between ${
-                        idx !== 0 ? 'border-t border-[#f3f4f6]' : ''
-                      }`}
-                    >
-                      {/* Left: Product Name (truncated) & Date */}
-                      <View className="flex-1 pr-2.5">
-                        <Text
-                          className="text-[14px] font-semibold text-[#1e1e1e] leading-[20px]"
-                          numberOfLines={1}
-                          ellipsizeMode="tail"
-                        >
-                          {order.productName}
-                        </Text>
-                        <Text className="text-[12px] font-normal text-[#6b7280] leading-[16px] mt-0.5">
-                          {formatOrderDate(order.timestamp)}
-                        </Text>
-                      </View>
-
-                      {/* Right: Status Pill & Chevron */}
-                      <View className="flex-row items-center gap-2 shrink-0">
-                        <View
-                          className="px-2.5 py-1 rounded-full items-center justify-center"
-                          style={pillStyles.containerStyle}
-                        >
-                          <Text
-                            className="text-[11px] font-medium leading-[16px]"
-                            style={{ color: pillStyles.textColor }}
-                          >
-                            {getStatusLabel(order.status)}
-                          </Text>
-                        </View>
-                        <Svg width={6} height={11} viewBox="0 0 6 11" fill="none">
-                          <Path
-                            d="M0.7 0.7L5.3 5.3L0.7 10"
-                            stroke="#9ca3af"
-                            strokeWidth={1.4}
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </Svg>
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })}
-
-                {/* Footer View All Action Link */}
-                <TouchableOpacity
                   activeOpacity={0.7}
-                  onPress={() => navigateTo('transactions')}
-                  className="pt-3.5 pb-2 border-t border-[#f3f4f6] flex-row items-center justify-center gap-1.5"
+                  onPress={() => navigateTo('transactions', { filter: 'ALL' })}
                 >
-                  <Text className="text-[12px] font-semibold text-[#2563eb] text-center tracking-[0.3px]">
-                    View all activities
+                  <Text className="text-[12px] font-semibold text-[#2563eb]">
+                    View all
                   </Text>
-                  <Svg width={6} height={10} viewBox="0 0 6 10" fill="none">
-                    <Path
-                      d="M0.75 0.75L4.85 4.85L0.75 8.95"
-                      stroke="#2563eb"
-                      strokeWidth={1.5}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </Svg>
                 </TouchableOpacity>
               </View>
-            )}
-          </View>
+              <View className="bg-white rounded-[20px] border border-[#e2e8f0] px-4 py-1">
+                {otherActiveOrders.map((order, idx) => (
+                  <TouchableOpacity
+                    key={order.id}
+                    activeOpacity={0.7}
+                    onPress={() => openOrder(order)}
+                    className="py-3.5 flex-row items-center justify-between"
+                    style={
+                      idx !== 0
+                        ? { borderTopWidth: 1, borderTopColor: '#f1f5f9' }
+                        : undefined
+                    }
+                  >
+                    <Text
+                      className="flex-1 pr-3 text-[14px] font-semibold text-[#0f172a]"
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                    >
+                      {order.productName}
+                    </Text>
+                    <View className="flex-row items-center gap-2 shrink-0">
+                      <Text
+                        className="text-[12px] font-semibold"
+                        style={{
+                          color:
+                            order.status === 'READY_TO_CLAIM'
+                              ? '#059669'
+                              : '#64748b',
+                        }}
+                      >
+                        {getStatusLabel(order.status)}
+                      </Text>
+                      <Svg width={5} height={9} viewBox="0 0 6 10" fill="none">
+                        <Path
+                          d="M0.75 0.75L4.85 4.85L0.75 8.95"
+                          stroke="#cbd5e1"
+                          strokeWidth={1.6}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </Svg>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
         </ScrollView>
 
-        {/* Floating Bottom Nav inside the Main Sheet */}
+        {/* Floating Bottom Nav */}
         <BottomNav activeTab="home" />
       </View>
     </View>
