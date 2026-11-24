@@ -28,5 +28,5 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#2563eb' },
   content: { flexGrow: 1, backgroundColor: '#2563eb' },
   sheet: { flex: 1, backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28,
-    paddingHorizontal: 24, paddingBottom: 28 },
+    paddingHorizontal: 16, paddingBottom: 28 },
 });

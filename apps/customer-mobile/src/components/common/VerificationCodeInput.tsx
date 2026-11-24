@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
-import type { StyleProp, TextStyle } from 'react-native';
 
 function TypingCaret() {
   const [visible, setVisible] = useState(true);
@@ -18,7 +17,6 @@ interface VerificationCodeInputProps {
   onChangeText: (value: string) => void;
   onSubmit: () => void;
   length: number;
-  digitStyle?: StyleProp<TextStyle>;
 }
 
 export function VerificationCodeInput({
@@ -26,7 +24,6 @@ export function VerificationCodeInput({
   onChangeText,
   onSubmit,
   length,
-  digitStyle,
 }: VerificationCodeInputProps) {
   const [focused, setFocused] = useState(false);
   const activeIndex = Math.min(value.length, length - 1);
@@ -40,7 +37,7 @@ export function VerificationCodeInput({
           return (
             <View key={index} style={[styles.cell, digit && styles.filled, active && styles.active]}>
               {digit ? (
-                <Text style={[styles.digit, digitStyle]}>{digit}</Text>
+                <Text style={styles.digit}>{digit}</Text>
               ) : active ? (
                 <TypingCaret />
               ) : null}
@@ -79,9 +76,9 @@ const styles = StyleSheet.create({
     borderWidth: 1.2,
   },
   filled: { backgroundColor: '#f8fafc', borderColor: '#cbd5e1' },
-  active: { backgroundColor: '#fff', borderColor: '#1d5ce6', borderWidth: 2 },
-  digit: { color: '#0f172a', fontSize: 20, fontWeight: '700', includeFontPadding: false },
-  caret: { width: 2, height: 22, backgroundColor: '#1d5ce6' },
+  active: { backgroundColor: '#fff', borderColor: '#2563eb', borderWidth: 2 },
+  digit: { color: '#0f172a', fontSize: 20, fontFamily: 'GoogleSans-Bold', includeFontPadding: false },
+  caret: { width: 2, height: 22, backgroundColor: '#2563eb' },
   caretHidden: { opacity: 0 },
   input: {
     backgroundColor: 'transparent',

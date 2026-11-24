@@ -10,6 +10,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import { isValidEmail } from '../../utils/authValidation';
 
 export type InputFeedbackState = 'normal' | 'filled' | 'error';
 export type AuthInputType = 'text' | 'email' | 'phone' | 'password';
@@ -26,10 +27,6 @@ interface AuthInputProps extends TextInputProps {
 }
 
 // Built-in validation helpers
-const isValidEmailAddress = (val: string): boolean => {
-  return /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(val.trim());
-};
-
 const isValidPhoneNumber = (val: string): boolean => {
   // Supports PH/international formats: e.g. 09171234567, +639171234567, 9171234567 (10-13 digits)
   const cleaned = val.replace(/[\s\-\(\)]/g, '');
@@ -73,7 +70,7 @@ export const AuthInput: React.FC<AuthInputProps> = ({
   if (isValidProp !== undefined) {
     computedIsValid = isValidProp;
   } else if (hasValue) {
-    if (isEmail) computedIsValid = isValidEmailAddress(stringValue);
+    if (isEmail) computedIsValid = isValidEmail(stringValue);
     else if (isPhone) computedIsValid = isValidPhoneNumber(stringValue);
   }
 

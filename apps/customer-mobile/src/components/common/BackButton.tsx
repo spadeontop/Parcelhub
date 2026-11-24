@@ -19,7 +19,6 @@ export interface BackButtonProps {
   style?: StyleProp<ViewStyle>;
   /** Optional testID for automated testing. */
   testID?: string;
-  icon?: React.ReactNode;
 }
 
 export const BackButton: React.FC<BackButtonProps> = ({
@@ -31,7 +30,6 @@ export const BackButton: React.FC<BackButtonProps> = ({
   className = '',
   style,
   testID,
-  icon,
 }) => {
   return (
     <TouchableOpacity
@@ -46,7 +44,7 @@ export const BackButton: React.FC<BackButtonProps> = ({
       style={[{ width: 32, height: 32 }, style]}
       testID={testID}
     >
-      {icon ?? <ArrowLeftIcon size={size} color={color} />}
+      <ArrowLeftIcon size={size} color={color} />
     </TouchableOpacity>
   );
 };
