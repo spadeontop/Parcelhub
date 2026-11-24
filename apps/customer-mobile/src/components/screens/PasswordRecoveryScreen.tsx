@@ -5,7 +5,7 @@ import { FloatingInput } from '../common/FloatingInput';
 import { FormCardHeader } from '../common/FormCardHeader';
 import { PasswordRequirements } from '../common/PasswordRequirements';
 import { getPasswordRequirements } from '../../utils/authValidation';
-import { PasswordRecoveryLayout } from '../layout/PasswordRecoveryLayout';
+import { AuthSheetLayout } from '../layout/AuthSheetLayout';
 import { RecoveryFlow, type RecoveryCopy } from './RecoveryFlow';
 
 const copy: RecoveryCopy = {
@@ -53,7 +53,7 @@ function PasswordStep({ onBack, onComplete }: { onBack: () => void; onComplete: 
   };
 
   return (
-    <PasswordRecoveryLayout onBack={onBack}>
+    <AuthSheetLayout onBack={onBack}>
       <View style={styles.form}>
         <FormCardHeader
           step={3}
@@ -92,7 +92,7 @@ function PasswordStep({ onBack, onComplete }: { onBack: () => void; onComplete: 
           <AuthButton label="Update Password" onPress={updatePassword} />
         </View>
       </View>
-    </PasswordRecoveryLayout>
+    </AuthSheetLayout>
   );
 }
 

@@ -220,8 +220,6 @@ export const AuthSessionProvider: React.FC<{ children: ReactNode }> = ({ childre
       }
       setPreAuthToken(null);
 
-      showToast(res.statusMessage || 'MPIN created successfully!');
-      setActiveScreen('home');
       return res;
     },
     [preAuthToken, showToast, setActiveScreen]
