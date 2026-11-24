@@ -1,7 +1,17 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 import type { StyleProp, TextStyle } from 'react-native';
-import { Image } from 'expo-image';
+
+function TypingCaret() {
+  const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    const timer = setInterval(() => setVisible((current) => !current), 530);
+    return () => clearInterval(timer);
+  }, []);
+
+  return <View style={[styles.caret, !visible && styles.caretHidden]} />;
+}
 
 interface VerificationCodeInputProps {
   value: string;
@@ -32,10 +42,7 @@ export function VerificationCodeInput({
               {digit ? (
                 <Text style={[styles.digit, digitStyle]}>{digit}</Text>
               ) : active ? (
-                <Image
-                  source={require('../../../assets/password-recovery/code-caret.svg')}
-                  style={styles.caret}
-                />
+                <TypingCaret />
               ) : null}
             </View>
           );
@@ -74,7 +81,8 @@ const styles = StyleSheet.create({
   filled: { backgroundColor: '#f8fafc', borderColor: '#cbd5e1' },
   active: { backgroundColor: '#fff', borderColor: '#1d5ce6', borderWidth: 2 },
   digit: { color: '#0f172a', fontSize: 20, fontWeight: '700', includeFontPadding: false },
-  caret: { width: 2, height: 22 },
+  caret: { width: 2, height: 22, backgroundColor: '#1d5ce6' },
+  caretHidden: { opacity: 0 },
   input: {
     backgroundColor: 'transparent',
     color: 'transparent',
