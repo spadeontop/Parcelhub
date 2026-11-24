@@ -24,6 +24,11 @@ export interface TopConfigBarProps {
   readonly onToggleRightRail: () => void;
   readonly theme: 'light' | 'dark';
   readonly onToggleTheme: () => void;
+  readonly realtimeDockOpen: boolean;
+  readonly realtimeDockMinimized: boolean;
+  readonly realtimeConnectedCount: number;
+  readonly realtimeUnreadCount: number;
+  readonly onToggleRealtimeDock: () => void;
 }
 
 export const TopConfigBar: React.FC<TopConfigBarProps> = ({
@@ -45,6 +50,11 @@ export const TopConfigBar: React.FC<TopConfigBarProps> = ({
   onToggleRightRail,
   theme,
   onToggleTheme,
+  realtimeDockOpen,
+  realtimeDockMinimized,
+  realtimeConnectedCount,
+  realtimeUnreadCount,
+  onToggleRealtimeDock,
 }) => {
   const [addingUrl, setAddingUrl] = useState(false);
   const [urlDraft, setUrlDraft] = useState('');
@@ -276,6 +286,35 @@ export const TopConfigBar: React.FC<TopConfigBarProps> = ({
             S: {tokens.staffAuthToken ? staffUsername : 'off'}
           </span>
         </div>
+
+        {/* Toggle Realtime WebSocket Dock */}
+        <button
+          type="button"
+          onClick={onToggleRealtimeDock}
+          aria-pressed={realtimeDockOpen && !realtimeDockMinimized}
+          title="Open or minimize persistent Realtime WebSocket dock (Ctrl+`)"
+          className={`px-2.5 py-1 text-[11px] font-medium rounded border cursor-pointer transition-colors flex items-center gap-1.5 shrink-0 ${
+            realtimeDockOpen && !realtimeDockMinimized
+              ? 'border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-950'
+              : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:border-zinc-400 dark:hover:border-zinc-600'
+          }`}
+        >
+          <span
+            className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+              realtimeConnectedCount > 0
+                ? 'bg-emerald-500 animate-pulse'
+                : realtimeDockOpen
+                  ? 'bg-amber-500'
+                  : 'bg-zinc-400 dark:bg-zinc-600'
+            }`}
+          />
+          <span>Realtime WS</span>
+          {realtimeUnreadCount > 0 && (
+            <span className="px-1 rounded bg-emerald-600 text-white font-mono text-[9px] font-semibold">
+              {realtimeUnreadCount}
+            </span>
+          )}
+        </button>
 
         {/* Theme Toggle */}
         <button

@@ -29,6 +29,7 @@ export interface ResponseInspectorProps {
     productName?: string;
     price?: number;
   }) => void;
+  readonly onConnectRealtimeFromResponse?: () => void;
 }
 
 function formatBytes(bytes: number): string {
@@ -49,6 +50,7 @@ export const ResponseInspector: React.FC<ResponseInspectorProps> = ({
   onClearLogs,
   onCopyText,
   onTargetOrder,
+  onConnectRealtimeFromResponse,
 }) => {
   const [tab, setTab] = useState<InspectorTab>('response');
   const [historyScope, setHistoryScope] = useState<'endpoint' | 'all'>('endpoint');
@@ -88,6 +90,20 @@ export const ResponseInspector: React.FC<ResponseInspectorProps> = ({
           ticketCode: typeof ord.ticketCode === 'string' ? ord.ticketCode : null,
         };
       }
+    }
+    return null;
+  }, [activeLog]);
+
+  // Extract realtime channel/token when POST /api/v1/realtime/token succeeds
+  const responseRealtimeInfo = useMemo(() => {
+    const body = activeLog?.response.body;
+    if (!body || typeof body !== 'object') return null;
+    const rec = body as Record<string, unknown>;
+    if (typeof rec.token === 'string' && rec.token && typeof rec.channel === 'string' && rec.channel) {
+      return {
+        channel: rec.channel,
+        expiresAt: typeof rec.expiresAt === 'string' ? rec.expiresAt : undefined,
+      };
     }
     return null;
   }, [activeLog]);
@@ -186,6 +202,22 @@ export const ResponseInspector: React.FC<ResponseInspectorProps> = ({
           <div className="flex-1 min-h-0 flex flex-col gap-2.5 overflow-hidden">
             {activeLog ? (
               <>
+                {/* Clickable Realtime Token -> Open WS Dock Strip */}
+                {responseRealtimeInfo && onConnectRealtimeFromResponse && (
+                  <div className="shrink-0 flex items-center justify-between gap-2 px-2.5 py-1.5 rounded border border-emerald-200 dark:border-emerald-800/70 bg-emerald-50/70 dark:bg-emerald-950/40">
+                    <span className="text-[11px] font-mono text-emerald-800 dark:text-emerald-300 truncate">
+                      Realtime channel ready: <strong>{responseRealtimeInfo.channel}</strong>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={onConnectRealtimeFromResponse}
+                      className="font-mono text-[11px] px-2.5 py-0.5 rounded bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-white cursor-pointer shrink-0"
+                    >
+                      Connect in Realtime Dock
+                    </button>
+                  </div>
+                )}
+
                 {/* Clickable Single Order Target Strip */}
                 {responseSingleOrder && (
                   <div className="shrink-0 flex items-center justify-between gap-2 px-2.5 py-1.5 rounded border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900">

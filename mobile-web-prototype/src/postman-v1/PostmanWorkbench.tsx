@@ -13,6 +13,7 @@ import {
   SEEDED_STAFF_ORDERS,
 } from './endpoints';
 import { usePostmanSession } from './usePostmanSession';
+import { usePostmanRealtime } from './usePostmanRealtime';
 import { TopConfigBar } from './components/TopConfigBar';
 import { EndpointSidebar } from './components/EndpointSidebar';
 import { RequestBar } from './components/RequestBar';
@@ -20,6 +21,7 @@ import { RequestConfigPanel } from './components/RequestConfigPanel';
 import { ResponseInspector } from './components/ResponseInspector';
 import { AuthSessionPanel } from './components/AuthSessionPanel';
 import { TargetOrderPanel } from './components/TargetOrderPanel';
+import { RealtimeDockPanel } from './components/RealtimeDockPanel';
 import type {
   AuthActor,
   CustomHeaderRow,
@@ -91,6 +93,14 @@ export const PostmanWorkbench: React.FC = () => {
     syncCustomerOrders,
     syncStaffOrders,
   } = session;
+
+  const realtime = usePostmanRealtime({
+    baseUrl,
+    apiPrefix,
+    tokens,
+    sendRequest,
+    showToast,
+  });
 
   const [activeEndpointId, setActiveEndpointId] = useState<PostmanEndpointId>('customer_login');
   const [form, setForm] = useState<PostmanFormState>(createInitialFormState);
@@ -397,17 +407,24 @@ export const PostmanWorkbench: React.FC = () => {
     syncStaffOrders,
   ]);
 
-  // Keyboard shortcut: Ctrl+Enter / Cmd+Enter sends the active request
+  // Keyboard shortcuts: Ctrl/Cmd+Enter sends active request, Ctrl+` toggles Realtime Dock (VS Code style)
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && !isSending) {
         e.preventDefault();
         void handleSend();
+      } else if (e.ctrlKey && e.key === '`') {
+        e.preventDefault();
+        if (!realtime.dockOpen) {
+          realtime.openDock();
+        } else {
+          realtime.toggleDockMinimized();
+        }
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [handleSend, isSending]);
+  }, [handleSend, isSending, realtime]);
 
   const handleQuickCustomerLogin = useCallback(async () => {
     setIsCustomerLoggingIn(true);
@@ -493,6 +510,17 @@ export const PostmanWorkbench: React.FC = () => {
         onToggleRightRail={() => setShowRightRail((v) => !v)}
         theme={theme}
         onToggleTheme={handleToggleTheme}
+        realtimeDockOpen={realtime.dockOpen}
+        realtimeDockMinimized={realtime.dockMinimized}
+        realtimeConnectedCount={realtime.connectedCount}
+        realtimeUnreadCount={realtime.totalUnread}
+        onToggleRealtimeDock={() => {
+          if (!realtime.dockOpen) {
+            realtime.openDock();
+          } else {
+            realtime.toggleDockMinimized();
+          }
+        }}
       />
 
       {/* 3-Pane Minimalist Postman Workspace */}
@@ -560,6 +588,7 @@ export const PostmanWorkbench: React.FC = () => {
             onClearLogs={clearLogs}
             onCopyText={(text, label) => void handleCopyText(text, label)}
             onTargetOrder={applyTargetOrder}
+            onConnectRealtimeFromResponse={() => void realtime.createSupabaseSession('vault')}
           />
         </main>
 
@@ -605,6 +634,7 @@ export const PostmanWorkbench: React.FC = () => {
                 onCopyText={(text, label) => void handleCopyText(text, label)}
                 isCustomerLoggingIn={isCustomerLoggingIn}
                 isStaffLoggingIn={isStaffLoggingIn}
+                onConnectVaultRealtime={() => void realtime.createSupabaseSession('vault')}
               />
             ) : (
               <TargetOrderPanel
@@ -633,6 +663,38 @@ export const PostmanWorkbench: React.FC = () => {
           </aside>
         )}
       </div>
+
+      {/* Persistent VS Code-style Realtime WebSocket Dock (stays alive across HTTP requests & minimizes to status bar) */}
+      {realtime.dockOpen && (
+        <RealtimeDockPanel
+          sessions={realtime.sessions}
+          activeSession={realtime.activeSession}
+          dockMinimized={realtime.dockMinimized}
+          dockMaximized={realtime.dockMaximized}
+          dockHeight={realtime.dockHeight}
+          totalUnread={realtime.totalUnread}
+          connectedCount={realtime.connectedCount}
+          supabaseUrl={realtime.supabaseUrl}
+          onChangeSupabaseUrl={realtime.setSupabaseUrl}
+          supabaseKey={realtime.supabaseKey}
+          onChangeSupabaseKey={realtime.setSupabaseKey}
+          tokens={tokens}
+          onSelectSession={realtime.selectSession}
+          onCreateSupabaseSession={realtime.createSupabaseSession}
+          onCreateRawSession={realtime.createRawSession}
+          onReconnectSession={realtime.reconnectSession}
+          onDisconnectSession={realtime.disconnectSession}
+          onCloseSession={realtime.closeSession}
+          onSendFrame={realtime.sendFrame}
+          onClearMessages={realtime.clearSessionMessages}
+          onToggleMinimized={realtime.toggleDockMinimized}
+          onToggleMaximized={realtime.toggleDockMaximized}
+          onChangeDockHeight={realtime.setDockHeight}
+          onCloseDock={realtime.closeDock}
+          onCopyText={(text, label) => void handleCopyText(text, label)}
+          onTargetOrder={applyTargetOrder}
+        />
+      )}
 
       {/* Minimalist Flat Toast */}
       {toast && (

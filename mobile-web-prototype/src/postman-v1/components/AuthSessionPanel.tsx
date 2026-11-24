@@ -15,6 +15,7 @@ export interface AuthSessionPanelProps {
   readonly onCopyText: (text: string, label: string) => void;
   readonly isCustomerLoggingIn: boolean;
   readonly isStaffLoggingIn: boolean;
+  readonly onConnectVaultRealtime: () => void;
 }
 
 function maskToken(token: string, reveal: boolean): string {
@@ -36,6 +37,7 @@ export const AuthSessionPanel: React.FC<AuthSessionPanelProps> = ({
   onCopyText,
   isCustomerLoggingIn,
   isStaffLoggingIn,
+  onConnectVaultRealtime,
 }) => {
   const [revealTokens, setRevealTokens] = useState(false);
   const activeSeed = SEEDED_CUSTOMER_ACCOUNTS[selectedSeedIdx] || SEEDED_CUSTOMER_ACCOUNTS[0];
@@ -225,17 +227,26 @@ export const AuthSessionPanel: React.FC<AuthSessionPanelProps> = ({
       {/* Realtime Token Block (only when captured) */}
       {tokens.realtimeToken && (
         <div className="space-y-1.5 pt-3 border-t border-zinc-200 dark:border-zinc-800">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
               Realtime Channel
             </span>
-            <button
-              type="button"
-              onClick={() => onCopyText(tokens.realtimeToken, 'realtime token')}
-              className="text-[10px] font-mono text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 cursor-pointer"
-            >
-              Copy JWT
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={onConnectVaultRealtime}
+                className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-white cursor-pointer"
+              >
+                Connect WS
+              </button>
+              <button
+                type="button"
+                onClick={() => onCopyText(tokens.realtimeToken, 'realtime token')}
+                className="text-[10px] font-mono text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 cursor-pointer"
+              >
+                Copy JWT
+              </button>
+            </div>
           </div>
           <div className="p-2 rounded border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 font-mono text-[10px] text-zinc-700 dark:text-zinc-300 break-all">
             <div>channel: {tokens.realtimeChannel}</div>
