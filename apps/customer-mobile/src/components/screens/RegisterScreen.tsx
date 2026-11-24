@@ -178,6 +178,7 @@ export const RegisterScreen: React.FC = () => {
                   <View>
                     <FormCardHeader
                       step={1}
+                      totalSteps={3}
                       title="Personal Details"
                       subtitle="Enter your name for deliveries"
                     />
@@ -213,6 +214,7 @@ export const RegisterScreen: React.FC = () => {
                   <View>
                     <FormCardHeader
                       step={2}
+                      totalSteps={3}
                       title="Account & Security"
                       subtitle="Set up your login credentials and contact info"
                     />
