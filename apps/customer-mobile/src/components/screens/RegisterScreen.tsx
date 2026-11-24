@@ -165,25 +165,14 @@ export const RegisterScreen: React.FC = () => {
 
             {/* Main non-scrollable sheet with curved top transition */}
             <View
-              className={currentStep === 1 ? "flex-1 bg-white rounded-t-[28px] px-4" : "flex-1 bg-[#f8fafc] rounded-t-[28px] px-4 justify-between"}
+              className="flex-1 bg-white rounded-t-[28px] px-4"
               style={{
-                paddingTop: currentStep === 1 ? (isCompact ? 24 : 32) : (isCompact ? 12 : 16),
-                paddingBottom: currentStep === 1 ? (isCompact ? 20 : 36) : (isCompact ? 16 : 24),
+                paddingTop: isCompact ? 24 : 32,
+                paddingBottom: isCompact ? 20 : 36,
               }}
             >
-              {/* Top/Middle Area: Form Card */}
-              <View
-                className={currentStep === 1 ? undefined : "bg-white rounded-2xl border border-[#e2e8f0]"}
-                style={{
-                  paddingHorizontal: currentStep === 1 ? 0 : 16,
-                  paddingVertical: currentStep === 1 ? 0 : (isCompact ? 12 : 16),
-                  shadowColor: '#000000',
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: currentStep === 1 ? 0 : 0.04,
-                  shadowRadius: 8,
-                  elevation: currentStep === 1 ? 0 : 2,
-                }}
-              >
+              {/* Form content */}
+              <View>
                 {currentStep === 1 ? (
                   /* STEP 1: Personal Details */
                   <View>
@@ -289,8 +278,8 @@ export const RegisterScreen: React.FC = () => {
                 )}
               </View>
 
-              {/* Bottom Pinned Action Buttons */}
-              <View className={currentStep === 1 ? "gap-3.5 mt-1" : "gap-2.5"}>
+              {/* Action buttons */}
+              <View className="gap-3.5 mt-1">
                 {currentStep === 1 ? (
                   <>
                     <AuthButton
