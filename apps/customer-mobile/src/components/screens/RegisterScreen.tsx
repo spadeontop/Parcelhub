@@ -16,6 +16,8 @@ import { FormCardHeader } from '../common/FormCardHeader';
 import { FloatingInput } from '../common/FloatingInput';
 import { AuthButton } from '../common/AuthButton';
 import { PasswordRequirements } from '../common/PasswordRequirements';
+import { VerificationCodeInput } from '../common/VerificationCodeInput';
+import { FieldError } from '../common/FieldError';
 import { getPasswordRequirements, isValidEmail } from '../../utils/authValidation';
 
 export const RegisterScreen: React.FC = () => {
@@ -26,7 +28,7 @@ export const RegisterScreen: React.FC = () => {
   const { height } = useWindowDimensions();
   const isCompact = height < 700;
 
-  const [currentStep, setCurrentStep] = useState<1 | 2>(1);
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
 
   // Form states matching CustomerRegisterReq
   const [firstName, setFirstName] = useState('');
@@ -36,6 +38,8 @@ export const RegisterScreen: React.FC = () => {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [verificationCodeError, setVerificationCodeError] = useState('');
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [confirmPasswordError, setConfirmPasswordError] = useState('');
@@ -69,6 +73,28 @@ export const RegisterScreen: React.FC = () => {
     setCurrentStep(2);
   };
 
+  const handleAccountNext = () => {
+    Keyboard.dismiss();
+    if (!isEmailValid) {
+      setEmailError('Please enter a valid email.');
+      showToast('Please enter a valid email.');
+    } else if (emailError) {
+      showToast(emailError);
+    } else if (!isPhoneValid) {
+      showToast('Please enter a valid phone number.');
+    } else if (!isPasswordValid) {
+      setPasswordError('Password must have uppercase, lowercase, number & symbol.');
+      showToast('Password must have uppercase, lowercase, number & symbol.');
+    } else if (!isConfirmPasswordValid) {
+      setConfirmPasswordError('Passwords do not match.');
+      showToast('Passwords do not match.');
+    } else {
+      setVerificationCode('');
+      setVerificationCodeError('');
+      setCurrentStep(3);
+    }
+  };
+
   const handleBackToLogin = () => {
     Keyboard.dismiss();
     setCurrentStep(1);
@@ -79,6 +105,8 @@ export const RegisterScreen: React.FC = () => {
     setPhone('');
     setPassword('');
     setConfirmPassword('');
+    setVerificationCode('');
+    setVerificationCodeError('');
     setEmailError('');
     setPasswordError('');
     setConfirmPasswordError('');
@@ -135,12 +163,23 @@ export const RegisterScreen: React.FC = () => {
 
       if (isConflict) {
         setEmailError(message);
+        setCurrentStep(2);
       } else {
         showToast(message);
       }
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleVerifyCode = () => {
+    if (isLoading) return;
+    if (verificationCode.length !== 6) {
+      setVerificationCodeError('Enter the 6-digit verification code.');
+      return;
+    }
+    setVerificationCodeError('');
+    void handleRegister();
   };
 
   return (
@@ -157,9 +196,11 @@ export const RegisterScreen: React.FC = () => {
               subtitle={
                 currentStep === 1
                   ? 'Create your account'
-                  : 'Almost there — secure your account'
+                  : currentStep === 2
+                    ? 'Almost there — secure your account'
+                    : 'Verify your email'
               }
-              onBack={currentStep === 2 ? () => { Keyboard.dismiss(); setCurrentStep(1); } : handleBackToLogin}
+              onBack={currentStep === 1 ? handleBackToLogin : () => { Keyboard.dismiss(); setCurrentStep(currentStep === 3 ? 2 : 1); }}
             />
 
             {/* Main non-scrollable sheet with curved top transition */}
@@ -177,7 +218,7 @@ export const RegisterScreen: React.FC = () => {
                   <View key="personal-details">
                     <FormCardHeader
                       step={1}
-                      totalSteps={3}
+                      totalSteps={4}
                       title="Personal Details"
                       subtitle="Enter your name for deliveries"
                     />
@@ -208,12 +249,12 @@ export const RegisterScreen: React.FC = () => {
                       onSubmitEditing={Keyboard.dismiss}
                     />
                   </View>
-                ) : (
+                ) : currentStep === 2 ? (
                   /* STEP 2: Account & Security */
                   <View key="account-security">
                     <FormCardHeader
                       step={2}
-                      totalSteps={3}
+                      totalSteps={4}
                       title="Account & Security"
                       subtitle="Set up your login credentials and contact info"
                     />
@@ -276,6 +317,28 @@ export const RegisterScreen: React.FC = () => {
                       At least 8 characters with uppercase, lowercase, number & symbol.
                     </Text>
                   </View>
+                ) : (
+                  <View key="email-verification">
+                    <FormCardHeader
+                      step={3}
+                      totalSteps={4}
+                      title="Verify your email"
+                      subtitle={<>Enter the 6-digit code for <Text className="font-bold text-[#1e293b]">{email.trim()}</Text>.</>}
+                    />
+                    <View className="mt-4 mb-4">
+                      <VerificationCodeInput
+                        autoFocus
+                        value={verificationCode}
+                        onChangeText={(value) => {
+                          setVerificationCode(value);
+                          setVerificationCodeError('');
+                        }}
+                        length={6}
+                        onSubmit={handleVerifyCode}
+                      />
+                      {verificationCodeError ? <FieldError message={verificationCodeError} /> : null}
+                    </View>
+                  </View>
                 )}
               </View>
 
@@ -286,7 +349,6 @@ export const RegisterScreen: React.FC = () => {
                     <AuthButton
                       label="Next"
                       variant="primary"
-                      disabled={!isStep1Valid}
                       onPress={handleNextStep}
                       showArrow
                     />
@@ -296,23 +358,37 @@ export const RegisterScreen: React.FC = () => {
                       onPress={handleBackToLogin}
                     />
                   </>
-                ) : (
+                ) : currentStep === 2 ? (
                   <>
                     <AuthButton
-                      label="Register"
+                      label="Next"
                       variant="primary"
-                      disabled={!isStep2Valid || isLoading}
-                      onPress={handleRegister}
-                      isLoading={isLoading}
+                      onPress={handleAccountNext}
+                      showArrow
                     />
                     <AuthButton
                       label="Back"
                       variant="secondary"
-                      onPress={() => {
-                        Keyboard.dismiss();
-                        setCurrentStep(1);
-                      }}
+                      onPress={() => { Keyboard.dismiss(); setCurrentStep(1); }}
                     />
+                  </>
+                ) : (
+                  <>
+                    <AuthButton
+                      label="Verify Code"
+                      onPress={handleVerifyCode}
+                      isLoading={isLoading}
+                    />
+                    <Text className="text-center text-[#64748b] text-xs">
+                      Didn&apos;t receive a code?{' '}
+                      <Text
+                        accessibilityRole="button"
+                        className="font-bold text-[#2563eb]"
+                        onPress={() => showToast('Email verification is not available yet.')}
+                      >
+                        Resend code
+                      </Text>
+                    </Text>
                   </>
                 )}
               </View>
