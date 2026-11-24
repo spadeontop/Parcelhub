@@ -1,5 +1,6 @@
 import { Text, View } from 'react-native';
 import { getPasswordRequirements } from '../../utils/authValidation';
+import { CheckIcon } from './Icons';
 
 export function PasswordRequirements({ password }: { password: string }) {
   if (!password) return null;
@@ -16,12 +17,17 @@ export function PasswordRequirements({ password }: { password: string }) {
   return (
     <View className="bg-slate-50 border border-slate-100 rounded-[10px] p-2.5 flex-row flex-wrap gap-x-3 gap-y-1 mb-2">
       {items.map(({ label, met }) => (
-        <Text
+        <View
           key={label}
-          className={`text-[10px] font-semibold ${met ? 'text-[#059669]' : 'text-slate-400'}`}
+          className="flex-row items-center gap-1"
+          accessible
+          accessibilityLabel={`${label}, ${met ? 'met' : 'not met'}`}
         >
-          {met ? '✓' : '•'} {label}
-        </Text>
+          {met ? <CheckIcon size={10} color="#059669" /> : <Text className="text-[10px] text-slate-400">•</Text>}
+          <Text className={`text-[10px] font-semibold ${met ? 'text-[#059669]' : 'text-slate-400'}`}>
+            {label}
+          </Text>
+        </View>
       ))}
     </View>
   );
