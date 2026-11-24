@@ -57,6 +57,18 @@ export async function POST(request: NextRequest) {
       return jsonError("Account not found", 404, "Not Found");
     }
 
+    if ((payload.tv ?? 0) !== customer.tokenVersion) {
+      return jsonError("Session expired. Please log in again", 401, "Unauthorized");
+    }
+
+    if (!customer.emailVerified) {
+      return jsonError(
+        "Please verify your email address before continuing.",
+        403,
+        "EmailNotVerified"
+      );
+    }
+
     if (customer.blacklisted) {
       return jsonError(
         `Account suspended: ${customer.blacklistReason || "Please contact support"}`,
@@ -78,6 +90,7 @@ export async function POST(request: NextRequest) {
       userId: customer.id,
       role: "CUSTOMER",
       email: customer.email,
+      tokenVersion: customer.tokenVersion,
     });
 
     // ---------------------------------------------------------

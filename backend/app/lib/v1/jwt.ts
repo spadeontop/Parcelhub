@@ -9,7 +9,12 @@ function getJwtSecret(): Uint8Array {
   return new TextEncoder().encode(secret);
 }
 
-export type TokenTokenType = "PRE_AUTH" | "AUTH" | "REFRESH";
+export type TokenTokenType =
+  | "PRE_AUTH"
+  | "AUTH"
+  | "REFRESH"
+  | "PASSWORD_RESET"
+  | "MPIN_RESET";
 
 export interface V1TokenPayload extends JWTPayload {
   userId: string;
@@ -17,6 +22,7 @@ export interface V1TokenPayload extends JWTPayload {
   email: string;
   type: TokenTokenType;
   isPreAuth?: boolean;
+  tv?: number;
 }
 
 /**
@@ -26,6 +32,7 @@ export async function signPreAuthToken(payload: {
   userId: string;
   role: Role;
   email: string;
+  tokenVersion?: number;
 }): Promise<string> {
   return new SignJWT({
     userId: payload.userId,
@@ -33,6 +40,7 @@ export async function signPreAuthToken(payload: {
     email: payload.email,
     type: "PRE_AUTH",
     isPreAuth: true,
+    tv: payload.tokenVersion ?? 0,
   })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
@@ -47,6 +55,7 @@ export async function signAuthToken(payload: {
   userId: string;
   role: Role;
   email: string;
+  tokenVersion?: number;
 }): Promise<string> {
   return new SignJWT({
     userId: payload.userId,
@@ -54,6 +63,7 @@ export async function signAuthToken(payload: {
     email: payload.email,
     type: "AUTH",
     isPreAuth: false,
+    tv: payload.tokenVersion ?? 0,
   })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
@@ -68,16 +78,60 @@ export async function signRefreshToken(payload: {
   userId: string;
   role: Role;
   email: string;
+  tokenVersion?: number;
 }): Promise<string> {
   return new SignJWT({
     userId: payload.userId,
     role: payload.role,
     email: payload.email,
     type: "REFRESH",
+    tv: payload.tokenVersion ?? 0,
   })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("30d")
+    .sign(getJwtSecret());
+}
+
+/**
+ * Mint a short-lived single-use password reset token (valid for 10 minutes)
+ */
+export async function signPasswordResetToken(payload: {
+  userId: string;
+  email: string;
+  tokenVersion: number;
+}): Promise<string> {
+  return new SignJWT({
+    userId: payload.userId,
+    role: "CUSTOMER",
+    email: payload.email,
+    type: "PASSWORD_RESET",
+    tv: payload.tokenVersion,
+  })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime("10m")
+    .sign(getJwtSecret());
+}
+
+/**
+ * Mint a short-lived single-use MPIN reset token (valid for 10 minutes)
+ */
+export async function signMpinResetToken(payload: {
+  userId: string;
+  email: string;
+  tokenVersion: number;
+}): Promise<string> {
+  return new SignJWT({
+    userId: payload.userId,
+    role: "CUSTOMER",
+    email: payload.email,
+    type: "MPIN_RESET",
+    tv: payload.tokenVersion,
+  })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime("10m")
     .sign(getJwtSecret());
 }
 

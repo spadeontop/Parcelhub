@@ -54,6 +54,18 @@ export async function POST(request: NextRequest) {
       return jsonError("Account not found", 404, "Not Found");
     }
 
+    if ((payload.tv ?? 0) !== customer.tokenVersion) {
+      return jsonError("Please log in again", 401, "Unauthorized");
+    }
+
+    if (!customer.emailVerified) {
+      return jsonError(
+        "Please verify your email address before continuing.",
+        403,
+        "EmailNotVerified"
+      );
+    }
+
     if (customer.blacklisted) {
       return jsonError(
         `Account suspended: ${customer.blacklistReason || "Please contact support"}`,
@@ -103,12 +115,14 @@ export async function POST(request: NextRequest) {
       userId: updatedCustomer.id,
       role: "CUSTOMER",
       email: updatedCustomer.email,
+      tokenVersion: updatedCustomer.tokenVersion,
     });
 
     const refreshToken = await signRefreshToken({
       userId: updatedCustomer.id,
       role: "CUSTOMER",
       email: updatedCustomer.email,
+      tokenVersion: updatedCustomer.tokenVersion,
     });
 
     const response: CustomerCreateMpinRes = {

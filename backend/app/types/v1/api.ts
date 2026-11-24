@@ -11,6 +11,8 @@
 export type {
   CustomerRow,
   NewCustomerRow,
+  EmailVerificationCodeRow,
+  NewEmailVerificationCodeRow,
   StaffRow,
   NewStaffRow,
   OrderRow,

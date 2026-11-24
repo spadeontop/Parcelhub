@@ -12,6 +12,9 @@ import {
 } from "drizzle-orm/pg-core";
 import { uuidv7 } from "uuidv7";
 import type {
+  CancelReasonCode,
+  EmailVerificationPurpose,
+  OrderActorRole,
   OrderStatus,
   ScreenshotSourceApp,
   StatusTimelineEntry,
@@ -45,6 +48,9 @@ export const customers = pgTable("customers", {
   middleInitial: text("middle_initial"),
   phoneNumber: text("phone_number").notNull(),
   mpin: text("mpin"),
+  emailVerified: boolean("email_verified").default(false).notNull(),
+  emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
+  tokenVersion: integer("token_version").default(0).notNull(),
   blacklisted: boolean("blacklisted").default(false).notNull(),
   blacklistReason: text("blacklist_reason"),
   createdAt: timestamp("created_at", { withTimezone: true })
@@ -101,6 +107,21 @@ export const orders = pgTable(
     courierPaidBy: text("courier_paid_by"),
     courierPaidAt: timestamp("courier_paid_at", { withTimezone: true }),
     isRefunded: boolean("is_refunded").default(false).notNull(),
+    activatedBy: text("activated_by"),
+    activatedAt: timestamp("activated_at", { withTimezone: true }),
+    cancelledBy: text("cancelled_by"),
+    cancelledByRole: text("cancelled_by_role").$type<OrderActorRole>(),
+    cancelReasonCode: text("cancel_reason_code").$type<CancelReasonCode>(),
+    cancelReason: text("cancel_reason"),
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    refundRequested: boolean("refund_requested").default(false).notNull(),
+    refundInitiatedAt: timestamp("refund_initiated_at", { withTimezone: true }),
+    refundExpiresAt: timestamp("refund_expires_at", { withTimezone: true }),
+    refundReasonCode: text("refund_reason_code").$type<CancelReasonCode>(),
+    refundReason: text("refund_reason"),
+    refundAmount: doublePrecision("refund_amount"),
+    refundedBy: text("refunded_by"),
+    refundedAt: timestamp("refunded_at", { withTimezone: true }),
     timestamp: timestamp("timestamp", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -110,6 +131,16 @@ export const orders = pgTable(
       .on(table.trackingId)
       .where(
         sql`${table.trackingId} IS NOT NULL AND ${table.status} IN ('AWAITING_PARCEL', 'READY_TO_CLAIM', 'CLAIMED')`
+      ),
+    index("orders_unpaid_tracking_id_idx")
+      .on(table.trackingId)
+      .where(
+        sql`${table.trackingId} IS NOT NULL AND ${table.status} IN ('PENDING_INITIALIZATION', 'PAYMENT_REQUIRED')`
+      ),
+    index("orders_cancelled_unrefunded_idx")
+      .on(table.timestamp.desc())
+      .where(
+        sql`${table.status} = 'CANCELLED' AND ${table.isRefunded} = false AND ${table.activatedAt} IS NOT NULL AND ${table.price} > 0 AND ${table.courierPaid} = false`
       ),
     index("orders_customer_id_timestamp_idx").on(
       table.customerId,
@@ -201,8 +232,41 @@ export const aiVerificationLogs = pgTable(
   ]
 );
 
+export const emailVerificationCodes = pgTable(
+  "email_verification_codes",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => uuidv7()),
+    customerId: text("customer_id").references(() => customers.id, {
+      onDelete: "cascade",
+    }),
+    email: text("email").notNull(),
+    purpose: text("purpose").$type<EmailVerificationPurpose>().notNull(),
+    codeHash: text("code_hash").notNull(),
+    attempts: integer("attempts").default(0).notNull(),
+    maxAttempts: integer("max_attempts").default(5).notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    consumedAt: timestamp("consumed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("email_verif_email_purpose_created_idx").on(
+      table.email,
+      table.purpose,
+      table.createdAt.desc()
+    ),
+    index("email_verif_expires_idx").on(table.expiresAt),
+  ]
+);
+
 export type CustomerRow = typeof customers.$inferSelect;
 export type NewCustomerRow = typeof customers.$inferInsert;
+
+export type EmailVerificationCodeRow = typeof emailVerificationCodes.$inferSelect;
+export type NewEmailVerificationCodeRow = typeof emailVerificationCodes.$inferInsert;
 
 export type StaffRow = typeof staff.$inferSelect;
 export type NewStaffRow = typeof staff.$inferInsert;

@@ -21,7 +21,8 @@ export type OrderStatus =
   | "AWAITING_PARCEL"
   | "READY_TO_CLAIM"
   | "CLAIMED"
-  | "CANCELLED";
+  | "CANCELLED"
+  | "REFUNDED";
 
 export type Role = "CUSTOMER" | "STAFF" | "ADMIN";
 
@@ -71,8 +72,125 @@ export type CustomerRegisterReq = {
   readonly phoneNumber: string;
 };
 
+export type EmailVerificationPurpose =
+  | "VERIFY_EMAIL"
+  | "FORGOT_PASSWORD"
+  | "FORGOT_MPIN"
+  | "CHANGE_PASSWORD"
+  | "CHANGE_EMAIL";
+
+export type OrderActorRole = "CUSTOMER" | "STAFF" | "ADMIN" | "SYSTEM";
+
+export type CustomerCancelReasonCode =
+  | "CHANGED_MIND"
+  | "SELLER_CANCELLED"
+  | "WRONG_DETAILS"
+  | "DUPLICATE_ORDER"
+  | "DELIVERY_DELAYED"
+  | "OTHER";
+
+export type SystemCancelReasonCode =
+  | "SYSTEM_DUPLICATE_TRACKING_ACTIVATED"
+  | "SYSTEM_PAYMENT_EXPIRED"
+  | "SYSTEM_DRAFT_ABANDONED";
+
+export type CancelReasonCode = CustomerCancelReasonCode | SystemCancelReasonCode;
+
 export type CustomerRegisterRes = StandardSuccessResponse & {
+  readonly emailVerificationRequired: true;
+  readonly email: string;
+  readonly verificationEmailSent: boolean;
+  readonly expiresInSeconds: number;
+  readonly retryAfterSeconds: number;
+  readonly preAuthToken?: JWTToken;
+};
+
+// POST /api/v1/customer/email/send-verification
+export type CustomerSendEmailVerificationReq = {
+  readonly email: string;
+};
+
+export type CustomerSendEmailVerificationRes = StandardSuccessResponse & {
+  readonly expiresInSeconds: number;
+  readonly retryAfterSeconds: number;
+};
+
+// POST /api/v1/customer/email/verify
+export type CustomerVerifyEmailReq = {
+  readonly email: string;
+  readonly code: string;
+};
+
+export type CustomerVerifyEmailRes = StandardSuccessResponse & {
+  readonly emailVerified: true;
+  readonly hasMpin: boolean;
   readonly preAuthToken: JWTToken;
+};
+
+// POST /api/v1/customer/forgot-password
+export type CustomerForgotPasswordReq = {
+  readonly email: string;
+};
+
+export type CustomerForgotPasswordRes = StandardSuccessResponse & {
+  readonly expiresInSeconds: number;
+  readonly retryAfterSeconds: number;
+};
+
+// POST /api/v1/customer/forgot-password/verify
+export type CustomerVerifyPasswordResetOtpReq = {
+  readonly email: string;
+  readonly code: string;
+};
+
+export type CustomerVerifyPasswordResetOtpRes = StandardSuccessResponse & {
+  readonly resetToken: JWTToken;
+};
+
+// POST /api/v1/customer/forgot-password/reset
+export type CustomerResetPasswordReq = {
+  readonly resetToken: JWTToken;
+  readonly newPassword: string;
+};
+
+export type CustomerResetPasswordRes = StandardSuccessResponse & {
+  readonly authToken?: JWTToken;
+  readonly refreshToken?: JWTToken;
+  readonly preAuthToken?: JWTToken;
+  readonly requiresMpinCreation: boolean;
+  readonly customer: CustomerProfile;
+};
+
+// POST /api/v1/customer/forgot-mpin
+export type CustomerForgotMpinReq = {
+  readonly email: string;
+};
+
+export type CustomerForgotMpinRes = StandardSuccessResponse & {
+  readonly expiresInSeconds: number;
+  readonly retryAfterSeconds: number;
+};
+
+// POST /api/v1/customer/forgot-mpin/verify
+export type CustomerVerifyMpinResetOtpReq = {
+  readonly email: string;
+  readonly code: string;
+};
+
+export type CustomerVerifyMpinResetOtpRes = StandardSuccessResponse & {
+  readonly resetToken: JWTToken;
+};
+
+// POST /api/v1/customer/forgot-mpin/reset
+export type CustomerResetMpinReq = {
+  readonly resetToken: JWTToken;
+  readonly newMpin: MPIN;
+};
+
+export type CustomerResetMpinRes = StandardSuccessResponse & {
+  readonly authToken: JWTToken;
+  readonly refreshToken: JWTToken;
+  readonly customer: CustomerProfile;
 };
 
 // POST /api/v1/customer/login
@@ -83,6 +201,7 @@ export type CustomerLoginReq = {
 
 export type CustomerLoginRes = StandardSuccessResponse & {
   readonly preAuthToken: JWTToken;
+  readonly hasMpin?: boolean;
 };
 
 // POST /api/v1/customer/create-mpin
@@ -127,6 +246,8 @@ export type CustomerProfile = {
   readonly lastName: string;
   readonly middleInitial?: string;
   readonly phoneNumber: string;
+  readonly emailVerified?: boolean;
+  readonly emailVerifiedAt?: ISO8601Timestamp | null;
   readonly blacklisted?: boolean;
   readonly blacklistReason?: string | null;
   readonly createdAt?: ISO8601Timestamp;
@@ -146,6 +267,12 @@ export type CustomerOrderSummary = {
   readonly status: OrderStatus;
   readonly timestamp: ISO8601Timestamp;
   readonly isClaimActive?: boolean;
+  readonly isRefundEligible?: boolean;
+  readonly refundableAmount?: number;
+  readonly isRefundActive?: boolean;
+  readonly isRefunded?: boolean;
+  readonly cancelReasonCode?: CancelReasonCode | null;
+  readonly cancelReason?: string | null;
 };
 
 export type CustomerListOrdersQueryParams = {
@@ -183,6 +310,23 @@ export type CustomerOrderDetail = {
   readonly claimExpiresAt?: ISO8601Timestamp | null;
   readonly isClaimActive?: boolean;
   readonly claimRemainingSeconds?: number;
+  readonly cancelledBy?: string | null;
+  readonly cancelledByRole?: OrderActorRole | null;
+  readonly cancelReasonCode?: CancelReasonCode | null;
+  readonly cancelReason?: string | null;
+  readonly cancelledAt?: ISO8601Timestamp | null;
+  readonly isRefundEligible?: boolean;
+  readonly refundableAmount?: number;
+  readonly refundRequested?: boolean;
+  readonly refundInitiatedAt?: ISO8601Timestamp | null;
+  readonly refundExpiresAt?: ISO8601Timestamp | null;
+  readonly isRefundActive?: boolean;
+  readonly refundRemainingSeconds?: number;
+  readonly refundReasonCode?: CancelReasonCode | null;
+  readonly refundReason?: string | null;
+  readonly isRefunded?: boolean;
+  readonly refundAmount?: number | null;
+  readonly refundedAt?: ISO8601Timestamp | null;
 };
 
 export type CustomerGetOrderRes = StandardSuccessResponse & {
@@ -236,8 +380,32 @@ export type CustomerUpdateOrderReq = {
 
 export type CustomerUpdateOrderRes = StandardSuccessResponse;
 
-// DELETE /api/v1/customer/orders/{id}
-export type CustomerCancelOrderRes = StandardSuccessResponse;
+// POST /api/v1/customer/orders/{id}/cancel
+export type CustomerCancelOrderReq = {
+  readonly reasonCode?: CustomerCancelReasonCode;
+  readonly reason?: string;
+};
+
+export type CustomerCancelOrderRes = StandardSuccessResponse & {
+  readonly orderId: OrderId;
+  readonly status: "CANCELLED";
+  readonly isRefundEligible: boolean;
+  readonly refundableAmount: number;
+};
+
+// POST /api/v1/customer/orders/{id}/refund
+export type CustomerInitiateRefundReq = {
+  readonly reasonCode?: CustomerCancelReasonCode;
+  readonly reason?: string;
+};
+
+export type CustomerInitiateRefundRes = StandardSuccessResponse & {
+  readonly orderId: OrderId;
+  readonly refundAmount: number;
+  readonly refundInitiatedAt: ISO8601Timestamp;
+  readonly refundExpiresAt: ISO8601Timestamp;
+  readonly durationMinutes: number;
+};
 
 // POST /api/v1/customer/orders/{id}/claim
 export type CustomerClaimOrderReq = Record<string, never>;
@@ -292,11 +460,25 @@ export type StaffOrderSummary = {
   readonly courierPaidAt?: ISO8601Timestamp | null;
   readonly createdAt?: ISO8601Timestamp;
   readonly statusTimeline?: OrderStatusHistoryTuple;
+  readonly cancelledByRole?: OrderActorRole | null;
+  readonly cancelReasonCode?: CancelReasonCode | null;
+  readonly cancelReason?: string | null;
+  readonly cancelledAt?: ISO8601Timestamp | null;
+  readonly isRefundEligible?: boolean;
+  readonly refundableAmount?: number;
+  readonly isRefundActive?: boolean;
+  readonly refundRemainingSeconds?: number;
+  readonly isRefunded?: boolean;
+  readonly refundAmount?: number | null;
+  readonly refundedBy?: StaffId | null;
+  readonly refundedByName?: string;
+  readonly refundedAt?: ISO8601Timestamp | null;
 };
 
 export type StaffListOrdersQueryParams = {
   readonly status?: OrderStatus;
   readonly search?: string;
+  readonly refundEligible?: boolean;
   readonly limit?: number;
   readonly offset?: number;
 };
@@ -333,6 +515,25 @@ export type StaffOrderDetail = {
   readonly courierPaidAt?: ISO8601Timestamp | null;
   readonly createdAt?: ISO8601Timestamp;
   readonly statusTimeline?: OrderStatusHistoryTuple;
+  readonly cancelledBy?: string | null;
+  readonly cancelledByRole?: OrderActorRole | null;
+  readonly cancelReasonCode?: CancelReasonCode | null;
+  readonly cancelReason?: string | null;
+  readonly cancelledAt?: ISO8601Timestamp | null;
+  readonly isRefundEligible?: boolean;
+  readonly refundableAmount?: number;
+  readonly refundRequested?: boolean;
+  readonly refundInitiatedAt?: ISO8601Timestamp | null;
+  readonly refundExpiresAt?: ISO8601Timestamp | null;
+  readonly isRefundActive?: boolean;
+  readonly refundRemainingSeconds?: number;
+  readonly refundReasonCode?: CancelReasonCode | null;
+  readonly refundReason?: string | null;
+  readonly isRefunded?: boolean;
+  readonly refundAmount?: number | null;
+  readonly refundedBy?: StaffId | null;
+  readonly refundedByName?: string;
+  readonly refundedAt?: ISO8601Timestamp | null;
 };
 
 export type StaffGetOrderRes = StaffOrderDetail;
@@ -355,6 +556,7 @@ export type StaffActivateOrderReq = {
 
 export type StaffActivateOrderRes = StandardSuccessResponse & {
   readonly change: number;
+  readonly autoCancelledCount?: number;
 };
 
 // POST /api/v1/staff/orders/{id}/make-claimable/pay
@@ -373,6 +575,15 @@ export type StaffAttachPhotoRes = StandardSuccessResponse & {
 // POST /api/v1/staff/orders/{id}/claim
 export type StaffClaimOrderReq = Record<string, never>;
 export type StaffClaimOrderRes = StandardSuccessResponse;
+
+// POST /api/v1/staff/orders/{id}/refund
+export type StaffRefundOrderReq = Record<string, never>;
+export type StaffRefundOrderRes = StandardSuccessResponse & {
+  readonly orderId: OrderId;
+  readonly status: "REFUNDED";
+  readonly refundAmount: number;
+  readonly refundedAt: ISO8601Timestamp;
+};
 
 // ==========================================
 // 4. Administrator Endpoints Types (v1)
@@ -488,7 +699,10 @@ export type RealtimeOrderEventType =
   | "COURIER_PAID"
   | "ORDER_READY"
   | "CLAIM_INITIATED"
-  | "ORDER_CLAIMED";
+  | "ORDER_CLAIMED"
+  | "ORDER_CANCELLED"
+  | "REFUND_INITIATED"
+  | "ORDER_REFUNDED";
 
 export type RealtimeOrderSignal = {
   readonly event: RealtimeOrderEventType;
@@ -516,6 +730,14 @@ export type RouteDefinition = readonly [method: HttpMethod, path: string];
 export type ApiRoutes =
   | readonly ["POST", "/api/v1/customer/register"]
   | readonly ["POST", "/api/v1/customer/login"]
+  | readonly ["POST", "/api/v1/customer/email/send-verification"]
+  | readonly ["POST", "/api/v1/customer/email/verify"]
+  | readonly ["POST", "/api/v1/customer/forgot-password"]
+  | readonly ["POST", "/api/v1/customer/forgot-password/verify"]
+  | readonly ["POST", "/api/v1/customer/forgot-password/reset"]
+  | readonly ["POST", "/api/v1/customer/forgot-mpin"]
+  | readonly ["POST", "/api/v1/customer/forgot-mpin/verify"]
+  | readonly ["POST", "/api/v1/customer/forgot-mpin/reset"]
   | readonly ["POST", "/api/v1/customer/create-mpin"]
   | readonly ["POST", "/api/v1/customer/mpin"]
   | readonly ["POST", "/api/v1/customer/refresh"]
@@ -525,7 +747,9 @@ export type ApiRoutes =
   | readonly ["GET", `/api/v1/customer/orders/${string}/photo`]
   | readonly ["POST", "/api/v1/customer/orders/initialize"]
   | readonly ["PUT", `/api/v1/customer/orders/${string}`]
+  | readonly ["POST", `/api/v1/customer/orders/${string}/cancel`]
   | readonly ["POST", `/api/v1/customer/orders/${string}/claim`]
+  | readonly ["POST", `/api/v1/customer/orders/${string}/refund`]
   | readonly ["POST", "/api/v1/staff/login"]
   | readonly ["GET", "/api/v1/staff/orders"]
   | readonly ["GET", `/api/v1/staff/orders/${string}`]
@@ -534,6 +758,7 @@ export type ApiRoutes =
   | readonly ["POST", `/api/v1/staff/orders/${string}/make-claimable/pay`]
   | readonly ["POST", `/api/v1/staff/orders/${string}/make-claimable/attach-photo`]
   | readonly ["POST", `/api/v1/staff/orders/${string}/claim`]
+  | readonly ["POST", `/api/v1/staff/orders/${string}/refund`]
   | readonly ["POST", "/api/v1/notification/upload-token"]
   | readonly ["DELETE", "/api/v1/notification/token"]
   | readonly ["POST", "/api/v1/realtime/token"];

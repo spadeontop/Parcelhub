@@ -26,6 +26,10 @@ export function serializeCustomerProfile(customer: SafeCustomerRow): CustomerPro
     lastName: customer.lastName,
     middleInitial: customer.middleInitial ?? undefined,
     phoneNumber: customer.phoneNumber,
+    emailVerified: customer.emailVerified,
+    emailVerifiedAt: customer.emailVerifiedAt
+      ? customer.emailVerifiedAt.toISOString()
+      : null,
     blacklisted: customer.blacklisted,
     blacklistReason: customer.blacklistReason,
     createdAt: customer.createdAt.toISOString(),
@@ -80,6 +84,22 @@ export async function authenticateCustomerRequest(
         session: null,
         error: "Account not found or has been removed",
         status: 404,
+      };
+    }
+
+    if ((auth.session.tv ?? 0) !== customer.tokenVersion) {
+      return {
+        session: null,
+        error: "Session revoked. Please log in again.",
+        status: 401,
+      };
+    }
+
+    if (!customer.emailVerified) {
+      return {
+        session: null,
+        error: "Please verify your email address before continuing.",
+        status: 403,
       };
     }
 

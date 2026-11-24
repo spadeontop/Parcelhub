@@ -5,7 +5,7 @@ import { drizzle as drizzlePglite } from "drizzle-orm/pglite";
 import * as schema from "./schema";
 
 // Auto-load .env into process.env so DATABASE_URL is available for CLI scripts and Next.js
-if (!process.env.DATABASE_URL) {
+if (process.env.USE_PGLITE !== "true" && !process.env.DATABASE_URL) {
   const envPath = path.resolve(__dirname, "../.env");
   if (fs.existsSync(envPath)) {
     const envContent = fs.readFileSync(envPath, "utf-8");
@@ -34,7 +34,7 @@ declare global {
 }
 
 function createDatabaseClient() {
-  if (process.env.DATABASE_URL) {
+  if (process.env.USE_PGLITE !== "true" && process.env.DATABASE_URL) {
     // If DATABASE_URL is provided (e.g. Supabase Postgres), lazily require postgres driver
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const postgresMod = require("postgres");
