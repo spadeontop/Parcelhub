@@ -16,6 +16,7 @@ import { FormCardHeader } from '../common/FormCardHeader';
 import { FloatingInput } from '../common/FloatingInput';
 import { AuthButton } from '../common/AuthButton';
 import { PasswordRequirements } from '../common/PasswordRequirements';
+import { VerificationCodeInput } from '../common/VerificationCodeInput';
 import { getPasswordRequirements, isValidEmail } from '../../utils/authValidation';
 
 export const RegisterScreen: React.FC = () => {
@@ -26,7 +27,7 @@ export const RegisterScreen: React.FC = () => {
   const { height } = useWindowDimensions();
   const isCompact = height < 700;
 
-  const [currentStep, setCurrentStep] = useState<1 | 2>(1);
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
 
   // Form states matching CustomerRegisterReq
   const [firstName, setFirstName] = useState('');
@@ -36,6 +37,7 @@ export const RegisterScreen: React.FC = () => {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [confirmPasswordError, setConfirmPasswordError] = useState('');
@@ -79,6 +81,7 @@ export const RegisterScreen: React.FC = () => {
     setPhone('');
     setPassword('');
     setConfirmPassword('');
+    setVerificationCode('');
     setEmailError('');
     setPasswordError('');
     setConfirmPasswordError('');
@@ -135,6 +138,7 @@ export const RegisterScreen: React.FC = () => {
 
       if (isConflict) {
         setEmailError(message);
+        setCurrentStep(2);
       } else {
         showToast(message);
       }
@@ -157,9 +161,11 @@ export const RegisterScreen: React.FC = () => {
               subtitle={
                 currentStep === 1
                   ? 'Create your account'
-                  : 'Almost there — secure your account'
+                  : currentStep === 2
+                    ? 'Almost there — secure your account'
+                    : 'Verify your email'
               }
-              onBack={currentStep === 2 ? () => { Keyboard.dismiss(); setCurrentStep(1); } : handleBackToLogin}
+              onBack={currentStep === 1 ? handleBackToLogin : () => { Keyboard.dismiss(); setCurrentStep(currentStep === 3 ? 2 : 1); }}
             />
 
             {/* Main non-scrollable sheet with curved top transition */}
@@ -177,7 +183,7 @@ export const RegisterScreen: React.FC = () => {
                   <View key="personal-details">
                     <FormCardHeader
                       step={1}
-                      totalSteps={3}
+                      totalSteps={4}
                       title="Personal Details"
                       subtitle="Enter your name for deliveries"
                     />
@@ -208,12 +214,12 @@ export const RegisterScreen: React.FC = () => {
                       onSubmitEditing={Keyboard.dismiss}
                     />
                   </View>
-                ) : (
+                ) : currentStep === 2 ? (
                   /* STEP 2: Account & Security */
                   <View key="account-security">
                     <FormCardHeader
                       step={2}
-                      totalSteps={3}
+                      totalSteps={4}
                       title="Account & Security"
                       subtitle="Set up your login credentials and contact info"
                     />
@@ -276,6 +282,26 @@ export const RegisterScreen: React.FC = () => {
                       At least 8 characters with uppercase, lowercase, number & symbol.
                     </Text>
                   </View>
+                ) : (
+                  <View key="email-verification">
+                    <FormCardHeader
+                      step={3}
+                      totalSteps={4}
+                      title="Verify your email"
+                      subtitle={<>Enter the 6-digit code for <Text className="font-bold text-[#1e293b]">{email.trim()}</Text>.</>}
+                    />
+                    <View className="mt-4 mb-4">
+                      <VerificationCodeInput
+                        value={verificationCode}
+                        onChangeText={setVerificationCode}
+                        length={6}
+                        onSubmit={Keyboard.dismiss}
+                      />
+                    </View>
+                    <Text className="text-[#64748b] text-xs mb-4">
+                      Email verification is not available yet. No code has been sent.
+                    </Text>
+                  </View>
                 )}
               </View>
 
@@ -296,10 +322,26 @@ export const RegisterScreen: React.FC = () => {
                       onPress={handleBackToLogin}
                     />
                   </>
-                ) : (
+                ) : currentStep === 2 ? (
                   <>
                     <AuthButton
-                      label="Register"
+                      label="Next"
+                      variant="primary"
+                      disabled={!isStep2Valid}
+                      onPress={() => { Keyboard.dismiss(); setVerificationCode(''); setCurrentStep(3); }}
+                      showArrow
+                    />
+                    <AuthButton
+                      label="Back"
+                      variant="secondary"
+                      onPress={() => { Keyboard.dismiss(); setCurrentStep(1); }}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <AuthButton label="Verify Code" disabled onPress={Keyboard.dismiss} />
+                    <AuthButton
+                      label="Continue without verification"
                       variant="primary"
                       disabled={!isStep2Valid || isLoading}
                       onPress={handleRegister}
@@ -310,7 +352,7 @@ export const RegisterScreen: React.FC = () => {
                       variant="secondary"
                       onPress={() => {
                         Keyboard.dismiss();
-                        setCurrentStep(1);
+                        setCurrentStep(2);
                       }}
                     />
                   </>
