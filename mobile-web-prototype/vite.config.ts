@@ -8,6 +8,11 @@ import { resolve } from 'path';
 export default defineConfig({
   base: './',
   plugins: [react(), tailwindcss()],
+  resolve: {
+    alias: {
+      '@parcelhub/contracts': resolve(__dirname, '../packages/contracts/src/index.ts'),
+    },
+  },
   server: {
     port: 5173,
     open: true,
@@ -26,6 +31,7 @@ export default defineConfig({
         staffDebug: resolve(__dirname, 'staff-debug.html'),
         customer: resolve(__dirname, 'customer.html'),
         customerDebug: resolve(__dirname, 'customer-debug.html'),
+        postman: resolve(__dirname, 'postman.html'),
       },
     },
   },
