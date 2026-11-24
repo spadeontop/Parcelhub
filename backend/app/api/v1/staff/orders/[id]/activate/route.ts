@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray, ne, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { orders } from "@/db/schema";
 import { authenticateStaffRequest } from "@/app/lib/v1/auth";
@@ -92,22 +92,116 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     const change = Math.max(0, body.amountReceived - order.price);
     const now = new Date();
+    const nowIso = now.toISOString();
+
+    type AutoCancelledRow = {
+      id: string;
+      customerId: string;
+      ticketCode: string | null;
+      previousStatus: "PENDING_INITIALIZATION" | "PAYMENT_REQUIRED";
+    };
 
     let updatedOrder: { id: string } | undefined;
+    let autoCancelledOrders: AutoCancelledRow[] = [];
+
     try {
-      [updatedOrder] = await db
-        .update(orders)
-        .set({
-          ...(normalizedTrackingId ? { trackingId: normalizedTrackingId } : {}),
-          amountReceived: body.amountReceived,
-          change,
-          status: "AWAITING_PARCEL",
-          statusTimeline: appendStatusTimelineSql("AWAITING_PARCEL", now.toISOString()),
-          modifiedBy: auth.session.userId,
-          timestamp: now,
-        })
-        .where(and(eq(orders.id, order.id), eq(orders.status, "PAYMENT_REQUIRED")))
-        .returning({ id: orders.id });
+      const txResult = await db.transaction(async (tx: typeof db) => {
+        const [activated] = await tx
+          .update(orders)
+          .set({
+            ...(normalizedTrackingId ? { trackingId: normalizedTrackingId } : {}),
+            amountReceived: body.amountReceived,
+            change,
+            status: "AWAITING_PARCEL",
+            activatedAt: now,
+            activatedBy: auth.session!.userId,
+            statusTimeline: appendStatusTimelineSql("AWAITING_PARCEL", nowIso),
+            modifiedBy: auth.session!.userId,
+            timestamp: now,
+          })
+          .where(and(eq(orders.id, order.id), eq(orders.status, "PAYMENT_REQUIRED")))
+          .returning({ id: orders.id });
+
+        if (!activated) {
+          return { activated: undefined, autoCancelled: [] as AutoCancelledRow[] };
+        }
+
+        if (!normalizedTrackingId) {
+          return { activated, autoCancelled: [] as AutoCancelledRow[] };
+        }
+
+        const competingRows = await tx
+          .select({
+            id: orders.id,
+            customerId: orders.customerId,
+            ticketCode: orders.ticketCode,
+            status: orders.status,
+          })
+          .from(orders)
+          .where(
+            and(
+              ne(orders.id, order.id),
+              inArray(orders.status, ["PENDING_INITIALIZATION", "PAYMENT_REQUIRED"]),
+              or(
+                eq(orders.trackingId, normalizedTrackingId),
+                sql`${orders.id} IN (
+                  SELECT os.order_id
+                  FROM order_screenshots os
+                  WHERE os.checks->>'trackingId_strict' IS NOT NULL
+                    AND upper(regexp_replace(os.checks->>'trackingId_strict', '[[:space:]]+', '', 'g')) = ${normalizedTrackingId}
+                )`
+              )
+            )
+          );
+
+        if (competingRows.length === 0) {
+          return { activated, autoCancelled: [] as AutoCancelledRow[] };
+        }
+
+        const systemReasonText = `Auto-cancelled: Tracking ID ${normalizedTrackingId} was paid and activated on another order (${order.ticketCode || order.id}).`;
+        const competingIds = competingRows.map((r: (typeof competingRows)[number]) => r.id);
+
+        const updatedCompeting = await tx
+          .update(orders)
+          .set({
+            status: "CANCELLED",
+            statusTimeline: appendStatusTimelineSql("CANCELLED", nowIso),
+            cancelledBy: "SYSTEM",
+            cancelledByRole: "SYSTEM",
+            cancelReasonCode: "SYSTEM_DUPLICATE_TRACKING_ACTIVATED",
+            cancelReason: systemReasonText,
+            cancelledAt: now,
+            claimRequested: false,
+            modifiedBy: "SYSTEM",
+            timestamp: now,
+          })
+          .where(
+            and(
+              inArray(orders.id, competingIds),
+              inArray(orders.status, ["PENDING_INITIALIZATION", "PAYMENT_REQUIRED"])
+            )
+          )
+          .returning({ id: orders.id });
+
+        const updatedIdSet = new Set(
+          updatedCompeting.map((row: (typeof updatedCompeting)[number]) => row.id)
+        );
+
+        return {
+          activated,
+          autoCancelled: competingRows
+            .filter((r: (typeof competingRows)[number]) => updatedIdSet.has(r.id))
+            .map((r: (typeof competingRows)[number]) => ({
+              id: r.id,
+              customerId: r.customerId,
+              ticketCode: r.ticketCode,
+              previousStatus: r.status as "PENDING_INITIALIZATION" | "PAYMENT_REQUIRED",
+            })),
+        };
+      });
+
+      updatedOrder = txResult.activated;
+      autoCancelledOrders = txResult.autoCancelled;
     } catch (updateErr: unknown) {
       if (isUniqueViolation(updateErr, "orders_paid_tracking_id_unique")) {
         return jsonError(
@@ -144,12 +238,42 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       orderId: order.id,
       ticketCode: order.ticketCode ?? null,
       status: "AWAITING_PARCEL",
-      updatedAt: now.toISOString(),
+      updatedAt: nowIso,
     });
+
+    for (const cancelled of autoCancelledOrders) {
+      const channels =
+        cancelled.previousStatus === "PAYMENT_REQUIRED"
+          ? ["staff:orders", `customer:${cancelled.customerId}`]
+          : [`customer:${cancelled.customerId}`];
+
+      publishOrderSignal(channels, {
+        event: "ORDER_CANCELLED",
+        orderId: cancelled.id,
+        ticketCode: cancelled.ticketCode ?? null,
+        status: "CANCELLED",
+        updatedAt: nowIso,
+      });
+
+      if (cancelled.previousStatus === "PAYMENT_REQUIRED") {
+        sendFcmNotification({
+          userId: cancelled.customerId,
+          title: "Order Auto-Cancelled",
+          body: `Your order for tracking ID ${normalizedTrackingId} was automatically cancelled because it was paid and activated on another order.`,
+          notifId: cancelled.id,
+          data: {
+            orderId: cancelled.id,
+            ticketCode: cancelled.ticketCode ?? "",
+            status: "CANCELLED",
+          },
+        }).catch(() => {});
+      }
+    }
 
     const response: StaffActivateOrderRes = {
       statusMessage: "Order activated and awaiting parcel delivery",
       change,
+      autoCancelledCount: autoCancelledOrders.length,
     };
 
     return jsonSuccess(response);

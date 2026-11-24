@@ -12,7 +12,10 @@ import {
   type AiVerificationResult,
 } from "@/app/lib/v1/ai-verification";
 import { isValidImageDataUri, validateImageSize } from "@/app/lib/v1/image";
-import { hasActivePaidTrackingId } from "@/app/lib/v1/orders";
+import {
+  hasActivePaidTrackingId,
+  normalizeTrackingId,
+} from "@/app/lib/v1/orders";
 import { parseJsonBody } from "@/app/lib/v1/request";
 import { jsonError, jsonSuccess } from "@/app/lib/response";
 import {
@@ -72,6 +75,7 @@ export async function POST(request: NextRequest) {
     const aiEnabled = isAiVerificationEnabled();
     const trackingIdMode = getAiTrackingIdMode();
     let aiResult: AiVerificationResult | null = null;
+    let extractedTrackingId: string | null = null;
 
     if (aiEnabled) {
       if (!isValidImageDataUri(imageUrl)) {
@@ -125,7 +129,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const extractedTrackingId = aiResult.autofill?.trackingId ?? null;
+      extractedTrackingId = aiResult.autofill?.trackingId ?? null;
 
       if (trackingIdMode !== "none" && !extractedTrackingId) {
         await logAiVerificationAttempt({
@@ -177,7 +181,7 @@ export async function POST(request: NextRequest) {
         .insert(orders)
         .values({
           ticketCode,
-          trackingId: null,
+          trackingId: extractedTrackingId ? normalizeTrackingId(extractedTrackingId) : null,
           productName: "",
           recipientName: "",
           price: 0,

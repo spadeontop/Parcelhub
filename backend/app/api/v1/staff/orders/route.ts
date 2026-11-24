@@ -1,10 +1,13 @@
 import { NextRequest } from "next/server";
-import { desc, eq, ne, count, and, or, ilike, sql } from "drizzle-orm";
+import { desc, eq, ne, count, and, or, ilike, sql, gt, gte, isNotNull } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/db";
 import { orders, staff } from "@/db/schema";
 import { authenticateStaffRequest } from "@/app/lib/v1/auth";
 import {
   computeClaimWindow,
+  computeRefundableAmount,
+  computeRefundWindow,
   formatStaffFullName,
   getStaffOrderStatusMessage,
 } from "@/app/lib/v1/orders";
@@ -24,6 +27,7 @@ const VALID_ORDER_STATUSES: OrderStatus[] = [
   "READY_TO_CLAIM",
   "CLAIMED",
   "CANCELLED",
+  "REFUNDED",
 ];
 
 export async function GET(request: NextRequest) {
@@ -36,6 +40,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const rawStatus = searchParams.get("status");
     const rawSearch = searchParams.get("search")?.trim();
+    const refundEligibleOnly = searchParams.get("refundEligible") === "true";
 
     if (rawStatus && !VALID_ORDER_STATUSES.includes(rawStatus as OrderStatus)) {
       return jsonError(
@@ -52,6 +57,17 @@ export async function GET(request: NextRequest) {
     if (statusFilter) {
       conditions.push(eq(orders.status, statusFilter));
     }
+    if (refundEligibleOnly) {
+      conditions.push(
+        eq(orders.status, "CANCELLED"),
+        eq(orders.isRefunded, false),
+        eq(orders.courierPaid, false),
+        isNotNull(orders.activatedAt),
+        isNotNull(orders.amountReceived),
+        gte(orders.amountReceived, orders.price),
+        gt(orders.price, 0)
+      );
+    }
     if (searchFilter) {
       const escapedSearch = searchFilter.replace(/[\\%_]/g, "\\$&");
       conditions.push(
@@ -62,6 +78,8 @@ export async function GET(request: NextRequest) {
       );
     }
     const whereClause = and(...conditions);
+
+    const refundedByStaff = alias(staff, "refunded_by_staff");
 
     const dbOrders = await db
       .select({
@@ -81,14 +99,27 @@ export async function GET(request: NextRequest) {
         courierPaid: orders.courierPaid,
         courierPaidBy: orders.courierPaidBy,
         courierPaidAt: orders.courierPaidAt,
+        activatedAt: orders.activatedAt,
+        cancelledByRole: orders.cancelledByRole,
+        cancelReasonCode: orders.cancelReasonCode,
+        cancelReason: orders.cancelReason,
+        cancelledAt: orders.cancelledAt,
+        refundRequested: orders.refundRequested,
+        refundExpiresAt: orders.refundExpiresAt,
         isRefunded: orders.isRefunded,
+        refundAmount: orders.refundAmount,
+        refundedBy: orders.refundedBy,
+        refundedAt: orders.refundedAt,
         timestamp: orders.timestamp,
         courierPaidByFirstName: staff.firstName,
         courierPaidByLastName: staff.lastName,
+        refundedByFirstName: refundedByStaff.firstName,
+        refundedByLastName: refundedByStaff.lastName,
         totalCount: sql<number>`count(*) over()`,
       })
       .from(orders)
       .leftJoin(staff, eq(orders.courierPaidBy, staff.id))
+      .leftJoin(refundedByStaff, eq(orders.refundedBy, refundedByStaff.id))
       .where(whereClause)
       .orderBy(desc(orders.timestamp))
       .limit(limit)
@@ -108,6 +139,12 @@ export async function GET(request: NextRequest) {
       const { isClaimActive, claimRemainingSeconds } = computeClaimWindow(
         o.claimRequested,
         o.claimExpiresAt,
+        nowMs
+      );
+      const refundableAmount = computeRefundableAmount(o);
+      const { isRefundActive, refundRemainingSeconds } = computeRefundWindow(
+        o.refundRequested,
+        o.refundExpiresAt,
         nowMs
       );
 
@@ -133,6 +170,22 @@ export async function GET(request: NextRequest) {
         courierPaidAt: o.courierPaidAt ? o.courierPaidAt.toISOString() : null,
         createdAt: o.statusTimeline?.[0]?.timestamp || o.timestamp.toISOString(),
         statusTimeline: o.statusTimeline,
+        cancelledByRole: o.cancelledByRole ?? null,
+        cancelReasonCode: o.cancelReasonCode ?? null,
+        cancelReason: o.cancelReason ?? null,
+        cancelledAt: o.cancelledAt ? o.cancelledAt.toISOString() : null,
+        isRefundEligible: refundableAmount > 0,
+        refundableAmount,
+        isRefundActive,
+        refundRemainingSeconds,
+        isRefunded: o.isRefunded,
+        refundAmount: o.refundAmount ?? null,
+        refundedBy: (o.refundedBy as StaffId) || null,
+        refundedByName: formatStaffFullName(
+          o.refundedByFirstName,
+          o.refundedByLastName
+        ),
+        refundedAt: o.refundedAt ? o.refundedAt.toISOString() : null,
       };
     });
 

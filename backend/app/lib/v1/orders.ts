@@ -2,6 +2,7 @@ import { and, eq, inArray, ne, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
 import { orders, orderScreenshots } from "@/db/schema";
 import type {
+  CustomerCancelReasonCode,
   OrderPhotoType,
   OrderStatus,
   StatusTimelineEntry,
@@ -192,9 +193,101 @@ export function getStaffOrderStatusMessage(status: OrderStatus): string {
       return "Parcel claimed";
     case "CANCELLED":
       return "Order cancelled";
+    case "REFUNDED":
+      return "Order refunded";
     default:
       return status;
   }
+}
+
+export const VALID_CUSTOMER_CANCEL_REASON_CODES: readonly CustomerCancelReasonCode[] = [
+  "CHANGED_MIND",
+  "SELLER_CANCELLED",
+  "WRONG_DETAILS",
+  "DUPLICATE_ORDER",
+  "DELIVERY_DELAYED",
+  "OTHER",
+] as const;
+
+export function computeRefundableAmount(order: {
+  status: OrderStatus;
+  activatedAt?: Date | string | null;
+  amountReceived: number | null;
+  price: number;
+  courierPaid: boolean;
+  isRefunded: boolean;
+}): number {
+  if (
+    order.status === "CANCELLED" &&
+    Boolean(order.activatedAt) &&
+    order.amountReceived !== null &&
+    order.amountReceived >= order.price &&
+    order.price > 0 &&
+    !order.courierPaid &&
+    !order.isRefunded
+  ) {
+    return order.price;
+  }
+  return 0;
+}
+
+export function computeRefundWindow(
+  refundRequested: boolean,
+  refundExpiresAt: Date | string | null | undefined,
+  nowMs: number = Date.now()
+): { isRefundActive: boolean; refundRemainingSeconds: number } {
+  if (!refundRequested || !refundExpiresAt) {
+    return { isRefundActive: false, refundRemainingSeconds: 0 };
+  }
+  const expiresMs = new Date(refundExpiresAt).getTime();
+  const diffSec = Math.floor((expiresMs - nowMs) / 1000);
+  if (diffSec > 0) {
+    return { isRefundActive: true, refundRemainingSeconds: diffSec };
+  }
+  return { isRefundActive: false, refundRemainingSeconds: 0 };
+}
+
+export function parseOptionalCancelOrRefundReason(body?: {
+  reasonCode?: unknown;
+  reason?: unknown;
+}):
+  | {
+      ok: true;
+      reasonCode: CustomerCancelReasonCode | null;
+      reason: string | null;
+    }
+  | { ok: false; error: string } {
+  if (!body || typeof body !== "object") {
+    return { ok: true, reasonCode: null, reason: null };
+  }
+
+  let reasonCode: CustomerCancelReasonCode | null = null;
+  if (body.reasonCode !== undefined && body.reasonCode !== null && body.reasonCode !== "") {
+    if (
+      typeof body.reasonCode !== "string" ||
+      !VALID_CUSTOMER_CANCEL_REASON_CODES.includes(body.reasonCode as CustomerCancelReasonCode)
+    ) {
+      return {
+        ok: false,
+        error: `Invalid reasonCode. Allowed values: ${VALID_CUSTOMER_CANCEL_REASON_CODES.join(", ")}`,
+      };
+    }
+    reasonCode = body.reasonCode as CustomerCancelReasonCode;
+  }
+
+  let reason: string | null = null;
+  if (body.reason !== undefined && body.reason !== null) {
+    if (typeof body.reason !== "string") {
+      return { ok: false, error: "reason must be a string" };
+    }
+    const trimmed = body.reason.trim();
+    if (trimmed.length > 300) {
+      return { ok: false, error: "reason must not exceed 300 characters" };
+    }
+    reason = trimmed.length > 0 ? trimmed : null;
+  }
+
+  return { ok: true, reasonCode, reason };
 }
 
 /**
