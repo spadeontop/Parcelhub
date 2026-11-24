@@ -71,6 +71,27 @@ export const RegisterScreen: React.FC = () => {
     setCurrentStep(2);
   };
 
+  const handleAccountNext = () => {
+    Keyboard.dismiss();
+    if (!isEmailValid) {
+      setEmailError('Please enter a valid email.');
+      showToast('Please enter a valid email.');
+    } else if (emailError) {
+      showToast(emailError);
+    } else if (!isPhoneValid) {
+      showToast('Please enter a valid phone number.');
+    } else if (!isPasswordValid) {
+      setPasswordError('Password must have uppercase, lowercase, number & symbol.');
+      showToast('Password must have uppercase, lowercase, number & symbol.');
+    } else if (!isConfirmPasswordValid) {
+      setConfirmPasswordError('Passwords do not match.');
+      showToast('Passwords do not match.');
+    } else {
+      setVerificationCode('');
+      setCurrentStep(3);
+    }
+  };
+
   const handleBackToLogin = () => {
     Keyboard.dismiss();
     setCurrentStep(1);
@@ -309,7 +330,6 @@ export const RegisterScreen: React.FC = () => {
                     <AuthButton
                       label="Next"
                       variant="primary"
-                      disabled={!isStep1Valid}
                       onPress={handleNextStep}
                       showArrow
                     />
@@ -324,8 +344,7 @@ export const RegisterScreen: React.FC = () => {
                     <AuthButton
                       label="Next"
                       variant="primary"
-                      disabled={!isStep2Valid}
-                      onPress={() => { Keyboard.dismiss(); setVerificationCode(''); setCurrentStep(3); }}
+                      onPress={handleAccountNext}
                       showArrow
                     />
                     <AuthButton
@@ -338,10 +357,9 @@ export const RegisterScreen: React.FC = () => {
                   <>
                     <AuthButton
                       label="Verify Code"
-                      disabled={verificationCode.length !== 6}
                       onPress={() => {
                         Keyboard.dismiss();
-                        showToast('Email verification is not available yet.');
+                        showToast(verificationCode.length === 6 ? 'Email verification is not available yet.' : 'Please enter the 6-digit verification code.');
                       }}
                     />
                     <Text className="text-center text-[#64748b] text-xs">
