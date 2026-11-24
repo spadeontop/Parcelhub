@@ -17,6 +17,7 @@ import { FloatingInput } from '../common/FloatingInput';
 import { AuthButton } from '../common/AuthButton';
 import { PasswordRequirements } from '../common/PasswordRequirements';
 import { VerificationCodeInput } from '../common/VerificationCodeInput';
+import { FieldError } from '../common/FieldError';
 import { getPasswordRequirements, isValidEmail } from '../../utils/authValidation';
 
 export const RegisterScreen: React.FC = () => {
@@ -38,6 +39,7 @@ export const RegisterScreen: React.FC = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
+  const [verificationCodeError, setVerificationCodeError] = useState('');
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [confirmPasswordError, setConfirmPasswordError] = useState('');
@@ -88,6 +90,7 @@ export const RegisterScreen: React.FC = () => {
       showToast('Passwords do not match.');
     } else {
       setVerificationCode('');
+      setVerificationCodeError('');
       setCurrentStep(3);
     }
   };
@@ -103,6 +106,7 @@ export const RegisterScreen: React.FC = () => {
     setPassword('');
     setConfirmPassword('');
     setVerificationCode('');
+    setVerificationCodeError('');
     setEmailError('');
     setPasswordError('');
     setConfirmPasswordError('');
@@ -166,6 +170,16 @@ export const RegisterScreen: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleVerifyCode = () => {
+    if (isLoading) return;
+    if (verificationCode.length !== 6) {
+      setVerificationCodeError('Enter the 6-digit verification code.');
+      return;
+    }
+    setVerificationCodeError('');
+    void handleRegister();
   };
 
   return (
@@ -313,11 +327,16 @@ export const RegisterScreen: React.FC = () => {
                     />
                     <View className="mt-4 mb-4">
                       <VerificationCodeInput
+                        autoFocus
                         value={verificationCode}
-                        onChangeText={setVerificationCode}
+                        onChangeText={(value) => {
+                          setVerificationCode(value);
+                          setVerificationCodeError('');
+                        }}
                         length={6}
-                        onSubmit={Keyboard.dismiss}
+                        onSubmit={handleVerifyCode}
                       />
+                      {verificationCodeError ? <FieldError message={verificationCodeError} /> : null}
                     </View>
                   </View>
                 )}
@@ -357,10 +376,8 @@ export const RegisterScreen: React.FC = () => {
                   <>
                     <AuthButton
                       label="Verify Code"
-                      onPress={() => {
-                        Keyboard.dismiss();
-                        showToast(verificationCode.length === 6 ? 'Email verification is not available yet.' : 'Please enter the 6-digit verification code.');
-                      }}
+                      onPress={handleVerifyCode}
+                      isLoading={isLoading}
                     />
                     <Text className="text-center text-[#64748b] text-xs">
                       Didn&apos;t receive a code?{' '}
