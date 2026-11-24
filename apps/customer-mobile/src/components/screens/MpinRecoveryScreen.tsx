@@ -18,7 +18,7 @@ const copy: RecoveryCopy = {
   changeEmailLabel: 'Not You?',
   successTitle: 'MPIN updated',
   successDescription: 'Your new 4-digit MPIN is active.\nUse it to confirm pickups and sign in faster.',
-  doneLabel: 'Back to Enter MPIN',
+  doneLabel: 'Continue',
 };
 
 export function MpinRecoveryScreen({ onExit }: { onExit: () => void }) {
