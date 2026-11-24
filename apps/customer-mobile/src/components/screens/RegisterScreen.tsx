@@ -160,7 +160,6 @@ export const RegisterScreen: React.FC = () => {
                   : 'Almost there — secure your account'
               }
               onBack={currentStep === 2 ? () => { Keyboard.dismiss(); setCurrentStep(1); } : handleBackToLogin}
-              onHelp={() => { Keyboard.dismiss(); navigateTo('faq'); }}
             />
 
             {/* Main non-scrollable sheet with curved top transition */}
@@ -175,7 +174,7 @@ export const RegisterScreen: React.FC = () => {
               <View>
                 {currentStep === 1 ? (
                   /* STEP 1: Personal Details */
-                  <View>
+                  <View key="personal-details">
                     <FormCardHeader
                       step={1}
                       totalSteps={3}
@@ -211,7 +210,7 @@ export const RegisterScreen: React.FC = () => {
                   </View>
                 ) : (
                   /* STEP 2: Account & Security */
-                  <View>
+                  <View key="account-security">
                     <FormCardHeader
                       step={2}
                       totalSteps={3}
