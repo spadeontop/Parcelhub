@@ -111,7 +111,7 @@ export const MpinLoginScreen: React.FC = () => {
   };
 
   const handleForgotMpin = () => {
-    showToast('Please contact your branch administrator to reset your MPIN.');
+    navigateTo('mpin_recovery');
   };
 
   const displayEmail = customer?.email || 'user@example.com';

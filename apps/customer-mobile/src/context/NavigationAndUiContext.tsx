@@ -15,6 +15,7 @@ export type ScreenId =
   | 'forgot_password'
   | 'mpin_create'
   | 'mpin_login'
+  | 'mpin_recovery'
   | 'home'
   | 'create_order'
   | 'confirm_order'

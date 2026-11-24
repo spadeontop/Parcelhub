@@ -12,12 +12,13 @@ import { LoginScreen } from '../components/screens/LoginScreen';
 import { PasswordRecoveryScreen } from '../components/screens/PasswordRecoveryScreen';
 import { RegisterScreen } from '../components/screens/RegisterScreen';
 import { MpinLoginScreen } from '../components/screens/MpinLoginScreen';
+import { MpinRecoveryScreen } from '../components/screens/MpinRecoveryScreen';
 import { MpinCreateScreen } from '../components/screens/MpinCreateScreen';
 import { ProfileScreen } from '../components/screens/ProfileScreen';
 import { FaqScreen } from '../components/screens/FaqScreen';
 
 export default function IndexPage() {
-  const { activeScreen, resetNavigationTo } = useNavigationUi();
+  const { activeScreen, goBack, resetNavigationTo } = useNavigationUi();
 
   switch (activeScreen) {
     case 'register':
@@ -44,6 +45,8 @@ export default function IndexPage() {
       return <PasswordRecoveryScreen onSignIn={() => resetNavigationTo('login')} />;
     case 'mpin_login':
       return <MpinLoginScreen />;
+    case 'mpin_recovery':
+      return <MpinRecoveryScreen onExit={goBack} />;
     case 'mpin_create':
       return <MpinCreateScreen />;
     case 'profile':
