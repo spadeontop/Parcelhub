@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, useWindowDimensions } from 'react-native';
+import type { StyleProp, TextStyle, ViewStyle } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 interface AuthButtonProps {
@@ -9,6 +10,8 @@ interface AuthButtonProps {
   isLoading?: boolean;
   disabled?: boolean;
   showArrow?: boolean;
+  style?: StyleProp<ViewStyle>;
+  labelStyle?: StyleProp<TextStyle>;
 }
 
 export const AuthButton: React.FC<AuthButtonProps> = ({
@@ -18,6 +21,8 @@ export const AuthButton: React.FC<AuthButtonProps> = ({
   isLoading = false,
   disabled = false,
   showArrow = false,
+  style,
+  labelStyle,
 }) => {
   const { height } = useWindowDimensions();
   const isCompact = height < 700;
@@ -28,37 +33,33 @@ export const AuthButton: React.FC<AuthButtonProps> = ({
     <TouchableOpacity
       activeOpacity={0.7}
       onPress={onPress}
+      accessibilityRole="button"
       disabled={isActionDisabled}
-      className={`w-full rounded-xl flex-row items-center justify-center ${
-        isPrimary
-          ? isActionDisabled
-            ? 'bg-[#93c5fd]' // Soft disabled blue when requirements not satisfied
-            : 'bg-[#2563eb]' // Active brand blue
-          : 'bg-transparent'
-      }`}
-      style={{
+      className="w-full rounded-xl flex-row items-center justify-center"
+      style={[{
         height: isCompact ? 40 : 44,
+        backgroundColor: isPrimary ? (isActionDisabled ? '#93c5fd' : '#2563eb') : 'transparent',
         shadowColor: isPrimary && !isActionDisabled ? '#2563eb' : undefined,
         shadowOffset: isPrimary && !isActionDisabled ? { width: 0, height: 3 } : undefined,
         shadowOpacity: isPrimary && !isActionDisabled ? 0.18 : 0,
         shadowRadius: isPrimary && !isActionDisabled ? 6 : 0,
         elevation: isPrimary && !isActionDisabled ? 2 : 0,
         cursor: isActionDisabled ? ('not-allowed' as any) : ('pointer' as any),
-      }}
+      }, style]}
     >
       {isLoading ? (
         <ActivityIndicator color={isPrimary ? '#ffffff' : '#64748b'} size="small" />
       ) : (
         <View className="flex-row items-center justify-center gap-1.5">
           <Text
-            className={`font-semibold ${
+            className={`${labelStyle ? '' : 'font-semibold'} ${
               isPrimary
                 ? isActionDisabled
                   ? 'text-white/80'
                   : 'text-white'
                 : 'text-[#64748b]'
             }`}
-            style={{ fontSize: isCompact ? 13.5 : 14 }}
+            style={[{ fontSize: isCompact ? 13.5 : 14 }, labelStyle]}
           >
             {label}
           </Text>

@@ -28,6 +28,7 @@ export interface PasswordEyeToggleProps {
   style?: StyleProp<ViewStyle>;
   /** Optional testID for automated testing. */
   testID?: string;
+  icons?: { masked: React.ReactNode; visible: React.ReactNode };
 }
 
 const USE_NATIVE_DRIVER = Platform.OS !== 'web';
@@ -42,6 +43,7 @@ export const PasswordEyeToggle: React.FC<PasswordEyeToggleProps> = ({
   className = '',
   style,
   testID,
+  icons,
 }) => {
   const progress = useRef(new Animated.Value(isVisible ? 1 : 0)).current;
   const pressScale = useRef(new Animated.Value(1)).current;
@@ -140,7 +142,7 @@ export const PasswordEyeToggle: React.FC<PasswordEyeToggleProps> = ({
             transform: [{ scale: eyeScale }, { rotate: eyeRotate }],
           }}
         >
-          <EyeIcon size={size} color={color} />
+          {icons?.masked ?? <EyeIcon size={size} color={color} />}
         </Animated.View>
 
         <Animated.View
@@ -152,7 +154,7 @@ export const PasswordEyeToggle: React.FC<PasswordEyeToggleProps> = ({
             transform: [{ scale: eyeOffScale }, { rotate: eyeOffRotate }],
           }}
         >
-          <EyeOffIcon size={size} color={color} />
+          {icons?.visible ?? <EyeOffIcon size={size} color={color} />}
         </Animated.View>
       </Animated.View>
     </TouchableOpacity>
