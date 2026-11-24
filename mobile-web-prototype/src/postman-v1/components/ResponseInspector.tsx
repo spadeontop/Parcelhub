@@ -117,9 +117,9 @@ export const ResponseInspector: React.FC<ResponseInspectorProps> = ({
   }, [activeLog]);
 
   return (
-    <section className="flex-1 min-h-0 flex flex-col bg-white overflow-hidden">
+    <section className="flex-1 min-h-0 flex flex-col bg-white dark:bg-zinc-950 overflow-hidden">
       {/* Inspector Header */}
-      <div className="shrink-0 px-4 border-b border-zinc-200 bg-zinc-50 flex flex-wrap items-center justify-between gap-2">
+      <div className="shrink-0 px-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 flex flex-wrap items-center justify-between gap-2">
         <div role="tablist" aria-label="Response Inspector Tabs" className="flex items-center gap-4">
           {(
             [
@@ -139,8 +139,8 @@ export const ResponseInspector: React.FC<ResponseInspectorProps> = ({
                 onClick={() => setTab(item.id)}
                 className={`py-2 text-[11px] font-medium border-b-2 -mb-px cursor-pointer transition-colors ${
                   active
-                    ? 'border-zinc-900 text-zinc-900'
-                    : 'border-transparent text-zinc-500 hover:text-zinc-900'
+                    ? 'border-zinc-900 text-zinc-900 dark:border-zinc-100 dark:text-zinc-100'
+                    : 'border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
                 }`}
               >
                 {item.label}
@@ -158,24 +158,24 @@ export const ResponseInspector: React.FC<ResponseInspectorProps> = ({
                 statusText={activeLog.response.statusText}
                 ok={activeLog.response.ok}
               />
-              <span className="font-mono text-[11px] text-zinc-500">
+              <span className="font-mono text-[11px] text-zinc-500 dark:text-zinc-400">
                 {activeLog.response.durationMs}ms
               </span>
-              <span className="font-mono text-[11px] text-zinc-400">
+              <span className="font-mono text-[11px] text-zinc-400 dark:text-zinc-500">
                 {formatBytes(activeLog.response.sizeBytes)}
               </span>
               {tab === 'response' && (
                 <button
                   type="button"
                   onClick={() => onCopyText(formattedResponseText, 'Response JSON')}
-                  className="text-[10px] font-mono px-2 py-0.5 rounded border border-zinc-200 bg-white text-zinc-600 hover:border-zinc-400 hover:text-zinc-900 cursor-pointer"
+                  className="text-[10px] font-mono px-2 py-0.5 rounded border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:border-zinc-400 dark:hover:border-zinc-600 hover:text-zinc-900 dark:hover:text-zinc-100 cursor-pointer"
                 >
                   Copy
                 </button>
               )}
             </>
           ) : (
-            <span className="font-mono text-[11px] text-zinc-400">Idle · {spec.shortLabel}</span>
+            <span className="font-mono text-[11px] text-zinc-400 dark:text-zinc-500">Idle · {spec.shortLabel}</span>
           )}
         </div>
       </div>
@@ -188,8 +188,8 @@ export const ResponseInspector: React.FC<ResponseInspectorProps> = ({
               <>
                 {/* Clickable Single Order Target Strip */}
                 {responseSingleOrder && (
-                  <div className="shrink-0 flex items-center justify-between gap-2 px-2.5 py-1.5 rounded border border-zinc-200 bg-zinc-50">
-                    <span className="text-[11px] text-zinc-500">Order returned in response:</span>
+                  <div className="shrink-0 flex items-center justify-between gap-2 px-2.5 py-1.5 rounded border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900">
+                    <span className="text-[11px] text-zinc-500 dark:text-zinc-400">Order returned in response:</span>
                     <button
                       type="button"
                       onClick={() =>
@@ -198,7 +198,7 @@ export const ResponseInspector: React.FC<ResponseInspectorProps> = ({
                           ticketCode: responseSingleOrder.ticketCode,
                         })
                       }
-                      className="font-mono text-[11px] px-2 py-0.5 rounded border border-zinc-300 bg-white hover:border-zinc-900 text-zinc-900 cursor-pointer"
+                      className="font-mono text-[11px] px-2 py-0.5 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 hover:border-zinc-900 dark:hover:border-zinc-200 text-zinc-900 dark:text-zinc-100 cursor-pointer"
                     >
                       Use {responseSingleOrder.id}
                       {responseSingleOrder.ticketCode ? ` (${responseSingleOrder.ticketCode})` : ''}
@@ -208,8 +208,8 @@ export const ResponseInspector: React.FC<ResponseInspectorProps> = ({
 
                 {/* Clickable Order List Pills */}
                 {responseOrders.length > 0 && (
-                  <div className="shrink-0 px-2.5 py-2 rounded border border-zinc-200 bg-zinc-50 space-y-1.5">
-                    <div className="text-[10px] font-medium uppercase tracking-wider text-zinc-400">
+                  <div className="shrink-0 px-2.5 py-2 rounded border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 space-y-1.5">
+                    <div className="text-[10px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
                       Click to target &#123;id&#125;
                     </div>
                     <div className="flex flex-wrap gap-1 max-h-16 overflow-y-auto">
@@ -226,7 +226,7 @@ export const ResponseInspector: React.FC<ResponseInspectorProps> = ({
                               price: ord.price,
                             })
                           }
-                          className="font-mono text-[10px] px-2 py-0.5 rounded border border-zinc-200 bg-white hover:border-zinc-900 text-zinc-700 hover:text-zinc-900 cursor-pointer"
+                          className="font-mono text-[10px] px-2 py-0.5 rounded border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 hover:border-zinc-900 dark:hover:border-zinc-200 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 cursor-pointer"
                         >
                           {ord.ticketCode || ord.id} · {ord.status}
                         </button>
@@ -244,12 +244,12 @@ export const ResponseInspector: React.FC<ResponseInspectorProps> = ({
                         href={photo.url}
                         target="_blank"
                         rel="noreferrer"
-                        className="flex items-center gap-2 px-2.5 py-1.5 rounded border border-zinc-200 bg-zinc-50 hover:border-zinc-400 text-[11px] font-mono text-zinc-700"
+                        className="flex items-center gap-2 px-2.5 py-1.5 rounded border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 hover:border-zinc-400 dark:hover:border-zinc-600 text-[11px] font-mono text-zinc-700 dark:text-zinc-300"
                       >
                         <img
                           src={photo.url}
                           alt={photo.label}
-                          className="w-7 h-7 object-cover rounded border border-zinc-200 bg-white"
+                          className="w-7 h-7 object-cover rounded border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950"
                         />
                         <span>{photo.label}</span>
                       </a>
@@ -258,17 +258,17 @@ export const ResponseInspector: React.FC<ResponseInspectorProps> = ({
                 )}
 
                 {/* Response JSON Payload */}
-                <pre className="flex-1 min-h-0 overflow-auto p-3 rounded border border-zinc-200 bg-zinc-50 font-mono text-xs text-zinc-900 whitespace-pre-wrap break-words leading-relaxed">
+                <pre className="flex-1 min-h-0 overflow-auto p-3 rounded border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 font-mono text-xs text-zinc-900 dark:text-zinc-100 whitespace-pre-wrap break-words leading-relaxed">
                   {formattedResponseText || '(empty response body)'}
                 </pre>
               </>
             ) : (
-              <div className="flex-1 flex flex-col items-center justify-center text-center border border-dashed border-zinc-200 rounded p-6">
-                <p className="text-xs font-medium text-zinc-700">
+              <div className="flex-1 flex flex-col items-center justify-center text-center border border-dashed border-zinc-200 dark:border-zinc-800 rounded p-6">
+                <p className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
                   No response captured for {spec.title}
                 </p>
-                <p className="text-[11px] text-zinc-400 mt-1 max-w-sm">
-                  Configure parameters above and click <strong className="text-zinc-700">Send</strong> to inspect live HTTP status, headers, and payload.
+                <p className="text-[11px] text-zinc-400 dark:text-zinc-500 mt-1 max-w-sm">
+                  Configure parameters above and click <strong className="text-zinc-700 dark:text-zinc-200">Send</strong> to inspect live HTTP status, headers, and payload.
                 </p>
               </div>
             )}
@@ -277,9 +277,9 @@ export const ResponseInspector: React.FC<ResponseInspectorProps> = ({
 
         {tab === 'request' && (
           <div className="flex-1 min-h-0 flex flex-col gap-2.5 overflow-hidden">
-            <div className="shrink-0 flex items-center justify-between gap-2 pb-2 border-b border-zinc-200">
-              <div className="flex items-center gap-2 min-w-0 font-mono text-xs text-zinc-800">
-                <span className="text-[10px] uppercase px-1.5 py-0.5 rounded border border-zinc-200 bg-zinc-50 text-zinc-500 shrink-0">
+            <div className="shrink-0 flex items-center justify-between gap-2 pb-2 border-b border-zinc-200 dark:border-zinc-800">
+              <div className="flex items-center gap-2 min-w-0 font-mono text-xs text-zinc-800 dark:text-zinc-200">
+                <span className="text-[10px] uppercase px-1.5 py-0.5 rounded border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400 shrink-0">
                   {activeLog ? 'Sent' : 'Prepared'}
                 </span>
                 <span className="truncate">
@@ -312,13 +312,13 @@ export const ResponseInspector: React.FC<ResponseInspectorProps> = ({
                     'Request snapshot'
                   )
                 }
-                className="text-[10px] font-mono px-2 py-0.5 rounded border border-zinc-200 text-zinc-600 hover:border-zinc-400 cursor-pointer shrink-0"
+                className="text-[10px] font-mono px-2 py-0.5 rounded border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-400 dark:hover:border-zinc-600 cursor-pointer shrink-0"
               >
                 Copy
               </button>
             </div>
 
-            <pre className="flex-1 min-h-0 overflow-auto p-3 rounded border border-zinc-200 bg-zinc-50 font-mono text-xs text-zinc-800 whitespace-pre-wrap break-words leading-relaxed">
+            <pre className="flex-1 min-h-0 overflow-auto p-3 rounded border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 font-mono text-xs text-zinc-800 dark:text-zinc-200 whitespace-pre-wrap break-words leading-relaxed">
               {activeLog
                 ? activeLog.request.body !== null && activeLog.request.body !== undefined
                   ? JSON.stringify(activeLog.request.body, null, 2)
@@ -333,18 +333,18 @@ export const ResponseInspector: React.FC<ResponseInspectorProps> = ({
         {tab === 'headers' && (
           <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-2 gap-3 overflow-hidden">
             <div className="min-h-0 flex flex-col gap-1.5 overflow-hidden">
-              <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+              <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
                 Request Headers ({activeLog ? 'Sent' : 'Prepared'})
               </span>
-              <pre className="flex-1 min-h-0 overflow-auto p-2.5 rounded border border-zinc-200 bg-zinc-50 font-mono text-[11px] text-zinc-800 whitespace-pre-wrap break-all">
+              <pre className="flex-1 min-h-0 overflow-auto p-2.5 rounded border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 font-mono text-[11px] text-zinc-800 dark:text-zinc-200 whitespace-pre-wrap break-all">
                 {JSON.stringify(activeLog ? activeLog.request.headers : preparedHeaders, null, 2)}
               </pre>
             </div>
             <div className="min-h-0 flex flex-col gap-1.5 overflow-hidden">
-              <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+              <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
                 Response Headers
               </span>
-              <pre className="flex-1 min-h-0 overflow-auto p-2.5 rounded border border-zinc-200 bg-zinc-50 font-mono text-[11px] text-zinc-800 whitespace-pre-wrap break-all">
+              <pre className="flex-1 min-h-0 overflow-auto p-2.5 rounded border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 font-mono text-[11px] text-zinc-800 dark:text-zinc-200 whitespace-pre-wrap break-all">
                 {activeLog
                   ? JSON.stringify(activeLog.response.headers, null, 2)
                   : '(awaiting response)'}
@@ -356,14 +356,14 @@ export const ResponseInspector: React.FC<ResponseInspectorProps> = ({
         {tab === 'history' && (
           <div className="flex-1 min-h-0 flex flex-col gap-2.5 overflow-hidden">
             <div className="shrink-0 flex items-center justify-between gap-2">
-              <div className="inline-flex border border-zinc-200 rounded overflow-hidden">
+              <div className="inline-flex border border-zinc-200 dark:border-zinc-800 rounded overflow-hidden">
                 <button
                   type="button"
                   onClick={() => setHistoryScope('endpoint')}
                   className={`px-2.5 py-1 text-[10px] font-medium cursor-pointer ${
                     historyScope === 'endpoint'
-                      ? 'bg-zinc-900 text-white'
-                      : 'bg-white text-zinc-600 hover:bg-zinc-50'
+                      ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950'
+                      : 'bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800'
                   }`}
                 >
                   This Endpoint ({endpointLogs.length})
@@ -373,8 +373,8 @@ export const ResponseInspector: React.FC<ResponseInspectorProps> = ({
                   onClick={() => setHistoryScope('all')}
                   className={`px-2.5 py-1 text-[10px] font-medium cursor-pointer ${
                     historyScope === 'all'
-                      ? 'bg-zinc-900 text-white'
-                      : 'bg-white text-zinc-600 hover:bg-zinc-50'
+                      ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950'
+                      : 'bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800'
                   }`}
                 >
                   All ({allLogs.length})
@@ -384,16 +384,16 @@ export const ResponseInspector: React.FC<ResponseInspectorProps> = ({
                 <button
                   type="button"
                   onClick={onClearLogs}
-                  className="text-[10px] font-mono text-rose-600 hover:text-rose-800 cursor-pointer"
+                  className="text-[10px] font-mono text-rose-600 dark:text-rose-400 hover:text-rose-800 dark:hover:text-rose-300 cursor-pointer"
                 >
                   Clear All
                 </button>
               )}
             </div>
 
-            <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-zinc-100 border border-zinc-200 rounded">
+            <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-zinc-100 dark:divide-zinc-800/80 border border-zinc-200 dark:border-zinc-800 rounded">
               {visibleHistory.length === 0 ? (
-                <div className="py-8 text-center text-xs text-zinc-400">
+                <div className="py-8 text-center text-xs text-zinc-400 dark:text-zinc-500">
                   No request history recorded yet.
                 </div>
               ) : (
@@ -408,23 +408,25 @@ export const ResponseInspector: React.FC<ResponseInspectorProps> = ({
                         setTab('response');
                       }}
                       className={`w-full text-left px-3 py-2 flex items-center justify-between gap-2 cursor-pointer transition-colors ${
-                        selected ? 'bg-zinc-100' : 'bg-white hover:bg-zinc-50'
+                        selected
+                          ? 'bg-zinc-100 dark:bg-zinc-800/90'
+                          : 'bg-white dark:bg-zinc-950 hover:bg-zinc-50 dark:hover:bg-zinc-900'
                       }`}
                     >
                       <div className="flex items-center gap-2 min-w-0">
                         <MethodBadge method={item.method} variant="text" />
                         <div className="min-w-0">
-                          <div className="text-xs font-medium text-zinc-900 truncate">
+                          <div className="text-xs font-medium text-zinc-900 dark:text-zinc-100 truncate">
                             {item.endpointTitle}
                           </div>
-                          <div className="font-mono text-[10px] text-zinc-400 truncate">
+                          <div className="font-mono text-[10px] text-zinc-400 dark:text-zinc-500 truncate">
                             {item.request.url}
                           </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <HttpStatusBadge status={item.response.status} ok={item.response.ok} />
-                        <span className="font-mono text-[10px] text-zinc-400">
+                        <span className="font-mono text-[10px] text-zinc-400 dark:text-zinc-500">
                           {item.response.durationMs}ms
                         </span>
                       </div>
