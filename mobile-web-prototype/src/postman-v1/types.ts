@@ -358,3 +358,54 @@ export interface TargetOrderItem {
   readonly isRefundActive?: boolean;
   readonly courierPaid?: boolean;
 }
+
+export type RealtimeConnectionMode = 'supabase' | 'raw';
+
+export type RealtimeSessionActor = 'customer' | 'staff' | 'vault' | 'custom';
+
+export type RealtimeSocketStatus =
+  | 'disconnected'
+  | 'minting'
+  | 'connecting'
+  | 'joining'
+  | 'subscribed'
+  | 'error';
+
+export type RealtimeMessageDirection = 'in' | 'out' | 'system';
+
+export type RealtimeMessageKind =
+  | 'signal'
+  | 'reply'
+  | 'heartbeat'
+  | 'message'
+  | 'error'
+  | 'system';
+
+export interface RealtimeMessageEntry {
+  readonly id: string;
+  readonly timestamp: string;
+  readonly direction: RealtimeMessageDirection;
+  readonly kind: RealtimeMessageKind;
+  readonly event: string;
+  readonly topic?: string;
+  readonly summary: string;
+  readonly payload: unknown;
+  readonly rawText: string;
+  readonly signal?: RealtimeOrderSignal;
+}
+
+export interface RealtimeSession {
+  readonly id: string;
+  readonly label: string;
+  readonly mode: RealtimeConnectionMode;
+  readonly actor: RealtimeSessionActor;
+  readonly status: RealtimeSocketStatus;
+  readonly channel: string;
+  readonly wsUrl: string;
+  readonly realtimeToken?: string;
+  readonly tokenExpiresAt?: string;
+  readonly lastError?: string;
+  readonly unreadCount: number;
+  readonly messages: readonly RealtimeMessageEntry[];
+  readonly createdAt: string;
+}
