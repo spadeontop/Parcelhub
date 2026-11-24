@@ -180,6 +180,7 @@ export function PasswordRecoveryScreen({ onSignIn }: { onSignIn: () => void }) {
             <Text accessibilityRole="link" onPress={goBack} style={styles.changeEmail}>Change email</Text>
             <View style={styles.codeField}>
               <VerificationCodeInput
+                autoFocus
                 value={code}
                 length={CODE_LENGTH}
                 onChangeText={(value) => { setCode(value); setError(null); }}

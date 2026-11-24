@@ -17,6 +17,7 @@ interface VerificationCodeInputProps {
   onChangeText: (value: string) => void;
   onSubmit: () => void;
   length: number;
+  autoFocus?: boolean;
 }
 
 export function VerificationCodeInput({
@@ -24,6 +25,7 @@ export function VerificationCodeInput({
   onChangeText,
   onSubmit,
   length,
+  autoFocus = false,
 }: VerificationCodeInputProps) {
   const [focused, setFocused] = useState(false);
   const activeIndex = Math.min(value.length, length - 1);
@@ -47,6 +49,7 @@ export function VerificationCodeInput({
       </View>
       <TextInput
         accessibilityLabel={`${length}-digit verification code`}
+        autoFocus={autoFocus}
         autoComplete="off"
         caretHidden
         keyboardType="number-pad"
