@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react';
 import { BackHandler, StyleSheet, Text, View } from 'react-native';
 import { FieldError } from '../common/FieldError';
+import { MpinDots, MPIN_LENGTH } from '../common/MpinDots';
 import { NumericKeypad } from '../common/NumericKeypad';
-import { PasswordRecoveryLayout } from '../layout/PasswordRecoveryLayout';
+import { AuthSheetLayout } from '../layout/AuthSheetLayout';
 import { RecoveryFlow, type RecoveryCopy } from './RecoveryFlow';
-
-const PIN_LENGTH = 4;
 
 const copy: RecoveryCopy = {
   title: 'Reset MPIN',
@@ -42,7 +41,7 @@ function MpinResetStep({ email, onBack, onComplete, onExit }: MpinResetStepProps
   const [newPin, setNewPin] = useState('');
   const [entry, setEntry] = useState('');
   const [hasMismatch, setHasMismatch] = useState(false);
-  const isConfirming = newPin.length === PIN_LENGTH;
+  const isConfirming = newPin.length === MPIN_LENGTH;
 
   const resetEntry = () => {
     setNewPin('');
@@ -63,7 +62,7 @@ function MpinResetStep({ email, onBack, onComplete, onExit }: MpinResetStepProps
     const next = entry + digit;
     setHasMismatch(false);
 
-    if (next.length < PIN_LENGTH) {
+    if (next.length < MPIN_LENGTH) {
       setEntry(next);
       return;
     }
@@ -84,7 +83,7 @@ function MpinResetStep({ email, onBack, onComplete, onExit }: MpinResetStepProps
   };
 
   return (
-    <PasswordRecoveryLayout onBack={isConfirming ? undefined : onBack}>
+    <AuthSheetLayout onBack={isConfirming ? undefined : onBack}>
       <View style={styles.content}>
         <View style={styles.account}>
           <Text style={styles.email}>{email}</Text>
@@ -96,11 +95,7 @@ function MpinResetStep({ email, onBack, onComplete, onExit }: MpinResetStepProps
         <Text style={styles.subtitle}>
           {isConfirming ? 'Re-enter your new MPIN to save changes' : 'Avoid sequential numbers like 1234'}
         </Text>
-        <View accessible accessibilityLabel={entry.length + ' of 4 digits entered'} style={styles.dots}>
-          {Array.from({ length: PIN_LENGTH }, (_, index) => (
-            <View key={index} style={[styles.dot, index < entry.length && styles.filledDot]} />
-          ))}
-        </View>
+        <MpinDots count={entry.length} />
         {hasMismatch && (
           <View style={styles.error}>
             <FieldError message="MPINs do not match. Try again." />
@@ -116,7 +111,7 @@ function MpinResetStep({ email, onBack, onComplete, onExit }: MpinResetStepProps
           {isConfirming ? 'Re-enter new MPIN' : 'Cancel Reset'}
         </Text>
       </View>
-    </PasswordRecoveryLayout>
+    </AuthSheetLayout>
   );
 }
 
@@ -130,9 +125,6 @@ const styles = StyleSheet.create({
   step: { color: '#2563eb', fontFamily: 'GoogleSans-Bold', fontSize: 11 },
   title: { marginTop: 20, textAlign: 'center', color: '#0f172a', fontFamily: 'GoogleSans-Bold', fontSize: 20 },
   subtitle: { textAlign: 'center', color: '#64748b', fontFamily: 'GoogleSans-Regular', fontSize: 13 },
-  dots: { flexDirection: 'row', justifyContent: 'center', gap: 12, marginVertical: 22 },
-  dot: { width: 15, height: 15, borderRadius: 8, backgroundColor: '#cbd5e1' },
-  filledDot: { backgroundColor: '#2563eb' },
   error: { alignItems: 'center', paddingRight: 4 },
   keypad: { marginTop: 12 },
   link: { alignSelf: 'center', padding: 12, marginTop: 20, color: '#2563eb', fontFamily: 'GoogleSans-Bold' },

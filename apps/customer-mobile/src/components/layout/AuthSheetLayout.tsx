@@ -6,19 +6,21 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
+import type { StyleProp, ViewStyle } from 'react-native';
 import { AuthBrandHeader } from './AuthBrandHeader';
 
-interface PasswordRecoveryLayoutProps {
+interface AuthSheetLayoutProps {
   children: ReactNode;
   onBack?: () => void;
+  sheetStyle?: StyleProp<ViewStyle>;
 }
 
-export function PasswordRecoveryLayout({ children, onBack }: PasswordRecoveryLayoutProps) {
+export function AuthSheetLayout({ children, onBack, sheetStyle }: AuthSheetLayoutProps) {
   return (
     <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <AuthBrandHeader onBack={onBack} />
-        <View style={styles.sheet}>{children}</View>
+        <View style={[styles.sheet, sheetStyle]}>{children}</View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
