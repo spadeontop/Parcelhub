@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, useWindowDimensions } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import { BackButton } from '../common/BackButton';
 import { ParcelHubLogoSvg } from '../common/Icons';
 
 interface AuthBrandHeaderProps {
@@ -33,22 +34,14 @@ export const AuthBrandHeader: React.FC<AuthBrandHeaderProps> = ({
         style={{ marginBottom: isCompact ? 6 : 10 }}
       >
         {onBack ? (
-          <TouchableOpacity
-            activeOpacity={0.7}
+          <BackButton
             onPress={onBack}
-            className="w-9 h-9 rounded-full bg-white/10 items-center justify-center border border-white/20"
+            size={18}
+            color="#fff"
+            className="rounded-full bg-white/10 border border-white/20"
+            style={{ width: 36, height: 36 }}
             accessibilityLabel="Go back"
-          >
-            <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-              <Path
-                d="M15 19l-7-7 7-7"
-                stroke="#ffffff"
-                strokeWidth={2.2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </Svg>
-          </TouchableOpacity>
+          />
         ) : (
           <View className="w-9 h-9" />
         )}

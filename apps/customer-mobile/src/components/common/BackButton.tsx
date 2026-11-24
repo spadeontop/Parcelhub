@@ -40,8 +40,8 @@ export const BackButton: React.FC<BackButtonProps> = ({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ disabled }}
-      className={`w-8 h-8 items-center justify-center ${className}`.trim()}
-      style={style}
+      className={`items-center justify-center ${className}`.trim()}
+      style={[{ width: 32, height: 32 }, style]}
       testID={testID}
     >
       <ArrowLeftIcon size={size} color={color} />

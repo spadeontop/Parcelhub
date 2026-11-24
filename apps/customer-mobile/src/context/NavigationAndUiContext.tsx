@@ -12,6 +12,7 @@ import { TransactionFilter } from '../types/api';
 export type ScreenId =
   | 'register'
   | 'login'
+  | 'forgot_password'
   | 'mpin_create'
   | 'mpin_login'
   | 'home'

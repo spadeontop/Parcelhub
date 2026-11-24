@@ -2,10 +2,10 @@ import React from 'react';
 import { View, Text, useWindowDimensions } from 'react-native';
 
 interface FormCardHeaderProps {
-  step: 1 | 2;
+  step: number;
   totalSteps?: number;
   title: string;
-  subtitle: string;
+  subtitle: React.ReactNode;
 }
 
 export const FormCardHeader: React.FC<FormCardHeaderProps> = ({
@@ -35,21 +35,18 @@ export const FormCardHeader: React.FC<FormCardHeaderProps> = ({
 
         {/* Indicator bars */}
         <View className="flex-row items-center gap-1.5">
-          <View
-            className={`w-7 h-1 rounded-full ${
-              step >= 1 ? 'bg-[#2563eb]' : 'bg-[#e2e8f0]'
-            }`}
-          />
-          <View
-            className={`w-7 h-1 rounded-full ${
-              step >= 2 ? 'bg-[#2563eb]' : 'bg-[#e2e8f0]'
-            }`}
-          />
+          {Array.from({ length: totalSteps }, (_, index) => (
+            <View
+              key={index}
+              className={index < step ? 'w-7 h-1 rounded-full bg-[#2563eb]' : 'w-7 h-1 rounded-full bg-[#e2e8f0]'}
+            />
+          ))}
         </View>
       </View>
 
       {/* Title & Subtitle */}
       <Text
+        accessibilityRole="header"
         className="font-bold text-[#1e293b] tracking-tight"
         style={{ fontSize: isCompact ? 15 : 16.5 }}
       >

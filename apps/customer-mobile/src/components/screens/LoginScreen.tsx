@@ -76,7 +76,7 @@ export const LoginScreen: React.FC = () => {
 
   const handleForgotPassword = () => {
     Keyboard.dismiss();
-    showToast('Please contact your branch administrator to reset your credentials.');
+    navigateTo('forgot_password');
   };
 
   return (
