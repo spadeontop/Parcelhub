@@ -15,6 +15,7 @@ import { AuthBrandHeader } from '../layout/AuthBrandHeader';
 import { FormCardHeader } from '../common/FormCardHeader';
 import { FloatingInput } from '../common/FloatingInput';
 import { AuthButton } from '../common/AuthButton';
+import { getPasswordRequirements, isValidEmail } from '../../utils/authValidation';
 
 export const RegisterScreen: React.FC = () => {
   const { navigateTo } = useNavigationUi();
@@ -45,16 +46,12 @@ export const RegisterScreen: React.FC = () => {
   const isStep1Valid = isFirstNameValid && isLastNameValid;
 
   // Validation rules for Step 2
-  const isEmailValid = /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(email.trim());
+  const isEmailValid = isValidEmail(email);
   const isPhoneValid = (() => {
     const cleaned = phone.replace(/[\s\-\(\)]/g, '');
     return /^(\+63|0)?9\d{9}$/.test(cleaned) || (cleaned.length >= 10 && /^\+?\d+$/.test(cleaned));
   })();
-  const hasMinLength = password.length >= 8;
-  const hasUppercase = /[A-Z]/.test(password);
-  const hasLowercase = /[a-z]/.test(password);
-  const hasNumber = /\d/.test(password);
-  const hasSymbol = /[!@#$%^&*(),.?":{}|<>_\-]/.test(password);
+  const { hasMinLength, hasUppercase, hasLowercase, hasNumber, hasSymbol } = getPasswordRequirements(password);
   const isPasswordValid = hasMinLength && hasUppercase && hasLowercase && hasNumber && hasSymbol;
   const isConfirmPasswordValid = Boolean(
     isPasswordValid && confirmPassword.length > 0 && confirmPassword === password

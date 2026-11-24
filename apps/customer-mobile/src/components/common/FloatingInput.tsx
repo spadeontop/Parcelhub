@@ -12,6 +12,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import { FieldError } from './FieldError';
 
 export interface FloatingInputProps extends TextInputProps {
   label: string;
@@ -289,21 +290,7 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
         )}
       </TouchableOpacity>
 
-      {/* Validation Feedback Error Message */}
-      {isError && (
-        <View style={{ marginTop: 4, marginLeft: 4 }}>
-          <Text
-            style={{
-              fontSize: 12,
-              fontFamily: 'GoogleSans-Regular',
-              color: errorColor,
-              fontWeight: '400',
-            }}
-          >
-            {error}
-          </Text>
-        </View>
-      )}
+      {error && <FieldError message={error} color={errorColor} />}
     </View>
   );
 };
