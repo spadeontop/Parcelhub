@@ -62,14 +62,6 @@ export const FormCardHeader: React.FC<FormCardHeaderProps> = ({
         {subtitle}
       </Text>
 
-      {/* Subtle Divider */}
-      <View
-        className="h-px bg-[#f1f5f9]"
-        style={{
-          marginTop: isCompact ? 8 : 12,
-          marginBottom: 2,
-        }}
-      />
     </View>
   );
 };
