@@ -1,356 +1,218 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, BackHandler, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useAuthSession } from '../../context/AuthSessionContext';
 import { useNavigationUi } from '../../context/NavigationAndUiContext';
 import { useToast } from '../../context/ToastContext';
-import { useAuthSession } from '../../context/AuthSessionContext';
-import { ParcelHubLogoSvg, ArrowLeftIcon } from '../common/Icons';
+import { V1ApiError } from '../../services/apiClient';
+import { AuthButton } from '../common/AuthButton';
+import { FieldError } from '../common/FieldError';
+import { MpinDots, MPIN_LENGTH } from '../common/MpinDots';
 import { NumericKeypad } from '../common/NumericKeypad';
+import { SuccessBadge } from '../common/SuccessBadge';
+import { AuthSheetLayout } from '../layout/AuthSheetLayout';
 
-export const MpinCreateScreen: React.FC = () => {
-  const { navigateTo } = useNavigationUi();
+export function MpinCreateScreen() {
+  const { resetNavigationTo } = useNavigationUi();
   const { showToast } = useToast();
-  const { customer, createCustomerMpin } = useAuthSession();
-  const [activeStep, setActiveStep] = useState<1 | 2>(1);
-  const [pin1, setPin1] = useState<string>('');
-  const [pin2, setPin2] = useState<string>('');
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-  const [mismatch, setMismatch] = useState<boolean>(false);
+  const { customer, preAuthToken, createCustomerMpin } = useAuthSession();
+  const [newPin, setNewPin] = useState('');
+  const [entry, setEntry] = useState('');
+  const [error, setError] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [isComplete, setIsComplete] = useState(false);
+  const savingRef = useRef(false);
+  const isConfirming = newPin.length === MPIN_LENGTH;
 
-  const handleKeyPress = useCallback(
-    (digit: string) => {
-      if (activeStep === 1) {
-        setMismatch(false);
-        if (pin1.length < 4) {
-          setPin1((prev) => (prev.length < 4 ? prev + digit : prev));
-        }
-      } else {
-        // If previous entry was mismatched, typing starts fresh immediately without freezing
-        if (mismatch) {
-          setMismatch(false);
-          setPin2(digit);
-          return;
-        }
+  const editEntry = (value: string) => {
+    if (savingRef.current) return;
+    setEntry(value);
+    setError('');
+  };
 
-        if (pin2.length < 4) {
-          const nextPin = pin2 + digit;
-          setPin2(nextPin);
-          if (nextPin.length === 4) {
-            if (nextPin === pin1) {
-              setMismatch(false);
-            } else {
-              setMismatch(true);
-              showToast('MPIN does not match. Please re-enter.');
-            }
-          }
-        }
-      }
-    },
-    [activeStep, pin1, pin2, mismatch, showToast]
-  );
+  const restart = useCallback(() => {
+    if (savingRef.current) return;
+    setNewPin('');
+    setEntry('');
+    setError('');
+  }, []);
 
-  const handleBackspace = useCallback(() => {
-    setMismatch(false);
-    if (activeStep === 1) {
-      if (pin1.length > 0) {
-        setPin1((prev) => prev.slice(0, -1));
-      }
-    } else {
-      if (pin2.length > 0) {
-        setPin2((prev) => prev.slice(0, -1));
-      } else {
-        // Return to Step 1 if backspace on empty Step 2
-        setActiveStep(1);
-      }
-    }
-  }, [activeStep, pin1.length, pin2.length]);
+  const goHome = useCallback(() => resetNavigationTo('home'), [resetNavigationTo]);
 
-  const handleClear = useCallback(() => {
-    if (activeStep === 2) {
-      setPin2('');
-      setMismatch(false);
-    } else {
-      setPin1('');
-    }
-  }, [activeStep]);
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (savingRef.current) return true;
+      if (isComplete) goHome();
+      else if (isConfirming) restart();
+      else resetNavigationTo('login');
+      return true;
+    });
+    return () => subscription.remove();
+  }, [goHome, isComplete, isConfirming, resetNavigationTo, restart]);
 
-  const isMatched = pin1.length === 4 && pin2.length === 4 && pin1 === pin2;
-  const isStep1Valid = pin1.length === 4;
-  const isStep2Valid = isMatched;
-  const isCurrentStepValid = activeStep === 1 ? isStep1Valid : isStep2Valid;
-  const isButtonDisabled = isSubmitting || !isCurrentStepValid;
+  const saveMpin = async (pin: string) => {
+    savingRef.current = true;
+    setIsSaving(true);
 
-  const handleSubmit = useCallback(async () => {
-    if (pin1.length < 4) {
-      showToast('Please enter a 4-digit MPIN first.');
-      setActiveStep(1);
-      return;
-    }
-    if (pin2.length < 4) {
-      showToast('Please re-enter your 4-digit MPIN to confirm.');
-      setActiveStep(2);
-      return;
-    }
-    if (pin1 !== pin2) {
-      setMismatch(true);
-      showToast('MPIN confirmation does not match. Please re-enter.');
-      setPin2('');
-      return;
-    }
-
-    setIsSubmitting(true);
     try {
-      await createCustomerMpin(pin1);
-    } catch (err: any) {
-      const msg = err?.message || 'Failed to create MPIN. Please try again.';
-      const status = err?.statusCode;
-      const errorType = err?.error;
+      await createCustomerMpin(pin);
+      setEntry('');
+      setNewPin('');
+      setIsComplete(true);
+    } catch (err) {
+      const message = err instanceof Error && err.message
+        ? err.message
+        : 'Failed to create MPIN. Please try again.';
 
-      showToast(msg);
-
-      // Rule 9: If 401 (session expired) or 409 (MPIN already set), redirect to login
-      if (status === 401 || status === 409 || errorType === 'Unauthorized' || errorType === 'Conflict') {
-        navigateTo('login');
+      if (
+        err instanceof V1ApiError &&
+        (err.statusCode === 401 || err.statusCode === 409 ||
+          err.error === 'Unauthorized' || err.error === 'Conflict')
+      ) {
+        showToast(message);
+        resetNavigationTo('login');
+      } else {
+        setEntry('');
+        setError(message);
       }
     } finally {
-      setIsSubmitting(false);
-    }
-  }, [pin1, pin2, createCustomerMpin, showToast, navigateTo]);
-
-  const handleButtonClick = () => {
-    if (activeStep === 1) {
-      if (isStep1Valid) {
-        setActiveStep(2);
-        setMismatch(false);
-      }
-    } else {
-      if (isStep2Valid) {
-        handleSubmit();
-      }
+      savingRef.current = false;
+      setIsSaving(false);
     }
   };
 
-  const handleBack = useCallback(() => {
-    if (activeStep === 2) {
-      setActiveStep(1);
-      setMismatch(false);
+  const pressDigit = (digit: string) => {
+    if (savingRef.current || entry.length >= MPIN_LENGTH) return;
+
+    const next = entry + digit;
+    setError('');
+
+    if (next.length < MPIN_LENGTH) {
+      setEntry(next);
+    } else if (!isConfirming) {
+      setNewPin(next);
+      setEntry('');
+    } else if (next === newPin) {
+      if (preAuthToken) {
+        setEntry(next);
+        void saveMpin(next);
+      } else {
+        setEntry('');
+        setNewPin('');
+        setIsComplete(true);
+      }
     } else {
-      // Step 1 Back: Account is already registered in DB, route to login
-      navigateTo('login');
+      setEntry('');
+      setError('MPINs do not match. Try again.');
     }
-  }, [activeStep, navigateTo]);
+  };
 
-  const displayEmail = customer?.email || '—';
-
-  const buttonLabel = isSubmitting
-    ? 'Activating MPIN...'
-    : activeStep === 1
-    ? 'Create MPIN'
-    : 'Confirm MPIN';
+  if (isComplete) {
+    return (
+      <AuthSheetLayout sheetStyle={styles.sheet}>
+        <View style={styles.successContent}>
+          <SuccessBadge />
+          <Text accessibilityRole="header" style={styles.successTitle}>You&apos;re all set!</Text>
+          <Text style={styles.successDescription}>
+            {'Your account and 4-digit MPIN are ready.\nStart tracking orders and hub pickups now.'}
+          </Text>
+        </View>
+        <View style={styles.successAction}>
+          <AuthButton label="Continue" onPress={goHome} />
+        </View>
+      </AuthSheetLayout>
+    );
+  }
 
   return (
-    <ScrollView
-      contentContainerStyle={{ flexGrow: 1, justifyContent: 'space-between' }}
-      style={{ flex: 1, backgroundColor: '#ffffff' }}
-      className="flex-1 bg-white px-6 py-6"
-      showsVerticalScrollIndicator={false}
+    <AuthSheetLayout
+      onBack={isConfirming && !isSaving ? restart : undefined}
+      sheetStyle={[styles.sheet, styles.entrySheet]}
     >
-      {/* Top Header, Identity & Dual MPIN Inputs */}
-      <View>
-        {/* Compact Horizontal Logo (moved down) */}
-        <View className="flex-row items-center justify-center gap-2 mb-4 mt-7">
-          <ParcelHubLogoSvg size={32} />
-          <View className="flex-row items-center">
-            <Text className="text-[19px] font-extrabold tracking-tight leading-none text-[#215cd4]">
-              Parcel
-            </Text>
-            <Text className="text-[19px] font-extrabold tracking-tight leading-none text-[#111827]">
-              Hub
-            </Text>
-          </View>
+      <View style={styles.entryContent}>
+        <View style={styles.account}>
+          <Text style={styles.email} numberOfLines={1}>{customer?.email || '—'}</Text>
+          <Text style={styles.step}>STEP 3 OF 3</Text>
         </View>
 
-        {/* User Identity Box */}
-        <View className="border border-gray-200 rounded-lg p-2.5 px-3.5 flex-row items-center justify-between mb-4 bg-white shadow-xs">
-          <Text className="text-[13.5px] font-medium text-gray-900">{displayEmail}</Text>
+        <Text accessibilityRole="header" style={styles.title}>
+          {isConfirming ? 'Confirm your 4-digit MPIN' : 'Set up your 4-digit MPIN'}
+        </Text>
+        <Text style={styles.subtitle}>
+          {isConfirming ? 'Re-enter your PIN to finish setting up' : 'Secures parcel claims and quick logins'}
+        </Text>
+
+        <MpinDots filledCount={entry.length} style={styles.dots} />
+        <View style={styles.feedback}>
+          {isSaving ? (
+            <ActivityIndicator accessibilityLabel="Saving MPIN" size="small" color="#2563eb" />
+          ) : error ? (
+            <FieldError message={error} />
+          ) : null}
         </View>
-
-        {/* Dual MPIN Creation & Confirmation Container */}
-        <View className="flex-col gap-3 mb-4">
-          {/* Step 1: Create 4-digit MPIN */}
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => {
-              setActiveStep(1);
-              setMismatch(false);
-            }}
-            className={`p-3 rounded-xl border items-center ${
-              activeStep === 1
-                ? 'bg-blue-50/50 border-[#215cd4]/40 shadow-xs'
-                : 'bg-gray-50/80 border-gray-200/80'
-            }`}
-          >
-            <View className="flex-row items-center justify-center gap-1.5 mb-2">
-              <View
-                className={`w-4 h-4 rounded-full items-center justify-center ${
-                  pin1.length === 4
-                    ? 'bg-[#10b780]'
-                    : activeStep === 1
-                    ? 'bg-[#215cd4]'
-                    : 'bg-gray-300'
-                }`}
-              >
-                <Text
-                  className={`text-[10px] font-bold ${
-                    pin1.length === 4 || activeStep === 1 ? 'text-white' : 'text-gray-700'
-                  }`}
-                >
-                  {pin1.length === 4 ? '✓' : '1'}
-                </Text>
-              </View>
-              <Text className="text-[12.5px] font-semibold text-gray-700">
-                1. Enter MPIN
-              </Text>
-            </View>
-            <View className="flex-row items-center justify-center gap-3">
-              {[0, 1, 2, 3].map((index) => {
-                const isFilled = index < pin1.length;
-                return (
-                  <View
-                    key={index}
-                    className={`w-3.5 h-3.5 rounded-full border-[1.5px] ${
-                      isFilled
-                        ? 'bg-[#215cd4] border-[#215cd4]'
-                        : 'border-gray-300 bg-transparent'
-                    }`}
-                  />
-                );
-              })}
-            </View>
-          </TouchableOpacity>
-
-          {/* Step 2: Re-enter MPIN to Confirm */}
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => {
-              if (pin1.length === 4) {
-                setActiveStep(2);
-                setMismatch(false);
-              } else {
-                showToast('Please finish entering your 4-digit MPIN first.');
-              }
-            }}
-            className={`p-3 rounded-xl border items-center ${
-              activeStep === 2
-                ? 'bg-blue-50/50 border-[#215cd4]/40 shadow-xs'
-                : 'bg-gray-50/80 border-gray-200/80'
-            }`}
-          >
-            <View className="flex-row items-center justify-center gap-1.5 mb-2">
-              <View
-                className={`w-4 h-4 rounded-full items-center justify-center ${
-                  isMatched
-                    ? 'bg-[#10b780]'
-                    : activeStep === 2
-                    ? 'bg-[#215cd4]'
-                    : 'bg-gray-300'
-                }`}
-              >
-                <Text
-                  className={`text-[10px] font-bold ${
-                    isMatched || activeStep === 2 ? 'text-white' : 'text-gray-700'
-                  }`}
-                >
-                  {isMatched ? '✓' : '2'}
-                </Text>
-              </View>
-              <Text className="text-[12.5px] font-semibold text-gray-700">
-                2. Confirm MPIN
-              </Text>
-            </View>
-            <View className="flex-row items-center justify-center gap-3">
-              {[0, 1, 2, 3].map((index) => {
-                const isFilled = index < pin2.length;
-                let dotStyle = 'border-gray-300 bg-transparent';
-                if (activeStep === 2 && mismatch) {
-                  dotStyle = 'border-red-500 bg-red-500';
-                } else if (isMatched) {
-                  dotStyle = 'border-[#10b780] bg-[#10b780]';
-                } else if (isFilled) {
-                  dotStyle = 'bg-[#215cd4] border-[#215cd4]';
-                }
-                return (
-                  <View
-                    key={index}
-                    className={`w-3.5 h-3.5 rounded-full border-[1.5px] ${dotStyle}`}
-                  />
-                );
-              })}
-            </View>
-            {activeStep === 2 && (
-              <View className="mt-1.5 items-center">
-                {mismatch ? (
-                  <Text className="text-[11px] font-semibold text-[#ef4444]">
-                    Digits do not match
-                  </Text>
-                ) : isMatched ? (
-                  <Text className="text-[11px] font-semibold text-[#10b780]">
-                    MPIN verified &amp; ready!
-                  </Text>
-                ) : (
-                  <Text className="text-[11px] font-medium text-gray-400">
-                    Re-enter MPIN to Confirm
-                  </Text>
-                )}
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Bottom Section: Keypad + Primary Action Button */}
-      <View className="w-full pb-2">
-        {/* Keypad */}
         <NumericKeypad
-          onPressDigit={handleKeyPress}
-          onPressBackspace={handleBackspace}
-          onPressClear={handleClear}
-          disabled={isSubmitting}
+          onPressDigit={pressDigit}
+          onPressBackspace={() => editEntry(entry.slice(0, -1))}
+          onPressClear={() => editEntry('')}
+          disabled={isSaving}
+          style={styles.keypad}
         />
-
-        <View className="mt-1 mb-2">
-          {/* Primary Action Button */}
-          <TouchableOpacity
-            activeOpacity={0.8}
-            disabled={isButtonDisabled}
-            onPress={handleButtonClick}
-            className={`w-full h-11 rounded-lg items-center justify-center ${
-              isButtonDisabled
-                ? 'bg-gray-200'
-                : 'bg-[#215cd4] active:bg-[#194cb5] shadow-xs'
-            }`}
-          >
-            <Text
-              className={`font-semibold text-[14.5px] ${
-                isButtonDisabled ? 'text-gray-400' : 'text-white'
-              }`}
-            >
-              {buttonLabel}
-            </Text>
-          </TouchableOpacity>
-
-          {/* Secondary Action: Back text link with arrow on its left */}
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={handleBack}
-            className="flex-row items-center justify-center gap-1.5 py-2.5 mt-1"
-          >
-            <ArrowLeftIcon size={15} color="#4b5563" />
-            <Text className="text-gray-600 font-semibold text-[13.5px]">Back</Text>
-          </TouchableOpacity>
-        </View>
       </View>
-    </ScrollView>
+
+      {isConfirming && (
+        <View style={styles.restartAction}>
+          <Pressable accessibilityRole="button" onPress={restart} disabled={isSaving} style={styles.restartButton}>
+            <Text style={[styles.restartLabel, isSaving && styles.savingLabel]}>Re-enter new MPIN</Text>
+          </Pressable>
+        </View>
+      )}
+    </AuthSheetLayout>
   );
-};
+}
+
+const styles = StyleSheet.create({
+  sheet: { paddingHorizontal: 24 },
+  entrySheet: { backgroundColor: '#f8fafc', paddingBottom: 16 },
+  entryContent: { paddingTop: 20 },
+  account: {
+    minHeight: 46,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    backgroundColor: '#fff',
+    borderColor: '#e2e8f0',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+  },
+  email: { flexShrink: 1, color: '#1e293b', fontFamily: 'GoogleSans-SemiBold', fontSize: 15 },
+  step: { color: '#2563eb', fontFamily: 'GoogleSans-Bold', fontSize: 11 },
+  title: {
+    marginTop: 20, textAlign: 'center', color: '#0f172a',
+    fontFamily: 'GoogleSans-Bold', fontSize: 20, lineHeight: 25,
+  },
+  subtitle: {
+    marginTop: 2, textAlign: 'center', color: '#64748b',
+    fontFamily: 'GoogleSans-Regular', fontSize: 13, lineHeight: 18,
+  },
+  dots: { marginTop: 22 },
+  feedback: { minHeight: 38, alignItems: 'center', justifyContent: 'center', paddingRight: 4 },
+  keypad: { maxWidth: 264 },
+  restartAction: { marginTop: 'auto', paddingTop: 20, alignItems: 'center' },
+  restartButton: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 12 },
+  restartLabel: { color: '#2563eb', fontFamily: 'GoogleSans-Bold', fontSize: 13.5 },
+  savingLabel: { color: '#64748b' },
+  successContent: { alignItems: 'center', paddingTop: 82 },
+  successTitle: {
+    marginTop: 16, textAlign: 'center', color: '#0f172a',
+    fontFamily: 'GoogleSans-Bold', fontSize: 22, lineHeight: 28,
+  },
+  successDescription: {
+    marginTop: 6, textAlign: 'center', color: '#64748b',
+    fontFamily: 'GoogleSans-Regular', fontSize: 13.5, lineHeight: 19,
+  },
+  successAction: { marginTop: 40 },
+});
 
 export default MpinCreateScreen;

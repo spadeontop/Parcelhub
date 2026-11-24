@@ -14,7 +14,7 @@ import { FormCardHeader } from '../common/FormCardHeader';
 import { SuccessBadge } from '../common/SuccessBadge';
 import { isValidEmail } from '../../utils/authValidation';
 import { VerificationCodeInput } from '../common/VerificationCodeInput';
-import { PasswordRecoveryLayout } from '../layout/PasswordRecoveryLayout';
+import { AuthSheetLayout } from '../layout/AuthSheetLayout';
 
 type Step = 'email' | 'code' | 'reset' | 'success';
 
@@ -131,7 +131,7 @@ export function RecoveryFlow({ copy, onExit, renderReset }: RecoveryFlowProps) {
 
   if (step === 'success') {
     return (
-      <PasswordRecoveryLayout>
+      <AuthSheetLayout>
         <View style={styles.successContent}>
           <SuccessBadge />
           <Text accessibilityRole="header" style={styles.successTitle}>{copy.successTitle}</Text>
@@ -142,12 +142,12 @@ export function RecoveryFlow({ copy, onExit, renderReset }: RecoveryFlowProps) {
         <View style={styles.successAction}>
           <AuthButton label={copy.doneLabel} onPress={onExit} />
         </View>
-      </PasswordRecoveryLayout>
+      </AuthSheetLayout>
     );
   }
 
   return (
-    <PasswordRecoveryLayout onBack={goBack}>
+    <AuthSheetLayout onBack={goBack}>
       <View style={styles.form}>
         {step === 'email' && (
           <>
@@ -217,7 +217,7 @@ export function RecoveryFlow({ copy, onExit, renderReset }: RecoveryFlowProps) {
         )}
 
       </View>
-    </PasswordRecoveryLayout>
+    </AuthSheetLayout>
   );
 }
 
