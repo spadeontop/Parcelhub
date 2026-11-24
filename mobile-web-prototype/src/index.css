@@ -4,6 +4,7 @@
    ========================================================================== */
 
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
   --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -63,6 +64,12 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(160, 174, 192, 0.6);
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(113, 113, 122, 0.45);
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(161, 161, 170, 0.65);
 }
 
 /* Pulse Animations for Live Status Indicators */
