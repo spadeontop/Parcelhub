@@ -1,5 +1,9 @@
 import nodemailer from "nodemailer";
 import type { EmailVerificationPurpose } from "@/app/types/v1/api";
+import {
+  renderOtpEmailTemplate,
+  renderSecurityAlertEmailTemplate,
+} from "./email-templates";
 
 export type EmailProvider = "smtp" | "brevo" | "resend";
 
@@ -50,15 +54,6 @@ function parseFromHeader(from: string): { name: string; email: string } {
     };
   }
   return { name: "ParcelHub", email: from.trim() };
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
 }
 
 async function sendViaSmtp(from: string, input: SendEmailInput): Promise<void> {
@@ -175,45 +170,6 @@ export async function sendEmail(input: SendEmailInput): Promise<void> {
   await sendViaResend(from, input);
 }
 
-function getOtpTemplateMeta(purpose: EmailVerificationPurpose): {
-  subject: string;
-  heading: string;
-  instruction: string;
-} {
-  switch (purpose) {
-    case "VERIFY_EMAIL":
-      return {
-        subject: "Verify your ParcelHub email",
-        heading: "Verify your email address",
-        instruction: "Use the 6-digit verification code below to finish setting up your ParcelHub account.",
-      };
-    case "FORGOT_PASSWORD":
-      return {
-        subject: "ParcelHub password reset code",
-        heading: "Reset your password",
-        instruction: "Use the 6-digit verification code below to reset your ParcelHub password.",
-      };
-    case "FORGOT_MPIN":
-      return {
-        subject: "ParcelHub MPIN reset code",
-        heading: "Reset your 4-digit MPIN",
-        instruction: "Use the 6-digit verification code below to reset your ParcelHub MPIN.",
-      };
-    case "CHANGE_PASSWORD":
-      return {
-        subject: "ParcelHub password change code",
-        heading: "Confirm password change",
-        instruction: "Use the 6-digit verification code below to confirm your password change.",
-      };
-    case "CHANGE_EMAIL":
-      return {
-        subject: "ParcelHub email change code",
-        heading: "Confirm email change",
-        instruction: "Use the 6-digit verification code below to verify your new email address.",
-      };
-  }
-}
-
 export async function sendOtpEmail(params: {
   to: string;
   purpose: EmailVerificationPurpose;
@@ -221,40 +177,16 @@ export async function sendOtpEmail(params: {
   firstName?: string | null;
   ttlMinutes: number;
 }): Promise<void> {
-  const meta = getOtpTemplateMeta(params.purpose);
-  const greetingName = params.firstName?.trim() || "there";
-
-  const text = [
-    `Hi ${greetingName},`,
-    "",
-    meta.instruction,
-    "",
-    `Your verification code: ${params.code}`,
-    `This code expires in ${params.ttlMinutes} minutes.`,
-    "",
-    "If you did not request this, you can safely ignore this email.",
-    "",
-    "— ParcelHub",
-  ].join("\n");
-
-  const html = `
-    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px; color: #111827;">
-      <h2 style="margin: 0 0 12px; font-size: 20px; color: #111827;">${escapeHtml(meta.heading)}</h2>
-      <p style="margin: 0 0 16px; font-size: 14px; line-height: 1.5;">Hi ${escapeHtml(greetingName)},</p>
-      <p style="margin: 0 0 20px; font-size: 14px; line-height: 1.5;">${escapeHtml(meta.instruction)}</p>
-      <div style="background: #F3F4F6; border-radius: 8px; padding: 16px; text-align: center; margin: 0 0 20px;">
-        <span style="font-size: 32px; font-weight: 700; letter-spacing: 6px; color: #111827;">${escapeHtml(params.code)}</span>
-      </div>
-      <p style="margin: 0 0 8px; font-size: 13px; color: #4B5563;">This code expires in ${params.ttlMinutes} minutes.</p>
-      <p style="margin: 0; font-size: 12px; color: #6B7280;">If you did not request this, you can safely ignore this email.</p>
-    </div>
-  `.trim();
+  const rendered = renderOtpEmailTemplate({
+    purpose: params.purpose,
+    code: params.code,
+    firstName: params.firstName,
+    ttlMinutes: params.ttlMinutes,
+  });
 
   await sendEmail({
     to: params.to,
-    subject: meta.subject,
-    text,
-    html,
+    ...rendered,
   });
 }
 
@@ -263,31 +195,13 @@ export async function sendSecurityAlertEmail(params: {
   firstName?: string | null;
   credentialChanged: "password" | "MPIN";
 }): Promise<void> {
-  const greetingName = params.firstName?.trim() || "there";
-  const label = params.credentialChanged;
-  const subject = `Your ParcelHub ${label} was changed`;
-  const text = [
-    `Hi ${greetingName},`,
-    "",
-    `Your ParcelHub account ${label} was just reset. All previous sessions have been signed out.`,
-    "If you did not make this change, please contact ParcelHub support immediately.",
-    "",
-    "— ParcelHub",
-  ].join("\n");
-
-  const html = `
-    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px; color: #111827;">
-      <h2 style="margin: 0 0 12px; font-size: 20px;">Security alert</h2>
-      <p style="margin: 0 0 12px; font-size: 14px; line-height: 1.5;">Hi ${escapeHtml(greetingName)},</p>
-      <p style="margin: 0 0 12px; font-size: 14px; line-height: 1.5;">Your ParcelHub account ${escapeHtml(label)} was just reset. All previous sessions have been signed out.</p>
-      <p style="margin: 0; font-size: 13px; color: #6B7280;">If you did not make this change, please contact ParcelHub support immediately.</p>
-    </div>
-  `.trim();
+  const rendered = renderSecurityAlertEmailTemplate({
+    firstName: params.firstName,
+    credentialChanged: params.credentialChanged,
+  });
 
   await sendEmail({
     to: params.to,
-    subject,
-    text,
-    html,
+    ...rendered,
   });
 }

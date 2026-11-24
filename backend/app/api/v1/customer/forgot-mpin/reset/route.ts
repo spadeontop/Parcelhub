@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
         mpin: hashedMpin,
         tokenVersion: sql`${customers.tokenVersion} + 1`,
         emailVerified: true,
-        emailVerifiedAt: sql`COALESCE(${customers.emailVerifiedAt}, ${now})`,
+        emailVerifiedAt: sql`COALESCE(${customers.emailVerifiedAt}, ${now.toISOString()})`,
         updatedAt: now,
       })
       .where(
