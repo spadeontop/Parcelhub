@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useRouter } from 'expo-router';
 import {
   View,
   Text,
@@ -19,7 +18,6 @@ import { FloatingInput } from '../common/FloatingInput';
 import { AuthButton } from '../common/AuthButton';
 
 export const LoginScreen: React.FC = () => {
-  const router = useRouter();
   const { navigateTo } = useNavigationUi();
   const { showToast } = useToast();
   const { loginCustomer } = useAuthSession();
@@ -78,7 +76,7 @@ export const LoginScreen: React.FC = () => {
 
   const handleForgotPassword = () => {
     Keyboard.dismiss();
-    router.push('./forgot-password');
+    navigateTo('forgot_password');
   };
 
   return (

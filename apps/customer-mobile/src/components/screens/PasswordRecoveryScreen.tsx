@@ -10,6 +10,7 @@ import { AuthButton } from '../common/AuthButton';
 import { FloatingInput } from '../common/FloatingInput';
 import { FieldError } from '../common/FieldError';
 import { FormCardHeader } from '../common/FormCardHeader';
+import { PasswordRequirements } from '../common/PasswordRequirements';
 import { SuccessBadge } from '../common/SuccessBadge';
 import { getPasswordRequirements, isValidEmail } from '../../utils/authValidation';
 import { VerificationCodeInput } from '../common/VerificationCodeInput';
@@ -62,8 +63,6 @@ export function PasswordRecoveryScreen({ onSignIn }: { onSignIn: () => void }) {
   }, [step, resendDeadline]);
 
   useEffect(() => {
-    if (step !== 'code' && step !== 'password') return;
-
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
       goBack();
       return true;
@@ -222,6 +221,7 @@ export function PasswordRecoveryScreen({ onSignIn }: { onSignIn: () => void }) {
                 value={password}
                 onChangeText={(value) => { setPassword(value); setError(null); }}
               />
+              <PasswordRequirements password={password} />
               <FloatingInput
                 label="Confirm new password"
                 accessibilityLabel="Confirm new password"

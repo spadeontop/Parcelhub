@@ -15,6 +15,7 @@ import { AuthBrandHeader } from '../layout/AuthBrandHeader';
 import { FormCardHeader } from '../common/FormCardHeader';
 import { FloatingInput } from '../common/FloatingInput';
 import { AuthButton } from '../common/AuthButton';
+import { PasswordRequirements } from '../common/PasswordRequirements';
 import { getPasswordRequirements, isValidEmail } from '../../utils/authValidation';
 
 export const RegisterScreen: React.FC = () => {
@@ -260,46 +261,7 @@ export const RegisterScreen: React.FC = () => {
                       returnKeyType="next"
                     />
 
-                    {/* Password Strength Requirement Indicators */}
-                    {password.length > 0 && (
-                      <View className="bg-slate-50 border border-slate-100 rounded-[10px] p-2.5 flex-row flex-wrap gap-x-3 gap-y-1 mb-2">
-                        <Text
-                          className={`text-[10px] font-semibold ${
-                            hasMinLength ? 'text-[#059669]' : 'text-slate-400'
-                          }`}
-                        >
-                          {hasMinLength ? '✓' : '•'} 8+ chars
-                        </Text>
-                        <Text
-                          className={`text-[10px] font-semibold ${
-                            hasUppercase ? 'text-[#059669]' : 'text-slate-400'
-                          }`}
-                        >
-                          {hasUppercase ? '✓' : '•'} Uppercase
-                        </Text>
-                        <Text
-                          className={`text-[10px] font-semibold ${
-                            hasLowercase ? 'text-[#059669]' : 'text-slate-400'
-                          }`}
-                        >
-                          {hasLowercase ? '✓' : '•'} Lowercase
-                        </Text>
-                        <Text
-                          className={`text-[10px] font-semibold ${
-                            hasNumber ? 'text-[#059669]' : 'text-slate-400'
-                          }`}
-                        >
-                          {hasNumber ? '✓' : '•'} Number
-                        </Text>
-                        <Text
-                          className={`text-[10px] font-semibold ${
-                            hasSymbol ? 'text-[#059669]' : 'text-slate-400'
-                          }`}
-                        >
-                          {hasSymbol ? '✓' : '•'} Symbol
-                        </Text>
-                      </View>
-                    )}
+                    <PasswordRequirements password={password} />
 
                     <FloatingInput
                       label="Confirm password"
