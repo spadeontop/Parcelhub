@@ -298,9 +298,6 @@ export const RegisterScreen: React.FC = () => {
                         onSubmit={Keyboard.dismiss}
                       />
                     </View>
-                    <Text className="text-[#64748b] text-xs mb-4">
-                      Email verification is not available yet. No code has been sent.
-                    </Text>
                   </View>
                 )}
               </View>
@@ -339,10 +336,27 @@ export const RegisterScreen: React.FC = () => {
                   </>
                 ) : (
                   <>
-                    <AuthButton label="Verify Code" disabled onPress={Keyboard.dismiss} />
                     <AuthButton
-                      label="Continue without verification"
-                      variant="primary"
+                      label="Verify Code"
+                      disabled={verificationCode.length !== 6}
+                      onPress={() => {
+                        Keyboard.dismiss();
+                        showToast('Email verification is not available yet.');
+                      }}
+                    />
+                    <Text className="text-center text-[#64748b] text-xs">
+                      Didn&apos;t receive a code?{' '}
+                      <Text
+                        accessibilityRole="button"
+                        className="font-bold text-[#2563eb]"
+                        onPress={() => showToast('Email verification is not available yet.')}
+                      >
+                        Resend code
+                      </Text>
+                    </Text>
+                    <AuthButton
+                      label="Skip verification for now"
+                      variant="secondary"
                       disabled={!isStep2Valid || isLoading}
                       onPress={handleRegister}
                       isLoading={isLoading}
