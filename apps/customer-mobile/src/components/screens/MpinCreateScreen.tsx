@@ -123,11 +123,10 @@ export function MpinCreateScreen() {
       sheetStyle={[styles.sheet, styles.entrySheet]}
     >
       <View style={styles.entryContent}>
-        {!!customer?.email && (
-          <View style={styles.account}>
-            <Text style={styles.email} numberOfLines={1}>{customer.email}</Text>
-          </View>
-        )}
+        <View style={styles.account}>
+          <Text style={styles.email} numberOfLines={1}>{customer?.email || '—'}</Text>
+          <Text style={styles.step}>STEP 3 OF 3</Text>
+        </View>
 
         <Text accessibilityRole="header" style={styles.title}>
           {isConfirming ? 'Confirm your 4-digit MPIN' : 'Set up your 4-digit MPIN'}
@@ -170,7 +169,10 @@ const styles = StyleSheet.create({
   entryContent: { paddingTop: 20 },
   account: {
     minHeight: 46,
-    justifyContent: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
     backgroundColor: '#fff',
     borderColor: '#e2e8f0',
     borderWidth: 1,
@@ -178,7 +180,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 10,
   },
-  email: { color: '#1e293b', fontFamily: 'GoogleSans-SemiBold', fontSize: 15 },
+  email: { flexShrink: 1, color: '#1e293b', fontFamily: 'GoogleSans-SemiBold', fontSize: 15 },
+  step: { color: '#2563eb', fontFamily: 'GoogleSans-Bold', fontSize: 11 },
   title: {
     marginTop: 20, textAlign: 'center', color: '#0f172a',
     fontFamily: 'GoogleSans-Bold', fontSize: 20, lineHeight: 25,
