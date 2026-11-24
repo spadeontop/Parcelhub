@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import {
   View,
   Text,
+  ScrollView,
   KeyboardAvoidingView,
   Platform,
   TouchableWithoutFeedback,
@@ -171,74 +172,91 @@ export const RegisterScreen: React.FC = () => {
           <View className="flex-1 bg-[#2563eb]">
             {/* Header */}
             <AuthBrandHeader
-              title="ParcelHub"
-              subtitle={
-                currentStep === 1
-                  ? 'Create your account'
-                  : 'Almost there — secure your account'
-              }
+              subtitle={currentStep === 2 ? 'Almost there — secure your account' : undefined}
               onBack={currentStep === 2 ? handlePreviousStep : handleBackToLogin}
               onHelp={handleHelp}
             />
 
-            {/* Main non-scrollable sheet with curved top transition */}
-            <View
-              className="flex-1 bg-[#f8fafc] rounded-t-[28px] px-4 justify-between"
-              style={{
-                paddingTop: isCompact ? 12 : 16,
-                paddingBottom: isCompact ? 16 : 24,
-              }}
-            >
-              {/* Top/Middle Area: Form Card */}
-              <View
-                className="bg-white rounded-2xl border border-[#e2e8f0]"
-                style={{
+            {currentStep === 1 ? (
+              <ScrollView
+                className="flex-1 bg-white rounded-t-[28px]"
+                keyboardShouldPersistTaps="handled"
+                contentContainerStyle={{
+                  flexGrow: 1,
+                  justifyContent: 'space-between',
                   paddingHorizontal: 16,
-                  paddingVertical: isCompact ? 12 : 16,
-                  shadowColor: '#000000',
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.04,
-                  shadowRadius: 8,
-                  elevation: 2,
+                  paddingTop: isCompact ? 24 : 32,
+                  paddingBottom: isCompact ? 20 : 36,
+                  gap: 16,
                 }}
               >
-                {currentStep === 1 ? (
-                  /* STEP 1: Personal Details */
-                  <View>
-                    <FormCardHeader
-                      step={1}
-                      title="Personal Details"
-                      subtitle="Enter your name for deliveries"
-                    />
+                <View>
+                  <FormCardHeader
+                    step={1}
+                    title="Personal Details"
+                    subtitle="Enter your name for deliveries"
+                  />
 
-                    <FloatingInput
-                      label="First name"
-                      value={firstName}
-                      onChangeText={setFirstName}
-                      autoCapitalize="words"
-                      returnKeyType="next"
-                    />
+                  <FloatingInput
+                    label="First name"
+                    value={firstName}
+                    onChangeText={setFirstName}
+                    autoCapitalize="words"
+                    returnKeyType="next"
+                  />
 
-                    <FloatingInput
-                      label="Last name"
-                      value={lastName}
-                      onChangeText={setLastName}
-                      autoCapitalize="words"
-                      returnKeyType="next"
-                    />
+                  <FloatingInput
+                    label="Last name"
+                    value={lastName}
+                    onChangeText={setLastName}
+                    autoCapitalize="words"
+                    returnKeyType="next"
+                  />
 
-                    <FloatingInput
-                      label="Middle initial (optional)"
-                      value={middleInitial}
-                      onChangeText={setMiddleInitial}
-                      maxLength={4}
-                      autoCapitalize="characters"
-                      returnKeyType="done"
-                      onSubmitEditing={Keyboard.dismiss}
-                    />
-                  </View>
-                ) : (
-                  /* STEP 2: Account & Security */
+                  <FloatingInput
+                    label="Middle initial (optional)"
+                    value={middleInitial}
+                    onChangeText={setMiddleInitial}
+                    maxLength={4}
+                    autoCapitalize="characters"
+                    returnKeyType="done"
+                    onSubmitEditing={Keyboard.dismiss}
+                  />
+                </View>
+                <View className="gap-2.5">
+                  <AuthButton
+                    label="Next"
+                    variant="primary"
+                    onPress={handleNextStep}
+                    showArrow
+                  />
+                  <AuthButton
+                    label="Back to login"
+                    variant="secondary"
+                    onPress={handleBackToLogin}
+                  />
+                </View>
+              </ScrollView>
+            ) : (
+              <View
+                className="flex-1 bg-[#f8fafc] rounded-t-[28px] px-4 justify-between"
+                style={{
+                  paddingTop: isCompact ? 12 : 16,
+                  paddingBottom: isCompact ? 16 : 24,
+                }}
+              >
+                <View
+                  className="bg-white rounded-2xl border border-[#e2e8f0]"
+                  style={{
+                    paddingHorizontal: 16,
+                    paddingVertical: isCompact ? 12 : 16,
+                    shadowColor: '#000000',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.04,
+                    shadowRadius: 8,
+                    elevation: 2,
+                  }}
+                >
                   <View>
                     <FormCardHeader
                       step={2}
@@ -305,43 +323,23 @@ export const RegisterScreen: React.FC = () => {
                       At least 8 characters with uppercase, lowercase, number & symbol.
                     </Text>
                   </View>
-                )}
+                </View>
+                <View className="gap-2.5">
+                  <AuthButton
+                    label="Register"
+                    variant="primary"
+                    disableWhileLoading={false}
+                    onPress={handleRegister}
+                    isLoading={isLoading}
+                  />
+                  <AuthButton
+                    label="Back"
+                    variant="secondary"
+                    onPress={handlePreviousStep}
+                  />
+                </View>
               </View>
-
-              {/* Bottom Pinned Action Buttons */}
-              <View className="gap-2.5">
-                {currentStep === 1 ? (
-                  <>
-                    <AuthButton
-                      label="Next"
-                      variant="primary"
-                      onPress={handleNextStep}
-                      showArrow
-                    />
-                    <AuthButton
-                      label="Back to login"
-                      variant="secondary"
-                      onPress={handleBackToLogin}
-                    />
-                  </>
-                ) : (
-                  <>
-                    <AuthButton
-                      label="Register"
-                      variant="primary"
-                      disableWhileLoading={false}
-                      onPress={handleRegister}
-                      isLoading={isLoading}
-                    />
-                    <AuthButton
-                      label="Back"
-                      variant="secondary"
-                      onPress={handlePreviousStep}
-                    />
-                  </>
-                )}
-              </View>
-            </View>
+            )}
           </View>
         </TouchableWithoutFeedback>
       </KeyboardAvoidingView>
