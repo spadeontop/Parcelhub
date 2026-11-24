@@ -16,7 +16,7 @@ const copy: RecoveryCopy = {
   exitLabel: 'Sign In',
   verifyTitle: 'Enter verification code',
   codePrompt: 'We sent a 6-digit code to',
-  changeEmailLabel: 'Change email',
+  changeEmailLabel: 'Not You?',
   successTitle: 'Password updated',
   successDescription: 'Your password has been reset successfully.\nYou can now sign in with your new password.',
   doneLabel: 'Back to Sign In',

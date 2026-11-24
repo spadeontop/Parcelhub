@@ -191,7 +191,6 @@ export function RecoveryFlow({ copy, onExit, renderReset }: RecoveryFlowProps) {
               title={copy.verifyTitle}
               subtitle={<>{copy.codePrompt} <Text style={styles.emailAddress}>{email}</Text></>}
             />
-            <Text accessibilityRole="link" onPress={goBack} style={styles.changeEmail}>{copy.changeEmailLabel}</Text>
             <View style={styles.codeField}>
               <VerificationCodeInput
                 autoFocus
@@ -213,6 +212,7 @@ export function RecoveryFlow({ copy, onExit, renderReset }: RecoveryFlowProps) {
                 <Text accessibilityRole="button" onPress={startCodeEntry} style={styles.link}>Resend</Text>
               )}
             </Text>
+            <Text accessibilityRole="link" onPress={goBack} style={styles.changeEmail}>{copy.changeEmailLabel}</Text>
           </>
         )}
 
@@ -245,12 +245,12 @@ const styles = StyleSheet.create({
   },
   link: { color: '#2563eb', fontFamily: 'GoogleSans-Bold' },
   changeEmail: {
-    alignSelf: 'flex-start',
+    alignSelf: 'center',
     color: '#2563eb',
     fontFamily: 'GoogleSans-Bold',
     fontSize: 12.5,
     lineHeight: 18,
-    marginTop: 2,
+    marginTop: 8,
     includeFontPadding: false,
   },
   resendDisabled: { color: '#94a3b8', fontFamily: 'GoogleSans-Bold' },
