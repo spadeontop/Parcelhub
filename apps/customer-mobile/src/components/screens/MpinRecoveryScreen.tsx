@@ -101,7 +101,11 @@ function MpinResetStep({ email, onBack, onComplete, onExit }: MpinResetStepProps
             <View key={index} style={[styles.dot, index < entry.length && styles.filledDot]} />
           ))}
         </View>
-        {hasMismatch && <FieldError message="MPINs do not match. Try again." />}
+        {hasMismatch && (
+          <View style={styles.error}>
+            <FieldError message="MPINs do not match. Try again." />
+          </View>
+        )}
         <NumericKeypad
           onPressDigit={pressDigit}
           onPressBackspace={() => editEntry(entry.slice(0, -1))}
@@ -129,6 +133,7 @@ const styles = StyleSheet.create({
   dots: { flexDirection: 'row', justifyContent: 'center', gap: 12, marginVertical: 22 },
   dot: { width: 15, height: 15, borderRadius: 8, backgroundColor: '#cbd5e1' },
   filledDot: { backgroundColor: '#2563eb' },
+  error: { alignItems: 'center', paddingRight: 4 },
   keypad: { marginTop: 12 },
   link: { alignSelf: 'center', padding: 12, marginTop: 20, color: '#2563eb', fontFamily: 'GoogleSans-Bold' },
 });
