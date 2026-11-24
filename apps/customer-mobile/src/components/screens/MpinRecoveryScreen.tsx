@@ -88,7 +88,7 @@ function MpinResetStep({ email, onBack, onComplete, onExit }: MpinResetStepProps
       <View style={styles.content}>
         <View style={styles.account}>
           <Text style={styles.email}>{email}</Text>
-          {!isConfirming && <Text style={styles.step}>STEP 3 OF 3</Text>}
+          <Text style={styles.step}>STEP 3 OF 3</Text>
         </View>
         <Text accessibilityRole="header" style={styles.title}>
           {isConfirming ? 'Confirm your 4-digit MPIN' : 'Create new 4-digit MPIN'}
