@@ -31,14 +31,16 @@ export const TargetOrderPanel: React.FC<TargetOrderPanelProps> = ({
     <div className="p-3 flex-1 min-h-0 flex flex-col gap-2.5 overflow-hidden">
       {/* Scope & Format Bar */}
       <div className="shrink-0 flex items-center justify-between gap-1.5">
-        <div className="inline-flex border border-zinc-200 rounded overflow-hidden">
+        <div className="inline-flex border border-zinc-200 dark:border-zinc-800 rounded overflow-hidden">
           {(['customer', 'staff'] as const).map((s) => (
             <button
               key={s}
               type="button"
               onClick={() => onChangeScope(s)}
               className={`px-2 py-1 text-[10px] font-medium capitalize cursor-pointer ${
-                scope === s ? 'bg-zinc-900 text-white' : 'bg-white text-zinc-600 hover:bg-zinc-50'
+                scope === s
+                  ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950'
+                  : 'bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800'
               }`}
             >
               {s}
@@ -51,7 +53,7 @@ export const TargetOrderPanel: React.FC<TargetOrderPanelProps> = ({
             type="button"
             onClick={onToggleUseTicketCode}
             title="Switch between UUID orderId and human ticketCode"
-            className="px-2 py-1 text-[10px] font-mono rounded border border-zinc-200 bg-white text-zinc-700 hover:border-zinc-400 cursor-pointer"
+            className="px-2 py-1 text-[10px] font-mono rounded border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:border-zinc-400 dark:hover:border-zinc-600 cursor-pointer"
           >
             {useTicketCode ? 'Ticket' : 'Order ID'}
           </button>
@@ -59,14 +61,14 @@ export const TargetOrderPanel: React.FC<TargetOrderPanelProps> = ({
             type="button"
             disabled={!canSync}
             onClick={onSync}
-            className="px-2 py-1 text-[10px] font-mono rounded border border-zinc-200 bg-white text-zinc-700 hover:border-zinc-900 disabled:opacity-40 cursor-pointer"
+            className="px-2 py-1 text-[10px] font-mono rounded border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:border-zinc-900 dark:hover:border-zinc-300 disabled:opacity-40 cursor-pointer"
           >
             Sync
           </button>
         </div>
       </div>
 
-      <div className="shrink-0 flex items-center justify-between text-[10px] font-mono text-zinc-400">
+      <div className="shrink-0 flex items-center justify-between text-[10px] font-mono text-zinc-400 dark:text-zinc-500">
         <span>Source: {isLiveData ? 'Live DB' : 'Seed Presets'}</span>
         <span>Active: {selectedOrderId || 'none'}</span>
       </div>
@@ -86,20 +88,20 @@ export const TargetOrderPanel: React.FC<TargetOrderPanelProps> = ({
               onClick={() => onSelectOrder(ord)}
               className={`w-full text-left p-2 rounded border cursor-pointer transition-colors ${
                 isSelected
-                  ? 'border-zinc-900 bg-zinc-100'
-                  : 'border-zinc-200 bg-white hover:border-zinc-400'
+                  ? 'border-zinc-900 bg-zinc-100 dark:border-zinc-200 dark:bg-zinc-800/90'
+                  : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 hover:border-zinc-400 dark:hover:border-zinc-600'
               }`}
             >
               <div className="flex items-center justify-between gap-1.5">
-                <span className="font-mono text-[11px] font-semibold text-zinc-900 truncate">
+                <span className="font-mono text-[11px] font-semibold text-zinc-900 dark:text-zinc-100 truncate">
                   {targetVal}
                 </span>
                 <OrderStatusBadge status={ord.status} />
               </div>
-              <div className="flex items-center justify-between gap-2 mt-1 text-[10px] text-zinc-500">
+              <div className="flex items-center justify-between gap-2 mt-1 text-[10px] text-zinc-500 dark:text-zinc-400">
                 <span className="truncate">{ord.label}</span>
                 {typeof ord.price === 'number' && ord.price > 0 && (
-                  <span className="font-mono text-zinc-700 shrink-0">₱{ord.price}</span>
+                  <span className="font-mono text-zinc-700 dark:text-zinc-300 shrink-0">₱{ord.price}</span>
                 )}
               </div>
             </button>

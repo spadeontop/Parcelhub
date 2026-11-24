@@ -13,6 +13,7 @@ import {
   SEEDED_STAFF_ORDERS,
 } from './endpoints';
 import { usePostmanSession } from './usePostmanSession';
+import { usePostmanRealtime } from './usePostmanRealtime';
 import { TopConfigBar } from './components/TopConfigBar';
 import { EndpointSidebar } from './components/EndpointSidebar';
 import { RequestBar } from './components/RequestBar';
@@ -20,6 +21,7 @@ import { RequestConfigPanel } from './components/RequestConfigPanel';
 import { ResponseInspector } from './components/ResponseInspector';
 import { AuthSessionPanel } from './components/AuthSessionPanel';
 import { TargetOrderPanel } from './components/TargetOrderPanel';
+import { RealtimeDockPanel } from './components/RealtimeDockPanel';
 import type {
   AuthActor,
   CustomHeaderRow,
@@ -31,6 +33,19 @@ import type {
 } from './types';
 
 type RightRailTab = 'session' | 'orders';
+type PostmanTheme = 'light' | 'dark';
+
+const THEME_STORAGE_KEY = 'ph_postman_v1_theme';
+
+function readInitialTheme(): PostmanTheme {
+  try {
+    const saved = localStorage.getItem(THEME_STORAGE_KEY);
+    if (saved === 'dark' || saved === 'light') return saved;
+  } catch {
+    // Ignore storage errors
+  }
+  return 'light';
+}
 
 const CUSTOMER_ORDER_MUTATIONS = new Set<PostmanEndpointId>([
   'customer_initialize_order',
@@ -79,6 +94,14 @@ export const PostmanWorkbench: React.FC = () => {
     syncStaffOrders,
   } = session;
 
+  const realtime = usePostmanRealtime({
+    baseUrl,
+    apiPrefix,
+    tokens,
+    sendRequest,
+    showToast,
+  });
+
   const [activeEndpointId, setActiveEndpointId] = useState<PostmanEndpointId>('customer_login');
   const [form, setForm] = useState<PostmanFormState>(createInitialFormState);
   const [selectedSeedIdx, setSelectedSeedIdx] = useState<number>(0);
@@ -93,8 +116,21 @@ export const PostmanWorkbench: React.FC = () => {
 
   const [showRightRail, setShowRightRail] = useState<boolean>(true);
   const [rightRailTab, setRightRailTab] = useState<RightRailTab>('session');
+  const [theme, setTheme] = useState<PostmanTheme>(readInitialTheme);
   const [targetScope, setTargetScope] = useState<'customer' | 'staff'>('customer');
   const [useTicketCode, setUseTicketCode] = useState<boolean>(false);
+
+  const handleToggleTheme = useCallback(() => {
+    setTheme((prev) => {
+      const next: PostmanTheme = prev === 'dark' ? 'light' : 'dark';
+      try {
+        localStorage.setItem(THEME_STORAGE_KEY, next);
+      } catch {
+        // Ignore storage errors
+      }
+      return next;
+    });
+  }, []);
 
   const [selectedLogIdByEndpoint, setSelectedLogIdByEndpoint] = useState<
     Partial<Record<PostmanEndpointId, string>>
@@ -371,17 +407,24 @@ export const PostmanWorkbench: React.FC = () => {
     syncStaffOrders,
   ]);
 
-  // Keyboard shortcut: Ctrl+Enter / Cmd+Enter sends the active request
+  // Keyboard shortcuts: Ctrl/Cmd+Enter sends active request, Ctrl+` toggles Realtime Dock (VS Code style)
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && !isSending) {
         e.preventDefault();
         void handleSend();
+      } else if (e.ctrlKey && e.key === '`') {
+        e.preventDefault();
+        if (!realtime.dockOpen) {
+          realtime.openDock();
+        } else {
+          realtime.toggleDockMinimized();
+        }
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [handleSend, isSending]);
+  }, [handleSend, isSending, realtime]);
 
   const handleQuickCustomerLogin = useCallback(async () => {
     setIsCustomerLoggingIn(true);
@@ -443,7 +486,10 @@ export const PostmanWorkbench: React.FC = () => {
   const preparedBodyText = customBodyMode ? customBodyText : generatedBodyText;
 
   return (
-    <div className="h-screen w-screen bg-white text-zinc-900 flex flex-col overflow-hidden font-sans antialiased">
+    <div
+      data-theme={theme}
+      className={`${theme === 'dark' ? 'dark [color-scheme:dark]' : ''} h-screen w-screen bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 flex flex-col overflow-hidden font-sans antialiased`}
+    >
       {/* Top Bar */}
       <TopConfigBar
         endpointCount={POSTMAN_V1_ENDPOINTS.length}
@@ -462,6 +508,19 @@ export const PostmanWorkbench: React.FC = () => {
         staffUsername={staffUsername}
         showRightRail={showRightRail}
         onToggleRightRail={() => setShowRightRail((v) => !v)}
+        theme={theme}
+        onToggleTheme={handleToggleTheme}
+        realtimeDockOpen={realtime.dockOpen}
+        realtimeDockMinimized={realtime.dockMinimized}
+        realtimeConnectedCount={realtime.connectedCount}
+        realtimeUnreadCount={realtime.totalUnread}
+        onToggleRealtimeDock={() => {
+          if (!realtime.dockOpen) {
+            realtime.openDock();
+          } else {
+            realtime.toggleDockMinimized();
+          }
+        }}
       />
 
       {/* 3-Pane Minimalist Postman Workspace */}
@@ -475,7 +534,7 @@ export const PostmanWorkbench: React.FC = () => {
         />
 
         {/* Center: Request Builder + Response Inspector */}
-        <main className="flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden bg-white">
+        <main className="flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden bg-white dark:bg-zinc-950">
           <RequestBar
             spec={activeSpec}
             resolvedUrl={resolvedUrl}
@@ -529,20 +588,21 @@ export const PostmanWorkbench: React.FC = () => {
             onClearLogs={clearLogs}
             onCopyText={(text, label) => void handleCopyText(text, label)}
             onTargetOrder={applyTargetOrder}
+            onConnectRealtimeFromResponse={() => void realtime.createSupabaseSession('vault')}
           />
         </main>
 
         {/* Right: Collapsible Session & Target Order Rail */}
         {showRightRail && (
-          <aside className="w-full lg:w-[290px] shrink-0 border-t lg:border-t-0 lg:border-l border-zinc-200 bg-white flex flex-col min-h-0 max-h-[300px] lg:max-h-none">
-            <div className="shrink-0 grid grid-cols-2 border-b border-zinc-200 bg-zinc-50">
+          <aside className="w-full lg:w-[290px] shrink-0 border-t lg:border-t-0 lg:border-l border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex flex-col min-h-0 max-h-[300px] lg:max-h-none">
+            <div className="shrink-0 grid grid-cols-2 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900">
               <button
                 type="button"
                 onClick={() => setRightRailTab('session')}
                 className={`py-2 text-[11px] font-medium border-b-2 -mb-px cursor-pointer transition-colors ${
                   rightRailTab === 'session'
-                    ? 'border-zinc-900 text-zinc-900 bg-white'
-                    : 'border-transparent text-zinc-500 hover:text-zinc-900'
+                    ? 'border-zinc-900 text-zinc-900 bg-white dark:border-zinc-100 dark:text-zinc-100 dark:bg-zinc-950'
+                    : 'border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
                 }`}
               >
                 Auth Vault
@@ -552,8 +612,8 @@ export const PostmanWorkbench: React.FC = () => {
                 onClick={() => setRightRailTab('orders')}
                 className={`py-2 text-[11px] font-medium border-b-2 -mb-px cursor-pointer transition-colors ${
                   rightRailTab === 'orders'
-                    ? 'border-zinc-900 text-zinc-900 bg-white'
-                    : 'border-transparent text-zinc-500 hover:text-zinc-900'
+                    ? 'border-zinc-900 text-zinc-900 bg-white dark:border-zinc-100 dark:text-zinc-100 dark:bg-zinc-950'
+                    : 'border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
                 }`}
               >
                 Target Order
@@ -574,6 +634,7 @@ export const PostmanWorkbench: React.FC = () => {
                 onCopyText={(text, label) => void handleCopyText(text, label)}
                 isCustomerLoggingIn={isCustomerLoggingIn}
                 isStaffLoggingIn={isStaffLoggingIn}
+                onConnectVaultRealtime={() => void realtime.createSupabaseSession('vault')}
               />
             ) : (
               <TargetOrderPanel
@@ -603,14 +664,46 @@ export const PostmanWorkbench: React.FC = () => {
         )}
       </div>
 
+      {/* Persistent VS Code-style Realtime WebSocket Dock (stays alive across HTTP requests & minimizes to status bar) */}
+      {realtime.dockOpen && (
+        <RealtimeDockPanel
+          sessions={realtime.sessions}
+          activeSession={realtime.activeSession}
+          dockMinimized={realtime.dockMinimized}
+          dockMaximized={realtime.dockMaximized}
+          dockHeight={realtime.dockHeight}
+          totalUnread={realtime.totalUnread}
+          connectedCount={realtime.connectedCount}
+          supabaseUrl={realtime.supabaseUrl}
+          onChangeSupabaseUrl={realtime.setSupabaseUrl}
+          supabaseKey={realtime.supabaseKey}
+          onChangeSupabaseKey={realtime.setSupabaseKey}
+          tokens={tokens}
+          onSelectSession={realtime.selectSession}
+          onCreateSupabaseSession={realtime.createSupabaseSession}
+          onCreateRawSession={realtime.createRawSession}
+          onReconnectSession={realtime.reconnectSession}
+          onDisconnectSession={realtime.disconnectSession}
+          onCloseSession={realtime.closeSession}
+          onSendFrame={realtime.sendFrame}
+          onClearMessages={realtime.clearSessionMessages}
+          onToggleMinimized={realtime.toggleDockMinimized}
+          onToggleMaximized={realtime.toggleDockMaximized}
+          onChangeDockHeight={realtime.setDockHeight}
+          onCloseDock={realtime.closeDock}
+          onCopyText={(text, label) => void handleCopyText(text, label)}
+          onTargetOrder={applyTargetOrder}
+        />
+      )}
+
       {/* Minimalist Flat Toast */}
       {toast && (
         <div
           role="status"
-          className={`fixed bottom-3 right-3 z-50 px-3 py-2 rounded border text-xs font-mono ${
+          className={`fixed bottom-10 right-3 z-50 px-3 py-2 rounded border text-xs font-mono ${
             toast.type === 'error'
-              ? 'bg-rose-50 border-rose-300 text-rose-800'
-              : 'bg-zinc-900 border-zinc-900 text-white'
+              ? 'bg-rose-50 border-rose-300 text-rose-800 dark:bg-rose-950 dark:border-rose-800 dark:text-rose-200'
+              : 'bg-zinc-900 border-zinc-900 text-white dark:bg-zinc-100 dark:border-zinc-100 dark:text-zinc-950'
           }`}
         >
           {toast.msg}
