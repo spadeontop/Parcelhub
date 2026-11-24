@@ -160,35 +160,24 @@ export const RegisterScreen: React.FC = () => {
                   : 'Almost there — secure your account'
               }
               onBack={currentStep === 2 ? () => { Keyboard.dismiss(); setCurrentStep(1); } : handleBackToLogin}
-              onHelp={() => { Keyboard.dismiss(); navigateTo('faq'); }}
             />
 
             {/* Main non-scrollable sheet with curved top transition */}
             <View
-              className="flex-1 bg-[#f8fafc] rounded-t-[28px] px-4 justify-between"
+              className="flex-1 bg-white rounded-t-[28px] px-4"
               style={{
-                paddingTop: isCompact ? 12 : 16,
-                paddingBottom: isCompact ? 16 : 24,
+                paddingTop: isCompact ? 24 : 32,
+                paddingBottom: isCompact ? 20 : 36,
               }}
             >
-              {/* Top/Middle Area: Form Card */}
-              <View
-                className="bg-white rounded-2xl border border-[#e2e8f0]"
-                style={{
-                  paddingHorizontal: 16,
-                  paddingVertical: isCompact ? 12 : 16,
-                  shadowColor: '#000000',
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.04,
-                  shadowRadius: 8,
-                  elevation: 2,
-                }}
-              >
+              {/* Form content */}
+              <View>
                 {currentStep === 1 ? (
                   /* STEP 1: Personal Details */
-                  <View>
+                  <View key="personal-details">
                     <FormCardHeader
                       step={1}
+                      totalSteps={3}
                       title="Personal Details"
                       subtitle="Enter your name for deliveries"
                     />
@@ -221,9 +210,10 @@ export const RegisterScreen: React.FC = () => {
                   </View>
                 ) : (
                   /* STEP 2: Account & Security */
-                  <View>
+                  <View key="account-security">
                     <FormCardHeader
                       step={2}
+                      totalSteps={3}
                       title="Account & Security"
                       subtitle="Set up your login credentials and contact info"
                     />
@@ -289,8 +279,8 @@ export const RegisterScreen: React.FC = () => {
                 )}
               </View>
 
-              {/* Bottom Pinned Action Buttons */}
-              <View className="gap-2.5">
+              {/* Action buttons */}
+              <View className="gap-3.5 mt-1">
                 {currentStep === 1 ? (
                   <>
                     <AuthButton
