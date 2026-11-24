@@ -14,7 +14,7 @@ import { AuthSheetLayout } from '../layout/AuthSheetLayout';
 export function MpinCreateScreen() {
   const { resetNavigationTo } = useNavigationUi();
   const { showToast } = useToast();
-  const { customer, createCustomerMpin } = useAuthSession();
+  const { customer, preAuthToken, createCustomerMpin } = useAuthSession();
   const [newPin, setNewPin] = useState('');
   const [entry, setEntry] = useState('');
   const [error, setError] = useState('');
@@ -92,8 +92,14 @@ export function MpinCreateScreen() {
       setNewPin(next);
       setEntry('');
     } else if (next === newPin) {
-      setEntry(next);
-      void saveMpin(next);
+      if (preAuthToken) {
+        setEntry(next);
+        void saveMpin(next);
+      } else {
+        setEntry('');
+        setNewPin('');
+        setIsComplete(true);
+      }
     } else {
       setEntry('');
       setError('MPINs do not match. Try again.');
@@ -111,7 +117,7 @@ export function MpinCreateScreen() {
           </Text>
         </View>
         <View style={styles.successAction}>
-          <AuthButton label="Go to Home" onPress={goHome} />
+          <AuthButton label="Continue" onPress={goHome} />
         </View>
       </AuthSheetLayout>
     );
