@@ -14,10 +14,10 @@ const copy: RecoveryCopy = {
   rememberPrompt: 'Remember your MPIN?',
   exitLabel: 'Enter MPIN',
   verifyTitle: 'Verify your identity',
-  codePrompt: 'For this preview, enter any 6-digit code for',
+  codePrompt: 'Enter the 6-digit code sent to',
   changeEmailLabel: 'Not You?',
-  successTitle: 'MPIN reset preview complete',
-  successDescription: 'Your saved MPIN is unchanged.',
+  successTitle: 'MPIN updated',
+  successDescription: 'Your new 4-digit MPIN is active.\nUse it to confirm pickups and sign in faster.',
   doneLabel: 'Back to Enter MPIN',
 };
 
