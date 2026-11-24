@@ -51,7 +51,7 @@ export const NumericKeypad: React.FC<NumericKeypadProps> = ({
             <TouchableOpacity
               key={digit}
               activeOpacity={0.7}
-              disabled={disabled}
+              disabled={disabled || undefined}
               onPress={() => onPressDigit(digit)}
               className={`w-16 h-16 rounded-full border border-[#e2e8f0] bg-white items-center justify-center ${
                 disabled ? 'opacity-50' : ''
@@ -77,7 +77,7 @@ export const NumericKeypad: React.FC<NumericKeypadProps> = ({
         {onPressClear ? (
           <TouchableOpacity
             activeOpacity={0.7}
-            disabled={disabled}
+            disabled={disabled || undefined}
             onPress={onPressClear}
             className={`w-16 h-16 rounded-full items-center justify-center ${
               disabled ? 'opacity-50' : ''
@@ -94,7 +94,7 @@ export const NumericKeypad: React.FC<NumericKeypadProps> = ({
 
         <TouchableOpacity
           activeOpacity={0.7}
-          disabled={disabled}
+          disabled={disabled || undefined}
           onPress={() => onPressDigit('0')}
           className={`w-16 h-16 rounded-full border border-[#e2e8f0] bg-white items-center justify-center ${
             disabled ? 'opacity-50' : ''
@@ -115,7 +115,7 @@ export const NumericKeypad: React.FC<NumericKeypadProps> = ({
 
         <TouchableOpacity
           activeOpacity={0.7}
-          disabled={disabled}
+          disabled={disabled || undefined}
           onPress={onPressBackspace}
           className={`w-16 h-16 rounded-full items-center justify-center ${
             disabled ? 'opacity-50' : ''

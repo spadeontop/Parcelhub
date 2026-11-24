@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -40,6 +40,20 @@ export const RegisterScreen: React.FC = () => {
   const [passwordError, setPasswordError] = useState('');
   const [confirmPasswordError, setConfirmPasswordError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const isRegistering = useRef(false);
+  const latestEmail = useRef('');
+
+  const handlePreviousStep = () => {
+    if (isRegistering.current) return;
+    Keyboard.dismiss();
+    setCurrentStep(1);
+  };
+
+  const handleHelp = () => {
+    if (isRegistering.current) return;
+    Keyboard.dismiss();
+    navigateTo('faq');
+  };
 
   // Validation rules for Step 1
   const isFirstNameValid = firstName.trim().length >= 1;
@@ -75,6 +89,7 @@ export const RegisterScreen: React.FC = () => {
     setFirstName('');
     setLastName('');
     setMiddleInitial('');
+    latestEmail.current = '';
     setEmail('');
     setPhone('');
     setPassword('');
@@ -86,8 +101,8 @@ export const RegisterScreen: React.FC = () => {
   };
 
   const handleRegister = async () => {
+    if (isRegistering.current) return;
     Keyboard.dismiss();
-    setEmailError('');
     setPasswordError('');
     setConfirmPasswordError('');
 
@@ -114,10 +129,12 @@ export const RegisterScreen: React.FC = () => {
       return;
     }
 
+    const submittedEmail = email.trim();
+    isRegistering.current = true;
     setIsLoading(true);
     try {
       await registerCustomer({
-        email: email.trim(),
+        email: submittedEmail,
         password,
         firstName: firstName.trim(),
         lastName: lastName.trim(),
@@ -133,12 +150,13 @@ export const RegisterScreen: React.FC = () => {
         err?.error === 'Conflict' ||
         message.toLowerCase().includes('already exists');
 
-      if (isConflict) {
+      if (isConflict && latestEmail.current.trim() === submittedEmail) {
         setEmailError(message);
       } else {
         showToast(message);
       }
     } finally {
+      isRegistering.current = false;
       setIsLoading(false);
     }
   };
@@ -159,8 +177,8 @@ export const RegisterScreen: React.FC = () => {
                   ? 'Create your account'
                   : 'Almost there — secure your account'
               }
-              onBack={currentStep === 2 ? () => { Keyboard.dismiss(); setCurrentStep(1); } : handleBackToLogin}
-              onHelp={() => { Keyboard.dismiss(); navigateTo('faq'); }}
+              onBack={currentStep === 2 ? handlePreviousStep : handleBackToLogin}
+              onHelp={handleHelp}
             />
 
             {/* Main non-scrollable sheet with curved top transition */}
@@ -234,6 +252,7 @@ export const RegisterScreen: React.FC = () => {
                       autoCapitalize="none"
                       value={email}
                       onChangeText={(val) => {
+                        latestEmail.current = val;
                         setEmail(val);
                         if (emailError) setEmailError('');
                       }}
@@ -296,7 +315,6 @@ export const RegisterScreen: React.FC = () => {
                     <AuthButton
                       label="Next"
                       variant="primary"
-                      disabled={!isStep1Valid}
                       onPress={handleNextStep}
                       showArrow
                     />
@@ -311,17 +329,14 @@ export const RegisterScreen: React.FC = () => {
                     <AuthButton
                       label="Register"
                       variant="primary"
-                      disabled={!isStep2Valid || isLoading}
+                      disableWhileLoading={false}
                       onPress={handleRegister}
                       isLoading={isLoading}
                     />
                     <AuthButton
                       label="Back"
                       variant="secondary"
-                      onPress={() => {
-                        Keyboard.dismiss();
-                        setCurrentStep(1);
-                      }}
+                      onPress={handlePreviousStep}
                     />
                   </>
                 )}

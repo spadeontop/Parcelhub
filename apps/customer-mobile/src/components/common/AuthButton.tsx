@@ -7,6 +7,7 @@ interface AuthButtonProps {
   variant?: 'primary' | 'secondary' | 'text';
   onPress: () => void;
   isLoading?: boolean;
+  disableWhileLoading?: boolean;
   disabled?: boolean;
   showArrow?: boolean;
 }
@@ -16,19 +17,20 @@ export const AuthButton: React.FC<AuthButtonProps> = ({
   variant = 'primary',
   onPress,
   isLoading = false,
+  disableWhileLoading = true,
   disabled = false,
   showArrow = false,
 }) => {
   const { height } = useWindowDimensions();
   const isCompact = height < 700;
   const isPrimary = variant === 'primary';
-  const isActionDisabled = disabled || isLoading;
+  const isActionDisabled = disabled || (isLoading && disableWhileLoading);
 
   return (
     <TouchableOpacity
       activeOpacity={0.7}
       onPress={onPress}
-      disabled={isActionDisabled}
+      disabled={isActionDisabled || undefined}
       className={`w-full rounded-xl flex-row items-center justify-center ${
         isPrimary
           ? isActionDisabled

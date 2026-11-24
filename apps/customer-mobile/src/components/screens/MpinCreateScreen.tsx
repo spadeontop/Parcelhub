@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { BackHandler, View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { useNavigationUi } from '../../context/NavigationAndUiContext';
 import { useToast } from '../../context/ToastContext';
 import { useAuthSession } from '../../context/AuthSessionContext';
@@ -15,9 +15,16 @@ export const MpinCreateScreen: React.FC = () => {
   const [pin2, setPin2] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [mismatch, setMismatch] = useState<boolean>(false);
+  const submitInFlight = useRef(false);
+
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => submitInFlight.current);
+    return () => subscription.remove();
+  }, []);
 
   const handleKeyPress = useCallback(
     (digit: string) => {
+      if (submitInFlight.current) return;
       if (activeStep === 1) {
         setMismatch(false);
         if (pin1.length < 4) {
@@ -49,6 +56,7 @@ export const MpinCreateScreen: React.FC = () => {
   );
 
   const handleBackspace = useCallback(() => {
+    if (submitInFlight.current) return;
     setMismatch(false);
     if (activeStep === 1) {
       if (pin1.length > 0) {
@@ -65,6 +73,7 @@ export const MpinCreateScreen: React.FC = () => {
   }, [activeStep, pin1.length, pin2.length]);
 
   const handleClear = useCallback(() => {
+    if (submitInFlight.current) return;
     if (activeStep === 2) {
       setPin2('');
       setMismatch(false);
@@ -74,12 +83,9 @@ export const MpinCreateScreen: React.FC = () => {
   }, [activeStep]);
 
   const isMatched = pin1.length === 4 && pin2.length === 4 && pin1 === pin2;
-  const isStep1Valid = pin1.length === 4;
-  const isStep2Valid = isMatched;
-  const isCurrentStepValid = activeStep === 1 ? isStep1Valid : isStep2Valid;
-  const isButtonDisabled = isSubmitting || !isCurrentStepValid;
 
   const handleSubmit = useCallback(async () => {
+    if (submitInFlight.current) return;
     if (pin1.length < 4) {
       showToast('Please enter a 4-digit MPIN first.');
       setActiveStep(1);
@@ -97,6 +103,7 @@ export const MpinCreateScreen: React.FC = () => {
       return;
     }
 
+    submitInFlight.current = true;
     setIsSubmitting(true);
     try {
       await createCustomerMpin(pin1);
@@ -112,24 +119,27 @@ export const MpinCreateScreen: React.FC = () => {
         navigateTo('login');
       }
     } finally {
+      submitInFlight.current = false;
       setIsSubmitting(false);
     }
   }, [pin1, pin2, createCustomerMpin, showToast, navigateTo]);
 
   const handleButtonClick = () => {
-    if (activeStep === 1) {
-      if (isStep1Valid) {
-        setActiveStep(2);
-        setMismatch(false);
-      }
-    } else {
-      if (isStep2Valid) {
-        handleSubmit();
-      }
+    if (submitInFlight.current) return;
+    if (activeStep === 2) {
+      void handleSubmit();
+      return;
     }
+    if (pin1.length < 4) {
+      showToast('Please enter a 4-digit MPIN first.');
+      return;
+    }
+    setActiveStep(2);
+    setMismatch(false);
   };
 
   const handleBack = useCallback(() => {
+    if (submitInFlight.current) return;
     if (activeStep === 2) {
       setActiveStep(1);
       setMismatch(false);
@@ -180,6 +190,7 @@ export const MpinCreateScreen: React.FC = () => {
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={() => {
+              if (submitInFlight.current) return;
               setActiveStep(1);
               setMismatch(false);
             }}
@@ -232,6 +243,7 @@ export const MpinCreateScreen: React.FC = () => {
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={() => {
+              if (submitInFlight.current) return;
               if (pin1.length === 4) {
                 setActiveStep(2);
                 setMismatch(false);
@@ -314,26 +326,16 @@ export const MpinCreateScreen: React.FC = () => {
           onPressDigit={handleKeyPress}
           onPressBackspace={handleBackspace}
           onPressClear={handleClear}
-          disabled={isSubmitting}
         />
 
         <View className="mt-1 mb-2">
           {/* Primary Action Button */}
           <TouchableOpacity
             activeOpacity={0.8}
-            disabled={isButtonDisabled}
             onPress={handleButtonClick}
-            className={`w-full h-11 rounded-lg items-center justify-center ${
-              isButtonDisabled
-                ? 'bg-gray-200'
-                : 'bg-[#215cd4] active:bg-[#194cb5] shadow-xs'
-            }`}
+            className="w-full h-11 rounded-lg items-center justify-center bg-[#215cd4] active:bg-[#194cb5] shadow-xs"
           >
-            <Text
-              className={`font-semibold text-[14.5px] ${
-                isButtonDisabled ? 'text-gray-400' : 'text-white'
-              }`}
-            >
+            <Text className="font-semibold text-[14.5px] text-white">
               {buttonLabel}
             </Text>
           </TouchableOpacity>
