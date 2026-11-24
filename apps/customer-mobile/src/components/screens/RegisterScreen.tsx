@@ -354,21 +354,6 @@ export const RegisterScreen: React.FC = () => {
                         Resend code
                       </Text>
                     </Text>
-                    <AuthButton
-                      label="Skip verification for now"
-                      variant="secondary"
-                      disabled={!isStep2Valid || isLoading}
-                      onPress={handleRegister}
-                      isLoading={isLoading}
-                    />
-                    <AuthButton
-                      label="Back"
-                      variant="secondary"
-                      onPress={() => {
-                        Keyboard.dismiss();
-                        setCurrentStep(2);
-                      }}
-                    />
                   </>
                 )}
               </View>
