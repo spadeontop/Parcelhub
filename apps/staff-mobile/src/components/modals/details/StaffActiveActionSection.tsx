@@ -143,9 +143,13 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
     try {
       await onPayCourier(order.id);
       setLocalCourierPaid(true);
-    } catch {
+    } catch (err: any) {
       setIsStep1Locked(false);
       setStep1BtnState('idle');
+      Alert.alert(
+        'Payout Failed',
+        err?.message || 'Unable to record courier payout. Please try again.'
+      );
     }
   };
 
@@ -299,9 +303,13 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
         targetStatus: 'READY_TO_CLAIM',
         targetTab: 'ready',
       });
-    } catch {
+    } catch (err: any) {
       setIsStep2Locked(false);
       setStep2BtnState('idle');
+      Alert.alert(
+        'Upload Failed',
+        err?.message || 'Unable to attach proof of delivery. Please try again.'
+      );
     }
   };
 

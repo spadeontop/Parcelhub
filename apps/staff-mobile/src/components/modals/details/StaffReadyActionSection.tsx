@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, Alert } from 'react-native';
 import { StaffOrder, JustUpdatedOrderInfo } from '../../../types';
 import { OrderConfirmationCard } from './OrderConfirmationCard';
 import { OrderCardContainer } from '../../common/OrderCardContainer';
@@ -136,9 +136,13 @@ export const StaffReadyActionSection: React.FC<StaffReadyActionSectionProps> = (
         targetStatus: 'CLAIMED',
         targetTab: 'claimed',
       });
-    } catch {
+    } catch (err: any) {
       setIsLocked(false);
       setBtnState('idle');
+      Alert.alert(
+        'Release Failed',
+        err?.message || 'Unable to release order. Please try again.'
+      );
     }
   };
 

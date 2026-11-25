@@ -127,8 +127,6 @@ export const StaffOrderDetailsModal: React.FC<StaffOrderDetailsModalProps> = ({
     try {
       await claimOrder(orderId);
       scrollViewRef.current?.scrollTo({ y: 0, animated: true });
-    } catch (err: any) {
-      console.warn(err?.message || 'Failed to release order');
     } finally {
       setIsReleasing(false);
     }
