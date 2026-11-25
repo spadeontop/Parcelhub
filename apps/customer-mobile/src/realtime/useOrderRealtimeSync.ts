@@ -19,6 +19,7 @@ interface UseOrderRealtimeSyncParams {
   readonly selectedOrderId: string | null;
   readonly orders: readonly CustomerOrderSummary[];
   readonly onUnauthorized: () => Promise<void> | void;
+  readonly onOrderSignal?: (signal: RealtimeOrderSignal) => void;
 }
 
 const INITIAL_JOIN_COALESCE_WINDOW_MS = 2000;
@@ -34,6 +35,7 @@ export function useOrderRealtimeSync({
   selectedOrderId,
   orders,
   onUnauthorized,
+  onOrderSignal,
 }: UseOrderRealtimeSyncParams) {
   const queryClient = useQueryClient();
   const [realtimeStatus, setRealtimeStatus] =
@@ -42,6 +44,7 @@ export function useOrderRealtimeSync({
   const authTokenRef = useRef<JWTToken | null>(authToken);
   const selectedOrderIdRef = useRef<string | null>(selectedOrderId);
   const onUnauthorizedRef = useRef(onUnauthorized);
+  const onOrderSignalRef = useRef(onOrderSignal);
   const ticketToIdMapRef = useRef<Map<string, string>>(new Map());
   const clientRef = useRef<OrderRealtimeClient | null>(null);
 
@@ -56,6 +59,10 @@ export function useOrderRealtimeSync({
   useEffect(() => {
     onUnauthorizedRef.current = onUnauthorized;
   }, [onUnauthorized]);
+
+  useEffect(() => {
+    onOrderSignalRef.current = onOrderSignal;
+  }, [onOrderSignal]);
 
   // Keep ticketCode -> canonicalOrderId map warm from orders list
   useEffect(() => {
@@ -145,6 +152,7 @@ export function useOrderRealtimeSync({
       onUnauthorized: () => onUnauthorizedRef.current(),
       onSignal: (signal) => {
         invalidateOrderQueries(signal);
+        onOrderSignalRef.current?.(signal);
       },
       onSubscribed: ({ isRejoin }) => {
         if (isRejoin) {

@@ -5,9 +5,12 @@ import React, {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   ReactNode,
 } from 'react';
-import { JWTToken } from '../types/api';
+import { useQueryClient } from '@tanstack/react-query';
+import { JWTToken, RealtimeOrderSignal } from '../types/api';
+import { customerQueryKeys } from '../query/queryClient';
 import { notificationApi } from '../services/notificationApi';
 import {
   requestNotificationPermission,
@@ -35,11 +38,15 @@ export type CustomerNotification = {
   readonly unread: boolean;
 };
 
+export type OrderSignalListener = (signal: RealtimeOrderSignal) => void;
+
 export type NotificationsContextType = {
   readonly notifications: readonly CustomerNotification[];
   readonly markAllNotificationsAsRead: () => void;
   readonly notificationsEnabled: boolean;
   readonly togglePushNotifications: () => Promise<void>;
+  readonly isRealtimeSubscribed: boolean;
+  readonly subscribeToOrderSignals: (listener: OrderSignalListener) => () => void;
 };
 
 const NotificationsContext = createContext<NotificationsContextType | undefined>(undefined);
@@ -48,16 +55,37 @@ const NotificationsContext = createContext<NotificationsContextType | undefined>
  * Manages derived in-app order notifications, unread state, and FCM push lifecycle listeners.
  */
 export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const queryClient = useQueryClient();
   const { authToken, sessionStatus, signOutCustomer } = useAuthSession();
   const { navigateTo, selectedOrderId } = useNavigationUi();
   const { showToast } = useToast();
   const { orders } = useCustomerOrders();
+  const orderSignalListenersRef = useRef<Set<OrderSignalListener>>(new Set());
+
+  const handleOrderSignal = useCallback((signal: RealtimeOrderSignal) => {
+    orderSignalListenersRef.current.forEach((listener) => {
+      try {
+        listener(signal);
+      } catch (err) {
+        console.warn('[Realtime] Order signal listener error:', err);
+      }
+    });
+  }, []);
+
+  const subscribeToOrderSignals = useCallback((listener: OrderSignalListener) => {
+    orderSignalListenersRef.current.add(listener);
+    return () => {
+      orderSignalListenersRef.current.delete(listener);
+    };
+  }, []);
+
   const { isRealtimeSubscribed, invalidateOrdersListCoalesced } = useOrderRealtimeSync({
     authToken,
     isAuthenticated: sessionStatus === 'authenticated',
     selectedOrderId,
     orders,
     onUnauthorized: signOutCustomer,
+    onOrderSignal: handleOrderSignal,
   });
 
   const [notificationsEnabled, setNotificationsEnabled] = useState<boolean>(true);
@@ -122,6 +150,17 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
       showToast(`📦 ${title}: ${body}`);
       if (!isRealtimeSubscribed) {
         invalidateOrdersListCoalesced();
+        const notifOrderId = message.data?.orderId || message.data?.notifId;
+        if (notifOrderId) {
+          void queryClient.invalidateQueries({
+            queryKey: customerQueryKeys.orderDetail(notifOrderId),
+          });
+        }
+        if (selectedOrderId && selectedOrderId !== notifOrderId) {
+          void queryClient.invalidateQueries({
+            queryKey: customerQueryKeys.orderDetail(selectedOrderId),
+          });
+        }
       }
     });
 
@@ -150,6 +189,8 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
     isRealtimeSubscribed,
     invalidateOrdersListCoalesced,
     navigateTo,
+    queryClient,
+    selectedOrderId,
   ]);
 
   const togglePushNotifications = useCallback(async () => {
@@ -222,8 +263,17 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
       markAllNotificationsAsRead,
       notificationsEnabled,
       togglePushNotifications,
+      isRealtimeSubscribed,
+      subscribeToOrderSignals,
     }),
-    [notifications, markAllNotificationsAsRead, notificationsEnabled, togglePushNotifications]
+    [
+      notifications,
+      markAllNotificationsAsRead,
+      notificationsEnabled,
+      togglePushNotifications,
+      isRealtimeSubscribed,
+      subscribeToOrderSignals,
+    ]
   );
 
   return <NotificationsContext.Provider value={value}>{children}</NotificationsContext.Provider>;

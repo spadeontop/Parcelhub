@@ -52,6 +52,15 @@ export type NavigationAndUiContextType = {
       filter?: TransactionFilter;
     }
   ) => void;
+  readonly replaceScreen: (
+    screen: ScreenId,
+    params?: {
+      orderId?: string | null;
+      ticketCode?: string | null;
+      filter?: TransactionFilter;
+      pruneScreens?: readonly ScreenId[];
+    }
+  ) => void;
   readonly goBack: () => void;
   readonly resetNavigationTo: (screen: ScreenId) => void;
   readonly resetNavigationState: () => void;
@@ -149,6 +158,37 @@ export const NavigationAndUiProvider: React.FC<{ children: ReactNode }> = ({ chi
     []
   );
 
+  const replaceScreen = useCallback(
+    (
+      screen: ScreenId,
+      params?: {
+        orderId?: string | null;
+        ticketCode?: string | null;
+        filter?: TransactionFilter;
+        pruneScreens?: readonly ScreenId[];
+      }
+    ) => {
+      if (TOP_LEVEL_SCREENS.includes(screen)) {
+        setNavigationHistory([]);
+      } else if (params?.pruneScreens && params.pruneScreens.length > 0) {
+        const pruneSet = new Set(params.pruneScreens);
+        setNavigationHistory((prev) => prev.filter((entry) => !pruneSet.has(entry.screen)));
+      }
+
+      setActiveScreen(screen);
+      if (params?.orderId !== undefined) {
+        setSelectedOrderId(params.orderId);
+      }
+      if (params?.ticketCode !== undefined) {
+        setSelectedOrderTicketCode(params.ticketCode);
+      }
+      if (params?.filter !== undefined) {
+        setTransactionFilter(params.filter);
+      }
+    },
+    []
+  );
+
   const goBack = useCallback(() => {
     const history = navigationHistoryRef.current;
     if (history.length === 0) {
@@ -196,6 +236,7 @@ export const NavigationAndUiProvider: React.FC<{ children: ReactNode }> = ({ chi
       activeScreen,
       setActiveScreen,
       navigateTo,
+      replaceScreen,
       goBack,
       resetNavigationTo,
       resetNavigationState,
@@ -212,6 +253,7 @@ export const NavigationAndUiProvider: React.FC<{ children: ReactNode }> = ({ chi
     [
       activeScreen,
       navigateTo,
+      replaceScreen,
       goBack,
       resetNavigationTo,
       resetNavigationState,
