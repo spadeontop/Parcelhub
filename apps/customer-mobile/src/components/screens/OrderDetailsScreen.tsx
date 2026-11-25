@@ -26,6 +26,9 @@ import { getStatusLabel } from '../../utils/statusHelpers';
 import { useClaimCountdown } from '../orders/useClaimCountdown';
 import { ClaimPassView } from '../orders/ClaimPassView';
 import { OrderCancelledView } from '../orders/OrderCancelledView';
+import { CancelOrderView, CANCELLATION_REASONS } from '../orders/CancelOrderView';
+import { RefundPassView } from '../orders/RefundPassView';
+import { OrderRefundedView } from '../orders/OrderRefundedView';
 import { OrderOverviewCard } from '../orders/OrderOverviewCard';
 import { OrderTimelineStepper } from '../orders/OrderTimelineStepper';
 import {
@@ -59,9 +62,14 @@ export const OrderDetailsScreen: React.FC = () => {
   const [isClaimSessionActive, setIsClaimSessionActive] = useState<boolean>(false);
   const [isPullRefreshing, setIsPullRefreshing] = useState<boolean>(false);
   const [unpaidViewMode, setUnpaidViewMode] = useState<UnpaidViewMode>('details');
-  const [cancelReason, setCancelReason] = useState<string>(UNPAID_CANCELLATION_REASONS[0]);
-  const [cancelNotes, setCancelNotes] = useState<string>('');
+  const [unpaidCancelReason, setUnpaidCancelReason] = useState<string>(UNPAID_CANCELLATION_REASONS[0]);
   const [cancelledTimeFallback, setCancelledTimeFallback] = useState<string>('—');
+  const [awaitingViewMode, setAwaitingViewMode] = useState<'details' | 'cancel' | 'refund_pass'>(
+    'details'
+  );
+  const [cancelReason, setCancelReason] = useState<string | null>(CANCELLATION_REASONS[0]);
+  const [cancelNotes, setCancelNotes] = useState<string>('');
+  const [cancelConfirmed, setCancelConfirmed] = useState<boolean>(false);
 
   // Hub status defaults to open
   const hubOpen = true;
@@ -101,9 +109,12 @@ export const OrderDetailsScreen: React.FC = () => {
     setIsPassDismissed(false);
     setIsClaimSessionActive(false);
     setUnpaidViewMode('details');
-    setCancelReason(UNPAID_CANCELLATION_REASONS[0]);
-    setCancelNotes('');
+    setUnpaidCancelReason(UNPAID_CANCELLATION_REASONS[0]);
     setCancelledTimeFallback('—');
+    setAwaitingViewMode('details');
+    setCancelReason(CANCELLATION_REASONS[0]);
+    setCancelNotes('');
+    setCancelConfirmed(false);
     resetCountdown();
   }, [selectedOrderId, resetCountdown]);
 
@@ -127,6 +138,58 @@ export const OrderDetailsScreen: React.FC = () => {
   // Transition animation values when entering focused pass view (Ready for Release)
   const passFadeAnim = useRef(new Animated.Value(isFocusedPassView ? 1 : 0)).current;
   const passSlideAnim = useRef(new Animated.Value(isFocusedPassView ? 0 : 12)).current;
+
+  // Slide transition animation values for Awaiting Parcel cancel & refund flow
+  const cancelFadeAnim = useRef(new Animated.Value(0)).current;
+  const cancelSlideAnim = useRef(new Animated.Value(36)).current;
+  const refundPassFadeAnim = useRef(new Animated.Value(0)).current;
+  const refundPassSlideAnim = useRef(new Animated.Value(36)).current;
+
+  const isAwaitingCancelView = status === 'AWAITING_PARCEL' && awaitingViewMode === 'cancel';
+  const isAwaitingRefundPassView =
+    status === 'AWAITING_PARCEL' && awaitingViewMode === 'refund_pass';
+  const isRefundExpired =
+    isAwaitingRefundPassView && remainingSecs === 0;
+  const isRefundExpiringSoon =
+    isAwaitingRefundPassView && !isRefundExpired && remainingSecs <= 60;
+
+  useEffect(() => {
+    if (isAwaitingCancelView) {
+      cancelFadeAnim.setValue(0);
+      cancelSlideAnim.setValue(36);
+      Animated.parallel([
+        Animated.timing(cancelFadeAnim, {
+          toValue: 1,
+          duration: 240,
+          useNativeDriver: true,
+        }),
+        Animated.timing(cancelSlideAnim, {
+          toValue: 0,
+          duration: 240,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [isAwaitingCancelView, cancelFadeAnim, cancelSlideAnim]);
+
+  useEffect(() => {
+    if (isAwaitingRefundPassView) {
+      refundPassFadeAnim.setValue(0);
+      refundPassSlideAnim.setValue(36);
+      Animated.parallel([
+        Animated.timing(refundPassFadeAnim, {
+          toValue: 1,
+          duration: 260,
+          useNativeDriver: true,
+        }),
+        Animated.timing(refundPassSlideAnim, {
+          toValue: 0,
+          duration: 260,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [isAwaitingRefundPassView, refundPassFadeAnim, refundPassSlideAnim]);
 
   useEffect(() => {
     if (isFocusedPassView) {
@@ -204,9 +267,30 @@ export const OrderDetailsScreen: React.FC = () => {
     animateUnpaidTransition('forward');
   }, [animateUnpaidTransition]);
 
+  const handleOpenCancelOrder = useCallback(() => {
+    setAwaitingViewMode('cancel');
+  }, []);
+
+  const handleKeepOrder = useCallback(() => {
+    setAwaitingViewMode('details');
+  }, []);
+
+  const handleInitiateRefund = useCallback(() => {
+    startLocalWindow(5 * 60);
+    setAwaitingViewMode('refund_pass');
+  }, [startLocalWindow]);
+
+  const handleRefreshRefundWindow = useCallback(() => {
+    startLocalWindow(5 * 60);
+  }, [startLocalWindow]);
+
   // Handle hardware back on Android: dismiss the pass and return to Complete Details or previous screen
   useEffect(() => {
     const onBackPress = () => {
+      if (isAwaitingRefundPassView || isAwaitingCancelView) {
+        setAwaitingViewMode('details');
+        return true;
+      }
       if (isFocusedPassView) {
         handleCloseFocusedPass();
         return true;
@@ -226,6 +310,8 @@ export const OrderDetailsScreen: React.FC = () => {
     const backSubscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
     return () => backSubscription.remove();
   }, [
+    isAwaitingRefundPassView,
+    isAwaitingCancelView,
     isFocusedPassView,
     handleCloseFocusedPass,
     isUnpaidCancelView,
@@ -309,7 +395,7 @@ export const OrderDetailsScreen: React.FC = () => {
       <StatusBar style="light" />
 
       {/* Top Header */}
-      {isFocusedPassView ? (
+      {isFocusedPassView || isAwaitingRefundPassView ? (
         <View
           style={{
             backgroundColor: '#2563EB',
@@ -321,7 +407,9 @@ export const OrderDetailsScreen: React.FC = () => {
           <View className="flex-row items-center justify-between relative min-h-[40px]">
             <TouchableOpacity
               activeOpacity={0.7}
-              onPress={handleCloseFocusedPass}
+              onPress={
+                isAwaitingRefundPassView ? handleKeepOrder : handleCloseFocusedPass
+              }
               style={{
                 width: 40,
                 height: 40,
@@ -346,10 +434,10 @@ export const OrderDetailsScreen: React.FC = () => {
 
             <View className="absolute inset-0 items-center justify-center">
               <Text className="text-[18px] font-bold text-white text-center">
-                Ready For Release
+                {isAwaitingRefundPassView ? 'Ready For Refund' : 'Ready For Release'}
               </Text>
               <Text className="text-[12px] font-normal text-[#DBEAFE] text-center mt-0.5">
-                Pickup Pass
+                {isAwaitingRefundPassView ? 'Refund Pass' : 'Pickup Pass'}
               </Text>
             </View>
 
@@ -379,6 +467,22 @@ export const OrderDetailsScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
         </View>
+      ) : status === 'REFUNDED' ? (
+        <AppHeader
+          title="Order Refunded"
+          subtitle="Refund Completed"
+          showBackButton
+          centerTitle
+          onBack={goBack}
+        />
+      ) : isAwaitingCancelView ? (
+        <AppHeader
+          title="Cancel Order"
+          subtitle={ticketCode || orderId}
+          showBackButton
+          centerTitle
+          onBack={handleKeepOrder}
+        />
       ) : isUnpaidCancelView ? (
         <AppHeader
           title="Cancel Order"
@@ -407,7 +511,58 @@ export const OrderDetailsScreen: React.FC = () => {
 
       {/* Main Curved Transition Sheet */}
       <View className="flex-1 bg-[#f1f5f9] rounded-t-[24px] pt-4 overflow-hidden">
-        {isFocusedPassView ? (
+        {status === 'REFUNDED' ? (
+          <OrderRefundedView
+            productName={productName}
+            price={price}
+            ticketCode={ticketCode}
+            orderId={orderId}
+            cancellationReason={cancelReason}
+            hubName="Lily’s Catering Hub"
+            hubAddress="Yati, Liloan, Cebu, 6002"
+            statusTimeline={statusTimeline}
+            isPullRefreshing={isPullRefreshing}
+            onRefresh={handlePullRefresh}
+            onReturnHome={() => navigateTo('home')}
+          />
+        ) : isAwaitingRefundPassView ? (
+          <RefundPassView
+            ticketCode={ticketCode}
+            orderId={orderId}
+            hasOrderDetail={Boolean(orderDetail)}
+            productName={productName}
+            refundAmount={price}
+            qrIdentifier={qrIdentifier}
+            timeFormatted={timeFormatted}
+            isRefundExpired={isRefundExpired}
+            isExpiringSoon={isRefundExpiringSoon}
+            isPullRefreshing={isPullRefreshing}
+            passFadeAnim={refundPassFadeAnim}
+            passSlideAnim={refundPassSlideAnim}
+            onRefresh={handlePullRefresh}
+            onRefreshRefund={handleRefreshRefundWindow}
+            onReturnHome={() => {
+              setAwaitingViewMode('details');
+              navigateTo('home');
+            }}
+          />
+        ) : isAwaitingCancelView ? (
+          <CancelOrderView
+            productName={productName}
+            hubName="Lily’s Catering Hub"
+            refundableAmount={price}
+            selectedReason={cancelReason}
+            onSelectReason={setCancelReason}
+            additionalNotes={cancelNotes}
+            onChangeNotes={setCancelNotes}
+            isConfirmed={cancelConfirmed}
+            onConfirmedChange={setCancelConfirmed}
+            onInitiateRefund={handleInitiateRefund}
+            onKeepOrder={handleKeepOrder}
+            slideAnim={cancelSlideAnim}
+            fadeAnim={cancelFadeAnim}
+          />
+        ) : isFocusedPassView ? (
           <ClaimPassView
             ticketCode={ticketCode}
             orderId={orderId}
@@ -437,9 +592,9 @@ export const OrderDetailsScreen: React.FC = () => {
           >
             <UnpaidCancelOrderView
               productName={productName}
-              selectedReason={cancelReason}
+              selectedReason={unpaidCancelReason}
               notes={cancelNotes}
-              onSelectReason={setCancelReason}
+              onSelectReason={setUnpaidCancelReason}
               onChangeNotes={setCancelNotes}
               onConfirmCancel={handleConfirmUnpaidCancel}
               onKeepOrder={handleKeepUnpaidOrder}
@@ -457,7 +612,7 @@ export const OrderDetailsScreen: React.FC = () => {
               trackingNumber={trackingNumber}
               productName={productName}
               price={price}
-              reason={cancelReason}
+              reason={unpaidCancelReason}
               hubOpen={hubOpen}
               statusTimeline={statusTimeline}
               cancelledTimeFallback={cancelledTimeFallback}
@@ -604,6 +759,18 @@ export const OrderDetailsScreen: React.FC = () => {
                     </View>
                   </View>
                 ))}
+
+              {status === 'AWAITING_PARCEL' && (
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={handleOpenCancelOrder}
+                  className="w-full h-[48px] rounded-[12px] bg-[#fef2f2] border border-[#fecaca] items-center justify-center"
+                >
+                  <Text className="text-[#dc2626] font-bold text-[14px]">
+                    Cancel Order
+                  </Text>
+                </TouchableOpacity>
+              )}
 
               <TouchableOpacity
                 activeOpacity={0.7}
