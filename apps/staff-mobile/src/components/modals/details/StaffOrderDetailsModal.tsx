@@ -15,6 +15,8 @@ import { StaffReadyActionSection } from './StaffReadyActionSection';
 import { StaffUnpaidActionSection } from './StaffUnpaidActionSection';
 import { StaffActiveActionSection } from './StaffActiveActionSection';
 import { StaffClaimedSummarySection } from './StaffClaimedSummarySection';
+import { StaffCancelledActionSection } from './StaffCancelledActionSection';
+import { StaffRefundedSummarySection } from './StaffRefundedSummarySection';
 import { ZoomableImageViewer } from '../ZoomableImageViewer';
 import { staffApi } from '../../../services/staffApi';
 
@@ -25,6 +27,7 @@ interface StaffOrderDetailsModalProps {
   onOrderUpdated?: (order: StaffOrder) => void;
   onSelectTab: (tab: StaffTab) => void;
   onJustUpdated: (info: JustUpdatedOrderInfo) => void;
+  onNotice?: (message: string) => void;
 }
 
 export const StaffOrderDetailsModal: React.FC<StaffOrderDetailsModalProps> = ({
@@ -34,18 +37,21 @@ export const StaffOrderDetailsModal: React.FC<StaffOrderDetailsModalProps> = ({
   onOrderUpdated,
   onSelectTab,
   onJustUpdated,
+  onNotice,
 }) => {
   const {
     activateOrder,
     payCourier,
     attachPhoto,
     claimOrder,
+    refundOrder,
   } = useStaffOrderActions(onOrderUpdated);
 
   const [isActivating, setIsActivating] = useState<boolean>(false);
   const [isPayingCourier, setIsPayingCourier] = useState<boolean>(false);
   const [isAttachingPhoto, setIsAttachingPhoto] = useState<boolean>(false);
   const [isReleasing, setIsReleasing] = useState<boolean>(false);
+  const [isRefunding, setIsRefunding] = useState<boolean>(false);
   const [isPodViewerOpen, setIsPodViewerOpen] = useState<boolean>(false);
   const [proofPhotoUrl, setProofPhotoUrl] = useState<string | null>(order?.proofImageUrl || null);
   const [loadingPhoto, setLoadingPhoto] = useState<boolean>(false);
@@ -148,7 +154,13 @@ export const StaffOrderDetailsModal: React.FC<StaffOrderDetailsModalProps> = ({
   const handleActivate = async (orderId: string, amount: number) => {
     setIsActivating(true);
     try {
-      await activateOrder(orderId, amount);
+      const res = await activateOrder(orderId, amount);
+      if (res?.autoCancelledCount && res.autoCancelledCount > 0) {
+        const count = res.autoCancelledCount;
+        onNotice?.(
+          `Activated — ${count} duplicate unpaid ${count === 1 ? 'order' : 'orders'} auto-cancelled.`
+        );
+      }
       scrollViewRef.current?.scrollTo({ y: 0, animated: true });
     } finally {
       setIsActivating(false);
@@ -183,7 +195,15 @@ export const StaffOrderDetailsModal: React.FC<StaffOrderDetailsModalProps> = ({
     }
   };
 
-  const isClaimedReceipt = order.status === 'CLAIMED';
+  const handleRefund = async (orderId: string) => {
+    setIsRefunding(true);
+    try {
+      await refundOrder(orderId);
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+    } finally {
+      setIsRefunding(false);
+    }
+  };
 
   // Determine Title & Subtitle from Status matching Figma 1343:1662 & 1346:2288
   const getHeaderInfo = () => {
@@ -199,6 +219,10 @@ export const StaffOrderDetailsModal: React.FC<StaffOrderDetailsModalProps> = ({
         };
       case 'CLAIMED':
         return { title: 'Order Details', subtitle: 'Claimed' };
+      case 'CANCELLED':
+        return { title: 'Order Details', subtitle: 'Cancelled Order' };
+      case 'REFUNDED':
+        return { title: 'Order Details', subtitle: 'Refunded' };
       default:
         return { title: 'Order Details', subtitle: 'Order Details' };
     }
@@ -283,6 +307,23 @@ export const StaffOrderDetailsModal: React.FC<StaffOrderDetailsModalProps> = ({
                   order={order}
                   onReturnHome={handleClose}
                   onViewProof={() => setIsPodViewerOpen(true)}
+                />
+              )}
+
+              {order.status === 'CANCELLED' && (
+                <StaffCancelledActionSection
+                  order={order}
+                  isRefunding={isRefunding}
+                  onRefund={handleRefund}
+                  onReturnHome={handleClose}
+                  onSuccessTransition={handleSuccessTransition}
+                />
+              )}
+
+              {order.status === 'REFUNDED' && (
+                <StaffRefundedSummarySection
+                  order={order}
+                  onReturnHome={handleClose}
                 />
               )}
             </ScrollView>

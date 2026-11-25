@@ -1,7 +1,15 @@
 import { QueryClient } from '@tanstack/react-query';
 import type { OrderStatus, StaffTab } from '../types';
 
-export const STAFF_TABS: readonly StaffTab[] = ['all', 'ready', 'active', 'unpaid', 'claimed'];
+export const STAFF_TABS: readonly StaffTab[] = [
+  'all',
+  'ready',
+  'active',
+  'unpaid',
+  'claimed',
+  'cancelled',
+  'refunded',
+];
 
 export function getStatusForTab(tab: StaffTab): OrderStatus | undefined {
   switch (tab) {
@@ -13,6 +21,10 @@ export function getStatusForTab(tab: StaffTab): OrderStatus | undefined {
       return 'PAYMENT_REQUIRED';
     case 'claimed':
       return 'CLAIMED';
+    case 'cancelled':
+      return 'CANCELLED';
+    case 'refunded':
+      return 'REFUNDED';
     case 'all':
     default:
       return undefined;

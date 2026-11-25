@@ -3,6 +3,7 @@ import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { PaginationMeta, StaffBadgeCounts, StaffOrder, StaffTab } from '../types';
 import { staffApi, StaffApiError, type StaffQrLookupResult } from '../services/staffApi';
 import { useStaffAuth } from '../context/StaffAuthContext';
+import { ENV } from '../config/env';
 import { getStatusForTab, STAFF_TABS, staffQueryKeys } from '../query/queryClient';
 
 export interface StaffOrdersPageData {
@@ -11,9 +12,13 @@ export interface StaffOrdersPageData {
 }
 
 const ITEMS_PER_PAGE = 20;
-const POLL_INTERVAL_MS = 4_000;
 
-export function useStaffOrders(activeTab: StaffTab, currentPage: number, searchQuery: string) {
+export function useStaffOrders(
+  activeTab: StaffTab,
+  currentPage: number,
+  searchQuery: string,
+  isRealtimeSubscribed = false
+) {
   const { staffUser } = useStaffAuth();
   const queryClient = useQueryClient();
   const token = staffUser?.token;
@@ -33,14 +38,16 @@ export function useStaffOrders(activeTab: StaffTab, currentPage: number, searchQ
 
   const isSearching = debouncedSearch.length > 0;
 
-  // Keep page 1 of all 5 tabs warm for instant tab switching and badge counts.
+  // Keep page 1 of all tabs warm for instant tab switching and badge counts.
+  // Disable polling while Supabase Realtime is subscribed; fall back automatically on disconnect/503.
+  const pollingInterval = isRealtimeSubscribed ? false : ENV.POLLING_INTERVAL_MS;
   const tabPage1Queries = useQueries({
     queries: STAFF_TABS.map((tab) => ({
       queryKey: staffQueryKeys.tab(tab, 1),
       queryFn: ({ signal }: { signal: AbortSignal }) =>
         staffApi.getOrders(getStatusForTab(tab), ITEMS_PER_PAGE, 0, token, undefined, signal),
       enabled: !!token,
-      refetchInterval: !isSearching && activeTab === tab && currentPage === 1 ? POLL_INTERVAL_MS : false,
+      refetchInterval: !isSearching && activeTab === tab && currentPage === 1 ? pollingInterval : false,
     })),
   });
 
@@ -57,7 +64,7 @@ export function useStaffOrders(activeTab: StaffTab, currentPage: number, searchQ
         signal
       ),
     enabled: !!token && !isSearching && currentPage > 1,
-    refetchInterval: !isSearching && currentPage > 1 ? POLL_INTERVAL_MS : false,
+    refetchInterval: !isSearching && currentPage > 1 ? pollingInterval : false,
   });
 
   // Dedicated search query (never pollutes tab caches).
@@ -92,6 +99,8 @@ export function useStaffOrders(activeTab: StaffTab, currentPage: number, searchQ
   const tab2Data = tabPage1Queries[2]?.data;
   const tab3Data = tabPage1Queries[3]?.data;
   const tab4Data = tabPage1Queries[4]?.data;
+  const tab5Data = tabPage1Queries[5]?.data;
+  const tab6Data = tabPage1Queries[6]?.data;
 
   const badgeCounts: StaffBadgeCounts = useMemo(
     () => ({
@@ -100,19 +109,31 @@ export function useStaffOrders(activeTab: StaffTab, currentPage: number, searchQ
       active: tab2Data?.pagination.totalCount ?? 0,
       unpaid: tab3Data?.pagination.totalCount ?? 0,
       claimed: tab4Data?.pagination.totalCount ?? 0,
+      cancelled: tab5Data?.pagination.totalCount ?? 0,
+      refunded: tab6Data?.pagination.totalCount ?? 0,
     }),
-    [tab0Data, tab1Data, tab2Data, tab3Data, tab4Data]
+    [tab0Data, tab1Data, tab2Data, tab3Data, tab4Data, tab5Data, tab6Data]
   );
 
   const allCachedOrders = useMemo(() => {
     const map = new Map<string, StaffOrder>();
-    for (const data of [tab0Data, tab1Data, tab2Data, tab3Data, tab4Data]) {
+    for (const data of [tab0Data, tab1Data, tab2Data, tab3Data, tab4Data, tab5Data, tab6Data]) {
       data?.orders.forEach((o) => map.set(o.id, o));
     }
     pagedTabQuery.data?.orders.forEach((o) => map.set(o.id, o));
     searchQueryResult.data?.orders.forEach((o) => map.set(o.id, o));
     return Array.from(map.values());
-  }, [tab0Data, tab1Data, tab2Data, tab3Data, tab4Data, pagedTabQuery.data, searchQueryResult.data]);
+  }, [
+    tab0Data,
+    tab1Data,
+    tab2Data,
+    tab3Data,
+    tab4Data,
+    tab5Data,
+    tab6Data,
+    pagedTabQuery.data,
+    searchQueryResult.data,
+  ]);
 
   const refreshOrders = useCallback(async () => {
     if (!token) return;
