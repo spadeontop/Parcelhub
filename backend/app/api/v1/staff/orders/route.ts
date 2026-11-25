@@ -6,10 +6,10 @@ import { orders, staff } from "@/db/schema";
 import { authenticateStaffRequest } from "@/app/lib/v1/auth";
 import {
   computeClaimWindow,
-  computeRefundableAmount,
-  computeRefundWindow,
   formatStaffFullName,
   getStaffOrderStatusMessage,
+  serializeOrderCancelFields,
+  serializeStaffOrderRefundFields,
 } from "@/app/lib/v1/orders";
 import { parsePagination } from "@/app/lib/pagination";
 import { jsonError, jsonSuccess } from "@/app/lib/response";
@@ -64,8 +64,8 @@ export async function GET(request: NextRequest) {
         eq(orders.courierPaid, false),
         isNotNull(orders.activatedAt),
         isNotNull(orders.amountReceived),
-        gte(orders.amountReceived, orders.price),
-        gt(orders.price, 0)
+        gt(orders.amountReceived, 0),
+        gte(orders.amountReceived, orders.price)
       );
     }
     if (searchFilter) {
@@ -100,12 +100,16 @@ export async function GET(request: NextRequest) {
         courierPaidBy: orders.courierPaidBy,
         courierPaidAt: orders.courierPaidAt,
         activatedAt: orders.activatedAt,
+        cancelledBy: orders.cancelledBy,
         cancelledByRole: orders.cancelledByRole,
         cancelReasonCode: orders.cancelReasonCode,
         cancelReason: orders.cancelReason,
         cancelledAt: orders.cancelledAt,
         refundRequested: orders.refundRequested,
+        refundInitiatedAt: orders.refundInitiatedAt,
         refundExpiresAt: orders.refundExpiresAt,
+        refundReasonCode: orders.refundReasonCode,
+        refundReason: orders.refundReason,
         isRefunded: orders.isRefunded,
         refundAmount: orders.refundAmount,
         refundedBy: orders.refundedBy,
@@ -141,24 +145,18 @@ export async function GET(request: NextRequest) {
         o.claimExpiresAt,
         nowMs
       );
-      const refundableAmount = computeRefundableAmount(o);
-      const { isRefundActive, refundRemainingSeconds } = computeRefundWindow(
-        o.refundRequested,
-        o.refundExpiresAt,
-        nowMs
-      );
-
       return {
         id: o.id as OrderId,
         ticketCode: o.ticketCode,
         trackingId: o.trackingId,
         customer: o.recipientName,
         amountToPay: o.price,
-        amountReceived: o.amountReceived || 0,
-        change: o.change || 0,
+        amountReceived: o.amountReceived ?? null,
+        change: o.change ?? 0,
         timestamp: o.timestamp.toISOString(),
         status: o.status,
         statusMessage: getStaffOrderStatusMessage(o.status),
+        activatedAt: o.activatedAt ? o.activatedAt.toISOString() : null,
         isClaimActive,
         claimRemainingSeconds,
         courierPaid: o.courierPaid,
@@ -170,22 +168,8 @@ export async function GET(request: NextRequest) {
         courierPaidAt: o.courierPaidAt ? o.courierPaidAt.toISOString() : null,
         createdAt: o.statusTimeline?.[0]?.timestamp || o.timestamp.toISOString(),
         statusTimeline: o.statusTimeline,
-        cancelledByRole: o.cancelledByRole ?? null,
-        cancelReasonCode: o.cancelReasonCode ?? null,
-        cancelReason: o.cancelReason ?? null,
-        cancelledAt: o.cancelledAt ? o.cancelledAt.toISOString() : null,
-        isRefundEligible: refundableAmount > 0,
-        refundableAmount,
-        isRefundActive,
-        refundRemainingSeconds,
-        isRefunded: o.isRefunded,
-        refundAmount: o.refundAmount ?? null,
-        refundedBy: (o.refundedBy as StaffId) || null,
-        refundedByName: formatStaffFullName(
-          o.refundedByFirstName,
-          o.refundedByLastName
-        ),
-        refundedAt: o.refundedAt ? o.refundedAt.toISOString() : null,
+        ...serializeOrderCancelFields(o),
+        ...serializeStaffOrderRefundFields(o, nowMs),
       };
     });
 

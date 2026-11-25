@@ -6,11 +6,11 @@ import { orders, staff } from "@/db/schema";
 import { authenticateStaffRequest } from "@/app/lib/v1/auth";
 import {
   computeClaimWindow,
-  computeRefundableAmount,
-  computeRefundWindow,
   formatStaffFullName,
   getStaffOrderStatusMessage,
   matchOrderByIdOrTicket,
+  serializeOrderCancelFields,
+  serializeStaffOrderRefundFields,
 } from "@/app/lib/v1/orders";
 import { jsonError, jsonSuccess } from "@/app/lib/response";
 import {
@@ -91,12 +91,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       order.claimRequested,
       order.claimExpiresAt
     );
-    const refundableAmount = computeRefundableAmount(order);
-    const { isRefundActive, refundRemainingSeconds } = computeRefundWindow(
-      order.refundRequested,
-      order.refundExpiresAt
-    );
-
     const orderDetail: StaffOrderDetail = {
       orderId: order.id as OrderId,
       ticketCode: order.ticketCode,
@@ -108,6 +102,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       timestamp: order.timestamp.toISOString(),
       status: order.status,
       statusMessage: getStaffOrderStatusMessage(order.status),
+      activatedAt: order.activatedAt ? order.activatedAt.toISOString() : null,
       isClaimActive,
       claimRemainingSeconds,
       courierPaid: order.courierPaid,
@@ -119,28 +114,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       courierPaidAt: order.courierPaidAt ? order.courierPaidAt.toISOString() : null,
       createdAt: order.statusTimeline?.[0]?.timestamp || order.timestamp.toISOString(),
       statusTimeline: order.statusTimeline,
-      cancelledBy: order.cancelledBy ?? null,
-      cancelledByRole: order.cancelledByRole ?? null,
-      cancelReasonCode: order.cancelReasonCode ?? null,
-      cancelReason: order.cancelReason ?? null,
-      cancelledAt: order.cancelledAt ? order.cancelledAt.toISOString() : null,
-      isRefundEligible: refundableAmount > 0,
-      refundableAmount,
-      refundRequested: order.refundRequested,
-      refundInitiatedAt: order.refundInitiatedAt ? order.refundInitiatedAt.toISOString() : null,
-      refundExpiresAt: order.refundExpiresAt ? order.refundExpiresAt.toISOString() : null,
-      isRefundActive,
-      refundRemainingSeconds,
-      refundReasonCode: order.refundReasonCode ?? null,
-      refundReason: order.refundReason ?? null,
-      isRefunded: order.isRefunded,
-      refundAmount: order.refundAmount ?? null,
-      refundedBy: (order.refundedBy as StaffId) || null,
-      refundedByName: formatStaffFullName(
-        order.refundedByFirstName,
-        order.refundedByLastName
-      ),
-      refundedAt: order.refundedAt ? order.refundedAt.toISOString() : null,
+      ...serializeOrderCancelFields(order),
+      ...serializeStaffOrderRefundFields(order),
     };
 
     const response: StaffGetOrderRes = orderDetail;

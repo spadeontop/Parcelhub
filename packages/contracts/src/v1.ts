@@ -258,22 +258,49 @@ export type CustomerProfileRes = StandardSuccessResponse & {
   readonly customer: CustomerProfile;
 };
 
+export type OrderCancelFields = {
+  readonly cancelledBy?: string | null;
+  readonly cancelledByRole?: OrderActorRole | null;
+  readonly cancelReasonCode?: CancelReasonCode | null;
+  readonly cancelReason?: string | null;
+  readonly cancelledAt?: ISO8601Timestamp | null;
+};
+
+export type OrderRefundFields = {
+  readonly isRefundEligible?: boolean;
+  readonly refundAmount?: number;
+  readonly refundRequested?: boolean;
+  readonly refundInitiatedAt?: ISO8601Timestamp | null;
+  readonly refundExpiresAt?: ISO8601Timestamp | null;
+  readonly isRefundActive?: boolean;
+  readonly refundRemainingSeconds?: number;
+  readonly refundReasonCode?: CancelReasonCode | null;
+  readonly refundReason?: string | null;
+  readonly isRefunded?: boolean;
+  readonly refundedAt?: ISO8601Timestamp | null;
+};
+
+export type StaffOrderRefundFields = OrderRefundFields & {
+  readonly refundedBy?: StaffId | null;
+  readonly refundedByName?: string;
+};
+
 // GET /api/v1/customer/orders
 export type CustomerOrderSummary = {
   readonly id: OrderId;
   readonly ticketCode?: string | null;
   readonly trackingId: string | null;
   readonly productName: string;
+  readonly price?: number;
+  readonly amountReceived?: number | null;
+  readonly change?: number;
   readonly status: OrderStatus;
   readonly timestamp: ISO8601Timestamp;
+  readonly activatedAt?: ISO8601Timestamp | null;
+  readonly courierPaid?: boolean;
   readonly isClaimActive?: boolean;
-  readonly isRefundEligible?: boolean;
-  readonly refundableAmount?: number;
-  readonly isRefundActive?: boolean;
-  readonly isRefunded?: boolean;
-  readonly cancelReasonCode?: CancelReasonCode | null;
-  readonly cancelReason?: string | null;
-};
+} & OrderCancelFields &
+  OrderRefundFields;
 
 export type CustomerListOrdersQueryParams = {
   readonly type?: OrderStatus;
@@ -303,31 +330,18 @@ export type CustomerOrderDetail = {
   readonly productName: string;
   readonly recipientName: string;
   readonly price: number;
+  readonly amountReceived?: number | null;
   readonly change: number;
   readonly status: OrderStatus;
   readonly statusTimeline: OrderStatusHistoryTuple;
+  readonly activatedAt?: ISO8601Timestamp | null;
+  readonly courierPaid?: boolean;
   readonly claimInitiatedAt?: ISO8601Timestamp | null;
   readonly claimExpiresAt?: ISO8601Timestamp | null;
   readonly isClaimActive?: boolean;
   readonly claimRemainingSeconds?: number;
-  readonly cancelledBy?: string | null;
-  readonly cancelledByRole?: OrderActorRole | null;
-  readonly cancelReasonCode?: CancelReasonCode | null;
-  readonly cancelReason?: string | null;
-  readonly cancelledAt?: ISO8601Timestamp | null;
-  readonly isRefundEligible?: boolean;
-  readonly refundableAmount?: number;
-  readonly refundRequested?: boolean;
-  readonly refundInitiatedAt?: ISO8601Timestamp | null;
-  readonly refundExpiresAt?: ISO8601Timestamp | null;
-  readonly isRefundActive?: boolean;
-  readonly refundRemainingSeconds?: number;
-  readonly refundReasonCode?: CancelReasonCode | null;
-  readonly refundReason?: string | null;
-  readonly isRefunded?: boolean;
-  readonly refundAmount?: number | null;
-  readonly refundedAt?: ISO8601Timestamp | null;
-};
+} & OrderCancelFields &
+  OrderRefundFields;
 
 export type CustomerGetOrderRes = StandardSuccessResponse & {
   readonly order: CustomerOrderDetail;
@@ -389,8 +403,13 @@ export type CustomerCancelOrderReq = {
 export type CustomerCancelOrderRes = StandardSuccessResponse & {
   readonly orderId: OrderId;
   readonly status: "CANCELLED";
+  readonly cancelledBy: string;
+  readonly cancelledByRole: OrderActorRole;
+  readonly cancelReasonCode: CancelReasonCode | null;
+  readonly cancelReason: string | null;
+  readonly cancelledAt: ISO8601Timestamp;
   readonly isRefundEligible: boolean;
-  readonly refundableAmount: number;
+  readonly refundAmount: number;
 };
 
 // POST /api/v1/customer/orders/{id}/refund
@@ -402,9 +421,14 @@ export type CustomerInitiateRefundReq = {
 export type CustomerInitiateRefundRes = StandardSuccessResponse & {
   readonly orderId: OrderId;
   readonly refundAmount: number;
+  readonly refundRequested: boolean;
   readonly refundInitiatedAt: ISO8601Timestamp;
   readonly refundExpiresAt: ISO8601Timestamp;
+  readonly isRefundActive: boolean;
+  readonly refundRemainingSeconds: number;
   readonly durationMinutes: number;
+  readonly refundReasonCode: CancelReasonCode | null;
+  readonly refundReason: string | null;
 };
 
 // POST /api/v1/customer/orders/{id}/claim
@@ -447,11 +471,12 @@ export type StaffOrderSummary = {
   readonly trackingId: string | null;
   readonly customer: string;
   readonly amountToPay: number;
-  readonly amountReceived: number;
+  readonly amountReceived: number | null;
   readonly change: number;
   readonly timestamp: ISO8601Timestamp;
   readonly status: OrderStatus;
   readonly statusMessage: string;
+  readonly activatedAt?: ISO8601Timestamp | null;
   readonly isClaimActive?: boolean;
   readonly claimRemainingSeconds?: number;
   readonly courierPaid?: boolean;
@@ -460,20 +485,8 @@ export type StaffOrderSummary = {
   readonly courierPaidAt?: ISO8601Timestamp | null;
   readonly createdAt?: ISO8601Timestamp;
   readonly statusTimeline?: OrderStatusHistoryTuple;
-  readonly cancelledByRole?: OrderActorRole | null;
-  readonly cancelReasonCode?: CancelReasonCode | null;
-  readonly cancelReason?: string | null;
-  readonly cancelledAt?: ISO8601Timestamp | null;
-  readonly isRefundEligible?: boolean;
-  readonly refundableAmount?: number;
-  readonly isRefundActive?: boolean;
-  readonly refundRemainingSeconds?: number;
-  readonly isRefunded?: boolean;
-  readonly refundAmount?: number | null;
-  readonly refundedBy?: StaffId | null;
-  readonly refundedByName?: string;
-  readonly refundedAt?: ISO8601Timestamp | null;
-};
+} & OrderCancelFields &
+  StaffOrderRefundFields;
 
 export type StaffListOrdersQueryParams = {
   readonly status?: OrderStatus;
@@ -507,6 +520,7 @@ export type StaffOrderDetail = {
   readonly timestamp: ISO8601Timestamp;
   readonly status: OrderStatus;
   readonly statusMessage: string;
+  readonly activatedAt?: ISO8601Timestamp | null;
   readonly isClaimActive?: boolean;
   readonly claimRemainingSeconds?: number;
   readonly courierPaid?: boolean;
@@ -515,26 +529,8 @@ export type StaffOrderDetail = {
   readonly courierPaidAt?: ISO8601Timestamp | null;
   readonly createdAt?: ISO8601Timestamp;
   readonly statusTimeline?: OrderStatusHistoryTuple;
-  readonly cancelledBy?: string | null;
-  readonly cancelledByRole?: OrderActorRole | null;
-  readonly cancelReasonCode?: CancelReasonCode | null;
-  readonly cancelReason?: string | null;
-  readonly cancelledAt?: ISO8601Timestamp | null;
-  readonly isRefundEligible?: boolean;
-  readonly refundableAmount?: number;
-  readonly refundRequested?: boolean;
-  readonly refundInitiatedAt?: ISO8601Timestamp | null;
-  readonly refundExpiresAt?: ISO8601Timestamp | null;
-  readonly isRefundActive?: boolean;
-  readonly refundRemainingSeconds?: number;
-  readonly refundReasonCode?: CancelReasonCode | null;
-  readonly refundReason?: string | null;
-  readonly isRefunded?: boolean;
-  readonly refundAmount?: number | null;
-  readonly refundedBy?: StaffId | null;
-  readonly refundedByName?: string;
-  readonly refundedAt?: ISO8601Timestamp | null;
-};
+} & OrderCancelFields &
+  StaffOrderRefundFields;
 
 export type StaffGetOrderRes = StaffOrderDetail;
 
@@ -581,7 +577,10 @@ export type StaffRefundOrderReq = Record<string, never>;
 export type StaffRefundOrderRes = StandardSuccessResponse & {
   readonly orderId: OrderId;
   readonly status: "REFUNDED";
+  readonly isRefunded: boolean;
   readonly refundAmount: number;
+  readonly refundedBy: StaffId;
+  readonly refundedByName?: string;
   readonly refundedAt: ISO8601Timestamp;
 };
 

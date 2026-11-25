@@ -552,6 +552,16 @@ async function runV1StaffSuite() {
     // 9. Testing Staff Refund Lifecycle (CANCELLED -> REFUNDED)
     // ---------------------------------------------------------
     console.log("\n9. Testing Staff Refund Pass Guards & CANCELLED -> REFUNDED...");
+    // Preview before cancel: activated AWAITING_PARCEL (amountReceived=500) exposes refundAmount=500
+    const staffDetailBeforeCancelRes = await getStaffOrder(
+      makeReq(`/api/v1/staff/orders/${autoWinOrderId}`, { token: authToken }),
+      { params: Promise.resolve({ id: autoWinOrderId }) }
+    );
+    const staffDetailBeforeCancelJson = await staffDetailBeforeCancelRes.json();
+    assert.strictEqual(staffDetailBeforeCancelRes.status, 200);
+    assert.strictEqual(staffDetailBeforeCancelJson.isRefundEligible, false);
+    assert.strictEqual(staffDetailBeforeCancelJson.refundAmount, 500);
+
     const custCancelRes = await cancelCustomerOrder(
       makeReq(`/api/v1/customer/orders/${autoWinOrderId}/cancel`, {
         method: "POST",
@@ -563,7 +573,7 @@ async function runV1StaffSuite() {
     const custCancelJson = await custCancelRes.json();
     assert.strictEqual(custCancelRes.status, 200);
     assert.strictEqual(custCancelJson.isRefundEligible, true);
-    assert.strictEqual(custCancelJson.refundableAmount, 480);
+    assert.strictEqual(custCancelJson.refundAmount, 500);
 
     // A0) GET /staff/orders?refundEligible=true includes the cancelled paid order
     const eligibleBeforeRes = await listStaffOrders(
@@ -572,7 +582,10 @@ async function runV1StaffSuite() {
     const eligibleBeforeJson = await eligibleBeforeRes.json();
     assert.strictEqual(eligibleBeforeRes.status, 200);
     assert.ok(
-      eligibleBeforeJson.orders.some((o: { id: string; refundableAmount?: number }) => o.id === autoWinOrderId && o.refundableAmount === 480),
+      eligibleBeforeJson.orders.some(
+        (o: { id: string; refundAmount?: number; cancelledBy?: string | null }) =>
+          o.id === autoWinOrderId && o.refundAmount === 500 && o.cancelledBy === testCustomerId
+      ),
       "Cancelled paid order must appear in ?refundEligible=true queue"
     );
 
@@ -629,14 +642,17 @@ async function runV1StaffSuite() {
     const staffRefundJson = await staffRefundRes.json();
     assert.strictEqual(staffRefundRes.status, 200);
     assert.strictEqual(staffRefundJson.status, "REFUNDED");
-    assert.strictEqual(staffRefundJson.refundAmount, 480);
+    assert.strictEqual(staffRefundJson.isRefunded, true);
+    assert.strictEqual(staffRefundJson.refundAmount, 500);
+    assert.strictEqual(staffRefundJson.refundedBy, testStaffId);
+    assert.strictEqual(staffRefundJson.refundedByName, "Test Staff");
 
     const refundedDbRow = await db.query.orders.findFirst({
       where: eq(orders.id, autoWinOrderId),
     });
     assert.strictEqual(refundedDbRow?.status, "REFUNDED");
     assert.strictEqual(refundedDbRow?.isRefunded, true);
-    assert.strictEqual(refundedDbRow?.refundAmount, 480);
+    assert.strictEqual(refundedDbRow?.refundAmount, 500);
     assert.strictEqual(refundedDbRow?.refundedBy, testStaffId);
     assert.ok(
       refundedDbRow?.statusTimeline?.some((entry: { status: string }) => entry.status === "REFUNDED"),
@@ -666,7 +682,8 @@ async function runV1StaffSuite() {
     );
     assert.ok(refundedEntry, "Refunded order must appear in ?status=REFUNDED");
     assert.strictEqual(refundedEntry.isRefunded, true);
-    assert.strictEqual(refundedEntry.refundAmount, 480);
+    assert.strictEqual(refundedEntry.isRefundEligible, false);
+    assert.strictEqual(refundedEntry.refundAmount, 500);
     assert.strictEqual(refundedEntry.refundedByName, "Test Staff");
     assert.strictEqual(refundedEntry.statusMessage, "Order refunded");
 
@@ -687,6 +704,9 @@ async function runV1StaffSuite() {
     const staffDetailAfterRefundJson = await staffDetailAfterRefundRes.json();
     assert.strictEqual(staffDetailAfterRefundRes.status, 200);
     assert.strictEqual(staffDetailAfterRefundJson.statusMessage, "Order refunded");
+    assert.strictEqual(staffDetailAfterRefundJson.isRefunded, true);
+    assert.strictEqual(staffDetailAfterRefundJson.isRefundEligible, false);
+    assert.strictEqual(staffDetailAfterRefundJson.refundAmount, 500);
     assert.strictEqual(staffDetailAfterRefundJson.refundedByName, "Test Staff");
     console.log("   ✅ Staff refund pass guards, CANCELLED -> REFUNDED, statusTimeline, double-refund 409, ?refundEligible=true, and ?status=REFUNDED verified.");
 

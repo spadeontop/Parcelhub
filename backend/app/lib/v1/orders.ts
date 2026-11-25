@@ -2,9 +2,15 @@ import { and, eq, inArray, ne, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
 import { orders, orderScreenshots } from "@/db/schema";
 import type {
+  CancelReasonCode,
   CustomerCancelReasonCode,
+  OrderActorRole,
+  OrderCancelFields,
   OrderPhotoType,
+  OrderRefundFields,
   OrderStatus,
+  StaffId,
+  StaffOrderRefundFields,
   StatusTimelineEntry,
 } from "@/app/types/v1/api";
 
@@ -209,26 +215,49 @@ export const VALID_CUSTOMER_CANCEL_REASON_CODES: readonly CustomerCancelReasonCo
   "OTHER",
 ] as const;
 
-export function computeRefundableAmount(order: {
+/**
+ * Computes unified refund eligibility and the literal `refundAmount` (full cash deposited =
+ * `amountReceived`, since change is held until parcel claim).
+ *
+ * - `REFUNDED` / `isRefunded`: literal recorded `refundAmount` (fallback to `amountReceived`)
+ * - `CANCELLED` (activated, `amountReceived > 0`, `!courierPaid`): eligible (`true`) + `amountReceived`
+ * - `AWAITING_PARCEL` (activated, `amountReceived > 0`, `!courierPaid`): not yet eligible (`false`) + `amountReceived` (preview)
+ * - All other states (unpaid, prepaid ₱0, `courierPaid`, `READY_TO_CLAIM`, `CLAIMED`): `0`
+ */
+export function computeRefundInfo(order: {
   status: OrderStatus;
   activatedAt?: Date | string | null;
   amountReceived: number | null;
   price: number;
   courierPaid: boolean;
   isRefunded: boolean;
-}): number {
-  if (
-    order.status === "CANCELLED" &&
+  refundAmount?: number | null;
+}): { isRefundEligible: boolean; refundAmount: number } {
+  const hasPaidDeposit =
     Boolean(order.activatedAt) &&
     order.amountReceived !== null &&
-    order.amountReceived >= order.price &&
-    order.price > 0 &&
-    !order.courierPaid &&
-    !order.isRefunded
-  ) {
-    return order.price;
+    order.amountReceived > 0 &&
+    order.amountReceived >= order.price;
+
+  if (order.status === "REFUNDED" || order.isRefunded) {
+    const recorded =
+      typeof order.refundAmount === "number" && order.refundAmount > 0
+        ? order.refundAmount
+        : hasPaidDeposit
+          ? order.amountReceived!
+          : 0;
+    return { isRefundEligible: false, refundAmount: recorded };
   }
-  return 0;
+
+  if (order.status === "CANCELLED" && hasPaidDeposit && !order.courierPaid) {
+    return { isRefundEligible: true, refundAmount: order.amountReceived! };
+  }
+
+  if (order.status === "AWAITING_PARCEL" && hasPaidDeposit && !order.courierPaid) {
+    return { isRefundEligible: false, refundAmount: order.amountReceived! };
+  }
+
+  return { isRefundEligible: false, refundAmount: 0 };
 }
 
 export function computeRefundWindow(
@@ -245,6 +274,84 @@ export function computeRefundWindow(
     return { isRefundActive: true, refundRemainingSeconds: diffSec };
   }
   return { isRefundActive: false, refundRemainingSeconds: 0 };
+}
+
+export function serializeOrderCancelFields(order: {
+  cancelledBy?: string | null;
+  cancelledByRole?: OrderActorRole | null;
+  cancelReasonCode?: CancelReasonCode | null;
+  cancelReason?: string | null;
+  cancelledAt?: Date | string | null;
+}): Required<OrderCancelFields> {
+  return {
+    cancelledBy: order.cancelledBy ?? null,
+    cancelledByRole: order.cancelledByRole ?? null,
+    cancelReasonCode: order.cancelReasonCode ?? null,
+    cancelReason: order.cancelReason ?? null,
+    cancelledAt: order.cancelledAt ? new Date(order.cancelledAt).toISOString() : null,
+  };
+}
+
+export function serializeOrderRefundFields(
+  order: {
+    status: OrderStatus;
+    activatedAt?: Date | string | null;
+    amountReceived: number | null;
+    price: number;
+    courierPaid: boolean;
+    refundRequested: boolean;
+    refundInitiatedAt?: Date | string | null;
+    refundExpiresAt?: Date | string | null;
+    refundReasonCode?: CancelReasonCode | null;
+    refundReason?: string | null;
+    isRefunded: boolean;
+    refundAmount?: number | null;
+    refundedAt?: Date | string | null;
+  },
+  nowMs: number = Date.now()
+): Required<OrderRefundFields> {
+  const { isRefundEligible, refundAmount } = computeRefundInfo(order);
+  const { isRefundActive, refundRemainingSeconds } = computeRefundWindow(
+    order.refundRequested,
+    order.refundExpiresAt,
+    nowMs
+  );
+
+  return {
+    isRefundEligible,
+    refundAmount,
+    refundRequested: order.refundRequested,
+    refundInitiatedAt: order.refundInitiatedAt
+      ? new Date(order.refundInitiatedAt).toISOString()
+      : null,
+    refundExpiresAt: order.refundExpiresAt
+      ? new Date(order.refundExpiresAt).toISOString()
+      : null,
+    isRefundActive,
+    refundRemainingSeconds,
+    refundReasonCode: order.refundReasonCode ?? null,
+    refundReason: order.refundReason ?? null,
+    isRefunded: order.isRefunded,
+    refundedAt: order.refundedAt ? new Date(order.refundedAt).toISOString() : null,
+  };
+}
+
+export function serializeStaffOrderRefundFields(
+  order: Parameters<typeof serializeOrderRefundFields>[0] & {
+    refundedBy?: string | null;
+    refundedByFirstName?: string | null;
+    refundedByLastName?: string | null;
+  },
+  nowMs: number = Date.now()
+): StaffOrderRefundFields {
+  return {
+    ...serializeOrderRefundFields(order, nowMs),
+    refundedBy: (order.refundedBy as StaffId) || null,
+    refundedByName: formatStaffFullName(
+      order.refundedByFirstName,
+      order.refundedByLastName
+    ),
+  };
 }
 
 export function parseOptionalCancelOrRefundReason(body?: {

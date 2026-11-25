@@ -684,7 +684,10 @@ async function runV1CustomerTests() {
     assert.strictEqual(cancelUnpaidRes.status, 200, `Expected 200 on cancel unpaid, got ${cancelUnpaidRes.status}`);
     assert.strictEqual(cancelUnpaidJson.status, "CANCELLED");
     assert.strictEqual(cancelUnpaidJson.isRefundEligible, false);
-    assert.strictEqual(cancelUnpaidJson.refundableAmount, 0);
+    assert.strictEqual(cancelUnpaidJson.refundAmount, 0);
+    assert.strictEqual(cancelUnpaidJson.cancelledBy, customerId);
+    assert.strictEqual(cancelUnpaidJson.cancelledByRole, "CUSTOMER");
+    assert.ok(cancelUnpaidJson.cancelledAt, "cancelledAt must be returned on cancel");
 
     // Cancelling already-CANCELLED order -> 409 OrderAlreadyCancelled
     const alreadyCancelledRes = await cancelCustomerOrder(
@@ -734,7 +737,7 @@ async function runV1CustomerTests() {
     const cancelPrepaidJson = await cancelPrepaidRes.json();
     assert.strictEqual(cancelPrepaidRes.status, 200);
     assert.strictEqual(cancelPrepaidJson.isRefundEligible, false);
-    assert.strictEqual(cancelPrepaidJson.refundableAmount, 0);
+    assert.strictEqual(cancelPrepaidJson.refundAmount, 0);
 
     // B) Cancelling AWAITING_PARCEL after courierPaid=true -> 409 CourierAlreadyPaid
     await db
@@ -762,11 +765,41 @@ async function runV1CustomerTests() {
     assert.strictEqual(courierPaidCancelRes.status, 409);
     assert.strictEqual(courierPaidCancelJson.error, "CourierAlreadyPaid");
 
-    // C) Cancel activated AWAITING_PARCEL (price=480, amountReceived=500, change=20, courierPaid=false) -> refundableAmount=480
+    // Verify AWAITING_PARCEL with courierPaid=true returns refundAmount=0
+    const courierPaidDetailRes = await getCustomerOrder(
+      makeReq(`http://localhost:3000/api/v1/customer/orders/${thirdOrderId}`, {
+        method: "GET",
+        token: authToken,
+      }),
+      { params: Promise.resolve({ id: thirdOrderId }) }
+    );
+    const courierPaidDetailJson = await courierPaidDetailRes.json();
+    assert.strictEqual(courierPaidDetailRes.status, 200);
+    assert.strictEqual(courierPaidDetailJson.order.courierPaid, true);
+    assert.strictEqual(courierPaidDetailJson.order.amountReceived, 500);
+    assert.strictEqual(courierPaidDetailJson.order.isRefundEligible, false);
+    assert.strictEqual(courierPaidDetailJson.order.refundAmount, 0);
+
+    // C) Cancel activated AWAITING_PARCEL (price=480, amountReceived=500, change=20, courierPaid=false) -> refundAmount=500
     await db
       .update(orders)
       .set({ courierPaid: false })
       .where(eq(orders.id, thirdOrderId));
+
+    // Preview before cancel: AWAITING_PARCEL (!courierPaid) returns literal refundAmount=500 with isRefundEligible=false
+    const previewDetailRes = await getCustomerOrder(
+      makeReq(`http://localhost:3000/api/v1/customer/orders/${thirdOrderId}`, {
+        method: "GET",
+        token: authToken,
+      }),
+      { params: Promise.resolve({ id: thirdOrderId }) }
+    );
+    const previewDetailJson = await previewDetailRes.json();
+    assert.strictEqual(previewDetailRes.status, 200);
+    assert.strictEqual(previewDetailJson.order.courierPaid, false);
+    assert.strictEqual(previewDetailJson.order.amountReceived, 500);
+    assert.strictEqual(previewDetailJson.order.isRefundEligible, false);
+    assert.strictEqual(previewDetailJson.order.refundAmount, 500);
 
     const cancelPaidRes = await cancelCustomerOrder(
       makeReq(`http://localhost:3000/api/v1/customer/orders/${thirdOrderId}/cancel`, {
@@ -779,7 +812,12 @@ async function runV1CustomerTests() {
     const cancelPaidJson = await cancelPaidRes.json();
     assert.strictEqual(cancelPaidRes.status, 200);
     assert.strictEqual(cancelPaidJson.isRefundEligible, true);
-    assert.strictEqual(cancelPaidJson.refundableAmount, 480);
+    assert.strictEqual(cancelPaidJson.refundAmount, 500);
+    assert.strictEqual(cancelPaidJson.cancelReasonCode, "CHANGED_MIND");
+    assert.strictEqual(cancelPaidJson.cancelReason, "Found a closer pickup point");
+    assert.strictEqual(cancelPaidJson.cancelledBy, customerId);
+    assert.strictEqual(cancelPaidJson.cancelledByRole, "CUSTOMER");
+    assert.ok(cancelPaidJson.cancelledAt);
 
     const initRefundRes = await refundCustomerOrder(
       makeReq(`http://localhost:3000/api/v1/customer/orders/${thirdOrderId}/refund`, {
@@ -791,7 +829,46 @@ async function runV1CustomerTests() {
     );
     const initRefundJson = await initRefundRes.json();
     assert.strictEqual(initRefundRes.status, 200);
-    assert.strictEqual(initRefundJson.refundAmount, 480);
+    assert.strictEqual(initRefundJson.refundAmount, 500);
+    assert.strictEqual(initRefundJson.refundRequested, true);
+    assert.strictEqual(initRefundJson.isRefundActive, true);
+    assert.ok(initRefundJson.refundRemainingSeconds > 0);
+    assert.strictEqual(initRefundJson.refundReasonCode, "OTHER");
+    assert.strictEqual(initRefundJson.refundReason, "Need counter cash refund");
+
+    // Verify GET detail & list return unified refundAmount=500 and complete refund/cancel fields
+    const afterInitDetailRes = await getCustomerOrder(
+      makeReq(`http://localhost:3000/api/v1/customer/orders/${thirdOrderId}`, {
+        method: "GET",
+        token: authToken,
+      }),
+      { params: Promise.resolve({ id: thirdOrderId }) }
+    );
+    const afterInitDetailJson = await afterInitDetailRes.json();
+    assert.strictEqual(afterInitDetailRes.status, 200);
+    assert.strictEqual(afterInitDetailJson.order.refundAmount, 500);
+    assert.strictEqual(afterInitDetailJson.order.isRefundEligible, true);
+    assert.strictEqual(afterInitDetailJson.order.isRefundActive, true);
+    assert.strictEqual(afterInitDetailJson.order.refundReasonCode, "OTHER");
+    assert.strictEqual(afterInitDetailJson.order.refundReason, "Need counter cash refund");
+
+    const listCancelledRes = await listCustomerOrders(
+      makeReq("http://localhost:3000/api/v1/customer/orders?type=CANCELLED", {
+        method: "GET",
+        token: authToken,
+      })
+    );
+    const listCancelledJson = await listCancelledRes.json();
+    assert.strictEqual(listCancelledRes.status, 200);
+    const cancelledSummary = listCancelledJson.orders.find(
+      (o: { id: string }) => o.id === thirdOrderId
+    );
+    assert.ok(cancelledSummary, "Cancelled order must appear in ?type=CANCELLED list");
+    assert.strictEqual(cancelledSummary.refundAmount, 500);
+    assert.strictEqual(cancelledSummary.amountReceived, 500);
+    assert.strictEqual(cancelledSummary.isRefundEligible, true);
+    assert.strictEqual(cancelledSummary.isRefundActive, true);
+    assert.strictEqual(cancelledSummary.refundReasonCode, "OTHER");
 
     // Re-initiating refund pass with empty body preserves existing refundReasonCode/refundReason
     const refreshRefundRes = await refundCustomerOrder(
@@ -816,7 +893,7 @@ async function runV1CustomerTests() {
       })
     );
     assert.strictEqual(listRefundedRes.status, 200);
-    console.log("   ✅ Customer cancel guards (unpaid/prepaid/courierPaid/already-cancelled/validation), refund pass (price=480, reason preserved on refresh), and REFUNDED filter verified.");
+    console.log("   ✅ Customer cancel guards (unpaid/prepaid/courierPaid/already-cancelled/validation), refund pass (amountReceived=500, reason preserved on refresh), unified list/detail fields, and REFUNDED filter verified.");
 
     // ==========================================
     // 11. Selective Blacklist Enforcement Test
