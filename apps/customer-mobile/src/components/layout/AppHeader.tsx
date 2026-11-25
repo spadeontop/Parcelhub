@@ -7,6 +7,7 @@ import { ParcelHubLogoSvg } from '../common/Icons';
 interface AppHeaderProps {
   title: string;
   subtitle?: string;
+  subtitleUppercase?: boolean;
   showLogo?: boolean;
   statusDotColor?: string;
   onHelp?: () => void;
@@ -20,6 +21,7 @@ interface AppHeaderProps {
 export const AppHeader: React.FC<AppHeaderProps> = ({
   title,
   subtitle,
+  subtitleUppercase = true,
   showLogo = false,
   statusDotColor,
   onHelp,
@@ -203,7 +205,13 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             </View>
             {subtitle && (
               <View className="flex-row items-center gap-1.5 mt-0.5">
-                <Text className="text-[11px] font-bold text-[#dbeafe] uppercase tracking-wider">
+                <Text
+                  className={
+                    subtitleUppercase
+                      ? 'text-[11px] font-bold text-[#dbeafe] uppercase tracking-wider'
+                      : 'text-[12px] font-medium text-[#dbeafe]'
+                  }
+                >
                   {subtitle}
                 </Text>
               </View>

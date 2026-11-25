@@ -111,7 +111,13 @@ export const HomeScreen: React.FC = () => {
     setRefreshing(false);
   };
 
-  const displayName = customer?.firstName?.trim() || 'Customer';
+  const userInitials = useMemo(() => {
+    const first = customer?.firstName?.trim() || '';
+    const last = customer?.lastName?.trim() || '';
+    if (first && last) return `${first[0]}${last[0]}`.toUpperCase();
+    if (first) return first.slice(0, 2).toUpperCase();
+    return 'U';
+  }, [customer?.firstName, customer?.lastName]);
   const isBlacklisted = Boolean(customer?.blacklisted);
 
   const {
@@ -254,12 +260,51 @@ export const HomeScreen: React.FC = () => {
 
   return (
     <View className="flex-1 bg-[#2563eb]">
-      {/* Unified Greeting + Hub Header */}
+      {/* Brand Header with Profile Initials Avatar */}
       <AppHeader
-        title={`Hi, ${displayName}`}
-        subtitle="LILY'S CATERING HUB"
+        title="ParcelHub"
+        subtitle="Lily's Catering Hub"
+        subtitleUppercase={false}
         showLogo
         statusDotColor="#10b981"
+        rightElement={
+          <View className="flex-row items-center gap-2">
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => navigateTo('faq')}
+              className="w-9 h-9 rounded-full bg-white/15 items-center justify-center border border-white/20"
+              accessibilityLabel="Help"
+            >
+              <Svg width={17} height={17} viewBox="0 0 24 24" fill="none">
+                <Path
+                  d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3m.08 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"
+                  stroke="#ffffff"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </Svg>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => navigateTo('profile')}
+              className="w-9 h-9 rounded-full bg-white items-center justify-center"
+              style={{
+                shadowColor: '#0f172a',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.12,
+                shadowRadius: 4,
+                elevation: 2,
+              }}
+              accessibilityLabel="Profile"
+            >
+              <Text className="text-[12px] font-bold text-[#2563eb] tracking-tight">
+                {userInitials}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        }
       />
 
       {/* Main Sheet */}
