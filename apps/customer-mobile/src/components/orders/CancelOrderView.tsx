@@ -29,6 +29,7 @@ interface CancelOrderViewProps {
   readonly onConfirmedChange: (checked: boolean) => void;
   readonly onInitiateRefund: () => void;
   readonly onKeepOrder: () => void;
+  readonly isLoading?: boolean;
   readonly slideAnim: Animated.Value;
   readonly fadeAnim: Animated.Value;
 }
@@ -49,6 +50,7 @@ export const CancelOrderView: React.FC<CancelOrderViewProps> = ({
   onConfirmedChange,
   onInitiateRefund,
   onKeepOrder,
+  isLoading = false,
   slideAnim,
   fadeAnim,
 }) => {
@@ -223,11 +225,13 @@ export const CancelOrderView: React.FC<CancelOrderViewProps> = ({
             onCheckedChange={onConfirmedChange}
             onValidate={handleValidate}
             onSubmit={onInitiateRefund}
+            isLoading={isLoading}
             themeColor="#2563eb"
           />
 
           <TouchableOpacity
             activeOpacity={0.7}
+            disabled={isLoading}
             onPress={onKeepOrder}
             className="items-center justify-center py-2"
           >

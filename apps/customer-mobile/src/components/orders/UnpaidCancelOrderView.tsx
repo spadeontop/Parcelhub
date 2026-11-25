@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  ActivityIndicator,
   ScrollView,
   Text,
   TextInput,
@@ -22,6 +23,7 @@ interface UnpaidCancelOrderViewProps {
   readonly onChangeNotes: (text: string) => void;
   readonly onConfirmCancel: () => void;
   readonly onKeepOrder: () => void;
+  readonly isLoading?: boolean;
 }
 
 /**
@@ -36,6 +38,7 @@ export const UnpaidCancelOrderView: React.FC<UnpaidCancelOrderViewProps> = ({
   onChangeNotes,
   onConfirmCancel,
   onKeepOrder,
+  isLoading = false,
 }) => {
   return (
     <ScrollView
@@ -155,8 +158,11 @@ export const UnpaidCancelOrderView: React.FC<UnpaidCancelOrderViewProps> = ({
       <View className="gap-3 pt-2 items-center">
         <TouchableOpacity
           activeOpacity={0.85}
+          disabled={isLoading}
           onPress={onConfirmCancel}
-          className="w-full bg-[#ef4444] rounded-[14px] p-[15px] items-center justify-center"
+          className={`w-full rounded-[14px] p-[15px] flex-row items-center justify-center gap-2 ${
+            isLoading ? 'bg-[#fca5a5]' : 'bg-[#ef4444]'
+          }`}
           style={{
             shadowColor: '#ef4444',
             shadowOffset: { width: 0, height: 6 },
@@ -165,13 +171,15 @@ export const UnpaidCancelOrderView: React.FC<UnpaidCancelOrderViewProps> = ({
             elevation: 4,
           }}
         >
+          {isLoading && <ActivityIndicator size="small" color="#ffffff" />}
           <Text className="text-[14px] font-bold text-white text-center">
-            Confirm Cancellation
+            {isLoading ? 'Cancelling Order...' : 'Confirm Cancellation'}
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           activeOpacity={0.7}
+          disabled={isLoading}
           onPress={onKeepOrder}
           className="px-3 pt-[3px] pb-[4px] rounded-[8px] items-center justify-center"
         >
