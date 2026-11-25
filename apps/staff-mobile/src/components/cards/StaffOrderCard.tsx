@@ -18,9 +18,9 @@ export const StaffOrderCard: React.FC<StaffOrderCardProps> = ({
 }) => {
   const formattedDate = (() => {
     const raw = order.timestamp || order.createdAt;
-    if (!raw) return 'October 18, 2026';
+    if (!raw) return '—';
     const d = new Date(raw);
-    if (isNaN(d.getTime())) return 'October 18, 2026';
+    if (isNaN(d.getTime())) return '—';
     return d.toLocaleDateString('en-US', {
       month: 'long',
       day: 'numeric',
