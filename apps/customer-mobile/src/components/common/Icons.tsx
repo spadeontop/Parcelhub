@@ -1,5 +1,5 @@
 import React from 'react';
-import Svg, { Path, Line, Circle } from 'react-native-svg';
+import Svg, { Path, Line, Circle, Rect } from 'react-native-svg';
 
 export const HomeIcon: React.FC<{ size?: number; color?: string }> = ({ size = 22, color = '#215cd4' }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -197,6 +197,27 @@ export const CloseIcon: React.FC<{ size?: number; color?: string }> = ({ size = 
 );
 
 export const ParcelHubLogoSvg: React.FC<{ size?: number; style?: any }> = ({ size = 40, style }) => (
+  <Svg width={size} height={size} viewBox="0 0 512 512" fill="none" style={style}>
+    <Rect width={512} height={512} rx={148} fill="#1E1E1E" />
+    <Path
+      d="M96 304V140C96 115.699 115.699 96 140 96H304"
+      stroke="#FFFFFF"
+      strokeWidth={64}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <Path
+      d="M416 208V372C416 396.301 396.301 416 372 416H208"
+      stroke="#FFFFFF"
+      strokeWidth={64}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <Rect x={176} y={176} width={160} height={160} rx={38} fill="#3B82F6" />
+  </Svg>
+);
+
+export const LegacyParcelHubLogoSvg: React.FC<{ size?: number; style?: any }> = ({ size = 40, style }) => (
   <Svg width={size} height={size} viewBox="0 0 52 52" fill="none" style={style}>
     <Path
       d="M37 0H15C6.71573 0 0 6.71573 0 15V37C0 45.2843 6.71573 52 15 52H37C45.2843 52 52 45.2843 52 37V15C52 6.71573 45.2843 0 37 0Z"
