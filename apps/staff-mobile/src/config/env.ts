@@ -40,15 +40,19 @@ export function getDetectedApiUrl(): string {
     return 'http://10.0.2.2:3000';
   }
 
-  // LAN Wi-Fi fallback for physical devices
-  return 'http://192.168.1.13:3000';
+  // Dev-only fallback when running without EXPO_PUBLIC_API_URL
+  if (__DEV__) {
+    return process.env.EXPO_PUBLIC_DEV_LAN_URL || 'http://localhost:3000';
+  }
+
+  return '';
 }
 
 export const ENV = {
   API_BASE_URL: getDetectedApiUrl(),
-  DEFAULT_STAFF_EMAIL: 'staff',
-  DEFAULT_STAFF_USERNAME: 'staff',
-  DEFAULT_STAFF_PASSWORD: 'password',
+  DEFAULT_STAFF_EMAIL: __DEV__ ? 'staff' : '',
+  DEFAULT_STAFF_USERNAME: __DEV__ ? 'staff' : '',
+  DEFAULT_STAFF_PASSWORD: __DEV__ ? 'password' : '',
   POLLING_INTERVAL_MS: 4000,
   HANDOFF_CUTOFF_TIME_MINS: 5,
 };

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { StaffOrder, JustUpdatedOrderInfo } from '../../../types';
 import { OrderConfirmationCard } from './OrderConfirmationCard';
 import { OrderCardContainer } from '../../common/OrderCardContainer';
@@ -128,9 +128,13 @@ export const StaffUnpaidActionSection: React.FC<StaffUnpaidActionSectionProps> =
         targetStatus: 'AWAITING_PARCEL',
         targetTab: 'active',
       });
-    } catch {
+    } catch (err: any) {
       setIsLocked(false);
       setBtnState('idle');
+      Alert.alert(
+        'Activation Failed',
+        err?.message || 'Unable to activate order. Please try again.'
+      );
     }
   };
 

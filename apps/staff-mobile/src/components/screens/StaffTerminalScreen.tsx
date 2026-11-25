@@ -17,7 +17,7 @@ import { StaffLiveUpdatedRow } from '../cards/StaffLiveUpdatedRow';
 import { StaffOrderCardSkeleton } from '../cards/StaffOrderCardSkeleton';
 import { StaffAccountModal } from '../modals/StaffAccountModal';
 import { StaffOrderDetailsModal } from '../modals/details/StaffOrderDetailsModal';
-import { StaffManualLookupModal } from '../modals/StaffManualLookupModal';
+import { StaffScanQrModal } from '../modals/StaffScanQrModal';
 import { Inbox } from '../common/Icons';
 import { StaffTab, StaffOrder } from '../../types';
 
@@ -336,7 +336,7 @@ export const StaffTerminalScreen: React.FC = () => {
         </View>
 
         {/* In-sheet QR Scanner View (Figma node 1355:3) */}
-        <StaffManualLookupModal
+        <StaffScanQrModal
           isOpen={isLookupOpen}
           onClose={() => setIsLookupOpen(false)}
           onSelectOrder={handleOpenOrderDetails}

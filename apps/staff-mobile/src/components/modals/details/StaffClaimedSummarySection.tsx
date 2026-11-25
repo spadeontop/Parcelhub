@@ -22,14 +22,14 @@ interface StaffClaimedSummarySectionProps {
   onReturnHome: () => void;
 }
 
-const formatDateMonth = (iso?: string, fallback = '17 Oct'): string => {
+const formatDateMonth = (iso?: string, fallback = '—'): string => {
   if (!iso) return fallback;
   const d = new Date(iso);
   if (isNaN(d.getTime())) return fallback;
   return d.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
 };
 
-const formatTimeShort = (iso?: string, fallback = '12:00'): string => {
+const formatTimeShort = (iso?: string, fallback = '—'): string => {
   if (!iso) return fallback;
   const d = new Date(iso);
   if (isNaN(d.getTime())) return fallback;
@@ -461,10 +461,10 @@ export const StaffClaimedSummarySection: React.FC<StaffClaimedSummarySectionProp
         <View className="flex-row items-start">
           <View className="w-14 items-end mr-3 pt-0.5">
             <Text className="text-[11.5px] font-bold text-[#64748B] text-right">
-              {formatDateMonth(placedTimestamp, '17 Oct')}
+              {formatDateMonth(placedTimestamp)}
             </Text>
             <Text className="text-[10px] text-[#64748B] text-right mt-0.5">
-              {formatTimeShort(placedTimestamp, '16:32')}
+              {formatTimeShort(placedTimestamp)}
             </Text>
           </View>
           <View className="w-5 items-center mr-3">
@@ -487,10 +487,10 @@ export const StaffClaimedSummarySection: React.FC<StaffClaimedSummarySectionProp
         <View className="flex-row items-start">
           <View className="w-14 items-end mr-3 pt-0.5">
             <Text className="text-[11.5px] font-bold text-[#64748B] text-right">
-              {formatDateMonth(awaitingTimestamp, '17 Oct')}
+              {formatDateMonth(awaitingTimestamp)}
             </Text>
             <Text className="text-[10px] text-[#64748B] text-right mt-0.5">
-              {formatTimeShort(awaitingTimestamp, '18:32')}
+              {formatTimeShort(awaitingTimestamp)}
             </Text>
           </View>
           <View className="w-5 items-center mr-3">
@@ -513,10 +513,10 @@ export const StaffClaimedSummarySection: React.FC<StaffClaimedSummarySectionProp
         <View className="flex-row items-start">
           <View className="w-14 items-end mr-3 pt-0.5">
             <Text className="text-[11.5px] font-bold text-[#64748B] text-right">
-              {formatDateMonth(readyTimestamp, '17 Oct')}
+              {formatDateMonth(readyTimestamp)}
             </Text>
             <Text className="text-[10px] text-[#64748B] text-right mt-0.5">
-              {formatTimeShort(readyTimestamp, '22:32')}
+              {formatTimeShort(readyTimestamp)}
             </Text>
           </View>
           <View className="w-5 items-center mr-3">
@@ -548,10 +548,10 @@ export const StaffClaimedSummarySection: React.FC<StaffClaimedSummarySectionProp
         <View className="flex-row items-start">
           <View className="w-14 items-end mr-3 pt-0.5">
             <Text className="text-[11.5px] font-bold text-[#15803D] text-right">
-              {formatDateMonth(claimedTimestamp, '18 Oct')}
+              {formatDateMonth(claimedTimestamp)}
             </Text>
             <Text className="text-[10px] text-[#15803D] text-right mt-0.5">
-              {formatTimeShort(claimedTimestamp, '08:11')}
+              {formatTimeShort(claimedTimestamp)}
             </Text>
           </View>
           <View className="w-5 items-center mr-3">

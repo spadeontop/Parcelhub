@@ -143,9 +143,13 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
     try {
       await onPayCourier(order.id);
       setLocalCourierPaid(true);
-    } catch {
+    } catch (err: any) {
       setIsStep1Locked(false);
       setStep1BtnState('idle');
+      Alert.alert(
+        'Payout Failed',
+        err?.message || 'Unable to record courier payout. Please try again.'
+      );
     }
   };
 
@@ -191,19 +195,15 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
         photoConfirmLastClickTimeRef.current = 0;
       }
     } catch (err: any) {
-      console.warn('Camera / compression fallback:', err);
+      console.warn('Camera / compression error:', err);
       setPhotoUri(null);
-      setPhotoBase64('mock://ai-verified-parcel-proof.jpg');
-      setHasPhoto(true);
-      setPhotoValidationState('VALID');
+      setPhotoBase64(null);
+      setHasPhoto(false);
       setIsPhotoConfirmed(false);
-      setHasStep2Error(false);
-      setStep2ErrorMessage('');
-      photoConfirmClickCountRef.current = 0;
-      photoConfirmLastClickTimeRef.current = 0;
-      if (err?.message && !err.message.includes('permission')) {
-        Alert.alert('Image Processing Notice', err.message);
-      }
+      Alert.alert(
+        'Photo Capture Failed',
+        err?.message || 'Unable to capture or process proof photo. Please try again.'
+      );
     } finally {
       setIsCompressing(false);
     }
@@ -290,7 +290,15 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
     setStep2BtnState('loading');
 
     try {
-      const payloadUrl = photoBase64 || photoUri || 'mock://ai-verified-parcel-proof.jpg';
+      const payloadUrl = (photoBase64 || photoUri || '').trim();
+      if (!payloadUrl) {
+        setHasStep2Error(true);
+        setStep2ErrorMessage('Please take or attach a parcel waybill photo first.');
+        setStep2ShakeTrigger((c) => c + 1);
+        setIsStep2Locked(false);
+        setStep2BtnState('idle');
+        return;
+      }
       await onAttachPhoto(order.id, payloadUrl);
       onSuccessTransition?.({
         orderId: order.id,
@@ -299,9 +307,13 @@ export const StaffActiveActionSection: React.FC<StaffActiveActionSectionProps> =
         targetStatus: 'READY_TO_CLAIM',
         targetTab: 'ready',
       });
-    } catch {
+    } catch (err: any) {
       setIsStep2Locked(false);
       setStep2BtnState('idle');
+      Alert.alert(
+        'Upload Failed',
+        err?.message || 'Unable to attach proof of delivery. Please try again.'
+      );
     }
   };
 

@@ -477,5 +477,3 @@ export const StaffScanQrModal: React.FC<StaffScanQrModalProps> = ({
   );
 };
 
-// Also export as StaffManualLookupModal alias for backward compatibility
-export const StaffManualLookupModal = StaffScanQrModal;

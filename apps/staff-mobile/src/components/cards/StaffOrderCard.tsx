@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { StaffOrder } from '../../types';
 import { StaffBadge } from '../common/StaffBadge';
 import { Clock } from '../common/Icons';
+import { useDeadlineCountdown } from '../../hooks/useDeadlineCountdown';
 
 interface StaffOrderCardProps {
   order: StaffOrder;
@@ -17,9 +18,9 @@ export const StaffOrderCard: React.FC<StaffOrderCardProps> = ({
 }) => {
   const formattedDate = (() => {
     const raw = order.timestamp || order.createdAt;
-    if (!raw) return 'October 18, 2026';
+    if (!raw) return '—';
     const d = new Date(raw);
-    if (isNaN(d.getTime())) return 'October 18, 2026';
+    if (isNaN(d.getTime())) return '—';
     return d.toLocaleDateString('en-US', {
       month: 'long',
       day: 'numeric',
@@ -37,24 +38,11 @@ export const StaffOrderCard: React.FC<StaffOrderCardProps> = ({
     (order.claimRemainingSeconds !== undefined && order.claimRemainingSeconds > 0)
   );
 
-  const [remainingSecs, setRemainingSecs] = useState<number>(
-    order.claimRemainingSeconds ?? (order.isClaimActive ? 300 : 0)
-  );
-
-  useEffect(() => {
-    setRemainingSecs(
-      order.claimRemainingSeconds ?? (order.isClaimActive ? 300 : 0)
-    );
-  }, [order.claimRemainingSeconds, order.isClaimActive]);
-
-  // Live countdown timer for active claim
-  useEffect(() => {
-    if (!isClaimInitiated || remainingSecs <= 0) return;
-    const interval = setInterval(() => {
-      setRemainingSecs((s) => Math.max(0, s - 1));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [isClaimInitiated, remainingSecs]);
+  const remainingSecs = useDeadlineCountdown({
+    isActive: isClaimInitiated,
+    initialSeconds: order.claimRemainingSeconds,
+    fallbackActiveSeconds: order.isClaimActive ? 300 : 0,
+  });
 
   // Renders live timer when claim is active, or price otherwise
   const renderPriceOrTimer = () => {
