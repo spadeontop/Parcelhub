@@ -11,8 +11,8 @@ interface StaffHeaderProps {
 export const StaffHeader: React.FC<StaffHeaderProps> = ({ onOpenAccount }) => {
   const { staffUser } = useStaffAuth();
 
-  const staffName = staffUser?.name || 'John Doe';
-  const staffId = staffUser?.id || 'STF-1991';
+  const staffName = staffUser?.name || staffUser?.username || 'Staff';
+  const staffSubtitle = staffUser?.username ? `@${staffUser.username}` : staffUser?.id || '—';
   const hubName = staffUser?.hubName || "LILY'S CATERING HUB";
 
   return (
@@ -40,7 +40,7 @@ export const StaffHeader: React.FC<StaffHeaderProps> = ({ onOpenAccount }) => {
         hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         className="bg-[#151A23] border border-[#303846] rounded-[12px] px-3 py-1.5 flex-row items-center gap-2"
         accessibilityRole="button"
-        accessibilityLabel={`Signed in as ${staffName}, ${staffId}. Open account menu`}
+        accessibilityLabel={`Signed in as ${staffName}, ${staffSubtitle}. Open account menu`}
       >
         {/* Status dot (green online) */}
         <View className="w-[7px] h-[7px] rounded-full bg-[#10B981]" />
@@ -54,7 +54,7 @@ export const StaffHeader: React.FC<StaffHeaderProps> = ({ onOpenAccount }) => {
             {staffName}
           </Text>
           <Text className="text-[9px] font-normal text-[#B8C4D4] leading-tight">
-            {staffId}
+            {staffSubtitle}
           </Text>
         </View>
 

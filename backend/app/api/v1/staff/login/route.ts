@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     // 3. Business Logic:
     //    a. Look up staff record by username
     //    b. Verify password with bcrypt
-    //    c. Mint independent HS256 authToken (15m) & refreshToken (30d)
+    //    c. Mint independent HS256 authToken & refreshToken (non-expiring POS tokens)
     // ---------------------------------------------------------
     const staffMember = await db.query.staff.findFirst({
       where: eq(staff.username, username),
@@ -75,6 +75,15 @@ export async function POST(request: NextRequest) {
       statusMessage: "Staff login successful",
       authToken,
       refreshToken,
+      staff: {
+        id: staffMember.id,
+        username: staffMember.username,
+        firstName: staffMember.firstName,
+        lastName: staffMember.lastName,
+        middleInitial: staffMember.middleInitial ?? undefined,
+        createdAt: staffMember.createdAt.toISOString(),
+        updatedAt: staffMember.updatedAt.toISOString(),
+      },
     };
 
     return jsonSuccess(response);
