@@ -103,6 +103,7 @@ export const CreateOrderScreen: React.FC = () => {
 
   // Subtle red highlight & feedback states for locked/incomplete presses
   const [receiptHighlight, setReceiptHighlight] = useState(false);
+  const [receiptFeedback, setReceiptFeedback] = useState<string | null>(null);
   const [detailsHighlight, setDetailsHighlight] = useState(false);
   const [detailsFeedback, setDetailsFeedback] = useState<string | null>(null);
   const [confirmHighlight, setConfirmHighlight] = useState(false);
@@ -122,6 +123,7 @@ export const CreateOrderScreen: React.FC = () => {
       feedbackTimerRef.current = null;
     }
     setReceiptHighlight(false);
+    setReceiptFeedback(null);
     setDetailsHighlight(false);
     setDetailsFeedback(null);
     setConfirmHighlight(false);
@@ -134,6 +136,7 @@ export const CreateOrderScreen: React.FC = () => {
     }
     feedbackTimerRef.current = setTimeout(() => {
       setReceiptHighlight(false);
+      setReceiptFeedback(null);
       setDetailsHighlight(false);
       setDetailsFeedback(null);
       setConfirmHighlight(false);
@@ -253,37 +256,29 @@ export const CreateOrderScreen: React.FC = () => {
     await runReceiptScan(orderDraft.imageUrl);
   };
 
-  const handleLockedDetailsPress = () => {
+  const highlightNeededReceipt = (message: string) => {
+    clearTransientFeedback();
     if (isScanning) {
-      setDetailsFeedback('Scanning receipt, please wait...');
+      setReceiptFeedback('Scanning receipt, please wait...');
       scheduleFeedbackReset();
       return;
     }
-    setDetailsHighlight(true);
     setReceiptHighlight(true);
-    setDetailsFeedback('Attach a receipt photo first to unlock details.');
-    runHorizontalShake(detailsShakeAnim);
+    setReceiptFeedback(message);
     runHorizontalShake(receiptShakeAnim);
+    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
     scheduleFeedbackReset();
+  };
+
+  const handleLockedDetailsPress = () => {
+    highlightNeededReceipt('Please attach a receipt photo first.');
   };
 
   const handleToggleConfirm = () => {
     if (isSubmitting) return;
 
     if (!isDetailsActive) {
-      setConfirmHighlight(true);
-      setReceiptHighlight(true);
-      setFooterFeedback(
-        isScanning
-          ? 'Please wait for receipt scanning to finish.'
-          : 'Attach a receipt photo first before confirming.'
-      );
-      runHorizontalShake(confirmShakeAnim);
-      if (!isScanning) {
-        runHorizontalShake(receiptShakeAnim);
-        scrollViewRef.current?.scrollTo({ y: 0, animated: true });
-      }
-      scheduleFeedbackReset();
+      highlightNeededReceipt('Please attach a receipt photo first.');
       return;
     }
 
@@ -329,36 +324,24 @@ export const CreateOrderScreen: React.FC = () => {
     if (isSubmitting) return;
 
     if (!isDetailsActive) {
-      setReceiptHighlight(true);
-      setDetailsHighlight(true);
-      setFooterFeedback(
-        isScanning
-          ? 'Scanning receipt, please wait a moment.'
-          : 'Attach a receipt photo to complete your order.'
-      );
-      runHorizontalShake(submitShakeAnim);
-      if (!isScanning) {
-        runHorizontalShake(receiptShakeAnim);
-        scrollViewRef.current?.scrollTo({ y: 0, animated: true });
-      }
-      scheduleFeedbackReset();
+      highlightNeededReceipt('Please attach a receipt photo first.');
       return;
     }
 
     const isFormValid = validateForm();
     if (!isFormValid) {
+      clearTransientFeedback();
       setDetailsHighlight(true);
       setDetailsFeedback('Please fill in all required order details.');
-      setFooterFeedback('Complete the highlighted fields above.');
       runHorizontalShake(detailsShakeAnim);
-      runHorizontalShake(submitShakeAnim);
       scheduleFeedbackReset();
       return;
     }
 
     if (!isConfirmed) {
+      clearTransientFeedback();
       setConfirmHighlight(true);
-      setFooterFeedback('Please check the confirmation box first.');
+      setFooterFeedback('Please check the confirmation box before submitting.');
       runHorizontalShake(confirmShakeAnim);
       scheduleFeedbackReset();
       return;
@@ -624,6 +607,16 @@ export const CreateOrderScreen: React.FC = () => {
                         </Svg>
                       </TouchableOpacity>
                     )}
+
+                    {/* Small Inline Feedback Message on Needed Receipt Card */}
+                    {receiptFeedback ? (
+                      <Text
+                        className="text-[11.5px] font-medium mt-2"
+                        style={{ color: receiptHighlight ? '#dc2626' : '#64748b' }}
+                      >
+                        {receiptFeedback}
+                      </Text>
+                    ) : null}
                   </View>
                 </Animated.View>
 
