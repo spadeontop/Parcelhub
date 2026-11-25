@@ -8,6 +8,7 @@ interface OrderTimelineStepperProps {
   readonly statusTimeline: OrderStatusHistoryTuple;
   readonly onViewQr: () => void;
   readonly onOpenPod: () => void;
+  readonly onCancelOrder?: () => void;
 }
 
 function formatTimelineTimestamp(
@@ -77,6 +78,7 @@ export const OrderTimelineStepper: React.FC<OrderTimelineStepperProps> = ({
   statusTimeline,
   onViewQr,
   onOpenPod,
+  onCancelOrder,
 }) => {
   const isStep1Done =
     status === 'AWAITING_PARCEL' || status === 'READY_TO_CLAIM' || status === 'CLAIMED';
@@ -162,6 +164,17 @@ export const OrderTimelineStepper: React.FC<OrderTimelineStepperProps> = ({
           <Text className="text-[12px] font-normal text-[#64748b] mt-0.5">
             Order by the user from the app
           </Text>
+          {status === 'PAYMENT_REQUIRED' && onCancelOrder && (
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={onCancelOrder}
+              className="self-start mt-1.5"
+            >
+              <Text className="text-[13px] font-bold text-[#dc2626]">
+                Cancel Order
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Step 2: Awaiting Parcel */}

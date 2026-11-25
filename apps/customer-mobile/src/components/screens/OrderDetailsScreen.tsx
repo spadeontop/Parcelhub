@@ -25,8 +25,15 @@ import { ConfirmationSubmitSection } from '../common/ConfirmationSubmitSection';
 import { getStatusLabel } from '../../utils/statusHelpers';
 import { useClaimCountdown } from '../orders/useClaimCountdown';
 import { ClaimPassView } from '../orders/ClaimPassView';
+import { OrderCancelledView } from '../orders/OrderCancelledView';
 import { OrderOverviewCard } from '../orders/OrderOverviewCard';
 import { OrderTimelineStepper } from '../orders/OrderTimelineStepper';
+import {
+  UNPAID_CANCELLATION_REASONS,
+  UnpaidCancelOrderView,
+} from '../orders/UnpaidCancelOrderView';
+
+type UnpaidViewMode = 'details' | 'cancel' | 'cancelled';
 
 export const OrderDetailsScreen: React.FC = () => {
   const {
@@ -51,6 +58,10 @@ export const OrderDetailsScreen: React.FC = () => {
   const [isPassDismissed, setIsPassDismissed] = useState<boolean>(false);
   const [isClaimSessionActive, setIsClaimSessionActive] = useState<boolean>(false);
   const [isPullRefreshing, setIsPullRefreshing] = useState<boolean>(false);
+  const [unpaidViewMode, setUnpaidViewMode] = useState<UnpaidViewMode>('details');
+  const [cancelReason, setCancelReason] = useState<string>(UNPAID_CANCELLATION_REASONS[0]);
+  const [cancelNotes, setCancelNotes] = useState<string>('');
+  const [cancelledTimeFallback, setCancelledTimeFallback] = useState<string>('—');
 
   // Hub status defaults to open
   const hubOpen = true;
@@ -89,6 +100,10 @@ export const OrderDetailsScreen: React.FC = () => {
     setIsInitiatingClaim(false);
     setIsPassDismissed(false);
     setIsClaimSessionActive(false);
+    setUnpaidViewMode('details');
+    setCancelReason(UNPAID_CANCELLATION_REASONS[0]);
+    setCancelNotes('');
+    setCancelledTimeFallback('—');
     resetCountdown();
   }, [selectedOrderId, resetCountdown]);
 
@@ -140,11 +155,68 @@ export const OrderDetailsScreen: React.FC = () => {
     setIsClaimSessionActive(false);
   }, []);
 
+  const isUnpaidCancelledView =
+    !isFocusedPassView && (status === 'CANCELLED' || unpaidViewMode === 'cancelled');
+  const isUnpaidCancelView =
+    !isFocusedPassView && !isUnpaidCancelledView && unpaidViewMode === 'cancel';
+
+  const unpaidSlideAnim = useRef(new Animated.Value(0)).current;
+  const unpaidFadeAnim = useRef(new Animated.Value(1)).current;
+
+  const animateUnpaidTransition = useCallback(
+    (direction: 'forward' | 'back') => {
+      unpaidSlideAnim.setValue(direction === 'forward' ? 28 : -28);
+      unpaidFadeAnim.setValue(0.35);
+      Animated.parallel([
+        Animated.timing(unpaidSlideAnim, {
+          toValue: 0,
+          duration: 240,
+          useNativeDriver: true,
+        }),
+        Animated.timing(unpaidFadeAnim, {
+          toValue: 1,
+          duration: 240,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    },
+    [unpaidSlideAnim, unpaidFadeAnim]
+  );
+
+  const handleOpenUnpaidCancel = useCallback(() => {
+    setUnpaidViewMode('cancel');
+    animateUnpaidTransition('forward');
+  }, [animateUnpaidTransition]);
+
+  const handleKeepUnpaidOrder = useCallback(() => {
+    setUnpaidViewMode('details');
+    animateUnpaidTransition('back');
+  }, [animateUnpaidTransition]);
+
+  const handleConfirmUnpaidCancel = useCallback(() => {
+    const now = new Date().toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+    setCancelledTimeFallback(now);
+    setUnpaidViewMode('cancelled');
+    animateUnpaidTransition('forward');
+  }, [animateUnpaidTransition]);
+
   // Handle hardware back on Android: dismiss the pass and return to Complete Details or previous screen
   useEffect(() => {
     const onBackPress = () => {
       if (isFocusedPassView) {
         handleCloseFocusedPass();
+        return true;
+      }
+      if (isUnpaidCancelView) {
+        handleKeepUnpaidOrder();
+        return true;
+      }
+      if (isUnpaidCancelledView) {
+        navigateTo('home');
         return true;
       }
       goBack();
@@ -153,7 +225,15 @@ export const OrderDetailsScreen: React.FC = () => {
 
     const backSubscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
     return () => backSubscription.remove();
-  }, [isFocusedPassView, handleCloseFocusedPass, goBack]);
+  }, [
+    isFocusedPassView,
+    handleCloseFocusedPass,
+    isUnpaidCancelView,
+    handleKeepUnpaidOrder,
+    isUnpaidCancelledView,
+    navigateTo,
+    goBack,
+  ]);
 
   const handlePullRefresh = useCallback(async () => {
     setIsPullRefreshing(true);
@@ -299,6 +379,22 @@ export const OrderDetailsScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
         </View>
+      ) : isUnpaidCancelView ? (
+        <AppHeader
+          title="Cancel Order"
+          subtitle={trackingNumber}
+          showBackButton
+          centerTitle
+          onBack={handleKeepUnpaidOrder}
+        />
+      ) : isUnpaidCancelledView ? (
+        <AppHeader
+          title="Order Cancelled"
+          subtitle="No Refund Required"
+          showBackButton
+          centerTitle
+          onBack={() => navigateTo('home')}
+        />
       ) : (
         <AppHeader
           title="Complete Details"
@@ -331,8 +427,52 @@ export const OrderDetailsScreen: React.FC = () => {
             onRefreshRelease={handleRefreshRelease}
             onReturnHome={handleReturnHomeFromPass}
           />
+        ) : isUnpaidCancelView ? (
+          <Animated.View
+            className="flex-1"
+            style={{
+              opacity: unpaidFadeAnim,
+              transform: [{ translateX: unpaidSlideAnim }],
+            }}
+          >
+            <UnpaidCancelOrderView
+              productName={productName}
+              selectedReason={cancelReason}
+              notes={cancelNotes}
+              onSelectReason={setCancelReason}
+              onChangeNotes={setCancelNotes}
+              onConfirmCancel={handleConfirmUnpaidCancel}
+              onKeepOrder={handleKeepUnpaidOrder}
+            />
+          </Animated.View>
+        ) : isUnpaidCancelledView ? (
+          <Animated.View
+            className="flex-1"
+            style={{
+              opacity: unpaidFadeAnim,
+              transform: [{ translateX: unpaidSlideAnim }],
+            }}
+          >
+            <OrderCancelledView
+              trackingNumber={trackingNumber}
+              productName={productName}
+              price={price}
+              reason={cancelReason}
+              hubOpen={hubOpen}
+              statusTimeline={statusTimeline}
+              cancelledTimeFallback={cancelledTimeFallback}
+              onReturnHome={() => navigateTo('home')}
+            />
+          </Animated.View>
         ) : (
-          <ScrollView
+          <Animated.View
+            className="flex-1"
+            style={{
+              opacity: unpaidFadeAnim,
+              transform: [{ translateX: unpaidSlideAnim }],
+            }}
+          >
+            <ScrollView
             className="flex-1 px-4"
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 40 }}
@@ -404,6 +544,7 @@ export const OrderDetailsScreen: React.FC = () => {
               statusTimeline={statusTimeline}
               onViewQr={() => navigateTo('qr_screen')}
               onOpenPod={openPodModal}
+              onCancelOrder={status === 'PAYMENT_REQUIRED' ? handleOpenUnpaidCancel : undefined}
             />
 
             {/* Section 4: Confirmation & Dynamic Actions by Status */}
@@ -475,6 +616,7 @@ export const OrderDetailsScreen: React.FC = () => {
               </TouchableOpacity>
             </View>
           </ScrollView>
+          </Animated.View>
         )}
       </View>
 
