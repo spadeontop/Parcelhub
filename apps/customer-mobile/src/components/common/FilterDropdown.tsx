@@ -52,7 +52,8 @@ export function FilterDropdown<T extends string>({
 
   const selectedOption = options.find((option) => option.value === value);
   const selectedLabel = selectedOption?.label ?? value;
-  const selectedColor = selectedOption?.color ?? '#2563eb';
+  const selectedColor = selectedOption?.color;
+  const showActiveDot = value !== 'ALL' && Boolean(selectedColor);
   const dropdownOptions = options.filter((option) => option.value !== value);
   const canOpen = dropdownOptions.length > 0;
 
@@ -63,9 +64,9 @@ export function FilterDropdown<T extends string>({
   }, [canOpen, filterOpen]);
 
   return (
-    <View className="mx-5 mb-3" style={{ zIndex: 20 }}>
+    <View className="mx-5 mb-4" style={{ zIndex: 20 }}>
       <TouchableOpacity
-        activeOpacity={0.85}
+        activeOpacity={0.8}
         disabled={!canOpen}
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}
@@ -75,24 +76,19 @@ export function FilterDropdown<T extends string>({
             setFilterOpen((open) => !open);
           }
         }}
-        className="h-[52px] border border-[#edf2f7] rounded-[18px] flex-row items-center justify-between px-4 bg-white"
-        style={{
-          shadowColor: '#0f172a',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.05,
-          shadowRadius: 12,
-          elevation: 2,
-        }}
+        className="h-[46px] border border-[#e5eaf3] rounded-[14px] flex-row items-center justify-between px-4 bg-white"
       >
-        <View className="flex-row items-center gap-2.5 flex-1 pr-2">
-          <View
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: 4,
-              backgroundColor: selectedColor,
-            }}
-          />
+        <View className="flex-row items-center gap-2 flex-1 pr-2">
+          {showActiveDot && (
+            <View
+              style={{
+                width: 7,
+                height: 7,
+                borderRadius: 3.5,
+                backgroundColor: selectedColor,
+              }}
+            />
+          )}
           <Text
             className="text-[14px] font-semibold text-[#0f172a]"
             numberOfLines={1}
@@ -102,17 +98,15 @@ export function FilterDropdown<T extends string>({
         </View>
 
         <View className="flex-row items-center gap-2 shrink-0">
-          <View className="px-2.5 py-1 rounded-full bg-[#eff6ff] border border-[#dbeafe]">
-            <Text className="text-[11.5px] font-semibold text-[#2563eb] leading-[14px]">
-              {countLabel}
-            </Text>
-          </View>
+          <Text className="text-[12px] font-medium text-[#64748b]">
+            {countLabel}
+          </Text>
           {canOpen && (
             <Animated.View style={chevronStyle}>
-              <Svg width={18} height={18} viewBox="0 0 20 20" fill="none">
+              <Svg width={17} height={17} viewBox="0 0 20 20" fill="none">
                 <Path
                   d="M5 7.5L10 12.5L15 7.5"
-                  stroke="#64748b"
+                  stroke="#94a3b8"
                   strokeWidth={1.8}
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -125,7 +119,7 @@ export function FilterDropdown<T extends string>({
 
       <View
         pointerEvents="box-none"
-        className="absolute top-[58px] left-0 right-0"
+        className="absolute top-[52px] left-0 right-0"
         style={{ zIndex: 30 }}
         collapsable={false}
       >
@@ -136,13 +130,13 @@ export function FilterDropdown<T extends string>({
           style={[
             {
               backgroundColor: '#ffffff',
-              borderRadius: 18,
-              borderColor: '#edf2f7',
+              borderRadius: 16,
+              borderColor: '#e5eaf3',
               shadowColor: '#0f172a',
               shadowOffset: { width: 0, height: 8 },
-              shadowOpacity: 0.1,
+              shadowOpacity: 0.08,
               shadowRadius: 16,
-              elevation: 6,
+              elevation: 5,
             },
             dropdownStyle,
           ]}
@@ -151,7 +145,7 @@ export function FilterDropdown<T extends string>({
             style={{
               flex: 1,
               overflow: 'hidden',
-              borderRadius: 18,
+              borderRadius: 16,
             }}
           >
             <Animated.View
@@ -182,7 +176,7 @@ export function FilterDropdown<T extends string>({
                       onChange(option.value);
                       setFilterOpen(false);
                     }}
-                    className="flex-row items-center justify-between px-4 py-3.5 bg-white"
+                    className="flex-row items-center justify-between px-4 py-3 bg-white"
                     style={
                       idx !== 0
                         ? { borderTopWidth: 1, borderTopColor: '#f1f5f9' }
@@ -192,9 +186,9 @@ export function FilterDropdown<T extends string>({
                     <View className="flex-row items-center gap-2.5">
                       <View
                         style={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: 4,
+                          width: 7,
+                          height: 7,
+                          borderRadius: 3.5,
                           backgroundColor: dotColor,
                         }}
                       />
@@ -203,7 +197,7 @@ export function FilterDropdown<T extends string>({
                       </Text>
                     </View>
                     {typeof count === 'number' && (
-                      <Text className="text-[12px] font-semibold text-[#64748b]">
+                      <Text className="text-[12px] font-medium text-[#64748b]">
                         {count}
                       </Text>
                     )}
