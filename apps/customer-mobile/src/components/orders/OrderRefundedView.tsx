@@ -227,20 +227,15 @@ export const OrderRefundedView: React.FC<OrderRefundedViewProps> = ({
         </View>
       </View>
 
-      {/* Primary Return to Home Button */}
+      {/* Bottom Action */}
       <TouchableOpacity
-        activeOpacity={0.85}
+        activeOpacity={0.7}
         onPress={onReturnHome}
-        className="w-full h-[48px] rounded-[12px] bg-[#215cd4] items-center justify-center"
-        style={{
-          shadowColor: '#215cd4',
-          shadowOffset: { width: 0, height: 6 },
-          shadowOpacity: 0.25,
-          shadowRadius: 12,
-          elevation: 4,
-        }}
+        className="items-center justify-center py-2"
       >
-        <Text className="text-white font-bold text-[14.5px]">Return to Home</Text>
+        <Text className="text-[12.5px] font-semibold text-[#475569] text-center">
+          Return to Home
+        </Text>
       </TouchableOpacity>
     </ScrollView>
   );

@@ -227,18 +227,11 @@ export const OrderCancelledView: React.FC<OrderCancelledViewProps> = ({
       {/* Bottom Action */}
       <View className="pt-2">
         <TouchableOpacity
-          activeOpacity={0.85}
+          activeOpacity={0.7}
           onPress={onReturnHome}
-          className="w-full h-[48px] bg-[#215cd4] rounded-[12px] items-center justify-center"
-          style={{
-            shadowColor: '#215cd4',
-            shadowOffset: { width: 0, height: 6 },
-            shadowOpacity: 0.24,
-            shadowRadius: 8,
-            elevation: 4,
-          }}
+          className="items-center justify-center py-2"
         >
-          <Text className="text-[14px] font-bold text-white text-center">
+          <Text className="text-[12.5px] font-semibold text-[#475569] text-center">
             Return to Home
           </Text>
         </TouchableOpacity>
