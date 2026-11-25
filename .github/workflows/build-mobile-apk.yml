@@ -1,7 +1,13 @@
 name: Build Mobile APK
 
-# Triggered on-demand via the GitHub Actions tab ("Run workflow" button).
-# Supports building Customer Mobile, Staff Mobile, or both without hardcoded endpoints.
+# Triggered either:
+#   1. On-demand via the GitHub Actions tab ("Run workflow" button) — auto-bumps version per app
+#      or lets you type a custom release tag.
+#   2. Automatically when you push a version tag: `customer-v*` or `staff-v*`.
+#
+# Customer and Staff apps maintain completely independent versions & tags:
+#   - Customer tags: customer-v1.0.1, customer-v1.0.2, ...
+#   - Staff tags:    staff-v1.0.1,    staff-v1.0.2,    ...
 on:
   workflow_dispatch:
     inputs:
@@ -14,6 +20,21 @@ on:
           - customer
           - staff
           - both
+      version_bump:
+        description: 'Auto version bump for each release (ignored if custom_tag is set)'
+        required: true
+        type: choice
+        default: 'patch'
+        options:
+          - patch
+          - minor
+          - major
+          - none
+      custom_tag:
+        description: 'Optional manual tag/version (e.g. v1.2.0, customer-v1.2.0-beta.1). Leave blank to auto-bump'
+        required: false
+        type: string
+        default: ''
       android_abi:
         description: 'Target Android ABI (arm64-v8a is fastest & standard for modern phones)'
         required: true
@@ -59,6 +80,11 @@ on:
         type: boolean
         default: true
 
+  push:
+    tags:
+      - 'customer-v*'
+      - 'staff-v*'
+
 permissions:
   contents: write
 
@@ -68,11 +94,56 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
+      android_abi: ${{ steps.set-matrix.outputs.android_abi }}
+      build_variant: ${{ steps.set-matrix.outputs.build_variant }}
+      use_cache: ${{ steps.set-matrix.outputs.use_cache }}
+      publish_release: ${{ steps.set-matrix.outputs.publish_release }}
+      version_bump: ${{ steps.set-matrix.outputs.version_bump }}
+      custom_tag: ${{ steps.set-matrix.outputs.custom_tag }}
     steps:
-      - name: Resolve target apps
+      - name: Resolve target apps & workflow parameters
         id: set-matrix
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          INPUT_APP: ${{ inputs.app }}
+          INPUT_VERSION_BUMP: ${{ inputs.version_bump }}
+          INPUT_CUSTOM_TAG: ${{ inputs.custom_tag }}
+          INPUT_ANDROID_ABI: ${{ inputs.android_abi }}
+          INPUT_BUILD_VARIANT: ${{ inputs.build_variant }}
+          INPUT_USE_CACHE: ${{ inputs.use_cache }}
+          INPUT_PUBLISH_RELEASE: ${{ inputs.publish_release }}
         run: |
-          case "${{ inputs.app }}" in
+          if [ "$EVENT_NAME" = "push" ]; then
+            case "$REF_NAME" in
+              customer-v*)
+                TARGET_APP="customer"
+                ;;
+              staff-v*)
+                TARGET_APP="staff"
+                ;;
+              *)
+                echo "::error::Unsupported release tag prefix: $REF_NAME (expected customer-v* or staff-v*)"
+                exit 1
+                ;;
+            esac
+            VERSION_BUMP="none"
+            CUSTOM_TAG="$REF_NAME"
+            ANDROID_ABI="arm64-v8a"
+            BUILD_VARIANT="release"
+            USE_CACHE="true"
+            PUBLISH_RELEASE="true"
+          else
+            TARGET_APP="${INPUT_APP:-customer}"
+            VERSION_BUMP="${INPUT_VERSION_BUMP:-patch}"
+            CUSTOM_TAG="$INPUT_CUSTOM_TAG"
+            ANDROID_ABI="${INPUT_ANDROID_ABI:-arm64-v8a}"
+            BUILD_VARIANT="${INPUT_BUILD_VARIANT:-release}"
+            USE_CACHE="${INPUT_USE_CACHE:-true}"
+            PUBLISH_RELEASE="${INPUT_PUBLISH_RELEASE:-true}"
+          fi
+
+          case "$TARGET_APP" in
             customer)
               MATRIX='[{"id":"customer","dir":"apps/customer-mobile"}]'
               ;;
@@ -83,14 +154,23 @@ jobs:
               MATRIX='[{"id":"customer","dir":"apps/customer-mobile"},{"id":"staff","dir":"apps/staff-mobile"}]'
               ;;
             *)
-              echo "::error::Unsupported app selection: ${{ inputs.app }}"
+              echo "::error::Unsupported app selection: $TARGET_APP"
               exit 1
               ;;
           esac
-          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "matrix=$MATRIX"
+            echo "android_abi=$ANDROID_ABI"
+            echo "build_variant=$BUILD_VARIANT"
+            echo "use_cache=$USE_CACHE"
+            echo "publish_release=$PUBLISH_RELEASE"
+            echo "version_bump=$VERSION_BUMP"
+            echo "custom_tag=$CUSTOM_TAG"
+          } >> "$GITHUB_OUTPUT"
 
   build-android:
-    name: Build ${{ matrix.target.id }} APK (${{ inputs.android_abi }} / ${{ inputs.build_variant }})
+    name: Build ${{ matrix.target.id }} APK (${{ needs.prepare.outputs.android_abi }} / ${{ needs.prepare.outputs.build_variant }})
     needs: prepare
     runs-on: ubuntu-latest
     strategy:
@@ -101,10 +181,25 @@ jobs:
     steps:
       - name: 1. Checkout Repository
         uses: actions/checkout@v4
+        with:
+          fetch-tags: true
 
-      - name: 2. Resolve App Metadata & Build Inputs
+      - name: 2. Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: ${{ needs.prepare.outputs.use_cache == 'true' && 'npm' || '' }}
+          cache-dependency-path: ${{ matrix.target.dir }}/package-lock.json
+
+      - name: 3. Resolve App Version, Release Tag & Build Inputs
         id: config
         env:
+          APP_ID: ${{ matrix.target.id }}
+          APP_DIR: ${{ matrix.target.dir }}
+          VERSION_BUMP: ${{ needs.prepare.outputs.version_bump }}
+          CUSTOM_TAG: ${{ needs.prepare.outputs.custom_tag }}
+          ANDROID_ABI: ${{ needs.prepare.outputs.android_abi }}
+          BUILD_VARIANT: ${{ needs.prepare.outputs.build_variant }}
           INPUT_API_URL: ${{ inputs.api_url }}
           VAR_API_URL: ${{ vars.EXPO_PUBLIC_API_URL }}
           INPUT_SUPABASE_URL: ${{ inputs.supabase_url }}
@@ -127,25 +222,25 @@ jobs:
             echo "::add-mask::$SUPABASE_KEY"
           fi
 
-          APP_NAME=$(node -p "require('./${{ matrix.target.dir }}/app.json').expo.name")
-          APP_VERSION=$(node -p "require('./${{ matrix.target.dir }}/app.json').expo.version")
-          ANDROID_PACKAGE=$(node -p "require('./${{ matrix.target.dir }}/app.json').expo.android.package")
+          # Ensure all remote tags are present so per-app auto-bump finds the latest release tag
+          git fetch --tags --force
 
-          if [ "${{ inputs.android_abi }}" = "universal" ]; then
+          # Resolves independent version/tag for this app and updates app.json for Expo prebuild
+          node .github/scripts/resolve-mobile-version.mjs
+
+          if [ "$ANDROID_ABI" = "universal" ]; then
             GRADLE_ABIS="armeabi-v7a,arm64-v8a,x86,x86_64"
             ABI_SLUG="universal"
           else
-            GRADLE_ABIS="${{ inputs.android_abi }}"
+            GRADLE_ABIS="$ANDROID_ABI"
             ABI_SLUG="${GRADLE_ABIS//,/-}"
           fi
 
-          if [ "${{ inputs.build_variant }}" = "debug" ]; then
+          if [ "$BUILD_VARIANT" = "debug" ]; then
             GRADLE_TASK="assembleDebug"
           else
             GRADLE_TASK="assembleRelease"
           fi
-
-          APK_FILENAME="parcelhub-${{ matrix.target.id }}-${ABI_SLUG}-${{ inputs.build_variant }}.apk"
 
           {
             echo "EXPO_PUBLIC_API_URL=$API_URL"
@@ -155,36 +250,31 @@ jobs:
 
           {
             echo "api_url=$API_URL"
-            echo "app_name=$APP_NAME"
-            echo "app_version=$APP_VERSION"
-            echo "android_package=$ANDROID_PACKAGE"
             echo "gradle_abis=$GRADLE_ABIS"
             echo "abi_slug=$ABI_SLUG"
             echo "gradle_task=$GRADLE_TASK"
-            echo "apk_filename=$APK_FILENAME"
           } >> "$GITHUB_OUTPUT"
 
-      - name: 3. Setup Node.js 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: ${{ inputs.use_cache && 'npm' || '' }}
-          cache-dependency-path: ${{ matrix.target.dir }}/package-lock.json
+      - name: 4. Resolve APK Filename
+        id: artifact
+        run: |
+          APK_FILENAME="parcelhub-${{ steps.config.outputs.release_tag_slug }}-${{ steps.config.outputs.abi_slug }}-${{ needs.prepare.outputs.build_variant }}.apk"
+          echo "apk_filename=$APK_FILENAME" >> "$GITHUB_OUTPUT"
 
-      - name: 4. Setup Java 17 (Temurin)
+      - name: 5. Setup Java 17 (Temurin)
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: 5. Setup Gradle & Build Cache
+      - name: 6. Setup Gradle & Build Cache
         uses: gradle/actions/setup-gradle@v4
         with:
-          cache-disabled: ${{ !inputs.use_cache }}
+          cache-disabled: ${{ needs.prepare.outputs.use_cache != 'true' }}
           cache-read-only: false
 
-      - name: 6. Cache Android Build Cache
-        if: inputs.use_cache
+      - name: 7. Cache Android Build Cache
+        if: needs.prepare.outputs.use_cache == 'true'
         uses: actions/cache@v4
         with:
           path: |
@@ -195,22 +285,22 @@ jobs:
             android-build-${{ runner.os }}-${{ matrix.target.id }}-${{ steps.config.outputs.abi_slug }}-
             android-build-${{ runner.os }}-${{ matrix.target.id }}-
 
-      - name: 7. Accept Android SDK Licenses
+      - name: 8. Accept Android SDK Licenses
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses || true
 
-      - name: 8. Install App Dependencies
+      - name: 9. Install App Dependencies
         run: npm --prefix "${{ matrix.target.dir }}" ci
 
-      - name: 9. Prebuild Native Android Project
+      - name: 10. Prebuild Native Android Project
         working-directory: ${{ matrix.target.dir }}
         run: npx expo prebuild --platform android --clean
 
-      - name: 10. Build Standalone APK via Gradle
+      - name: 11. Build Standalone APK via Gradle
         working-directory: ${{ matrix.target.dir }}/android
         run: |
           chmod +x ./gradlew
           CACHE_FLAG=""
-          if [ "${{ inputs.use_cache }}" = "true" ]; then
+          if [ "${{ needs.prepare.outputs.use_cache }}" = "true" ]; then
             CACHE_FLAG="--build-cache"
           fi
           ./gradlew "${{ steps.config.outputs.gradle_task }}" \
@@ -218,42 +308,61 @@ jobs:
             $CACHE_FLAG \
             --no-daemon
 
-      - name: 11. Package Built APK
+      - name: 12. Package Built APK
         run: |
           mkdir -p build-output
-          APK_SOURCE=$(find "${{ matrix.target.dir }}/android/app/build/outputs/apk/${{ inputs.build_variant }}" -maxdepth 2 -name "*.apk" | head -n 1)
+          APK_SOURCE=$(find "${{ matrix.target.dir }}/android/app/build/outputs/apk/${{ needs.prepare.outputs.build_variant }}" -maxdepth 2 -name "*.apk" | head -n 1)
           if [ -z "$APK_SOURCE" ]; then
-            echo "::error::No APK found in ${{ matrix.target.dir }}/android/app/build/outputs/apk/${{ inputs.build_variant }}"
+            echo "::error::No APK found in ${{ matrix.target.dir }}/android/app/build/outputs/apk/${{ needs.prepare.outputs.build_variant }}"
             exit 1
           fi
-          cp "$APK_SOURCE" "build-output/${{ steps.config.outputs.apk_filename }}"
-          ls -lh "build-output/${{ steps.config.outputs.apk_filename }}"
+          cp "$APK_SOURCE" "build-output/${{ steps.artifact.outputs.apk_filename }}"
+          ls -lh "build-output/${{ steps.artifact.outputs.apk_filename }}"
 
-      - name: 12. Upload APK to Workflow Artifacts
+      - name: 13. Upload APK to Workflow Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: parcelhub-${{ matrix.target.id }}-${{ steps.config.outputs.abi_slug }}-${{ inputs.build_variant }}-apk
-          path: build-output/${{ steps.config.outputs.apk_filename }}
+          name: parcelhub-${{ steps.config.outputs.release_tag_slug }}-${{ steps.config.outputs.abi_slug }}-${{ needs.prepare.outputs.build_variant }}-apk
+          path: build-output/${{ steps.artifact.outputs.apk_filename }}
           retention-days: 14
 
-      - name: 13. Publish Direct APK Download to GitHub Releases
-        if: inputs.publish_release
+      - name: 14. Publish Direct APK Download to GitHub Releases
+        if: needs.prepare.outputs.publish_release == 'true'
         uses: softprops/action-gh-release@v2
-        continue-on-error: true
         with:
-          tag_name: apk-${{ matrix.target.id }}-latest
-          name: ${{ steps.config.outputs.app_name }} Standalone APK (v${{ steps.config.outputs.app_version }})
+          tag_name: ${{ steps.config.outputs.release_tag }}
+          name: ${{ steps.config.outputs.release_title }}
           body: |
             ### ${{ steps.config.outputs.app_name }} Standalone Android Build
+            - **Tag**: `${{ steps.config.outputs.release_tag }}`
             - **Package**: `${{ steps.config.outputs.android_package }}`
-            - **Version**: `${{ steps.config.outputs.app_version }}`
-            - **Variant**: `${{ inputs.build_variant }}`
+            - **Version**: `${{ steps.config.outputs.app_version }}` (versionCode `${{ steps.config.outputs.android_version_code }}`)
+            - **Variant**: `${{ needs.prepare.outputs.build_variant }}`
             - **ABI**: `${{ steps.config.outputs.gradle_abis }}`
             - **Backend Endpoint**: `${{ steps.config.outputs.api_url }}`
+            - **Commit**: `${{ github.sha }}`
+            ${{ steps.config.outputs.previous_tag != '' && format('- **Changes**: https://github.com/{0}/compare/{1}...{2}', github.repository, steps.config.outputs.previous_tag, steps.config.outputs.release_tag) || '' }}
 
-            Tap `${{ steps.config.outputs.apk_filename }}` below on your Android device to install.
-          files: build-output/${{ steps.config.outputs.apk_filename }}
+            Tap `${{ steps.artifact.outputs.apk_filename }}` below on your Android device to install.
+          files: build-output/${{ steps.artifact.outputs.apk_filename }}
           draft: false
-          prerelease: true
+          prerelease: ${{ steps.config.outputs.is_prerelease == 'true' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 15. Write Build Summary
+        run: |
+          {
+            echo "### ${{ steps.config.outputs.app_name }} APK Build"
+            echo ""
+            echo "| Field | Value |"
+            echo "| :--- | :--- |"
+            echo "| **App** | \`${{ matrix.target.id }}\` |"
+            echo "| **Release Tag** | \`${{ steps.config.outputs.release_tag }}\` |"
+            echo "| **Version** | \`${{ steps.config.outputs.app_version }}\` (versionCode \`${{ steps.config.outputs.android_version_code }}\`) |"
+            echo "| **Version Source** | \`${{ steps.config.outputs.version_source }}\` |"
+            echo "| **Previous Tag** | \`${{ steps.config.outputs.previous_tag || 'none' }}\` |"
+            echo "| **Prerelease** | \`${{ steps.config.outputs.is_prerelease }}\` |"
+            echo "| **APK File** | \`${{ steps.artifact.outputs.apk_filename }}\` |"
+            echo "| **Published to Releases** | \`${{ needs.prepare.outputs.publish_release }}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
