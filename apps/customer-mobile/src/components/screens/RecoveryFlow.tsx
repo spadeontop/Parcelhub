@@ -35,8 +35,11 @@ export interface RecoveryCopy {
 interface RecoveryFlowProps {
   copy: RecoveryCopy;
   onExit: () => void;
+  onRequestCode?: (email: string) => Promise<{ retryAfterSeconds?: number } | void>;
+  onVerifyCode?: (email: string, code: string) => Promise<{ resetToken?: string } | void>;
   renderReset: (actions: {
     email: string;
+    resetToken: string;
     onBack: () => void;
     onComplete: () => void;
   }) => ReactNode;
@@ -45,10 +48,18 @@ interface RecoveryFlowProps {
 const CODE_LENGTH = 6;
 const RESEND_DELAY_SECONDS = 60;
 
-export function RecoveryFlow({ copy, onExit, renderReset }: RecoveryFlowProps) {
+export function RecoveryFlow({
+  copy,
+  onExit,
+  onRequestCode,
+  onVerifyCode,
+  renderReset,
+}: RecoveryFlowProps) {
   const [step, setStep] = useState<Step>('email');
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
+  const [resetToken, setResetToken] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<{ field: Step; message: string } | null>(null);
   const [resendDeadline, setResendDeadline] = useState(0);
   const [resendSeconds, setResendSeconds] = useState(0);
@@ -89,14 +100,19 @@ export function RecoveryFlow({ copy, onExit, renderReset }: RecoveryFlowProps) {
     return () => subscription.remove();
   }, [goBack, step]);
 
-  const startCodeEntry = () => {
+  const startCodeEntry = (retryAfterSeconds?: number) => {
+    const delaySeconds =
+      typeof retryAfterSeconds === 'number' && retryAfterSeconds > 0
+        ? retryAfterSeconds
+        : RESEND_DELAY_SECONDS;
     setCode('');
     setError(null);
-    setResendSeconds(RESEND_DELAY_SECONDS);
-    setResendDeadline(Date.now() + RESEND_DELAY_SECONDS * 1000);
+    setResendSeconds(delaySeconds);
+    setResendDeadline(Date.now() + delaySeconds * 1000);
   };
 
-  const requestCode = () => {
+  const requestCode = async () => {
+    if (isSubmitting) return;
     const address = email.trim();
     if (!isValidEmail(address)) {
       setError({ field: 'email', message: 'Enter a valid email address.' });
@@ -104,24 +120,70 @@ export function RecoveryFlow({ copy, onExit, renderReset }: RecoveryFlowProps) {
     }
 
     setEmail(address);
-    startCodeEntry();
-    showStep('code');
+    setError(null);
+    setIsSubmitting(true);
+    try {
+      const res = await onRequestCode?.(address);
+      startCodeEntry(res?.retryAfterSeconds);
+      showStep('code');
+    } catch (err) {
+      setError({
+        field: 'email',
+        message: err instanceof Error ? err.message : 'Unable to send verification code. Please try again.',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const verifyCode = () => {
+  const resendCode = async () => {
+    if (isSubmitting || resendSeconds > 0) return;
+    setError(null);
+    setIsSubmitting(true);
+    try {
+      const res = await onRequestCode?.(email);
+      startCodeEntry(res?.retryAfterSeconds);
+    } catch (err) {
+      setError({
+        field: 'code',
+        message: err instanceof Error ? err.message : 'Unable to resend verification code. Please try again.',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const verifyCode = async () => {
+    if (isSubmitting) return;
     if (code.length !== CODE_LENGTH) {
       setError({ field: 'code', message: 'Enter the 6-digit verification code.' });
       return;
     }
-    showStep('reset');
+
+    setError(null);
+    setIsSubmitting(true);
+    try {
+      const res = await onVerifyCode?.(email, code);
+      setResetToken(res?.resetToken ?? '');
+      showStep('reset');
+    } catch (err) {
+      setError({
+        field: 'code',
+        message: err instanceof Error ? err.message : 'Invalid or expired verification code.',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (step === 'reset') {
     return renderReset({
       email,
+      resetToken,
       onBack: () => showStep('code'),
       onComplete: () => {
         setCode('');
+        setResetToken('');
         showStep('success');
       },
     });
@@ -174,7 +236,7 @@ export function RecoveryFlow({ copy, onExit, renderReset }: RecoveryFlowProps) {
               />
             </View>
             <View style={styles.emailAction}>
-              <AuthButton label={copy.sendLabel} onPress={requestCode} />
+              <AuthButton label={copy.sendLabel} onPress={requestCode} isLoading={isSubmitting} />
             </View>
             <Text style={styles.footer}>
               {copy.rememberPrompt}{' '}
@@ -202,14 +264,20 @@ export function RecoveryFlow({ copy, onExit, renderReset }: RecoveryFlowProps) {
               {error?.field === 'code' && <FieldError message={error.message} />}
             </View>
             <View style={styles.codeAction}>
-              <AuthButton label="Verify Code" onPress={verifyCode} />
+              <AuthButton label="Verify Code" onPress={verifyCode} isLoading={isSubmitting} />
             </View>
             <Text style={styles.footer}>
               Didn&apos;t receive a code?{' '}
               {resendSeconds > 0 ? (
                 <Text style={styles.resendDisabled}>Resend in {resendTime}</Text>
               ) : (
-                <Text accessibilityRole="button" onPress={startCodeEntry} style={styles.link}>Resend</Text>
+                <Text
+                  accessibilityRole="button"
+                  onPress={resendCode}
+                  style={isSubmitting ? styles.resendDisabled : styles.link}
+                >
+                  Resend
+                </Text>
               )}
             </Text>
             <Text accessibilityRole="link" onPress={goBack} style={styles.changeEmail}>{copy.changeEmailLabel}</Text>
