@@ -254,9 +254,9 @@ export const HomeScreen: React.FC = () => {
 
   return (
     <View className="flex-1 bg-[#2563eb]">
-      {/* Standard Top Header */}
+      {/* Unified Greeting + Hub Header */}
       <AppHeader
-        title="ParcelHub"
+        title={`Hi, ${displayName}`}
         subtitle="LILY'S CATERING HUB"
         showLogo
         statusDotColor="#10b981"
@@ -267,7 +267,7 @@ export const HomeScreen: React.FC = () => {
         <ScrollView
           showsVerticalScrollIndicator={false}
           className="flex-1 px-5"
-          contentContainerStyle={{ paddingTop: 22, paddingBottom: 156 }}
+          contentContainerStyle={{ paddingTop: 20, paddingBottom: 156 }}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -276,17 +276,6 @@ export const HomeScreen: React.FC = () => {
             />
           }
         >
-          {/* Greeting */}
-          <View className="mb-4">
-            <Text
-              className="text-[24px] font-bold text-[#0f172a] tracking-tight"
-              numberOfLines={1}
-              ellipsizeMode="tail"
-            >
-              Hi, {displayName}
-            </Text>
-          </View>
-
           {/* Suspension Notice (only if blacklisted) */}
           {isBlacklisted && (
             <View className="rounded-2xl bg-[#fef2f2] border border-[#fecaca] px-4 py-3 mb-4">
@@ -306,20 +295,27 @@ export const HomeScreen: React.FC = () => {
             onCreateOrder={handleCreateOrder}
           />
 
-          {/* Parcel Status Overview Strip */}
-          <View className="flex-row gap-2.5 mb-5">
-            {summaryBuckets.map((bucket) => (
+          {/* Unified Minimalist Parcel Status Bar */}
+          <View
+            className="flex-row rounded-[20px] bg-white border border-[#edf2f7] py-3.5 mb-5"
+            style={CARD_SHADOW}
+          >
+            {summaryBuckets.map((bucket, idx) => (
               <TouchableOpacity
                 key={bucket.filter}
-                activeOpacity={0.8}
+                activeOpacity={0.75}
                 onPress={() => openFilteredOrders(bucket.filter)}
-                className="flex-1 rounded-[18px] bg-white border border-[#edf2f7] px-3.5 py-3"
-                style={CARD_SHADOW}
+                className="flex-1 items-center justify-center px-2"
+                style={
+                  idx !== 0
+                    ? { borderLeftWidth: 1, borderLeftColor: '#f1f5f9' }
+                    : undefined
+                }
               >
-                <View className="flex-row items-center justify-between mb-2">
+                <View className="flex-row items-center gap-1.5">
                   {bucket.renderIcon()}
                   <Text
-                    className="text-[20px] font-bold tracking-tight"
+                    className="text-[18px] font-bold tracking-tight"
                     style={{
                       color: bucket.count > 0 ? '#0f172a' : '#cbd5e1',
                     }}
@@ -328,7 +324,7 @@ export const HomeScreen: React.FC = () => {
                   </Text>
                 </View>
                 <Text
-                  className="text-[12px] font-semibold text-[#475569]"
+                  className="text-[11.5px] font-semibold text-[#64748b] mt-1"
                   numberOfLines={1}
                 >
                   {bucket.label}
