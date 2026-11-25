@@ -226,7 +226,7 @@ export const CancelOrderView: React.FC<CancelOrderViewProps> = ({
             onValidate={handleValidate}
             onSubmit={onInitiateRefund}
             isLoading={isLoading}
-            themeColor="#2563eb"
+            themeColor="#ef4444"
           />
 
           <TouchableOpacity
