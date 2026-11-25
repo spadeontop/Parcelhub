@@ -18,6 +18,8 @@ export const StaffFilterTabs: React.FC<StaffFilterTabsProps> = ({
     { key: 'active', label: 'Awaiting Parcel' },
     { key: 'unpaid', label: 'Payment Required' },
     { key: 'claimed', label: 'Claimed' },
+    { key: 'cancelled', label: 'Cancelled' },
+    { key: 'refunded', label: 'Refunded' },
   ];
 
   return (

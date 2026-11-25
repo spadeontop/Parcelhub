@@ -44,7 +44,21 @@ export const StaffOrderCard: React.FC<StaffOrderCardProps> = ({
     fallbackActiveSeconds: order.isClaimActive ? 300 : 0,
   });
 
-  // Renders live timer when claim is active, or price otherwise
+  // Check if refund pass is active on a cancelled order
+  const isRefundInitiated =
+    order.status === 'CANCELLED' &&
+    Boolean(
+      order.isRefundActive ||
+        (order.refundRemainingSeconds !== undefined && order.refundRemainingSeconds > 0)
+    );
+
+  const refundRemainingSecs = useDeadlineCountdown({
+    isActive: isRefundInitiated,
+    initialSeconds: order.refundRemainingSeconds,
+    fallbackActiveSeconds: order.isRefundActive ? 300 : 0,
+  });
+
+  // Renders live timer when claim or refund pass is active, or price otherwise
   const renderPriceOrTimer = () => {
     if (isClaimInitiated && remainingSecs > 0) {
       const mins = Math.floor(remainingSecs / 60);
@@ -64,6 +78,19 @@ export const StaffOrderCard: React.FC<StaffOrderCardProps> = ({
         <View className="bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
           <Text className="text-[10px] font-bold text-rose-600">
             Timer Expired
+          </Text>
+        </View>
+      );
+    }
+
+    if (isRefundInitiated && refundRemainingSecs > 0) {
+      const mins = Math.floor(refundRemainingSecs / 60);
+      const secs = String(refundRemainingSecs % 60).padStart(2, '0');
+      return (
+        <View className="flex-row items-center gap-1 bg-[#F3E8FF] px-2 py-0.5 rounded-full border border-[#D8B4FE]">
+          <Clock size={11} color="#7E22CE" />
+          <Text className="text-[11px] font-bold text-[#7E22CE]">
+            Refund: {mins}:{secs}
           </Text>
         </View>
       );

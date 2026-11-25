@@ -34,6 +34,10 @@ const getTabLabel = (tab: StaffTab): string => {
       return 'Payment Required';
     case 'claimed':
       return 'Claimed';
+    case 'cancelled':
+      return 'Cancelled';
+    case 'refunded':
+      return 'Refunded';
     case 'all':
     default:
       return 'All Orders';
@@ -52,6 +56,13 @@ export const StaffTerminalScreen: React.FC = () => {
   const [isLookupOpen, setIsLookupOpen] = useState<boolean>(false);
   const [isDeskInfoOpen, setIsDeskInfoOpen] = useState<boolean>(false);
   const [justUpdatedOrder, setJustUpdatedOrder] = useState<JustUpdatedOrderInfo | null>(null);
+  const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!noticeMessage) return;
+    const timer = setTimeout(() => setNoticeMessage(null), 4_000);
+    return () => clearTimeout(timer);
+  }, [noticeMessage]);
 
   const {
     orders,
@@ -79,6 +90,10 @@ export const StaffTerminalScreen: React.FC = () => {
         prev.courierPaid === fresh.courierPaid &&
         prev.isClaimActive === fresh.isClaimActive &&
         prev.claimRemainingSeconds === fresh.claimRemainingSeconds &&
+        prev.isRefundActive === fresh.isRefundActive &&
+        prev.refundRemainingSeconds === fresh.refundRemainingSeconds &&
+        prev.isRefunded === fresh.isRefunded &&
+        prev.refundAmount === fresh.refundAmount &&
         prev.amountReceived === fresh.amountReceived &&
         prev.change === fresh.change &&
         prev.proofImageUrl === nextProof
@@ -196,6 +211,17 @@ export const StaffTerminalScreen: React.FC = () => {
           badgeCounts={badgeCounts}
           onSelectTab={handleSelectTab}
         />
+
+        {noticeMessage ? (
+          <View className="mx-5 mt-1.5 mb-0.5 rounded-xl bg-[#EFF6FF] border border-[#BFDBFE] px-3.5 py-2 flex-row items-center justify-between">
+            <Text className="text-[11.5px] font-medium text-[#1D4ED8] flex-1 pr-2">
+              {noticeMessage}
+            </Text>
+            <TouchableOpacity activeOpacity={0.7} onPress={() => setNoticeMessage(null)}>
+              <Text className="text-[11px] font-bold text-[#1D4ED8]">Dismiss</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
 
         {/* Section Title Header */}
         <View className="px-5 pt-2 pb-1.5 flex-row items-center justify-between">
@@ -340,6 +366,7 @@ export const StaffTerminalScreen: React.FC = () => {
         }
         onSelectTab={handleSelectTab}
         onJustUpdated={setJustUpdatedOrder}
+        onNotice={setNoticeMessage}
       />
     </View>
   );

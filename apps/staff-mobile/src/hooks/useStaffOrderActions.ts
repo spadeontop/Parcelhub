@@ -155,9 +155,37 @@ export function useStaffOrderActions(onOrderUpdated?: (order: StaffOrder) => voi
     },
   });
 
+  const refundMutation = useMutation({
+    mutationFn: (orderId: string) => staffApi.refundOrder(orderId, token),
+    onSuccess: (res, orderId) => {
+      const refundedAt = res.refundedAt || new Date().toISOString();
+      const updated = moveOrderBetweenTabCaches(
+        queryClient,
+        orderId,
+        'cancelled',
+        'refunded',
+        (o) => ({
+          ...o,
+          status: 'REFUNDED' as OrderStatus,
+          isRefundEligible: false,
+          isRefundActive: false,
+          refundRemainingSeconds: 0,
+          isRefunded: true,
+          refundAmount: res.refundAmount,
+          refundedBy: res.refundedBy,
+          refundedByName: res.refundedByName,
+          refundedAt,
+          timestamp: refundedAt,
+        })
+      );
+      if (updated) onOrderUpdated?.(updated);
+      queryClient.invalidateQueries({ queryKey: staffQueryKeys.orders() });
+    },
+  });
+
   const activateOrder = useCallback(
     async (orderId: string, amountReceived: number) => {
-      await activateMutation.mutateAsync({ orderId, amountReceived });
+      return activateMutation.mutateAsync({ orderId, amountReceived });
     },
     [activateMutation]
   );
@@ -183,10 +211,18 @@ export function useStaffOrderActions(onOrderUpdated?: (order: StaffOrder) => voi
     [claimMutation]
   );
 
+  const refundOrder = useCallback(
+    async (orderId: string) => {
+      return refundMutation.mutateAsync(orderId);
+    },
+    [refundMutation]
+  );
+
   return {
     activateOrder,
     payCourier,
     attachPhoto,
     claimOrder,
+    refundOrder,
   };
 }
