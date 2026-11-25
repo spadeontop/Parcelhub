@@ -43,6 +43,11 @@ export const StaffBadge: React.FC<StaffBadgeProps> = ({ status, variant = 'card'
       textColor = 'text-[#DC2626]';
       label = 'Cancelled';
       break;
+    case 'REFUNDED':
+      bgColor = 'bg-[#F3E8FF]';
+      textColor = 'text-[#7E22CE]';
+      label = 'Refunded';
+      break;
   }
 
   const isModal = variant === 'modal';
