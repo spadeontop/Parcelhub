@@ -219,7 +219,7 @@ export const CancelOrderView: React.FC<CancelOrderViewProps> = ({
           <ConfirmationSubmitSection
             title="I confirm that these order details are correct"
             subtitle={`Since your parcel is still in Awaiting status, cancelling will make your ${formattedAmount} refund available to claim at the hub counter.`}
-            buttonLabel="Cancel Order"
+            buttonLabel="Confirm Cancellation"
             errorMessage="Please check the confirmation box before cancelling order."
             isChecked={isConfirmed}
             onCheckedChange={onConfirmedChange}
