@@ -752,7 +752,10 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const attachPhoto = async (orderId: string, imageUrl?: string) => {
-    const payloadUrl = imageUrl?.trim() || 'mock://ai-verified-proof-delivery.jpg';
+    const payloadUrl = imageUrl?.trim();
+    if (!payloadUrl) {
+      throw new Error('Proof of delivery photo is required.');
+    }
     await staffApi.attachPhoto(orderId, payloadUrl, staffUser?.token);
 
     // Optimistically update selectedOrder and tabCache with the new proof photo
