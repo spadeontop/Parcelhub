@@ -1,10 +1,11 @@
 import { NextRequest } from "next/server";
-import { and, eq, gt, isNotNull } from "drizzle-orm";
+import { and, eq, gt, gte, isNotNull } from "drizzle-orm";
 import { db } from "@/db";
 import { orders } from "@/db/schema";
 import { authenticateCustomerRequest, customerAuthErrorResponse } from "@/app/lib/v1/auth";
 import {
-  computeRefundableAmount,
+  computeRefundInfo,
+  computeRefundWindow,
   matchOrderByIdOrTicket,
   ORDER_NON_IMAGE_COLUMNS,
   parseOptionalCancelOrRefundReason,
@@ -84,8 +85,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const refundableAmount = computeRefundableAmount(order);
-    if (refundableAmount <= 0) {
+    const { isRefundEligible, refundAmount } = computeRefundInfo(order);
+    if (!isRefundEligible || refundAmount <= 0) {
       return jsonError(
         "This order has no refundable counter deposit.",
         400,
@@ -106,6 +107,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         refundReasonCode:
           parsedReason.reasonCode ?? order.refundReasonCode ?? order.cancelReasonCode ?? null,
         refundReason: parsedReason.reason ?? order.refundReason ?? order.cancelReason ?? null,
+        modifiedBy: auth.session.userId,
         timestamp: initiatedAt,
       })
       .where(
@@ -116,13 +118,18 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           eq(orders.isRefunded, false),
           eq(orders.courierPaid, false),
           isNotNull(orders.activatedAt),
-          gt(orders.price, 0)
+          isNotNull(orders.amountReceived),
+          gt(orders.amountReceived, 0),
+          gte(orders.amountReceived, orders.price)
         )
       )
       .returning({
         id: orders.id,
+        refundRequested: orders.refundRequested,
         refundInitiatedAt: orders.refundInitiatedAt,
         refundExpiresAt: orders.refundExpiresAt,
+        refundReasonCode: orders.refundReasonCode,
+        refundReason: orders.refundReason,
       });
 
     if (!updatedOrder) {
@@ -141,13 +148,26 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       updatedAt: initiatedAt.toISOString(),
     });
 
+    const effectiveInitiatedAt = updatedOrder.refundInitiatedAt ?? initiatedAt;
+    const effectiveExpiresAt = updatedOrder.refundExpiresAt ?? expiresAt;
+    const { isRefundActive, refundRemainingSeconds } = computeRefundWindow(
+      updatedOrder.refundRequested,
+      effectiveExpiresAt,
+      initiatedAt.getTime()
+    );
+
     const response: CustomerInitiateRefundRes = {
       statusMessage: "Refund pass initiated",
       orderId: updatedOrder.id as OrderId,
-      refundAmount: refundableAmount,
-      refundInitiatedAt: (updatedOrder.refundInitiatedAt ?? initiatedAt).toISOString(),
-      refundExpiresAt: (updatedOrder.refundExpiresAt ?? expiresAt).toISOString(),
+      refundAmount,
+      refundRequested: updatedOrder.refundRequested,
+      refundInitiatedAt: effectiveInitiatedAt.toISOString(),
+      refundExpiresAt: effectiveExpiresAt.toISOString(),
+      isRefundActive,
+      refundRemainingSeconds,
       durationMinutes,
+      refundReasonCode: updatedOrder.refundReasonCode ?? null,
+      refundReason: updatedOrder.refundReason ?? null,
     };
 
     return jsonSuccess(response);

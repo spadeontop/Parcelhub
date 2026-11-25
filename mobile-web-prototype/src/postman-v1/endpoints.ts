@@ -678,7 +678,7 @@ export const POSTMAN_V1_ENDPOINTS: readonly PostmanEndpointSpec[] = [
     authPolicy: 'customer',
     hasBody: true,
     hasOrderIdParam: true,
-    guardHint: 'Blocked if READY_TO_CLAIM, CLAIMED, or courierPaid=true. Computes refundableAmount.',
+    guardHint: 'Blocked if READY_TO_CLAIM, CLAIMED, or courierPaid=true. Computes refundAmount (full amountReceived).',
     fields: [
       { key: 'orderId', label: 'id (orderId or ticketCode)', section: 'path', kind: 'text', required: true, mono: true },
       { key: 'reasonCode', label: 'reasonCode', section: 'body', kind: 'select', options: ['', ...CANCEL_REASON_OPTIONS], mono: true },
@@ -718,7 +718,7 @@ export const POSTMAN_V1_ENDPOINTS: readonly PostmanEndpointSpec[] = [
     authPolicy: 'customer',
     hasBody: true,
     hasOrderIdParam: true,
-    guardHint: 'Requires status === CANCELLED, courierPaid === false, and refundableAmount > 0.',
+    guardHint: 'Requires status === CANCELLED, courierPaid === false, and refundAmount > 0.',
     fields: [
       { key: 'orderId', label: 'id (orderId or ticketCode)', section: 'path', kind: 'text', required: true, mono: true },
       { key: 'reasonCode', label: 'reasonCode', section: 'body', kind: 'select', options: ['', ...CANCEL_REASON_OPTIONS], mono: true },

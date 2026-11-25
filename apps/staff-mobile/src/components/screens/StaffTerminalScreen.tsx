@@ -14,6 +14,7 @@ import { staffApi } from '../../services/staffApi';
 import { StaffHeader } from '../header/StaffHeader';
 import { StaffSearchBar } from '../header/StaffSearchBar';
 import { StaffFilterTabs } from '../navigation/StaffFilterTabs';
+import { TerminalPaginationBar } from '../navigation/TerminalPaginationBar';
 import { StaffOrderCard } from '../cards/StaffOrderCard';
 import { StaffLiveUpdatedRow } from '../cards/StaffLiveUpdatedRow';
 import { StaffOrderCardSkeleton } from '../cards/StaffOrderCardSkeleton';
@@ -69,16 +70,28 @@ export const StaffTerminalScreen: React.FC = () => {
     if (!selectedOrder) return;
     const fresh = allCachedOrders.find((o) => o.id === selectedOrder.id);
     if (!fresh) return;
-    setSelectedOrder((prev) =>
-      prev && prev.id === fresh.id
-        ? {
-            ...fresh,
-            notes: prev.notes,
-            proofImageUrl: prev.proofImageUrl || fresh.proofImageUrl,
-          }
-        : prev
-    );
-  }, [allCachedOrders]);
+    setSelectedOrder((prev) => {
+      if (!prev || prev.id !== fresh.id) return prev;
+      const nextProof = prev.proofImageUrl || fresh.proofImageUrl;
+      if (
+        prev.status === fresh.status &&
+        prev.timestamp === fresh.timestamp &&
+        prev.courierPaid === fresh.courierPaid &&
+        prev.isClaimActive === fresh.isClaimActive &&
+        prev.claimRemainingSeconds === fresh.claimRemainingSeconds &&
+        prev.amountReceived === fresh.amountReceived &&
+        prev.change === fresh.change &&
+        prev.proofImageUrl === nextProof
+      ) {
+        return prev;
+      }
+      return {
+        ...fresh,
+        notes: prev.notes,
+        proofImageUrl: nextProof,
+      };
+    });
+  }, [allCachedOrders, selectedOrder?.id]);
 
   const handleSelectTab = (tab: StaffTab) => {
     if (justUpdatedOrder) setJustUpdatedOrder(null);
@@ -294,88 +307,13 @@ export const StaffTerminalScreen: React.FC = () => {
           </View>
         </ScrollView>
 
-        {/* Fixed Bottom Pagination Bar (Always pinned at bottom whether there are orders or not) */}
-        <View
-          style={{
-            zIndex: 10,
-            borderTopWidth: 1,
-            borderTopColor: '#E2E8F0',
-          }}
-          className="bg-[#F8FAFC] px-5 pt-2.5 pb-6 items-center"
-        >
-          {/* Accurate Record Range Indicator */}
-          <Text className="text-[12px] font-medium text-[#475569] mb-2">
-            {rangeDisplay}
-          </Text>
-
-          {/* Pagination Controls */}
-          <View className="flex-row items-center justify-center gap-2">
-            {/* Prev Button */}
-            <TouchableOpacity
-              onPress={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage <= 1}
-              activeOpacity={0.7}
-              className={`h-[40px] px-4 rounded-[12px] items-center justify-center ${
-                currentPage <= 1
-                  ? 'bg-[#F1F5F9]'
-                  : 'bg-white border border-[#E2E8F0]'
-              }`}
-            >
-              <Text
-                className={`text-[12px] font-medium ${
-                  currentPage <= 1 ? 'text-[#94A3B8]' : 'text-[#475569]'
-                }`}
-              >
-                Prev
-              </Text>
-            </TouchableOpacity>
-
-            {/* Page Number Pills */}
-            {pageNumbers.map((pageNum) => {
-              const isActive = currentPage === pageNum;
-              return (
-                <TouchableOpacity
-                  key={`page-${pageNum}`}
-                  onPress={() => setCurrentPage(pageNum)}
-                  activeOpacity={0.8}
-                  className={`w-10 h-10 rounded-[12px] items-center justify-center ${
-                    isActive
-                      ? 'bg-[#2563EB]'
-                      : 'bg-white border border-[#E2E8F0]'
-                  }`}
-                >
-                  <Text
-                    className={`text-[12px] font-medium ${
-                      isActive ? 'text-white' : 'text-[#475569]'
-                    }`}
-                  >
-                    {pageNum}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-
-            {/* Next Button */}
-            <TouchableOpacity
-              onPress={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage >= totalPages}
-              activeOpacity={0.7}
-              className={`h-[40px] px-4 rounded-[12px] items-center justify-center ${
-                currentPage >= totalPages
-                  ? 'bg-[#F1F5F9]'
-                  : 'bg-white border border-[#E2E8F0]'
-              }`}
-            >
-              <Text
-                className={`text-[12px] font-medium ${
-                  currentPage >= totalPages ? 'text-[#94A3B8]' : 'text-[#475569]'
-                }`}
-              >
-                Next
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+        <TerminalPaginationBar
+          rangeDisplay={rangeDisplay}
+          currentPage={currentPage}
+          totalPages={totalPages}
+          pageNumbers={pageNumbers}
+          onPageChange={setCurrentPage}
+        />
 
         {/* In-sheet QR Scanner View (Figma node 1355:3) */}
         <StaffScanQrModal

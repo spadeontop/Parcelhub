@@ -140,7 +140,7 @@ export const orders = pgTable(
     index("orders_cancelled_unrefunded_idx")
       .on(table.timestamp.desc())
       .where(
-        sql`${table.status} = 'CANCELLED' AND ${table.isRefunded} = false AND ${table.activatedAt} IS NOT NULL AND ${table.price} > 0 AND ${table.courierPaid} = false`
+        sql`${table.status} = 'CANCELLED' AND ${table.isRefunded} = false AND ${table.activatedAt} IS NOT NULL AND ${table.amountReceived} > 0 AND ${table.courierPaid} = false`
       ),
     index("orders_customer_id_timestamp_idx").on(
       table.customerId,

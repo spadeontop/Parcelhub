@@ -6,14 +6,20 @@ import { authenticateStaffRequest } from "@/app/lib/v1/auth";
 import { sendFcmNotification } from "@/app/lib/v1/fcm";
 import {
   appendStatusTimelineSql,
-  computeRefundableAmount,
+  computeRefundInfo,
+  formatStaffFullName,
   matchOrderByIdOrTicket,
   ORDER_NON_IMAGE_COLUMNS,
 } from "@/app/lib/v1/orders";
 import { parseOptionalJsonBody } from "@/app/lib/v1/request";
 import { publishOrderSignal } from "@/app/lib/v1/realtime";
 import { jsonError, jsonSuccess } from "@/app/lib/response";
-import type { OrderId, StaffRefundOrderReq, StaffRefundOrderRes } from "@/app/types/v1/api";
+import type {
+  OrderId,
+  StaffId,
+  StaffRefundOrderReq,
+  StaffRefundOrderRes,
+} from "@/app/types/v1/api";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -66,8 +72,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const refundableAmount = computeRefundableAmount(order);
-    if (refundableAmount <= 0) {
+    const { isRefundEligible, refundAmount } = computeRefundInfo(order);
+    if (!isRefundEligible || refundAmount <= 0) {
       return jsonError(
         "This order has no refundable counter deposit.",
         400,
@@ -104,7 +110,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         statusTimeline: appendStatusTimelineSql("REFUNDED", nowIso),
         isRefunded: true,
         refundRequested: false,
-        refundAmount: refundableAmount,
+        refundAmount,
         refundedBy: auth.session.userId,
         refundedAt: now,
         modifiedBy: auth.session.userId,
@@ -117,14 +123,18 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           eq(orders.isRefunded, false),
           eq(orders.courierPaid, false),
           isNotNull(orders.activatedAt),
-          gt(orders.price, 0),
+          isNotNull(orders.amountReceived),
+          gt(orders.amountReceived, 0),
+          gte(orders.amountReceived, orders.price),
           eq(orders.refundRequested, true),
           gte(orders.refundExpiresAt, now)
         )
       )
       .returning({
         id: orders.id,
+        isRefunded: orders.isRefunded,
         refundAmount: orders.refundAmount,
+        refundedBy: orders.refundedBy,
         refundedAt: orders.refundedAt,
       });
 
@@ -139,7 +149,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     sendFcmNotification({
       userId: order.customerId,
       title: "Refund Completed",
-      body: `₱${refundableAmount} cash refund has been released for ${order.trackingId || order.productName || "your order"}.`,
+      body: `₱${refundAmount} cash refund has been released for ${order.trackingId || order.productName || "your order"}.`,
       notifId: order.id,
       data: {
         orderId: order.id,
@@ -160,7 +170,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       statusMessage: "Order refunded successfully",
       orderId: updatedOrder.id as OrderId,
       status: "REFUNDED",
-      refundAmount: updatedOrder.refundAmount ?? refundableAmount,
+      isRefunded: updatedOrder.isRefunded,
+      refundAmount: updatedOrder.refundAmount ?? refundAmount,
+      refundedBy: (updatedOrder.refundedBy ?? auth.session.userId) as StaffId,
+      refundedByName: formatStaffFullName(auth.staff?.firstName, auth.staff?.lastName),
       refundedAt: (updatedOrder.refundedAt ?? now).toISOString(),
     };
 

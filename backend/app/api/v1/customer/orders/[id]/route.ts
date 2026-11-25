@@ -6,12 +6,12 @@ import { authenticateCustomerRequest, customerAuthErrorResponse } from "@/app/li
 import {
   appendStatusTimelineSql,
   computeClaimWindow,
-  computeRefundableAmount,
-  computeRefundWindow,
   hasActivePaidTrackingId,
   matchOrderByIdOrTicket,
   normalizeTrackingId,
   ORDER_NON_IMAGE_COLUMNS,
+  serializeOrderCancelFields,
+  serializeOrderRefundFields,
 } from "@/app/lib/v1/orders";
 import { parseJsonBody } from "@/app/lib/v1/request";
 import { publishOrderSignal } from "@/app/lib/v1/realtime";
@@ -59,12 +59,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       order.claimRequested,
       order.claimExpiresAt
     );
-    const refundableAmount = computeRefundableAmount(order);
-    const { isRefundActive, refundRemainingSeconds } = computeRefundWindow(
-      order.refundRequested,
-      order.refundExpiresAt
-    );
-
     const orderDetail: CustomerOrderDetail = {
       id: order.id as OrderId,
       ticketCode: order.ticketCode,
@@ -72,30 +66,18 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       productName: order.productName,
       recipientName: order.recipientName,
       price: order.price,
+      amountReceived: order.amountReceived ?? null,
       change: order.change,
       status: order.status,
       statusTimeline: (order.statusTimeline ?? []) as unknown as OrderStatusHistoryTuple,
+      activatedAt: order.activatedAt ? order.activatedAt.toISOString() : null,
+      courierPaid: order.courierPaid,
       claimInitiatedAt: order.claimInitiatedAt ? order.claimInitiatedAt.toISOString() : null,
       claimExpiresAt: order.claimExpiresAt ? order.claimExpiresAt.toISOString() : null,
       isClaimActive,
       claimRemainingSeconds,
-      cancelledBy: order.cancelledBy ?? null,
-      cancelledByRole: order.cancelledByRole ?? null,
-      cancelReasonCode: order.cancelReasonCode ?? null,
-      cancelReason: order.cancelReason ?? null,
-      cancelledAt: order.cancelledAt ? order.cancelledAt.toISOString() : null,
-      isRefundEligible: refundableAmount > 0,
-      refundableAmount,
-      refundRequested: order.refundRequested,
-      refundInitiatedAt: order.refundInitiatedAt ? order.refundInitiatedAt.toISOString() : null,
-      refundExpiresAt: order.refundExpiresAt ? order.refundExpiresAt.toISOString() : null,
-      isRefundActive,
-      refundRemainingSeconds,
-      refundReasonCode: order.refundReasonCode ?? null,
-      refundReason: order.refundReason ?? null,
-      isRefunded: order.isRefunded,
-      refundAmount: order.refundAmount ?? null,
-      refundedAt: order.refundedAt ? order.refundedAt.toISOString() : null,
+      ...serializeOrderCancelFields(order),
+      ...serializeOrderRefundFields(order),
     };
 
     const response: CustomerGetOrderRes = {
