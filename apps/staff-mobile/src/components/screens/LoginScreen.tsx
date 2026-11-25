@@ -18,7 +18,7 @@ import {
 } from '../auth';
 
 export const LoginScreen: React.FC = () => {
-  const { login } = useStaff();
+  const { login, sessionExpiredMessage, clearSessionExpiredMessage } = useStaff();
   const [email, setEmail] = useState<string>(ENV.DEFAULT_STAFF_EMAIL);
   const [password, setPassword] = useState<string>(ENV.DEFAULT_STAFF_PASSWORD);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -27,10 +27,13 @@ export const LoginScreen: React.FC = () => {
   // Modal dialog states
   const [isForgotPassOpen, setIsForgotPassOpen] = useState<boolean>(false);
 
+  const activeError = errorMessage || sessionExpiredMessage;
+
   const handleLogin = async (eEmail = email, ePass = password) => {
     if (!eEmail.trim() || !ePass.trim() || isLoading) return;
     setIsLoading(true);
     setErrorMessage(null);
+    clearSessionExpiredMessage();
     try {
       await login(eEmail.trim(), ePass.trim());
     } catch (err: any) {
@@ -77,11 +80,11 @@ export const LoginScreen: React.FC = () => {
             </View>
 
             {/* Error Banner */}
-            {errorMessage && (
+            {activeError && (
               <View className="bg-rose-50 border border-rose-200 rounded-xl p-3 flex-row items-start gap-2 mb-4">
                 <AlertCircle size={16} color="#e11d48" className="mt-0.5 shrink-0" />
                 <Text className="text-rose-700 text-xs flex-1 leading-relaxed">
-                  {errorMessage}
+                  {activeError}
                 </Text>
               </View>
             )}
@@ -96,6 +99,7 @@ export const LoginScreen: React.FC = () => {
                 onChangeText={(val) => {
                   setEmail(val);
                   if (errorMessage) setErrorMessage(null);
+                  if (sessionExpiredMessage) clearSessionExpiredMessage();
                 }}
                 autoCapitalize="none"
                 returnKeyType="next"
@@ -110,6 +114,7 @@ export const LoginScreen: React.FC = () => {
                 onChangeText={(val) => {
                   setPassword(val);
                   if (errorMessage) setErrorMessage(null);
+                  if (sessionExpiredMessage) clearSessionExpiredMessage();
                 }}
                 isPassword
                 returnKeyType="done"

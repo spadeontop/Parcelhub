@@ -17,6 +17,7 @@ import {
 } from '../types';
 import { staffApi, StaffApiError } from '../services/staffApi';
 import type { StaffQrLookupResult } from '../services/staffApi';
+import { setUnauthorizedHandler } from '../services/apiClient';
 import { ENV } from '../config/env';
 
 export const STAFF_TABS: StaffTab[] = ['all', 'ready', 'active', 'unpaid', 'claimed'];
@@ -67,6 +68,8 @@ interface StaffContextType {
   updateOrderNotes: (orderId: string, notes: string) => void;
   justUpdatedOrder: JustUpdatedOrderInfo | null;
   setJustUpdatedOrder: (info: JustUpdatedOrderInfo | null) => void;
+  sessionExpiredMessage: string | null;
+  clearSessionExpiredMessage: () => void;
 }
 
 function getStatusForTab(tab: StaffTab): OrderStatus | undefined {
@@ -156,6 +159,27 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isLookupOpen, setIsLookupOpen] = useState<boolean>(false);
   const [isDeskInfoOpen, setIsDeskInfoOpen] = useState<boolean>(false);
   const [justUpdatedOrder, setJustUpdatedOrder] = useState<JustUpdatedOrderInfo | null>(null);
+  const [sessionExpiredMessage, setSessionExpiredMessage] = useState<string | null>(null);
+  const clearSessionExpiredMessage = useCallback(() => setSessionExpiredMessage(null), []);
+
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      setStaffUser(null);
+      setTabCache({
+        all: undefined,
+        ready: undefined,
+        active: undefined,
+        unpaid: undefined,
+        claimed: undefined,
+      });
+      setSearchOrders(null);
+      setSearchQuery('');
+      setSelectedOrder(null);
+      setIsDetailsOpen(false);
+      setSessionExpiredMessage('Session expired. Please sign in again.');
+    });
+    return () => setUnauthorizedHandler(null);
+  }, []);
 
   const userRef = useRef<StaffUser | null>(null);
   userRef.current = staffUser;
@@ -588,6 +612,7 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       hubName: "LILY'S CATERING HUB",
       token: res.authToken,
     };
+    setSessionExpiredMessage(null);
     setStaffUser(user);
     // Strategy A: Eagerly prefetch 20 orders for each tab on login
     await fetchAllTabs(false, res.authToken);
@@ -595,6 +620,7 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const logout = async () => {
     await staffApi.clearStoredSession();
+    setSessionExpiredMessage(null);
     setStaffUser(null);
     setTabCache({
       all: undefined,
@@ -987,6 +1013,8 @@ export const StaffProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         updateOrderNotes,
         justUpdatedOrder,
         setJustUpdatedOrder,
+        sessionExpiredMessage,
+        clearSessionExpiredMessage,
       }}
     >
       {children}
