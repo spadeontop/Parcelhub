@@ -119,6 +119,16 @@ export const StaffTerminalScreen: React.FC = () => {
     setActiveTab(tab);
   };
 
+  const handleAmbiguousQrMatch = (code: string, matches: StaffOrder[]) => {
+    if (justUpdatedOrder) setJustUpdatedOrder(null);
+    setActiveTab('all');
+    setCurrentPage(1);
+    setSearchQuery(code);
+    setNoticeMessage(
+      `Multiple orders (${matches.length}) matched "${code}". Showing all hits.`
+    );
+  };
+
   const handleOpenOrderDetails = async (order: StaffOrder, hasDetails = false) => {
     if (justUpdatedOrder) setJustUpdatedOrder(null);
     setSelectedOrder(order);
@@ -372,6 +382,7 @@ export const StaffTerminalScreen: React.FC = () => {
           isOpen={isLookupOpen}
           onClose={() => setIsLookupOpen(false)}
           onSelectOrder={handleOpenOrderDetails}
+          onAmbiguousMatch={handleAmbiguousQrMatch}
           findOrderByQrCode={findOrderByQrCode}
         />
       </View>
