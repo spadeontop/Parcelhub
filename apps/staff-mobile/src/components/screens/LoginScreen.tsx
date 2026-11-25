@@ -7,7 +7,7 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
-import { useStaff } from '../../context/StaffContext';
+import { useStaffAuth } from '../../context/StaffAuthContext';
 import { AlertCircle } from '../common/Icons';
 import { ENV } from '../../config/env';
 import {
@@ -18,7 +18,7 @@ import {
 } from '../auth';
 
 export const LoginScreen: React.FC = () => {
-  const { login, sessionExpiredMessage, clearSessionExpiredMessage } = useStaff();
+  const { login, sessionExpiredMessage, clearSessionExpiredMessage } = useStaffAuth();
   const [email, setEmail] = useState<string>(ENV.DEFAULT_STAFF_EMAIL);
   const [password, setPassword] = useState<string>(ENV.DEFAULT_STAFF_PASSWORD);
   const [isLoading, setIsLoading] = useState<boolean>(false);
