@@ -8,7 +8,6 @@ import {
   BackHandler,
   RefreshControl,
 } from 'react-native';
-import QRCode from 'react-native-qrcode-svg';
 import * as Clipboard from 'expo-clipboard';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as MediaLibrary from 'expo-media-library';
@@ -19,6 +18,9 @@ import { useToast } from '../../context/ToastContext';
 import { useCustomerOrders } from '../../hooks/useCustomerOrders';
 import { useCustomerOrderDetailQuery } from '../../query/useCustomerQueries';
 import { ArrowLeftIcon, DownloadIcon } from '../common/Icons';
+import { CARD_SHADOW } from '../common/cardStyles';
+import { ReturnHomeLink } from '../orders/OrderDetailPrimitives';
+import { QrCodeFrame } from '../orders/QrCodeFrame';
 
 export const QrScreen: React.FC = () => {
   const { authToken } = useAuthSession();
@@ -233,114 +235,38 @@ export const QrScreen: React.FC = () => {
           }
           contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, paddingTop: 20, paddingBottom: 32 }}
         >
-          {/* Section - Elevated Verification Card (White Surface, 24px Radius) */}
+          {/* Section - Minimalist Verification Pass Card */}
           <View
-            style={{
-              backgroundColor: '#FFFFFF',
-              borderWidth: 1,
-              borderColor: 'rgba(241, 245, 249, 0.8)',
-              borderRadius: 24,
-              padding: 25,
-              alignItems: 'center',
-              shadowColor: '#215CD4',
-              shadowOffset: { width: 0, height: 10 },
-              shadowOpacity: 0.08,
-              shadowRadius: 30,
-              elevation: 4,
-            }}
+            className="bg-white border border-[#edf2f7] rounded-[20px] p-5 items-center"
+            style={CARD_SHADOW}
           >
-            {/* Scannable High-Contrast QR Code Area */}
-            <View
-              style={{
-                paddingVertical: 8,
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '100%',
-              }}
-            >
-              <View
-                style={{
-                  width: 197,
-                  height: 209,
-                  backgroundColor: '#FFFFFF',
-                  borderRadius: 16,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: 12,
-                }}
-              >
-                <QRCode
-                  getRef={(c) => {
-                    qrSvgRef.current = c;
-                  }}
-                  value={qrValue}
-                  size={172}
-                  color="#0f172a"
-                  backgroundColor="#ffffff"
-                />
-              </View>
-            </View>
-
-            {/* Ticket Identifier Container */}
+            {/* Tappable Ticket Header */}
             <TouchableOpacity
-              activeOpacity={0.8}
+              activeOpacity={0.7}
               onPress={handleCopyTicket}
-              style={{
-                marginTop: 16,
-                width: '100%',
-                borderWidth: 1,
-                borderColor: 'rgba(33, 92, 212, 0.1)',
-                borderRadius: 16,
-                paddingVertical: 17,
-                paddingHorizontal: 16,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
+              className="w-full pb-4 border-b border-[#f1f5f9] items-center"
               accessibilityLabel="Copy Ticket ID"
             >
-              <Text
-                style={{
-                  fontWeight: '700',
-                  fontSize: 11,
-                  lineHeight: 16.5,
-                  letterSpacing: 1.1,
-                  textTransform: 'uppercase',
-                  color: '#215CD4',
-                  textAlign: 'center',
-                }}
-              >
+              <Text className="text-[11px] font-bold text-[#94a3b8] tracking-[0.65px] uppercase">
                 TICKET
               </Text>
-              <Text
-                style={{
-                  fontWeight: '700',
-                  fontSize: 20,
-                  lineHeight: 28,
-                  letterSpacing: 1,
-                  color: '#1E1E1E',
-                  textAlign: 'center',
-                  marginTop: 2,
-                }}
-              >
+              <Text className="font-mono text-[18px] font-bold text-[#0f172a] mt-1 tracking-[0.5px]">
                 {displayTicket}
               </Text>
             </TouchableOpacity>
 
+            {/* Padded Square QR Frame */}
+            <QrCodeFrame
+              value={qrValue}
+              getRef={(c) => {
+                qrSvgRef.current = c;
+              }}
+            />
+
             {/* Explanatory Instructions */}
-            <View style={{ paddingTop: 19.065, paddingHorizontal: 16, alignItems: 'center' }}>
-              <Text
-                style={{
-                  fontSize: 13,
-                  lineHeight: 21.13,
-                  fontWeight: '400',
-                  color: '#6B7280',
-                  textAlign: 'center',
-                  maxWidth: 280,
-                }}
-              >
-                Please wait by the counter. Show this screen only if requested by staff.
-              </Text>
-            </View>
+            <Text className="text-[12.5px] font-normal text-[#64748b] text-center leading-[18px] max-w-[260px]">
+              Show this QR pass at the hub counter when requested by staff.
+            </Text>
           </View>
 
           {/* Footer - Action Button Group */}
@@ -390,28 +316,7 @@ export const QrScreen: React.FC = () => {
             </TouchableOpacity>
 
             {/* Return to Home Navigation Link */}
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() => navigateTo('home')}
-              style={{
-                paddingVertical: 10,
-                paddingHorizontal: 16,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Text
-                style={{
-                  fontWeight: '500',
-                  fontSize: 14,
-                  lineHeight: 20,
-                  color: '#6B7280',
-                  textAlign: 'center',
-                }}
-              >
-                Return to Home
-              </Text>
-            </TouchableOpacity>
+            <ReturnHomeLink onPress={() => navigateTo('home')} />
           </View>
         </ScrollView>
       </View>

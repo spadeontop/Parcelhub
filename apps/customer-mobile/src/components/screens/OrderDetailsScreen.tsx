@@ -32,6 +32,8 @@ import { RefundPassView } from '../orders/RefundPassView';
 import { OrderRefundedView } from '../orders/OrderRefundedView';
 import { OrderRefundPendingView } from '../orders/OrderRefundPendingView';
 import { OrderOverviewCard } from '../orders/OrderOverviewCard';
+import { OrderHubCard } from '../orders/OrderHubCard';
+import { ReturnHomeLink } from '../orders/OrderDetailPrimitives';
 import { OrderTimelineStepper } from '../orders/OrderTimelineStepper';
 import {
   UNPAID_CANCELLATION_REASONS,
@@ -665,6 +667,8 @@ export const OrderDetailsScreen: React.FC = () => {
           <OrderRefundedView
             productName={productName}
             price={orderDetail?.refundAmount ?? amountReceived ?? price}
+            orderPrice={price}
+            paidAmount={amountReceived ?? price}
             ticketCode={ticketCode}
             orderId={orderId}
             cancellationReason={orderDetail?.refundReason || orderDetail?.cancelReason || cancelReason}
@@ -792,6 +796,7 @@ export const OrderDetailsScreen: React.FC = () => {
               hubOpen={hubOpen}
               statusTimeline={statusTimeline}
               cancelledTimeFallback={cancelledTimeFallback}
+              onCopyTracking={handleCopyTracking}
               onReturnHome={() => navigateTo('home')}
             />
           </Animated.View>
@@ -829,46 +834,7 @@ export const OrderDetailsScreen: React.FC = () => {
             />
 
             {/* Section 2: Hub Location Card */}
-            <View
-              className="bg-white border border-[#f1f5f9] rounded-[16px] p-[17px] mb-3.5 flex-row items-center justify-between"
-              style={{
-                shadowColor: '#111827',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.04,
-                shadowRadius: 8,
-                elevation: 2,
-              }}
-            >
-              <View className="flex-1 pr-3">
-                <Text className="text-[14px] font-bold text-[#111827] tracking-[-0.35px]">
-                  Lily’s Catering Hub
-                </Text>
-                <Text className="text-[12px] text-[#64748b] font-normal mt-0.5">
-                  Yati, Liloan, Cebu, 6002
-                </Text>
-              </View>
-
-              <View
-                className={`flex-row items-center gap-[6px] px-[13px] py-[5px] rounded-full border ${
-                  hubOpen
-                    ? 'bg-[#ecfdf5] border-[rgba(167,243,208,0.6)]'
-                    : 'bg-[#fef2f2] border-[#fecaca]'
-                }`}
-              >
-                <View
-                  className={`w-2 h-2 rounded-full ${
-                    hubOpen ? 'bg-[#10b981]' : 'bg-[#ef4444]'
-                  }`}
-                />
-                <Text
-                  className={`text-[12px] font-semibold ${
-                    hubOpen ? 'text-[#059669]' : 'text-[#dc2626]'
-                  }`}
-                >
-                  {hubOpen ? 'Open' : 'Closed'}
-                </Text>
-              </View>
-            </View>
+            <OrderHubCard hubOpen={hubOpen} />
 
             {/* Section 3: Tracking Progress Card */}
             <OrderTimelineStepper
@@ -949,15 +915,7 @@ export const OrderDetailsScreen: React.FC = () => {
                 </TouchableOpacity>
               )}
 
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() => navigateTo('home')}
-                className="items-center justify-center py-2"
-              >
-                <Text className="text-[12px] font-semibold text-[#475569] text-center">
-                  Return to Home
-                </Text>
-              </TouchableOpacity>
+              <ReturnHomeLink onPress={() => navigateTo('home')} />
             </View>
           </ScrollView>
           </Animated.View>

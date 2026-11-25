@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { OrderProductBlock, OrderSectionCard } from './OrderDetailPrimitives';
 
 export const UNPAID_CANCELLATION_REASONS = [
   'Changed my mind',
@@ -48,46 +49,9 @@ export const UnpaidCancelOrderView: React.FC<UnpaidCancelOrderViewProps> = ({
       contentContainerStyle={{ paddingBottom: 32, paddingTop: 4, gap: 14 }}
     >
       {/* Order Summary Card */}
-      <View
-        className="bg-white rounded-[20px] px-5 pt-[19px] pb-5 gap-[13px]"
-        style={{
-          shadowColor: '#0f172a',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.04,
-          shadowRadius: 8,
-          elevation: 2,
-        }}
-      >
-        <Text className="text-[11px] font-bold text-[#94a3b8] uppercase tracking-[0.66px]">
-          ORDER SUMMARY
-        </Text>
-
-        <View className="flex-row items-center justify-between pt-px">
-          <Text className="text-[13.5px] font-medium text-[#64748b]">Product</Text>
-          <Text
-            className="text-[13.5px] font-semibold text-[#0f172a] text-right flex-1 ml-4"
-            numberOfLines={1}
-          >
-            {productName}
-          </Text>
-        </View>
-
-        <View className="flex-row items-center justify-between pb-px">
-          <Text className="text-[13.5px] font-medium text-[#64748b]">Payment Status</Text>
-          <View className="bg-[#fef3c7] border border-[#fde68a] rounded-full px-[10px] py-[4px]">
-            <Text className="text-[12px] font-bold text-[#b45309]">Unpaid</Text>
-          </View>
-        </View>
-
-        <View className="h-px bg-[#f1f5f9] w-full" />
-
-        <View className="flex-row items-center justify-between pt-px">
-          <Text className="text-[13.5px] font-medium text-[#64748b]">Paid Amount</Text>
-          <Text className="text-[13.5px] font-semibold text-[#0f172a] text-right">
-            No payment collected
-          </Text>
-        </View>
-      </View>
+      <OrderSectionCard title="ITEM TO CANCEL" style={{ marginBottom: 0 }}>
+        <OrderProductBlock productName={productName} withDivider={false} />
+      </OrderSectionCard>
 
       {/* Reason Selection & Additional Notes Card */}
       <View

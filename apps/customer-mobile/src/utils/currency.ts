@@ -17,3 +17,9 @@ export const formatCurrency = (val: number | string): string => {
     maximumFractionDigits: 2,
   })}`;
 };
+
+export const formatPeso = (amount: number): string =>
+  `₱${amount.toLocaleString('en-US')}`;
+
+export const formatPesoOrDash = (amount: number): string =>
+  amount > 0 ? formatPeso(amount) : '—';
