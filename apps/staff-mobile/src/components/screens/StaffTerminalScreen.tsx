@@ -8,7 +8,9 @@ import {
   Animated,
   Easing,
 } from 'react-native';
-import { useStaff } from '../../context/StaffContext';
+import { useStaffAuth } from '../../context/StaffAuthContext';
+import { useStaffOrders } from '../../hooks/useStaffOrders';
+import { staffApi } from '../../services/staffApi';
 import { StaffHeader } from '../header/StaffHeader';
 import { StaffSearchBar } from '../header/StaffSearchBar';
 import { StaffFilterTabs } from '../navigation/StaffFilterTabs';
@@ -19,7 +21,7 @@ import { StaffAccountModal } from '../modals/StaffAccountModal';
 import { StaffOrderDetailsModal } from '../modals/details/StaffOrderDetailsModal';
 import { StaffScanQrModal } from '../modals/StaffScanQrModal';
 import { Inbox } from '../common/Icons';
-import { StaffTab, StaffOrder } from '../../types';
+import { StaffTab, StaffOrder, JustUpdatedOrderInfo } from '../../types';
 
 const getTabLabel = (tab: StaffTab): string => {
   switch (tab) {
@@ -38,37 +40,80 @@ const getTabLabel = (tab: StaffTab): string => {
 };
 
 export const StaffTerminalScreen: React.FC = () => {
+  const { staffUser } = useStaffAuth();
+
+  // Screen-local UI state (no StaffUiContext needed)
+  const [activeTab, setActiveTab] = useState<StaffTab>('all');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [selectedOrder, setSelectedOrder] = useState<StaffOrder | null>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState<boolean>(false);
+  const [isLookupOpen, setIsLookupOpen] = useState<boolean>(false);
+  const [isDeskInfoOpen, setIsDeskInfoOpen] = useState<boolean>(false);
+  const [justUpdatedOrder, setJustUpdatedOrder] = useState<JustUpdatedOrderInfo | null>(null);
+
   const {
     orders,
     filteredOrders,
     allCachedOrders,
     isLoadingOrders,
     totalCount,
-    currentPage,
-    setCurrentPage,
-    activeTab,
-    setActiveTab,
-    searchQuery,
-    setSearchQuery,
     badgeCounts,
-    selectedOrder,
-    isDetailsOpen,
-    openOrderDetails,
-    findOrderByQrCode,
-    closeOrderDetails,
-    isLookupOpen,
-    setIsLookupOpen,
-    isDeskInfoOpen,
-    setIsDeskInfoOpen,
     isRefreshing,
     refreshOrders,
-    justUpdatedOrder,
-    setJustUpdatedOrder,
-  } = useStaff();
+    findOrderByQrCode,
+  } = useStaffOrders(activeTab, currentPage, searchQuery);
 
-  const handleOpenOrderDetails = (order: StaffOrder, hasDetails = false) => {
+  // Keep selectedOrder synced when background polling refreshes the active list
+  useEffect(() => {
+    if (!selectedOrder) return;
+    const fresh = allCachedOrders.find((o) => o.id === selectedOrder.id);
+    if (!fresh) return;
+    setSelectedOrder((prev) =>
+      prev && prev.id === fresh.id
+        ? {
+            ...fresh,
+            notes: prev.notes,
+            proofImageUrl: prev.proofImageUrl || fresh.proofImageUrl,
+          }
+        : prev
+    );
+  }, [allCachedOrders]);
+
+  const handleSelectTab = (tab: StaffTab) => {
     if (justUpdatedOrder) setJustUpdatedOrder(null);
-    openOrderDetails(order, hasDetails);
+    if (searchQuery) setSearchQuery('');
+    setActiveTab(tab);
+  };
+
+  const handleOpenOrderDetails = async (order: StaffOrder, hasDetails = false) => {
+    if (justUpdatedOrder) setJustUpdatedOrder(null);
+    setSelectedOrder(order);
+    setIsDetailsOpen(true);
+    if (hasDetails || !staffUser?.token) return;
+    try {
+      const detail = await staffApi.getOrder(order.id, staffUser.token);
+      setSelectedOrder((prev) =>
+        prev && prev.id === order.id
+          ? {
+              ...prev,
+              ...detail,
+              amountReceived: detail.amountReceived ?? prev.amountReceived,
+              change: detail.change || prev.change,
+              notes: prev.notes,
+              claimedAt: prev.claimedAt || detail.claimedAt,
+              createdAt: detail.createdAt || prev.createdAt,
+              statusTimeline: detail.statusTimeline || prev.statusTimeline,
+              proofImageUrl: detail.proofImageUrl || prev.proofImageUrl || order.proofImageUrl,
+            }
+          : prev
+      );
+    } catch {}
+  };
+
+  const closeOrderDetails = () => {
+    setIsDetailsOpen(false);
+    setSelectedOrder(null);
   };
 
   // 20 items per page (server-side paginated)
@@ -136,10 +181,7 @@ export const StaffTerminalScreen: React.FC = () => {
         <StaffFilterTabs
           activeTab={activeTab}
           badgeCounts={badgeCounts}
-          onSelectTab={(tab) => {
-            if (justUpdatedOrder) setJustUpdatedOrder(null);
-            setActiveTab(tab);
-          }}
+          onSelectTab={handleSelectTab}
         />
 
         {/* Section Title Header */}
@@ -355,6 +397,11 @@ export const StaffTerminalScreen: React.FC = () => {
         order={selectedOrder}
         isOpen={isDetailsOpen}
         onClose={closeOrderDetails}
+        onOrderUpdated={(updated) =>
+          setSelectedOrder((prev) => (prev && prev.id === updated.id ? updated : prev))
+        }
+        onSelectTab={handleSelectTab}
+        onJustUpdated={setJustUpdatedOrder}
       />
     </View>
   );

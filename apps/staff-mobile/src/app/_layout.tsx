@@ -4,7 +4,9 @@ import { Slot } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { StaffProvider } from '../context/StaffContext';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { StaffAuthProvider } from '../context/StaffAuthContext';
+import { staffQueryClient } from '../query/queryClient';
 import '../global.css';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -34,9 +36,11 @@ function RootAppContent() {
 export default function RootLayout() {
   return (
     <SafeAreaProvider style={{ flex: 1 }}>
-      <StaffProvider>
-        <RootAppContent />
-      </StaffProvider>
+      <QueryClientProvider client={staffQueryClient}>
+        <StaffAuthProvider>
+          <RootAppContent />
+        </StaffAuthProvider>
+      </QueryClientProvider>
     </SafeAreaProvider>
   );
 }

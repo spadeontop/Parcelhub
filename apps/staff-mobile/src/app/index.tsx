@@ -1,11 +1,11 @@
 import React from 'react';
 import { View, ActivityIndicator, Text } from 'react-native';
-import { useStaff } from '../context/StaffContext';
+import { useStaffAuth } from '../context/StaffAuthContext';
 import { LoginScreen } from '../components/screens/LoginScreen';
 import { StaffTerminalScreen } from '../components/screens/StaffTerminalScreen';
 
 export default function IndexPage() {
-  const { isAuthenticated, isInitialLoading } = useStaff();
+  const { isAuthenticated, isInitialLoading } = useStaffAuth();
 
   if (isInitialLoading) {
     return (

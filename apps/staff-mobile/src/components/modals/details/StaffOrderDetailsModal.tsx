@@ -7,8 +7,8 @@ import {
   Easing,
   Dimensions,
 } from 'react-native';
-import { StaffOrder, JustUpdatedOrderInfo } from '../../../types';
-import { useStaff } from '../../../context/StaffContext';
+import { StaffOrder, StaffTab, JustUpdatedOrderInfo } from '../../../types';
+import { useStaffOrderActions } from '../../../hooks/useStaffOrderActions';
 import { OrderDetailsHeader } from './OrderDetailsHeader';
 import { StaffOrderOverviewCard } from './StaffOrderOverviewCard';
 import { StaffReadyActionSection } from './StaffReadyActionSection';
@@ -20,21 +20,25 @@ interface StaffOrderDetailsModalProps {
   order: StaffOrder | null;
   isOpen: boolean;
   onClose: () => void;
+  onOrderUpdated?: (order: StaffOrder) => void;
+  onSelectTab: (tab: StaffTab) => void;
+  onJustUpdated: (info: JustUpdatedOrderInfo) => void;
 }
 
 export const StaffOrderDetailsModal: React.FC<StaffOrderDetailsModalProps> = ({
   order,
   isOpen,
   onClose,
+  onOrderUpdated,
+  onSelectTab,
+  onJustUpdated,
 }) => {
   const {
     activateOrder,
     payCourier,
     attachPhoto,
     claimOrder,
-    setJustUpdatedOrder,
-    setActiveTab,
-  } = useStaff();
+  } = useStaffOrderActions(onOrderUpdated);
 
   const [isActivating, setIsActivating] = useState<boolean>(false);
   const [isPayingCourier, setIsPayingCourier] = useState<boolean>(false);
@@ -79,7 +83,7 @@ export const StaffOrderDetailsModal: React.FC<StaffOrderDetailsModalProps> = ({
     isClosingRef.current = true;
 
     // 1. Immediately switch to the updated pill tabs while still covered by the modal
-    setActiveTab(info.targetTab);
+    onSelectTab(info.targetTab);
 
     // 2. Smoothly slide the Order Details modal downward off the screen (translateY(100%), 350ms ease-in-out)
     // so when it slides down, the Home screen is already on the updated pill tabs
@@ -90,7 +94,7 @@ export const StaffOrderDetailsModal: React.FC<StaffOrderDetailsModalProps> = ({
       useNativeDriver: true,
     }).start(() => {
       onClose();
-      setJustUpdatedOrder(info);
+      onJustUpdated(info);
     });
   };
 

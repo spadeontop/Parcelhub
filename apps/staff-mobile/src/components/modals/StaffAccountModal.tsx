@@ -9,7 +9,7 @@ import {
   Easing,
 } from 'react-native';
 import { X } from '../common/Icons';
-import { useStaff } from '../../context/StaffContext';
+import { useStaffAuth } from '../../context/StaffAuthContext';
 
 export interface StaffAccountModalProps {
   isOpen: boolean;
@@ -20,7 +20,7 @@ export const StaffAccountModal: React.FC<StaffAccountModalProps> = ({
   isOpen,
   onClose,
 }) => {
-  const { staffUser, logout } = useStaff();
+  const { staffUser, logout } = useStaffAuth();
   const slideAnim = useRef(new Animated.Value(450)).current;
 
   // Animate sheet sliding up from bottom; backdrop fades in natively via animationType="fade"

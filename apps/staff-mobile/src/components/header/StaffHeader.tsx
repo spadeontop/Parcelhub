@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { useStaff } from '../../context/StaffContext';
+import { useStaffAuth } from '../../context/StaffAuthContext';
 import { ChevronDown } from '../common/Icons';
 import { ParcelHubLogo } from '../auth/ParcelHubLogo';
 
@@ -9,7 +9,7 @@ interface StaffHeaderProps {
 }
 
 export const StaffHeader: React.FC<StaffHeaderProps> = ({ onOpenAccount }) => {
-  const { staffUser } = useStaff();
+  const { staffUser } = useStaffAuth();
 
   const staffName = staffUser?.name || 'John Doe';
   const staffId = staffUser?.id || 'STF-1991';
