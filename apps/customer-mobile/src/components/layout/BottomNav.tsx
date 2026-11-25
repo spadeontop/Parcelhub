@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, TouchableOpacity, Text } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { useNavigationUi } from '../../context/NavigationAndUiContext';
 import { useNotifications } from '../../context/NotificationsContext';
+import { useAuthSession } from '../../context/AuthSessionContext';
 
 interface BottomNavProps {
   activeTab?: 'home' | 'transactions' | 'notifications' | 'profile';
@@ -11,7 +12,16 @@ interface BottomNavProps {
 export const BottomNav: React.FC<BottomNavProps> = ({ activeTab = 'home' }) => {
   const { navigateTo } = useNavigationUi();
   const { notifications } = useNotifications();
+  const { customer } = useAuthSession();
   const unreadCount = notifications.filter((n) => n.unread).length;
+
+  const userInitials = useMemo(() => {
+    const first = customer?.firstName?.trim() || '';
+    const last = customer?.lastName?.trim() || '';
+    if (first && last) return `${first[0]}${last[0]}`.toUpperCase();
+    if (first) return first.slice(0, 2).toUpperCase();
+    return 'U';
+  }, [customer?.firstName, customer?.lastName]);
 
   return (
     <View
@@ -148,15 +158,29 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab = 'home' }) => {
             className="items-center justify-center py-1 px-3"
             accessibilityLabel="Profile"
           >
-            <Svg width={20} height={20} viewBox="0 0 20 20" fill="none">
-              <Path
-                d="M13.3333 5.83333C13.3333 7.67305 11.8397 9.16667 10 9.16667C8.16028 9.16667 6.66667 7.67305 6.66667 5.83333C6.66667 3.99362 8.16028 2.5 10 2.5C11.8397 2.5 13.3333 3.99362 13.3333 5.83333V5.83333M10 11.6667C6.7805 11.6667 4.16667 14.2805 4.16667 17.5H15.8333C15.8333 14.2805 13.2195 11.6667 10 11.6667V11.6667"
-                strokeWidth={1.67}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                stroke={activeTab === 'profile' ? '#215cd4' : '#94a3b8'}
-              />
-            </Svg>
+            <View
+              className="w-[22px] h-[22px] rounded-full items-center justify-center"
+              style={{
+                marginTop: -1,
+                marginBottom: -1,
+                backgroundColor:
+                  activeTab === 'profile' ? '#215cd4' : 'transparent',
+                borderWidth: 1.6,
+                borderColor:
+                  activeTab === 'profile' ? '#215cd4' : '#94a3b8',
+              }}
+            >
+              <Text
+                className="text-[9px] font-bold tracking-tight"
+                style={{
+                  color: activeTab === 'profile' ? '#ffffff' : '#64748b',
+                  includeFontPadding: false,
+                  textAlign: 'center',
+                }}
+              >
+                {userInitials}
+              </Text>
+            </View>
             <Text
               className={`text-[9px] pt-[3px] ${
                 activeTab === 'profile'
