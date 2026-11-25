@@ -78,52 +78,19 @@ export const OrderRefundedView: React.FC<OrderRefundedViewProps> = ({
         />
       }
     >
-      {/* Card 1: Order & Refund Details */}
+      {/* Card 1: Order Details */}
       <View
         className="bg-white border border-[#edf2f7] rounded-[20px] p-5 mb-3.5"
         style={CARD_SHADOW}
       >
-        <View className="flex-row items-center justify-between pb-3.5 border-b border-[#f1f5f9]">
-          <View className="flex-row items-center gap-3 flex-1 pr-2">
-            <View className="w-10 h-10 rounded-[12px] bg-[#ecfdf5] border border-[#a7f3d0] items-center justify-center">
-              <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-                <Path
-                  d="M20 6L9 17L4 12"
-                  stroke="#059669"
-                  strokeWidth={2.5}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </Svg>
-            </View>
-            <View className="flex-1">
-              <Text className="text-[15px] font-extrabold text-[#0f172a]">
-                Refund Issued
-              </Text>
-              <Text className="text-[12px] font-medium text-[#64748b] mt-0.5">
-                Cash returned at hub
-              </Text>
-            </View>
-          </View>
-          <View
-            className="px-2.5 py-0.5 rounded-full"
-            style={{
-              backgroundColor: '#ecfdf5',
-              borderWidth: 1,
-              borderColor: '#d1fae5',
-            }}
-          >
-            <Text className="text-[11px] font-semibold text-[#047857]">Completed</Text>
-          </View>
-        </View>
+        <Text className="text-[11px] font-bold text-[#94a3b8] uppercase tracking-[0.65px]">
+          ORDER DETAILS
+        </Text>
 
-        {/* Product Subject */}
-        <View className="mt-3.5 pb-3.5 border-b border-[#f1f5f9]">
-          <Text className="text-[11.5px] font-medium text-[#94a3b8] mb-1">
-            Product
-          </Text>
+        {/* Product Title */}
+        <View className="mt-2.5 pb-4 border-b border-[#f1f5f9]">
           <Text
-            className="text-[15px] font-bold text-[#0f172a] leading-[21px]"
+            className="text-[15.5px] font-bold text-[#0f172a] leading-[22px] tracking-[-0.25px]"
             numberOfLines={2}
           >
             {productName}
@@ -134,8 +101,8 @@ export const OrderRefundedView: React.FC<OrderRefundedViewProps> = ({
         <View className="pt-3.5 gap-3.5">
           <View className="flex-row items-center justify-between">
             <Text className="text-[13.5px] text-[#64748b] font-medium">Refund Ticket</Text>
-            <View className="bg-[#eff6ff] border border-[#dbeafe] px-2.5 py-1 rounded-[8px]">
-              <Text className="font-mono text-[12px] font-bold text-[#215cd4]">
+            <View className="bg-[#f8fafc] border border-[#e2e8f0] px-2.5 py-1 rounded-[8px]">
+              <Text className="font-mono text-[12px] font-bold text-[#1e293b]">
                 {displayTicket}
               </Text>
             </View>
@@ -153,26 +120,14 @@ export const OrderRefundedView: React.FC<OrderRefundedViewProps> = ({
         </View>
       </View>
 
-      {/* Card 2: Refund Breakdown */}
+      {/* Card 2: Refund Summary */}
       <View
         className="bg-white border border-[#edf2f7] rounded-[20px] p-5 mb-3.5"
         style={CARD_SHADOW}
       >
-        <View className="flex-row items-center justify-between mb-3.5">
-          <Text className="text-[11px] font-bold text-[#94a3b8] uppercase tracking-[0.65px]">
-            REFUND SUMMARY
-          </Text>
-          <View
-            className="px-2.5 py-0.5 rounded-full"
-            style={{
-              backgroundColor: '#ecfdf5',
-              borderWidth: 1,
-              borderColor: '#d1fae5',
-            }}
-          >
-            <Text className="text-[11px] font-semibold text-[#047857]">Refunded</Text>
-          </View>
-        </View>
+        <Text className="text-[11px] font-bold text-[#94a3b8] uppercase tracking-[0.65px] mb-3.5">
+          REFUND SUMMARY
+        </Text>
 
         <View className="gap-3">
           <View className="flex-row items-center justify-between">
@@ -183,27 +138,20 @@ export const OrderRefundedView: React.FC<OrderRefundedViewProps> = ({
           </View>
 
           <View className="flex-row items-center justify-between">
-            <Text className="text-[13.5px] text-[#64748b] font-medium">Cash Paid</Text>
+            <Text className="text-[13.5px] text-[#64748b] font-medium">Amount Paid</Text>
             <Text className="text-[14px] font-semibold text-[#0f172a]">
               {formattedPaidAmount}
             </Text>
           </View>
-        </View>
 
-        <View
-          className="mt-4 rounded-[12px] px-3.5 py-3 flex-row items-center justify-between"
-          style={{
-            backgroundColor: '#ecfdf5',
-            borderWidth: 1,
-            borderColor: '#d1fae5',
-          }}
-        >
-          <Text className="text-[13.5px] font-semibold text-[#065f46]">
-            Refund Returned
-          </Text>
-          <Text className="text-[16px] font-extrabold text-[#059669]">
-            {formattedRefundAmount}
-          </Text>
+          <View className="border-t border-[#f1f5f9] pt-3 flex-row items-baseline justify-between">
+            <Text className="text-[14px] font-semibold text-[#0f172a]">
+              Refund Returned
+            </Text>
+            <Text className="text-[16px] font-bold text-[#0f172a]">
+              {formattedRefundAmount}
+            </Text>
+          </View>
         </View>
       </View>
 
@@ -237,7 +185,7 @@ export const OrderRefundedView: React.FC<OrderRefundedViewProps> = ({
                 />
               </Svg>
             </View>
-            <View className="flex-1 w-[2px] bg-[#10b981] my-1.5" />
+            <View className="flex-1 w-[2px] bg-[#e2e8f0] my-1.5" />
           </View>
           <View className="flex-1 pb-5">
             <View className="flex-row items-center justify-between">

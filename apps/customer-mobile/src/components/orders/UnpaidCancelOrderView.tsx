@@ -53,47 +53,16 @@ export const UnpaidCancelOrderView: React.FC<UnpaidCancelOrderViewProps> = ({
         className="bg-white border border-[#edf2f7] rounded-[20px] p-5"
         style={CARD_SHADOW}
       >
-        <View className="flex-row items-center justify-between">
-          <Text className="text-[11px] font-bold text-[#94a3b8] uppercase tracking-[0.65px]">
-            ORDER SUMMARY
-          </Text>
-          <View
-            className="rounded-full px-2.5 py-0.5"
-            style={{
-              backgroundColor: '#fffbeb',
-              borderWidth: 1,
-              borderColor: '#fde68a',
-            }}
-          >
-            <Text className="text-[11px] font-semibold text-[#b45309]">Unpaid</Text>
-          </View>
-        </View>
+        <Text className="text-[11px] font-bold text-[#94a3b8] uppercase tracking-[0.65px]">
+          ITEM TO CANCEL
+        </Text>
 
-        <View className="mt-3 pb-3.5 border-b border-[#f1f5f9]">
-          <Text className="text-[11.5px] font-medium text-[#94a3b8] mb-1">
-            Product
-          </Text>
-          <Text
-            className="text-[15px] font-bold text-[#0f172a] leading-[21px]"
-            numberOfLines={2}
-          >
-            {productName}
-          </Text>
-        </View>
-
-        <View
-          className="mt-3.5 rounded-[12px] px-3.5 py-3 flex-row items-center justify-between"
-          style={{
-            backgroundColor: '#f8fafc',
-            borderWidth: 1,
-            borderColor: '#e2e8f0',
-          }}
+        <Text
+          className="text-[15.5px] font-bold text-[#0f172a] leading-[22px] tracking-[-0.25px] mt-2.5"
+          numberOfLines={2}
         >
-          <Text className="text-[13.5px] font-medium text-[#64748b]">Cash Paid</Text>
-          <Text className="text-[13.5px] font-semibold text-[#475569]">
-            No payment collected
-          </Text>
-        </View>
+          {productName}
+        </Text>
       </View>
 
       {/* Reason Selection & Additional Notes Card */}

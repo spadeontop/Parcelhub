@@ -58,53 +58,19 @@ export const OrderCancelledView: React.FC<OrderCancelledViewProps> = ({
       showsVerticalScrollIndicator={false}
       contentContainerStyle={{ paddingBottom: 40 }}
     >
-      {/* Card 1: Order & Cancellation Details */}
+      {/* Card 1: Order Details */}
       <View
         className="bg-white border border-[#edf2f7] rounded-[20px] p-5 mb-3.5"
         style={CARD_SHADOW}
       >
-        {/* Header */}
-        <View className="flex-row items-center justify-between pb-3.5 border-b border-[#f1f5f9]">
-          <View className="flex-row items-center gap-3 flex-1 pr-2">
-            <View className="w-10 h-10 rounded-[12px] bg-[#fef2f2] border border-[#fecaca] items-center justify-center">
-              <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-                <Path
-                  d="M18 6L6 18M6 6l12 12"
-                  stroke="#dc2626"
-                  strokeWidth={2.4}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </Svg>
-            </View>
-            <View className="flex-1">
-              <Text className="text-[15px] font-extrabold text-[#0f172a]">
-                Order Voided
-              </Text>
-              <Text className="text-[12px] font-medium text-[#64748b] mt-0.5">
-                Cancelled prior to payment
-              </Text>
-            </View>
-          </View>
-          <View
-            className="px-2.5 py-0.5 rounded-full"
-            style={{
-              backgroundColor: '#fef2f2',
-              borderWidth: 1,
-              borderColor: '#fecaca',
-            }}
-          >
-            <Text className="text-[11px] font-semibold text-[#b91c1c]">Voided</Text>
-          </View>
-        </View>
+        <Text className="text-[11px] font-bold text-[#94a3b8] uppercase tracking-[0.65px]">
+          ORDER DETAILS
+        </Text>
 
-        {/* Product Subject */}
-        <View className="mt-3.5 pb-3.5 border-b border-[#f1f5f9]">
-          <Text className="text-[11.5px] font-medium text-[#94a3b8] mb-1">
-            Product
-          </Text>
+        {/* Product Title */}
+        <View className="mt-2.5 pb-4 border-b border-[#f1f5f9]">
           <Text
-            className="text-[15px] font-bold text-[#0f172a] leading-[21px]"
+            className="text-[15.5px] font-bold text-[#0f172a] leading-[22px] tracking-[-0.25px]"
             numberOfLines={2}
           >
             {productName}
@@ -167,21 +133,9 @@ export const OrderCancelledView: React.FC<OrderCancelledViewProps> = ({
         className="bg-white border border-[#edf2f7] rounded-[20px] p-5 mb-3.5"
         style={CARD_SHADOW}
       >
-        <View className="flex-row items-center justify-between mb-3.5">
-          <Text className="text-[11px] font-bold text-[#94a3b8] uppercase tracking-[0.65px]">
-            PAYMENT SUMMARY
-          </Text>
-          <View
-            className="px-2.5 py-0.5 rounded-full"
-            style={{
-              backgroundColor: '#fffbeb',
-              borderWidth: 1,
-              borderColor: '#fde68a',
-            }}
-          >
-            <Text className="text-[11px] font-semibold text-[#b45309]">Unpaid</Text>
-          </View>
-        </View>
+        <Text className="text-[11px] font-bold text-[#94a3b8] uppercase tracking-[0.65px] mb-3.5">
+          PAYMENT SUMMARY
+        </Text>
 
         <View className="gap-3">
           <View className="flex-row items-center justify-between">
@@ -191,24 +145,10 @@ export const OrderCancelledView: React.FC<OrderCancelledViewProps> = ({
             </Text>
           </View>
 
-          <View className="flex-row items-center justify-between">
-            <Text className="text-[13.5px] font-medium text-[#64748b]">Cash Paid</Text>
-            <Text className="text-[13.5px] font-medium text-[#94a3b8]">
-              No payment collected
-            </Text>
+          <View className="border-t border-[#f1f5f9] pt-3 flex-row items-baseline justify-between">
+            <Text className="text-[14px] font-semibold text-[#0f172a]">Refund Due</Text>
+            <Text className="text-[15px] font-bold text-[#64748b]">₱0</Text>
           </View>
-        </View>
-
-        <View
-          className="mt-4 rounded-[12px] px-3.5 py-3 flex-row items-center justify-between"
-          style={{
-            backgroundColor: '#f8fafc',
-            borderWidth: 1,
-            borderColor: '#e2e8f0',
-          }}
-        >
-          <Text className="text-[13.5px] font-semibold text-[#475569]">Refund Due</Text>
-          <Text className="text-[14px] font-bold text-[#475569]">₱0 · None</Text>
         </View>
       </View>
 

@@ -136,10 +136,7 @@ export const OrderTimelineStepper: React.FC<OrderTimelineStepperProps> = ({
         <View className="flex-row">
           <View className="items-center mr-3.5" style={{ width: 24 }}>
             <View className="mt-0.5">{renderStepNode(isStep1Done, isStep1Active)}</View>
-            <View
-              className="flex-1 w-[2px] my-1.5"
-              style={{ backgroundColor: isStep1Done ? '#10b981' : '#e2e8f0' }}
-            />
+            <View className="flex-1 w-[2px] bg-[#e2e8f0] my-1.5" />
           </View>
           <View className="flex-1 pb-6">
             <View className="flex-row items-baseline justify-between gap-2">
@@ -161,11 +158,11 @@ export const OrderTimelineStepper: React.FC<OrderTimelineStepperProps> = ({
             </Text>
             {status === 'PAYMENT_REQUIRED' && onCancelOrder && (
               <TouchableOpacity
-                activeOpacity={0.75}
+                activeOpacity={0.7}
                 onPress={onCancelOrder}
-                className="self-start mt-2.5 px-3 py-1.5 rounded-[8px] bg-[#fef2f2] border border-[#fecaca]"
+                className="self-start mt-2 py-0.5"
               >
-                <Text className="text-[12px] font-bold text-[#dc2626]">
+                <Text className="text-[12.5px] font-semibold text-[#dc2626]">
                   Cancel Order
                 </Text>
               </TouchableOpacity>
@@ -177,10 +174,7 @@ export const OrderTimelineStepper: React.FC<OrderTimelineStepperProps> = ({
         <View className="flex-row">
           <View className="items-center mr-3.5" style={{ width: 24 }}>
             <View className="mt-0.5">{renderStepNode(isStep2Done, isStep2Active)}</View>
-            <View
-              className="flex-1 w-[2px] my-1.5"
-              style={{ backgroundColor: isStep2Done ? '#10b981' : '#e2e8f0' }}
-            />
+            <View className="flex-1 w-[2px] bg-[#e2e8f0] my-1.5" />
           </View>
           <View className="flex-1 pb-6">
             <View className="flex-row items-baseline justify-between gap-2">
@@ -218,10 +212,7 @@ export const OrderTimelineStepper: React.FC<OrderTimelineStepperProps> = ({
         <View className="flex-row">
           <View className="items-center mr-3.5" style={{ width: 24 }}>
             <View className="mt-0.5">{renderStepNode(isStep3Done, isStep3Active)}</View>
-            <View
-              className="flex-1 w-[2px] my-1.5"
-              style={{ backgroundColor: isStep3Done ? '#10b981' : '#e2e8f0' }}
-            />
+            <View className="flex-1 w-[2px] bg-[#e2e8f0] my-1.5" />
           </View>
           <View className="flex-1 pb-6">
             <View className="flex-row items-baseline justify-between gap-2">
@@ -264,9 +255,9 @@ export const OrderTimelineStepper: React.FC<OrderTimelineStepperProps> = ({
               <TouchableOpacity
                 activeOpacity={0.7}
                 onPress={onOpenPod}
-                className="flex-row items-center self-start mt-2.5 px-3 py-1.5 rounded-[8px] bg-[#eff6ff] border border-[#dbeafe]"
+                className="flex-row items-center self-start mt-2 py-0.5"
               >
-                <Text className="text-[12px] font-semibold text-[#215cd4] mr-1">
+                <Text className="text-[12.5px] font-semibold text-[#215cd4] mr-1">
                   View Proof of Delivery
                 </Text>
                 <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">

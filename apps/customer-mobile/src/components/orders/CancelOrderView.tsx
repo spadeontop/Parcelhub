@@ -98,13 +98,10 @@ export const CancelOrderView: React.FC<CancelOrderViewProps> = ({
             ITEM TO CANCEL
           </Text>
 
-          <View className="mt-3 pb-3.5 border-b border-[#f1f5f9]">
-            <Text className="text-[11.5px] font-medium text-[#94a3b8] mb-1">
-              Product
-            </Text>
+          <View className="mt-2.5 pb-4 border-b border-[#f1f5f9]">
             <Text
               numberOfLines={2}
-              className="text-[15px] font-bold text-[#0f172a] leading-[21px]"
+              className="text-[15.5px] font-bold text-[#0f172a] leading-[22px] tracking-[-0.25px]"
             >
               {productName}
             </Text>
@@ -121,18 +118,11 @@ export const CancelOrderView: React.FC<CancelOrderViewProps> = ({
               </Text>
             </View>
 
-            <View
-              className="mt-1 rounded-[12px] px-3.5 py-3 flex-row items-center justify-between"
-              style={{
-                backgroundColor: '#ecfdf5',
-                borderWidth: 1,
-                borderColor: '#d1fae5',
-              }}
-            >
-              <Text className="text-[13.5px] font-semibold text-[#065f46]">
+            <View className="border-t border-[#f1f5f9] pt-3 flex-row items-baseline justify-between">
+              <Text className="text-[14px] font-semibold text-[#0f172a]">
                 Refundable Amount
               </Text>
-              <Text className="text-[16px] font-extrabold text-[#059669]">
+              <Text className="text-[16px] font-bold text-[#0f172a]">
                 {formattedAmount}
               </Text>
             </View>
