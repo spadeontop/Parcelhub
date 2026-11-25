@@ -34,14 +34,6 @@ const CARD_SHADOW = {
   elevation: 2,
 };
 
-const FOOTER_SHADOW = {
-  shadowColor: '#000000',
-  shadowOffset: { width: 0, height: -4 },
-  shadowOpacity: 0.06,
-  shadowRadius: 12,
-  elevation: 8,
-};
-
 const TRACKING_TUTORIAL_BY_APP: Record<
   ScreenshotSourceApp,
   { title: string; steps: string }
@@ -430,67 +422,68 @@ export const CreateOrderScreen: React.FC = () => {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             className="flex-1 px-4"
-            contentContainerStyle={{ paddingTop: 18, paddingBottom: 20 }}
+            contentContainerStyle={{ paddingTop: 14, paddingBottom: 12 }}
           >
-            {/* STEP 1 ROW: Left (1) Node + Vertical Line | Right Receipt Card */}
+            {/* STEP 1 ROW: Left vertically centered (1) + line | Right Receipt Card */}
             <View className="flex-row items-stretch">
               {/* Left Vertical Stepper Rail - Step 1 */}
-              <View className="w-7 items-center mr-2.5">
-                <View className="mt-4">
-                  {isOrderReady ? (
-                    <View
-                      className="w-6 h-6 rounded-full bg-[#10b981] items-center justify-center"
-                      style={{
-                        shadowColor: '#000000',
-                        shadowOffset: { width: 0, height: 1 },
-                        shadowOpacity: 0.1,
-                        shadowRadius: 2,
-                        elevation: 2,
-                      }}
-                    >
-                      <Svg width={13} height={13} viewBox="0 0 24 24" fill="none">
-                        <Path
-                          d="M20 6L9 17L4 12"
-                          stroke="#ffffff"
-                          strokeWidth={3}
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </Svg>
-                    </View>
-                  ) : (
-                    <View
-                      className="w-6 h-6 rounded-full items-center justify-center"
-                      style={{
-                        backgroundColor: receiptHighlight ? '#dc2626' : BRAND_BLUE,
-                        shadowColor: receiptHighlight ? '#dc2626' : BRAND_BLUE,
-                        shadowOffset: { width: 0, height: 2 },
-                        shadowOpacity: 0.25,
-                        shadowRadius: 4,
-                        elevation: 3,
-                      }}
-                    >
-                      <Text className="text-[11px] font-bold text-white">1</Text>
-                    </View>
-                  )}
-                </View>
+              <View className="w-5 items-center mr-2.5">
+                {/* Top spacer to center (1) vertically with Card 1 */}
+                <View className="flex-1" />
 
-                {/* Connecting Vertical Line down to Step 2 */}
+                {isOrderReady ? (
+                  <View
+                    className="w-5 h-5 rounded-full bg-[#215cd4] items-center justify-center"
+                    style={{
+                      shadowColor: BRAND_BLUE,
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: 0.2,
+                      shadowRadius: 3,
+                      elevation: 2,
+                    }}
+                  >
+                    <Svg width={11} height={11} viewBox="0 0 24 24" fill="none">
+                      <Path
+                        d="M20 6L9 17L4 12"
+                        stroke="#ffffff"
+                        strokeWidth={3}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </Svg>
+                  </View>
+                ) : (
+                  <View
+                    className="w-5 h-5 rounded-full items-center justify-center"
+                    style={{
+                      backgroundColor: receiptHighlight ? '#dc2626' : BRAND_BLUE,
+                      shadowColor: receiptHighlight ? '#dc2626' : BRAND_BLUE,
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: 0.22,
+                      shadowRadius: 3,
+                      elevation: 2,
+                    }}
+                  >
+                    <Text className="text-[10px] font-bold text-white">1</Text>
+                  </View>
+                )}
+
+                {/* Bottom connector line from (1) down to Step 2 */}
                 <View
-                  className="flex-1 w-[2px] mt-1.5"
+                  className="flex-1 w-[2px]"
                   style={{
-                    backgroundColor: isOrderReady ? '#10b981' : '#e2e8f0',
+                    backgroundColor: isOrderReady ? BRAND_BLUE : '#e2e8f0',
                   }}
                 />
               </View>
 
               {/* Step 1 Content: Receipt Card (+ Tracking Guidance if 422) */}
-              <View className="flex-1 pb-3.5">
+              <View className="flex-1 pb-2.5">
                 <Animated.View
                   style={{ transform: [{ translateX: receiptShakeAnim }] }}
                 >
                   <View
-                    className="rounded-[16px] p-[17px] border"
+                    className="rounded-[16px] p-3.5 border"
                     style={[
                       CARD_SHADOW,
                       {
@@ -499,13 +492,13 @@ export const CreateOrderScreen: React.FC = () => {
                       },
                     ]}
                   >
-                    <View className="flex-row items-center justify-between mb-3">
+                    <View className="flex-row items-center justify-between mb-2">
                       <Text className="text-[11px] font-bold text-[#94a3b8] uppercase tracking-[0.55px]">
                         RECEIPT SCREENSHOT
                       </Text>
                       {isOrderReady && !isScanning ? (
-                        <Text className="text-[11px] font-semibold text-[#059669]">
-                          Scanned
+                        <Text className="text-[11px] font-semibold text-[#215cd4]">
+                          Attached
                         </Text>
                       ) : receiptHighlight ? (
                         <Text className="text-[11px] font-semibold text-[#dc2626]">
@@ -520,7 +513,7 @@ export const CreateOrderScreen: React.FC = () => {
                           activeOpacity={0.8}
                           onPress={handleUploadPress}
                           disabled={isScanning || isPicking || isSubmitting}
-                          className="w-14 h-14 rounded-[10px] overflow-hidden bg-[#f1f5f9] border border-[#e2e8f0] mr-3"
+                          className="w-12 h-12 rounded-[10px] overflow-hidden bg-[#f1f5f9] border border-[#e2e8f0] mr-3"
                         >
                           <Image
                             source={{ uri: previewSourceUri }}
@@ -533,28 +526,28 @@ export const CreateOrderScreen: React.FC = () => {
                           {isScanning ? (
                             <View className="flex-row items-center gap-2">
                               <ActivityIndicator size="small" color={BRAND_BLUE} />
-                              <Text className="text-[13.5px] font-semibold text-[#111827]">
+                              <Text className="text-[13px] font-semibold text-[#111827]">
                                 Scanning receipt...
                               </Text>
                             </View>
                           ) : isOrderReady ? (
                             <>
-                              <Text className="text-[13.5px] font-semibold text-[#111827]">
+                              <Text className="text-[13px] font-semibold text-[#111827]">
                                 Receipt attached
                               </Text>
-                              <Text className="text-[12px] text-[#64748b] mt-0.5">
-                                Details auto-filled below
+                              <Text className="text-[11.5px] text-[#64748b] mt-0.5">
+                                Order details populated
                               </Text>
                             </>
                           ) : (
                             <>
-                              <Text className="text-[13.5px] font-semibold text-[#b45309]">
-                                Could not read receipt
+                              <Text className="text-[13px] font-semibold text-[#b45309]">
+                                Unable to read receipt
                               </Text>
-                              <Text className="text-[12px] text-[#64748b] mt-0.5">
+                              <Text className="text-[11.5px] text-[#64748b] mt-0.5">
                                 {missingTrackingApp
                                   ? 'Tracking number missing'
-                                  : 'Tap retry or replace photo'}
+                                  : 'Retry or upload another photo'}
                               </Text>
                             </>
                           )}
@@ -567,7 +560,7 @@ export const CreateOrderScreen: React.FC = () => {
                               onPress={handleRetryScan}
                               className="px-2.5 py-1.5 rounded-[8px] bg-[#eff6ff]"
                             >
-                              <Text className="text-[12px] font-semibold text-[#215cd4]">
+                              <Text className="text-[11.5px] font-semibold text-[#215cd4]">
                                 Retry
                               </Text>
                             </TouchableOpacity>
@@ -578,7 +571,7 @@ export const CreateOrderScreen: React.FC = () => {
                             disabled={isScanning || isPicking || isSubmitting}
                             className="px-2.5 py-1.5 rounded-[8px] bg-[#f1f5f9]"
                           >
-                            <Text className="text-[12px] font-semibold text-[#475569]">
+                            <Text className="text-[11.5px] font-semibold text-[#475569]">
                               Replace
                             </Text>
                           </TouchableOpacity>
@@ -589,7 +582,7 @@ export const CreateOrderScreen: React.FC = () => {
                         activeOpacity={0.75}
                         onPress={handleUploadPress}
                         disabled={isPicking || isScanning}
-                        className="rounded-[12px] border border-dashed py-4 px-3.5 flex-row items-center"
+                        className="rounded-[12px] border border-dashed py-3 px-3 flex-row items-center"
                         style={{
                           backgroundColor: receiptHighlight ? '#fef2f2' : '#f8fafc',
                           borderColor: receiptHighlight ? '#f87171' : '#cbd5e1',
@@ -599,7 +592,7 @@ export const CreateOrderScreen: React.FC = () => {
                           {isPicking ? (
                             <ActivityIndicator size="small" color={BRAND_BLUE} />
                           ) : (
-                            <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+                            <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
                               <Path
                                 d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"
                                 stroke={receiptHighlight ? '#dc2626' : BRAND_BLUE}
@@ -612,15 +605,15 @@ export const CreateOrderScreen: React.FC = () => {
                         </View>
 
                         <View className="flex-1">
-                          <Text className="text-[13.5px] font-semibold text-[#111827]">
+                          <Text className="text-[13px] font-semibold text-[#111827]">
                             {isPicking ? 'Opening gallery...' : 'Attach receipt photo'}
                           </Text>
-                          <Text className="text-[12px] text-[#64748b] mt-0.5">
+                          <Text className="text-[11.5px] text-[#64748b] mt-0.5">
                             Shopee · Lazada · TikTok Shop
                           </Text>
                         </View>
 
-                        <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+                        <Svg width={15} height={15} viewBox="0 0 24 24" fill="none">
                           <Path
                             d="M9 18l6-6-6-6"
                             stroke="#94a3b8"
@@ -636,11 +629,11 @@ export const CreateOrderScreen: React.FC = () => {
 
                 {/* App-Specific Tracking Guidance on 422 TrackingIdMissing */}
                 {missingTrackingApp && (
-                  <View className="rounded-[14px] bg-[#fffbeb] border border-[#fde68a] p-3.5 mt-2.5">
-                    <Text className="text-[12.5px] font-bold text-[#92400e] mb-1">
+                  <View className="rounded-[14px] bg-[#fffbeb] border border-[#fde68a] p-3 mt-2">
+                    <Text className="text-[12px] font-bold text-[#92400e] mb-0.5">
                       {TRACKING_TUTORIAL_BY_APP[missingTrackingApp].title}
                     </Text>
-                    <Text className="text-[12px] text-[#78350f] leading-[18px]">
+                    <Text className="text-[11.5px] text-[#78350f] leading-[17px]">
                       {TRACKING_TUTORIAL_BY_APP[missingTrackingApp].steps}
                     </Text>
                   </View>
@@ -648,48 +641,51 @@ export const CreateOrderScreen: React.FC = () => {
               </View>
             </View>
 
-            {/* STEP 2 ROW: Left (2) Node | Right Order Details Card */}
+            {/* STEP 2 ROW: Left vertically centered (2) + top line | Right Order Details Card */}
             <View className="flex-row items-stretch">
               {/* Left Vertical Stepper Rail - Step 2 */}
-              <View className="w-7 items-center mr-2.5">
-                {/* Top stub connecting continuously from Step 1's line */}
+              <View className="w-5 items-center mr-2.5">
+                {/* Top connector line down into centered (2) */}
                 <View
-                  className="w-[2px] h-4"
+                  className="flex-1 w-[2px]"
                   style={{
-                    backgroundColor: isOrderReady ? '#10b981' : '#e2e8f0',
+                    backgroundColor: isOrderReady ? BRAND_BLUE : '#e2e8f0',
                   }}
                 />
 
                 {isDetailsActive ? (
                   <View
-                    className="w-6 h-6 rounded-full items-center justify-center"
+                    className="w-5 h-5 rounded-full items-center justify-center"
                     style={{
                       backgroundColor: detailsHighlight ? '#dc2626' : BRAND_BLUE,
                       shadowColor: detailsHighlight ? '#dc2626' : BRAND_BLUE,
-                      shadowOffset: { width: 0, height: 2 },
-                      shadowOpacity: 0.25,
-                      shadowRadius: 4,
-                      elevation: 3,
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: 0.22,
+                      shadowRadius: 3,
+                      elevation: 2,
                     }}
                   >
-                    <Text className="text-[11px] font-bold text-white">2</Text>
+                    <Text className="text-[10px] font-bold text-white">2</Text>
                   </View>
                 ) : (
                   <View
-                    className="w-6 h-6 rounded-full items-center justify-center border-2"
+                    className="w-5 h-5 rounded-full items-center justify-center border-[1.5px]"
                     style={{
                       backgroundColor: detailsHighlight ? '#fef2f2' : '#f1f5f9',
                       borderColor: detailsHighlight ? '#f87171' : '#cbd5e1',
                     }}
                   >
                     <Text
-                      className="text-[11px] font-bold"
+                      className="text-[10px] font-bold"
                       style={{ color: detailsHighlight ? '#dc2626' : '#94a3b8' }}
                     >
                       2
                     </Text>
                   </View>
                 )}
+
+                {/* Bottom spacer to keep (2) vertically centered with Card 2 */}
+                <View className="flex-1" />
               </View>
 
               {/* Step 2 Content: Order Details Card */}
@@ -698,7 +694,7 @@ export const CreateOrderScreen: React.FC = () => {
                   style={{ transform: [{ translateX: detailsShakeAnim }] }}
                 >
                   <View
-                    className="rounded-[16px] p-[17px] border relative"
+                    className="rounded-[16px] p-3.5 border relative"
                     style={[
                       CARD_SHADOW,
                       {
@@ -708,31 +704,20 @@ export const CreateOrderScreen: React.FC = () => {
                     ]}
                   >
                     {/* Header */}
-                    <View className="flex-row items-center justify-between mb-3">
+                    <View className="flex-row items-center justify-between mb-2.5">
                       <Text className="text-[11px] font-bold text-[#94a3b8] uppercase tracking-[0.55px]">
                         ORDER DETAILS
                       </Text>
-                      <Text
-                        className="text-[11px] font-medium"
-                        style={{
-                          color: detailsHighlight
-                            ? '#dc2626'
-                            : isDetailsActive
-                            ? '#64748b'
-                            : '#94a3b8',
-                        }}
-                      >
-                        {isScanning
-                          ? 'Auto-filling...'
-                          : isDetailsActive
-                          ? 'Edit if needed'
-                          : 'Attach photo first'}
-                      </Text>
+                      {isScanning ? (
+                        <Text className="text-[11px] font-medium text-[#215cd4]">
+                          Auto-filling...
+                        </Text>
+                      ) : null}
                     </View>
 
                     {/* Form Fields */}
                     <View
-                      style={{ opacity: isDetailsActive ? 1 : 0.48 }}
+                      style={{ opacity: isDetailsActive ? 1 : 0.45 }}
                       pointerEvents={isDetailsActive ? 'auto' : 'none'}
                     >
                       <FloatingInput
@@ -741,6 +726,7 @@ export const CreateOrderScreen: React.FC = () => {
                         editable={isDetailsActive}
                         focusedBorderColor={BRAND_BLUE}
                         error={fieldErrors.product}
+                        containerStyle={{ marginBottom: 8 }}
                         onChangeText={(text) => {
                           if (fieldErrors.product) {
                             setFieldErrors((prev) => ({ ...prev, product: undefined }));
@@ -755,6 +741,7 @@ export const CreateOrderScreen: React.FC = () => {
                         editable={isDetailsActive}
                         focusedBorderColor={BRAND_BLUE}
                         error={fieldErrors.recipient}
+                        containerStyle={{ marginBottom: 8 }}
                         onChangeText={(text) => {
                           if (fieldErrors.recipient) {
                             setFieldErrors((prev) => ({ ...prev, recipient: undefined }));
@@ -770,6 +757,7 @@ export const CreateOrderScreen: React.FC = () => {
                         focusedBorderColor={BRAND_BLUE}
                         error={fieldErrors.amount || amountError}
                         keyboardType="numeric"
+                        containerStyle={{ marginBottom: 8 }}
                         onChangeText={(text) => {
                           if (fieldErrors.amount) {
                             setFieldErrors((prev) => ({ ...prev, amount: undefined }));
@@ -808,7 +796,7 @@ export const CreateOrderScreen: React.FC = () => {
 
                     {/* Small Inline Feedback Message */}
                     {detailsFeedback ? (
-                      <Text className="text-[11.5px] font-medium text-[#dc2626] mt-2.5">
+                      <Text className="text-[11.5px] font-medium text-[#dc2626] mt-2">
                         {detailsFeedback}
                       </Text>
                     ) : null}
@@ -833,12 +821,9 @@ export const CreateOrderScreen: React.FC = () => {
             </View>
           </ScrollView>
 
-          {/* Sticky Bottom Nav-Area Footer: Confirmation + Complete Order */}
-          <View
-            className="bg-white border-t border-[#f1f5f9] px-4 pt-3 pb-5"
-            style={FOOTER_SHADOW}
-          >
-            {/* Confirmation Checkbox Card (always tappable for shake feedback) */}
+          {/* Sticky Bottom Action Area (Clean transparent dock, no extra bg bar) */}
+          <View className="px-4 pt-2 pb-5">
+            {/* Confirmation Checkbox Card matching ConfirmationSubmitSection */}
             <Animated.View
               style={{
                 transform: [{ translateX: confirmShakeAnim }],
@@ -848,7 +833,7 @@ export const CreateOrderScreen: React.FC = () => {
               <TouchableOpacity
                 activeOpacity={0.85}
                 onPress={handleToggleConfirm}
-                className="flex-row items-center p-3 rounded-[12px] border-[1.5px]"
+                className="flex-row items-start p-3 rounded-xl border-[1.5px]"
                 style={{
                   backgroundColor: confirmHighlight
                     ? '#fef2f2'
@@ -856,14 +841,14 @@ export const CreateOrderScreen: React.FC = () => {
                     ? '#fafafa'
                     : '#ffffff',
                   borderColor: confirmHighlight
-                    ? '#fca5a5'
+                    ? '#dc2626'
                     : isConfirmed
                     ? BRAND_BLUE
                     : '#e4e4e7',
                 }}
               >
                 <View
-                  className="w-[18px] h-[18px] rounded-[5px] items-center justify-center border-[1.5px] mr-2.5"
+                  className="w-[18px] h-[18px] rounded-[5px] items-center justify-center mt-0.5 border-[1.5px] mr-2.5"
                   style={{
                     backgroundColor:
                       isConfirmed && !confirmHighlight ? BRAND_BLUE : '#ffffff',
@@ -887,30 +872,25 @@ export const CreateOrderScreen: React.FC = () => {
                   )}
                 </View>
 
-                <Text className="flex-1 text-[12.5px] font-semibold text-[#111827] leading-[17px]">
-                  I confirm these order details are correct
-                </Text>
-
-                <TouchableOpacity
-                  activeOpacity={0.7}
-                  onPress={() => navigateTo('faq')}
-                  className="pl-2 py-0.5"
-                >
-                  <Text className="text-[11.5px] font-semibold text-[#215cd4]">
-                    Policy
+                <View className="flex-1 justify-center">
+                  <Text className="text-[12.5px] font-semibold text-[#09090b] leading-tight">
+                    I confirm that these order details are correct
                   </Text>
-                </TouchableOpacity>
+                  <Text className="text-[11px] font-normal text-[#71717a] mt-0.5 leading-[14px]">
+                    Please ensure parcel amount and tracking number match your delivery receipt.
+                  </Text>
+                </View>
               </TouchableOpacity>
             </Animated.View>
 
             {/* Small Subtle Feedback Message */}
             {footerFeedback ? (
-              <Text className="text-[11.5px] font-medium text-[#dc2626] mt-1.5 px-0.5">
+              <Text className="text-[11.5px] font-medium text-[#dc2626] mt-1.5 px-1">
                 {footerFeedback}
               </Text>
             ) : null}
 
-            {/* Complete Order Button (always tappable for shake feedback) */}
+            {/* Complete Order Button */}
             <Animated.View
               style={{
                 transform: [{ translateX: submitShakeAnim }],
