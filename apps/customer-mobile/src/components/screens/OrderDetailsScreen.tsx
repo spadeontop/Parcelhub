@@ -353,9 +353,6 @@ export const OrderDetailsScreen: React.FC = () => {
   const activateRefundWindow = useCallback(
     async (targetOrderId: string) => {
       const payload = buildCancelReasonPayload(cancelReason, cancelNotes);
-      if (status !== 'CANCELLED') {
-        await cancelCustomerOrder(targetOrderId, payload);
-      }
       const res = await initiateCustomerRefund(targetOrderId, payload);
       const initialSeconds = (res.durationMinutes || 5) * 60;
       startRefundLocalWindow(initialSeconds);
@@ -366,16 +363,39 @@ export const OrderDetailsScreen: React.FC = () => {
       await refetch();
     },
     [
-      status,
       cancelReason,
       cancelNotes,
-      cancelCustomerOrder,
       initiateCustomerRefund,
       startRefundLocalWindow,
       queryClient,
       refetch,
     ]
   );
+
+  const handleCancelAwaitingOrder = useCallback(async () => {
+    if (isCancellingOrder || !orderId) return;
+    setIsCancellingOrder(true);
+    try {
+      const payload = buildCancelReasonPayload(cancelReason, cancelNotes);
+      await cancelCustomerOrder(orderId, payload);
+      await queryClient.invalidateQueries({ queryKey: customerQueryKeys.orders() });
+      await refetch();
+      setAwaitingViewMode('details');
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to cancel order.');
+    } finally {
+      setIsCancellingOrder(false);
+    }
+  }, [
+    isCancellingOrder,
+    orderId,
+    cancelReason,
+    cancelNotes,
+    cancelCustomerOrder,
+    queryClient,
+    refetch,
+    showToast,
+  ]);
 
   const handleInitiateRefund = useCallback(async () => {
     if (isInitiatingRefund || !orderId) return;
@@ -711,9 +731,9 @@ export const OrderDetailsScreen: React.FC = () => {
             onChangeNotes={setCancelNotes}
             isConfirmed={cancelConfirmed}
             onConfirmedChange={setCancelConfirmed}
-            onInitiateRefund={handleInitiateRefund}
+            onInitiateRefund={handleCancelAwaitingOrder}
             onKeepOrder={handleKeepOrder}
-            isLoading={isInitiatingRefund}
+            isLoading={isCancellingOrder}
             slideAnim={cancelSlideAnim}
             fadeAnim={cancelFadeAnim}
           />
