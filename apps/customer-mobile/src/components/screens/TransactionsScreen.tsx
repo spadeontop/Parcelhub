@@ -62,7 +62,6 @@ export const TransactionsScreen: React.FC = () => {
     transactionFilter,
     setTransactionFilter,
   } = useNavigationUi();
-  const activeTypeFilter = transactionFilter === 'ALL' ? undefined : transactionFilter;
   const {
     orders,
     isLoading,
@@ -70,8 +69,13 @@ export const TransactionsScreen: React.FC = () => {
     hasNextPage,
     fetchNextPage,
     refetch,
-  } = useInfiniteCustomerOrders(activeTypeFilter);
+  } = useInfiniteCustomerOrders();
   const [refreshing, setRefreshing] = useState(false);
+
+  const filteredOrders =
+    transactionFilter === 'ALL'
+      ? orders
+      : orders.filter((o) => o.status === transactionFilter);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -85,7 +89,7 @@ export const TransactionsScreen: React.FC = () => {
   };
 
   const countSuffix = hasNextPage ? '+' : '';
-  const countLabel = `${orders.length}${countSuffix} ${orders.length === 1 && !hasNextPage ? 'Order' : 'Orders'}`;
+  const countLabel = `${filteredOrders.length}${countSuffix} ${filteredOrders.length === 1 && !hasNextPage ? 'Order' : 'Orders'}`;
 
   return (
     <View className="flex-1 bg-[#2560ea]">
@@ -115,7 +119,7 @@ export const TransactionsScreen: React.FC = () => {
         {/* Scrollable Content Container */}
         <View className="mx-5 mb-24 bg-white border border-[#e5eaf3] rounded-[24px] overflow-hidden" style={{ flexShrink: 1 }}>
           <FlatList
-            data={orders}
+            data={filteredOrders}
             keyExtractor={(item) => item.id}
             showsVerticalScrollIndicator={false}
             style={{ flexGrow: 0 }}
@@ -155,7 +159,7 @@ export const TransactionsScreen: React.FC = () => {
             }
             renderItem={({ item: order, index }) => {
               const statusTheme = getStatusTheme(order.status);
-              const isLast = index === orders.length - 1;
+              const isLast = index === filteredOrders.length - 1;
 
               return (
                 <TouchableOpacity

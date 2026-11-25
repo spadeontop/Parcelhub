@@ -49,29 +49,36 @@ export function useCustomerOrdersQuery(
 }
 
 export function useCustomerInfiniteOrdersQuery(
-  authToken: JWTToken | null,
-  type?: OrderStatus
+  authToken: JWTToken | null
 ) {
   return useInfiniteQuery<readonly CustomerOrderSummary[]>({
-    queryKey: customerQueryKeys.ordersInfinite(type),
+    queryKey: customerQueryKeys.ordersInfinite(),
     initialPageParam: 0,
+    staleTime: Infinity,
     queryFn: async ({ pageParam }) => {
       if (!authToken) {
         throw new Error('Missing auth token');
       }
       const offset = typeof pageParam === 'number' ? pageParam : 0;
       const res = await orderApi.listOrders(authToken, {
-        type,
+        forEach: true,
         limit: CUSTOMER_ORDERS_PAGE_SIZE,
         offset,
       });
       return res.orders || [];
     },
     getNextPageParam: (lastPage, allPages) => {
-      if (lastPage.length < CUSTOMER_ORDERS_PAGE_SIZE) {
+      const countsByStatus = new Map<OrderStatus, number>();
+      for (const order of lastPage) {
+        countsByStatus.set(order.status, (countsByStatus.get(order.status) ?? 0) + 1);
+      }
+      const hasMoreInAnyBucket = Array.from(countsByStatus.values()).some(
+        (count) => count >= CUSTOMER_ORDERS_PAGE_SIZE
+      );
+      if (!hasMoreInAnyBucket) {
         return undefined;
       }
-      return allPages.reduce((sum, page) => sum + page.length, 0);
+      return allPages.length * CUSTOMER_ORDERS_PAGE_SIZE;
     },
     enabled: Boolean(authToken),
   });

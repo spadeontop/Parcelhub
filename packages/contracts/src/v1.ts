@@ -306,6 +306,7 @@ export type CustomerListOrdersQueryParams = {
   readonly type?: OrderStatus;
   readonly limit?: number;
   readonly offset?: number;
+  readonly forEach?: boolean;
 };
 
 export type CustomerListOrdersRes = StandardSuccessResponse & {

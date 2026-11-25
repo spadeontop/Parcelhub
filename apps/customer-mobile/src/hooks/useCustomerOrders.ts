@@ -73,11 +73,11 @@ export const useCustomerOrders = () => {
 };
 
 /**
- * Paginated infinite-scroll orders list (20 items per page) for TransactionsScreen.
+ * Paginated infinite-scroll orders list (20 items per status per page) for TransactionsScreen.
  */
-export const useInfiniteCustomerOrders = (type?: OrderStatus) => {
+export const useInfiniteCustomerOrders = () => {
   const { authToken } = useAuthSession();
-  const query = useCustomerInfiniteOrdersQuery(authToken, type);
+  const query = useCustomerInfiniteOrdersQuery(authToken);
 
   const orders = useMemo<readonly CustomerOrderSummary[]>(() => {
     const pages = query.data?.pages ?? [];
