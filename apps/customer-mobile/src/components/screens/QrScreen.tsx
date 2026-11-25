@@ -14,8 +14,13 @@ import * as MediaLibrary from 'expo-media-library';
 import { StatusBar } from 'expo-status-bar';
 import { useAuthSession } from '../../context/AuthSessionContext';
 import { useNavigationUi } from '../../context/NavigationAndUiContext';
+import { useNotifications } from '../../context/NotificationsContext';
 import { useToast } from '../../context/ToastContext';
 import { useCustomerOrders } from '../../hooks/useCustomerOrders';
+import {
+  QR_FALLBACK_POLL_INTERVAL_MS,
+  useQrOrderUpdateListener,
+} from '../../hooks/useQrOrderUpdateListener';
 import { useCustomerOrderDetailQuery } from '../../query/useCustomerQueries';
 import { ArrowLeftIcon, DownloadIcon } from '../common/Icons';
 import { CARD_SHADOW } from '../common/cardStyles';
@@ -31,8 +36,15 @@ export const QrScreen: React.FC = () => {
     goBack,
   } = useNavigationUi();
   const { showToast } = useToast();
+  const { isRealtimeSubscribed } = useNotifications();
   const { orders } = useCustomerOrders();
-  const { data: orderDetail, refetch } = useCustomerOrderDetailQuery(authToken, selectedOrderId);
+  const {
+    data: orderDetail,
+    isPlaceholderData,
+    refetch,
+  } = useCustomerOrderDetailQuery(authToken, selectedOrderId, {
+    refetchInterval: isRealtimeSubscribed ? false : QR_FALLBACK_POLL_INTERVAL_MS,
+  });
   const [isSavingPass, setIsSavingPass] = useState(false);
   const [isPullRefreshing, setIsPullRefreshing] = useState(false);
   const qrSvgRef = useRef<any>(null);
@@ -63,6 +75,20 @@ export const QrScreen: React.FC = () => {
   const ticketCode =
     selectedOrderTicketCode || orderDetail?.ticketCode || cachedSummary?.ticketCode;
   const orderId = orderDetail?.id || cachedSummary?.id || selectedOrderId || '';
+  const currentStatus =
+    (!isPlaceholderData ? orderDetail?.status : undefined) ||
+    (cachedSummary?.status && cachedSummary.status !== 'PENDING_INITIALIZATION'
+      ? cachedSummary.status
+      : undefined);
+
+  const { isOrderUpdated } = useQrOrderUpdateListener({
+    orderId,
+    ticketCode,
+    selectedOrderId,
+    selectedOrderTicketCode,
+    currentStatus,
+    refetchOrderDetail: refetch,
+  });
 
   // Encode ticketCode if present (e.g. 941-53N), falling back to UUID order.id
   const qrValue = ticketCode || orderId || 'PARCELHUB-DEMO';
@@ -208,7 +234,7 @@ export const QrScreen: React.FC = () => {
                 marginTop: 2,
               }}
             >
-              Ready to Scan
+              {isOrderUpdated ? 'Order Updated — Opening Details...' : 'Ready to Scan'}
             </Text>
           </View>
         </View>
@@ -258,6 +284,7 @@ export const QrScreen: React.FC = () => {
             {/* Padded Square QR Frame */}
             <QrCodeFrame
               value={qrValue}
+              overlayState={isOrderUpdated ? 'completed' : undefined}
               getRef={(c) => {
                 qrSvgRef.current = c;
               }}
