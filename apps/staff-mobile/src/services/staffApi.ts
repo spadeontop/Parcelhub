@@ -1,80 +1,52 @@
-import { Platform } from 'react-native';
-import * as SecureStore from 'expo-secure-store';
 import {
-  StaffOrder,
-  StaffLoginResponse,
-  StaffOrderDetailResponse,
+  OrderStatus,
+  PaginationMeta,
   StaffActivateOrderResponse,
-  StaffPayCourierResponse,
   StaffAttachPhotoResponse,
   StaffClaimOrderResponse,
-  OrderStatus,
+  StaffGetOrderPhotoResponse,
+  StaffLoginResponse,
+  StaffOrder,
+  StaffOrderDetailResponse,
+  StaffPayCourierResponse,
 } from '../types';
 import { ENV } from '../config/env';
+import { StaffApiError, staffFetch } from './apiClient';
+import { staffStorage } from './staffStorage';
 
-const AUTH_TOKEN_KEY = 'parcelhub_staff_auth_token';
-const REFRESH_TOKEN_KEY = 'parcelhub_staff_refresh_token';
-const STAFF_EMAIL_KEY = 'parcelhub_staff_email';
-
-// In-memory cache for fast, reliable synchronous access across web & native
-let memoryAuthToken: string | null = null;
-let memoryRefreshToken: string | null = null;
-let memoryStaffEmail: string | null = null;
-
-const isWeb = Platform.OS === 'web';
-
-const storage = {
-  async getItem(key: string): Promise<string | null> {
-    try {
-      if (isWeb) {
-        if (typeof window !== 'undefined' && window.localStorage) {
-          return window.localStorage.getItem(key);
-        }
-        return null;
-      }
-      return await SecureStore.getItemAsync(key);
-    } catch {
-      return null;
-    }
-  },
-
-  async setItem(key: string, value: string): Promise<void> {
-    try {
-      if (isWeb) {
-        if (typeof window !== 'undefined' && window.localStorage) {
-          window.localStorage.setItem(key, value);
-        }
-        return;
-      }
-      await SecureStore.setItemAsync(key, value);
-    } catch {}
-  },
-
-  async deleteItem(key: string): Promise<void> {
-    try {
-      if (isWeb) {
-        if (typeof window !== 'undefined' && window.localStorage) {
-          window.localStorage.removeItem(key);
-        }
-        return;
-      }
-      await SecureStore.deleteItemAsync(key);
-    } catch {}
-  },
-};
-
-export class StaffApiError extends Error {
-  statusCode?: number;
-  constructor(message: string, statusCode?: number) {
-    super(message);
-    this.name = 'StaffApiError';
-    this.statusCode = statusCode;
-  }
-}
+export { StaffApiError };
 
 export type StaffQrLookupResult =
   | { kind: 'found'; order: StaffOrder; hasDetails: boolean }
   | { kind: 'not-found' | 'ambiguous' };
+
+function mapSummaryOrder(o: any): StaffOrder {
+  return {
+    id: o.id || o.orderId,
+    ticketCode: o.ticketCode || null,
+    trackingId: o.trackingId || '',
+    customer: o.customer || o.recipientName || 'Unknown Customer',
+    amountToPay: typeof o.amountToPay === 'number' ? o.amountToPay : o.price || 0,
+    amountReceived: o.amountReceived,
+    change: o.change || 0,
+    timestamp: o.timestamp || new Date().toISOString(),
+    status: o.status,
+    statusMessage: o.statusMessage,
+    isClaimActive: o.isClaimActive,
+    claimRemainingSeconds: o.claimRemainingSeconds,
+    claimInitiatedAt: o.claimInitiatedAt,
+    claimExpiresAt: o.claimExpiresAt,
+    courierPaid: o.courierPaid,
+    courierPaidBy: o.courierPaidBy ?? undefined,
+    courierPaidByName: o.courierPaidByName,
+    courierPaidAt: o.courierPaidAt ?? undefined,
+    claimedAt: o.claimedAt,
+    createdAt: o.createdAt || o.statusTimeline?.[0]?.timestamp || o.timestamp,
+    statusTimeline: o.statusTimeline,
+    proofImageUrl: o.proofImageUrl || o.imageUrl,
+    notes: o.notes,
+  };
+}
 
 export const staffApi = {
   async findOrderByQrCode(
@@ -103,7 +75,12 @@ export const staffApi = {
     // Staff search returns partial matches, and an exact tracking ID can belong to multiple orders.
     while (!signal.aborted) {
       const { orders, pagination } = await this.getOrders(
-        undefined, pageSize, offset, token, normalizedCode, signal
+        undefined,
+        pageSize,
+        offset,
+        token,
+        normalizedCode,
+        signal
       );
       for (const order of orders) {
         const isExactMatch = [order.ticketCode, order.trackingId].some(
@@ -120,85 +97,34 @@ export const staffApi = {
     return match ? { kind: 'found', order: match, hasDetails: false } : { kind: 'not-found' };
   },
 
-  async getStoredAuthToken(): Promise<string | null> {
-    if (memoryAuthToken) return memoryAuthToken;
-    const stored = await storage.getItem(AUTH_TOKEN_KEY);
-    if (stored) memoryAuthToken = stored;
-    return stored;
-  },
-
-  async setStoredAuthToken(token: string): Promise<void> {
-    memoryAuthToken = token;
-    await storage.setItem(AUTH_TOKEN_KEY, token);
-  },
-
-  async getStoredRefreshToken(): Promise<string | null> {
-    if (memoryRefreshToken) return memoryRefreshToken;
-    const stored = await storage.getItem(REFRESH_TOKEN_KEY);
-    if (stored) memoryRefreshToken = stored;
-    return stored;
-  },
-
-  async setStoredRefreshToken(token: string): Promise<void> {
-    memoryRefreshToken = token;
-    await storage.setItem(REFRESH_TOKEN_KEY, token);
-  },
-
-  async getStoredStaffEmail(): Promise<string | null> {
-    if (memoryStaffEmail) return memoryStaffEmail;
-    const stored = await storage.getItem(STAFF_EMAIL_KEY);
-    if (stored) memoryStaffEmail = stored;
-    return stored;
-  },
-
-  async setStoredStaffEmail(email: string): Promise<void> {
-    memoryStaffEmail = email;
-    await storage.setItem(STAFF_EMAIL_KEY, email);
-  },
-
-  async clearStoredSession(): Promise<void> {
-    memoryAuthToken = null;
-    memoryRefreshToken = null;
-    memoryStaffEmail = null;
-    await storage.deleteItem(AUTH_TOKEN_KEY);
-    await storage.deleteItem(REFRESH_TOKEN_KEY);
-    await storage.deleteItem(STAFF_EMAIL_KEY);
-  },
+  getStoredAuthToken: () => staffStorage.getAuthToken(),
+  setStoredAuthToken: (token: string) => staffStorage.setAuthToken(token),
+  getStoredRefreshToken: () => staffStorage.getRefreshToken(),
+  setStoredRefreshToken: (token: string) => staffStorage.setRefreshToken(token),
+  getStoredStaffEmail: () => staffStorage.getStaffEmail(),
+  setStoredStaffEmail: (email: string) => staffStorage.setStaffEmail(email),
+  clearStoredSession: () => staffStorage.clearSession(),
 
   async login(usernameOrEmail: string, password: string): Promise<StaffLoginResponse> {
-    try {
-      const normalizedUsername = usernameOrEmail.trim().includes('@')
-        ? usernameOrEmail.trim().split('@')[0].toLowerCase()
-        : usernameOrEmail.trim().toLowerCase();
+    const normalizedUsername = usernameOrEmail.trim().includes('@')
+      ? usernameOrEmail.trim().split('@')[0].toLowerCase()
+      : usernameOrEmail.trim().toLowerCase();
 
-      const res = await fetch(`${ENV.API_BASE_URL}/api/v1/staff/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: normalizedUsername, password }),
-      });
+    const data = await staffFetch<StaffLoginResponse>('/api/v1/staff/login', {
+      method: 'POST',
+      requiresAuth: false,
+      body: { username: normalizedUsername, password },
+      fallbackErrorMessage: 'Login failed',
+      networkErrorMessage: `Cannot reach backend at ${ENV.API_BASE_URL}. Ensure Next.js server is running.`,
+    });
 
-      const data = await res.json().catch(() => null);
-
-      if (!res.ok) {
-        const errorMsg = data?.message || data?.error || data?.statusMessage || `Login failed (${res.status})`;
-        throw new StaffApiError(errorMsg, res.status);
-      }
-
-      await this.setStoredAuthToken(data.authToken);
-      if (data.refreshToken) {
-        await this.setStoredRefreshToken(data.refreshToken);
-      }
-      await this.setStoredStaffEmail(normalizedUsername);
-
-      return data as StaffLoginResponse;
-    } catch (err: any) {
-      if (err instanceof StaffApiError) throw err;
-      throw new StaffApiError(
-        err?.message?.includes('Network request failed')
-          ? `Cannot reach backend at ${ENV.API_BASE_URL}. Ensure Next.js server is running.`
-          : err?.message || 'Network error during login'
-      );
+    await staffStorage.setAuthToken(data.authToken);
+    if (data.refreshToken) {
+      await staffStorage.setRefreshToken(data.refreshToken);
     }
+    await staffStorage.setStaffEmail(normalizedUsername);
+
+    return data;
   },
 
   async getOrders(
@@ -208,20 +134,7 @@ export const staffApi = {
     explicitToken?: string,
     search?: string,
     signal?: AbortSignal
-  ): Promise<{
-    orders: StaffOrder[];
-    pagination: {
-      totalCount: number;
-      limit: number;
-      offset: number;
-      hasMore: boolean;
-    };
-  }> {
-    const token = explicitToken || (await this.getStoredAuthToken());
-    if (!token) {
-      throw new StaffApiError('Missing staff authorization token. Please sign in.', 401);
-    }
-
+  ): Promise<{ orders: StaffOrder[]; pagination: PaginationMeta }> {
     const queryParams = new URLSearchParams();
     if (status) queryParams.append('status', status);
     if (limit !== undefined) queryParams.append('limit', limit.toString());
@@ -229,72 +142,27 @@ export const staffApi = {
     if (search && search.trim()) queryParams.append('search', search.trim());
 
     const qs = queryParams.toString() ? `?${queryParams.toString()}` : '';
-
-    try {
-      const res = await fetch(`${ENV.API_BASE_URL}/api/v1/staff/orders${qs}`, {
+    const data = await staffFetch<{ orders?: any[]; pagination?: Partial<PaginationMeta> }>(
+      `/api/v1/staff/orders${qs}`,
+      {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
+        token: explicitToken,
         signal,
-      });
-
-      const data = await res.json().catch(() => null);
-
-      if (!res.ok) {
-        if (res.status === 401) {
-          await this.clearStoredSession();
-        }
-        const errorMsg = data?.message || data?.error || `Failed to fetch orders (${res.status})`;
-        throw new StaffApiError(errorMsg, res.status);
+        fallbackErrorMessage: 'Failed to fetch orders',
+        networkErrorMessage: `Backend offline: Cannot connect to ${ENV.API_BASE_URL}.`,
       }
+    );
 
-      const rawOrders: any[] = data?.orders || [];
-      const mappedOrders: StaffOrder[] = rawOrders.map((o) => ({
-        id: o.id || o.orderId,
-        ticketCode: o.ticketCode || null,
-        trackingId: o.trackingId || '',
-        customer: o.customer || o.recipientName || 'Unknown Customer',
-        amountToPay: typeof o.amountToPay === 'number' ? o.amountToPay : (o.price || 0),
-        amountReceived: o.amountReceived,
-        change: o.change || 0,
-        timestamp: o.timestamp || new Date().toISOString(),
-        status: o.status,
-        statusMessage: o.statusMessage,
-        isClaimActive: o.isClaimActive,
-        claimRemainingSeconds: o.claimRemainingSeconds,
-        claimInitiatedAt: o.claimInitiatedAt,
-        claimExpiresAt: o.claimExpiresAt,
-        courierPaid: o.courierPaid,
-        courierPaidBy: o.courierPaidBy,
-        courierPaidByName: o.courierPaidByName,
-        courierPaidAt: o.courierPaidAt,
-        claimedAt: o.claimedAt,
-        createdAt: o.createdAt || (o.statusTimeline && o.statusTimeline[0]?.timestamp) || o.timestamp,
-        statusTimeline: o.statusTimeline,
-        proofImageUrl: o.proofImageUrl || o.imageUrl,
-        notes: o.notes,
-      }));
-
-      return {
-        orders: mappedOrders,
-        pagination: {
-          totalCount: data?.pagination?.totalCount ?? mappedOrders.length,
-          limit: data?.pagination?.limit ?? limit ?? 20,
-          offset: data?.pagination?.offset ?? offset ?? 0,
-          hasMore: Boolean(data?.pagination?.hasMore),
-        },
-      };
-    } catch (err: any) {
-      if (err?.name === 'AbortError') throw err;
-      if (err instanceof StaffApiError) throw err;
-      throw new StaffApiError(
-        err?.message?.includes('Network request failed')
-          ? `Backend offline: Cannot connect to ${ENV.API_BASE_URL}.`
-          : err?.message || 'Error fetching staff orders'
-      );
-    }
+    const mappedOrders = (data?.orders || []).map(mapSummaryOrder);
+    return {
+      orders: mappedOrders,
+      pagination: {
+        totalCount: data?.pagination?.totalCount ?? mappedOrders.length,
+        limit: data?.pagination?.limit ?? limit ?? 20,
+        offset: data?.pagination?.offset ?? offset ?? 0,
+        hasMore: Boolean(data?.pagination?.hasMore),
+      },
+    };
   },
 
   async getOrderPhoto(
@@ -303,234 +171,113 @@ export const staffApi = {
     explicitToken?: string,
     signal?: AbortSignal
   ): Promise<{ imageUrl: string | null; proofImageUrl: string | null }> {
-    const token = explicitToken || (await this.getStoredAuthToken());
-    if (!token || signal?.aborted) return { imageUrl: null, proofImageUrl: null };
-
-    const controller = new AbortController();
-    const abort = () => controller.abort();
-    signal?.addEventListener('abort', abort);
-    const timeoutId = setTimeout(abort, 10000);
-
+    if (signal?.aborted) return { imageUrl: null, proofImageUrl: null };
     try {
-      const res = await fetch(
-        `${ENV.API_BASE_URL}/api/v1/staff/orders/${encodeURIComponent(orderId)}/photo?type=${type}`,
+      const data = await staffFetch<StaffGetOrderPhotoResponse>(
+        `/api/v1/staff/orders/${encodeURIComponent(orderId)}/photo?type=${type}`,
         {
           method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          signal: controller.signal,
+          token: explicitToken,
+          signal,
+          fallbackErrorMessage: 'Failed to fetch order photo',
         }
       );
-      if (!res.ok) return { imageUrl: null, proofImageUrl: null };
-      const data = await res.json().catch(() => null);
       return {
         imageUrl: data?.imageUrl || null,
         proofImageUrl: data?.proofImageUrl || null,
       };
     } catch {
       return { imageUrl: null, proofImageUrl: null };
-    } finally {
-      clearTimeout(timeoutId);
-      signal?.removeEventListener('abort', abort);
     }
   },
 
   async getOrder(orderId: string, explicitToken?: string, signal?: AbortSignal): Promise<StaffOrder> {
-    const token = explicitToken || (await this.getStoredAuthToken());
-    if (!token) {
-      throw new StaffApiError('Missing staff authorization token. Please sign in.', 401);
-    }
-
-    try {
-      const res = await fetch(`${ENV.API_BASE_URL}/api/v1/staff/orders/${encodeURIComponent(orderId)}`, {
+    const o = await staffFetch<StaffOrderDetailResponse & { proofImageUrl?: string; claimedAt?: string }>(
+      `/api/v1/staff/orders/${encodeURIComponent(orderId)}`,
+      {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
+        token: explicitToken,
         signal,
-      });
-
-      const data = await res.json().catch(() => null);
-
-      if (!res.ok) {
-        if (res.status === 401) {
-          await this.clearStoredSession();
-        }
-        const errorMsg = data?.message || data?.error || `Failed to fetch order ${orderId}`;
-        throw new StaffApiError(errorMsg, res.status);
+        fallbackErrorMessage: `Failed to fetch order ${orderId}`,
       }
+    );
 
-      const o = data as StaffOrderDetailResponse;
-
-      // In v1, photo is served via /photo endpoint to optimize payload
-      let proofImageUrl = o.proofImageUrl;
-      if (!proofImageUrl) {
-        try {
-          const photoData = await this.getOrderPhoto(orderId, 'proof', token, signal);
-          proofImageUrl = photoData.proofImageUrl || photoData.imageUrl || undefined;
-        } catch {}
-      }
-
-      return {
-        id: o.orderId || orderId,
-        ticketCode: o.ticketCode || null,
-        trackingId: o.trackingId,
-        customer: o.customer,
-        amountToPay: o.amountToPay,
-        amountReceived: typeof o.amountReceived === 'number' ? o.amountReceived : undefined,
-        change: o.change || 0,
-        timestamp: o.timestamp,
-        status: o.status,
-        statusMessage: o.statusMessage,
-        isClaimActive: o.isClaimActive,
-        claimRemainingSeconds: o.claimRemainingSeconds,
-        courierPaid: o.courierPaid,
-        courierPaidBy: o.courierPaidBy,
-        courierPaidByName: o.courierPaidByName,
-        courierPaidAt: o.courierPaidAt,
-        claimedAt: o.claimedAt,
-        createdAt: o.createdAt || (o.statusTimeline && o.statusTimeline[0]?.timestamp) || o.timestamp,
-        statusTimeline: o.statusTimeline,
-        proofImageUrl,
-      };
-    } catch (err: any) {
-      if (err instanceof StaffApiError) throw err;
-      throw new StaffApiError(err?.message || `Error fetching order ${orderId}`);
+    // Scope eager /photo prefetch to statuses that actually have a proof photo.
+    let proofImageUrl = o.proofImageUrl;
+    if (!proofImageUrl && (o.status === 'READY_TO_CLAIM' || o.status === 'CLAIMED')) {
+      const photoData = await this.getOrderPhoto(orderId, 'proof', explicitToken, signal);
+      proofImageUrl = photoData.proofImageUrl || photoData.imageUrl || undefined;
     }
+
+    return {
+      id: o.orderId || orderId,
+      ticketCode: o.ticketCode || null,
+      trackingId: o.trackingId || '',
+      customer: o.customer,
+      amountToPay: o.amountToPay,
+      amountReceived: typeof o.amountReceived === 'number' ? o.amountReceived : undefined,
+      change: o.change || 0,
+      timestamp: o.timestamp,
+      status: o.status,
+      statusMessage: o.statusMessage,
+      isClaimActive: o.isClaimActive,
+      claimRemainingSeconds: o.claimRemainingSeconds,
+      courierPaid: o.courierPaid,
+      courierPaidBy: o.courierPaidBy ?? undefined,
+      courierPaidByName: o.courierPaidByName,
+      courierPaidAt: o.courierPaidAt ?? undefined,
+      claimedAt: o.claimedAt,
+      createdAt: o.createdAt || o.statusTimeline?.[0]?.timestamp || o.timestamp,
+      statusTimeline: o.statusTimeline,
+      proofImageUrl,
+    };
   },
 
-  async activateOrder(orderId: string, amountReceived: number, explicitToken?: string): Promise<StaffActivateOrderResponse> {
-    const token = explicitToken || (await this.getStoredAuthToken());
-    if (!token) {
-      throw new StaffApiError('Missing staff authorization token. Please sign in.', 401);
-    }
-
-    try {
-      const res = await fetch(`${ENV.API_BASE_URL}/api/v1/staff/orders/${encodeURIComponent(orderId)}/activate`, {
+  activateOrder(orderId: string, amountReceived: number, explicitToken?: string) {
+    return staffFetch<StaffActivateOrderResponse>(
+      `/api/v1/staff/orders/${encodeURIComponent(orderId)}/activate`,
+      {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ amountReceived }),
-      });
-
-      const data = await res.json().catch(() => null);
-
-      if (!res.ok) {
-        if (res.status === 401) {
-          await this.clearStoredSession();
-        }
-        const errorMsg = data?.message || data?.error || data?.statusMessage || `Activation failed (${res.status})`;
-        throw new StaffApiError(errorMsg, res.status);
+        token: explicitToken,
+        body: { amountReceived },
+        fallbackErrorMessage: 'Activation failed',
       }
-
-      return data as StaffActivateOrderResponse;
-    } catch (err: any) {
-      if (err instanceof StaffApiError) throw err;
-      throw new StaffApiError(err?.message || 'Error activating order');
-    }
+    );
   },
 
-  async payCourier(orderId: string, explicitToken?: string): Promise<StaffPayCourierResponse> {
-    const token = explicitToken || (await this.getStoredAuthToken());
-    if (!token) {
-      throw new StaffApiError('Missing staff authorization token. Please sign in.', 401);
-    }
-
-    try {
-      const res = await fetch(`${ENV.API_BASE_URL}/api/v1/staff/orders/${encodeURIComponent(orderId)}/make-claimable/pay`, {
+  payCourier(orderId: string, explicitToken?: string) {
+    return staffFetch<StaffPayCourierResponse>(
+      `/api/v1/staff/orders/${encodeURIComponent(orderId)}/make-claimable/pay`,
+      {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({}),
-      });
-
-      const data = await res.json().catch(() => null);
-
-      if (!res.ok) {
-        if (res.status === 401) {
-          await this.clearStoredSession();
-        }
-        const errorMsg = data?.message || data?.error || data?.statusMessage || `Courier payment failed (${res.status})`;
-        throw new StaffApiError(errorMsg, res.status);
+        token: explicitToken,
+        body: {},
+        fallbackErrorMessage: 'Courier payment failed',
       }
-
-      return data as StaffPayCourierResponse;
-    } catch (err: any) {
-      if (err instanceof StaffApiError) throw err;
-      throw new StaffApiError(err?.message || 'Error recording courier payout');
-    }
+    );
   },
 
-  async attachPhoto(orderId: string, imageUrl: string, explicitToken?: string): Promise<StaffAttachPhotoResponse> {
-    const token = explicitToken || (await this.getStoredAuthToken());
-    if (!token) {
-      throw new StaffApiError('Missing staff authorization token. Please sign in.', 401);
-    }
-
-    try {
-      const res = await fetch(`${ENV.API_BASE_URL}/api/v1/staff/orders/${encodeURIComponent(orderId)}/make-claimable/attach-photo`, {
+  attachPhoto(orderId: string, imageUrl: string, explicitToken?: string) {
+    return staffFetch<StaffAttachPhotoResponse>(
+      `/api/v1/staff/orders/${encodeURIComponent(orderId)}/make-claimable/attach-photo`,
+      {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ imageUrl }),
-      });
-
-      const data = await res.json().catch(() => null);
-
-      if (!res.ok) {
-        if (res.status === 401) {
-          await this.clearStoredSession();
-        }
-        const errorMsg = data?.message || data?.error || data?.statusMessage || `Photo attach failed (${res.status})`;
-        throw new StaffApiError(errorMsg, res.status);
+        token: explicitToken,
+        body: { imageUrl },
+        fallbackErrorMessage: 'Photo attach failed',
       }
-
-      return data as StaffAttachPhotoResponse;
-    } catch (err: any) {
-      if (err instanceof StaffApiError) throw err;
-      throw new StaffApiError(err?.message || 'Error attaching parcel photo');
-    }
+    );
   },
 
-  async claimOrder(orderId: string, explicitToken?: string): Promise<StaffClaimOrderResponse> {
-    const token = explicitToken || (await this.getStoredAuthToken());
-    if (!token) {
-      throw new StaffApiError('Missing staff authorization token. Please sign in.', 401);
-    }
-
-    try {
-      const res = await fetch(`${ENV.API_BASE_URL}/api/v1/staff/orders/${encodeURIComponent(orderId)}/claim`, {
+  claimOrder(orderId: string, explicitToken?: string) {
+    return staffFetch<StaffClaimOrderResponse>(
+      `/api/v1/staff/orders/${encodeURIComponent(orderId)}/claim`,
+      {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({}),
-      });
-
-      const data = await res.json().catch(() => null);
-
-      if (!res.ok) {
-        if (res.status === 401) {
-          await this.clearStoredSession();
-        }
-        const errorMsg = data?.message || data?.error || data?.statusMessage || `Claim failed (${res.status})`;
-        throw new StaffApiError(errorMsg, res.status);
+        token: explicitToken,
+        body: {},
+        fallbackErrorMessage: 'Claim failed',
       }
-
-      return data as StaffClaimOrderResponse;
-    } catch (err: any) {
-      if (err instanceof StaffApiError) throw err;
-      throw new StaffApiError(err?.message || 'Error releasing parcel to customer');
-    }
+    );
   },
 };
