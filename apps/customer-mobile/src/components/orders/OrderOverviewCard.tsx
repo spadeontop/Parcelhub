@@ -101,25 +101,28 @@ export const OrderOverviewCard: React.FC<OrderOverviewCardProps> = ({
             </TouchableOpacity>
           </View>
         </View>
-      </View>
 
-      {/* Card 2: Payment Summary */}
-      <View
-        className="bg-white border border-[#edf2f7] rounded-[20px] p-5"
-        style={CARD_SHADOW}
-      >
-        <Text className="text-[11px] font-bold text-[#94a3b8] uppercase tracking-[0.65px] mb-3.5">
-          PAYMENT SUMMARY
-        </Text>
-
-        {isUnpaid ? (
-          <View className="flex-row items-baseline justify-between">
-            <Text className="text-[14px] text-[#64748b] font-medium">Amount Due</Text>
-            <Text className="text-[18px] font-bold text-[#0f172a] tracking-[-0.3px]">
+        {/* Solo Amount Due folded cleanly into Order Details while Unpaid */}
+        {isUnpaid && (
+          <View className="mt-4 pt-3.5 border-t border-[#f1f5f9] flex-row items-baseline justify-between">
+            <Text className="text-[14px] font-semibold text-[#0f172a]">Amount Due</Text>
+            <Text className="text-[17px] font-bold text-[#0f172a] tracking-[-0.3px]">
               {formattedPrice}
             </Text>
           </View>
-        ) : (
+        )}
+      </View>
+
+      {/* Card 2: Payment Summary (shown once payment has been made) */}
+      {!isUnpaid && (
+        <View
+          className="bg-white border border-[#edf2f7] rounded-[20px] p-5"
+          style={CARD_SHADOW}
+        >
+          <Text className="text-[11px] font-bold text-[#94a3b8] uppercase tracking-[0.65px] mb-3.5">
+            PAYMENT SUMMARY
+          </Text>
+
           <View className="gap-3">
             <View className="flex-row items-center justify-between">
               <Text className="text-[13.5px] text-[#64748b] font-medium">Order Total</Text>
@@ -147,8 +150,8 @@ export const OrderOverviewCard: React.FC<OrderOverviewCardProps> = ({
               </Text>
             </View>
           </View>
-        )}
-      </View>
+        </View>
+      )}
     </View>
   );
 };
