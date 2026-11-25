@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { CARD_SHADOW } from '../common/cardStyles';
 
 export const UNPAID_CANCELLATION_REASONS = [
   'Changed my mind',
@@ -49,41 +50,47 @@ export const UnpaidCancelOrderView: React.FC<UnpaidCancelOrderViewProps> = ({
     >
       {/* Order Summary Card */}
       <View
-        className="bg-white rounded-[20px] px-5 pt-[19px] pb-5 gap-[13px]"
-        style={{
-          shadowColor: '#0f172a',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.04,
-          shadowRadius: 8,
-          elevation: 2,
-        }}
+        className="bg-white border border-[#edf2f7] rounded-[20px] p-5"
+        style={CARD_SHADOW}
       >
-        <Text className="text-[11px] font-bold text-[#94a3b8] uppercase tracking-[0.66px]">
-          ORDER SUMMARY
-        </Text>
+        <View className="flex-row items-center justify-between">
+          <Text className="text-[11px] font-bold text-[#94a3b8] uppercase tracking-[0.65px]">
+            ORDER SUMMARY
+          </Text>
+          <View
+            className="rounded-full px-2.5 py-0.5"
+            style={{
+              backgroundColor: '#fffbeb',
+              borderWidth: 1,
+              borderColor: '#fde68a',
+            }}
+          >
+            <Text className="text-[11px] font-semibold text-[#b45309]">Unpaid</Text>
+          </View>
+        </View>
 
-        <View className="flex-row items-center justify-between pt-px">
-          <Text className="text-[13.5px] font-medium text-[#64748b]">Product</Text>
+        <View className="mt-3 pb-3.5 border-b border-[#f1f5f9]">
+          <Text className="text-[11.5px] font-medium text-[#94a3b8] mb-1">
+            Product
+          </Text>
           <Text
-            className="text-[13.5px] font-semibold text-[#0f172a] text-right flex-1 ml-4"
-            numberOfLines={1}
+            className="text-[15px] font-bold text-[#0f172a] leading-[21px]"
+            numberOfLines={2}
           >
             {productName}
           </Text>
         </View>
 
-        <View className="flex-row items-center justify-between pb-px">
-          <Text className="text-[13.5px] font-medium text-[#64748b]">Payment Status</Text>
-          <View className="bg-[#fef3c7] border border-[#fde68a] rounded-full px-[10px] py-[4px]">
-            <Text className="text-[12px] font-bold text-[#b45309]">Unpaid</Text>
-          </View>
-        </View>
-
-        <View className="h-px bg-[#f1f5f9] w-full" />
-
-        <View className="flex-row items-center justify-between pt-px">
-          <Text className="text-[13.5px] font-medium text-[#64748b]">Paid Amount</Text>
-          <Text className="text-[13.5px] font-semibold text-[#0f172a] text-right">
+        <View
+          className="mt-3.5 rounded-[12px] px-3.5 py-3 flex-row items-center justify-between"
+          style={{
+            backgroundColor: '#f8fafc',
+            borderWidth: 1,
+            borderColor: '#e2e8f0',
+          }}
+        >
+          <Text className="text-[13.5px] font-medium text-[#64748b]">Cash Paid</Text>
+          <Text className="text-[13.5px] font-semibold text-[#475569]">
             No payment collected
           </Text>
         </View>

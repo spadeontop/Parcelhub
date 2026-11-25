@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { CARD_SHADOW } from '../common/cardStyles';
 import { ConfirmationSubmitSection } from '../common/ConfirmationSubmitSection';
 import { FieldError } from '../common/FieldError';
 
@@ -90,31 +91,27 @@ export const CancelOrderView: React.FC<CancelOrderViewProps> = ({
       >
         {/* Item Summary Card */}
         <View
-          className="bg-white border border-[#f1f5f9] rounded-[16px] p-[17px] mb-3.5"
-          style={{
-            shadowColor: '#111827',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.04,
-            shadowRadius: 8,
-            elevation: 2,
-          }}
+          className="bg-white border border-[#edf2f7] rounded-[20px] p-5 mb-3.5"
+          style={CARD_SHADOW}
         >
-          <Text className="text-[11px] font-bold text-[#94a3b8] uppercase tracking-[0.55px] mb-3">
+          <Text className="text-[11px] font-bold text-[#94a3b8] uppercase tracking-[0.65px]">
             ITEM TO CANCEL
           </Text>
 
-          <View className="gap-2.5">
-            <View className="flex-row items-center justify-between py-[2px]">
-              <Text className="text-[13.5px] text-[#64748b] font-medium">Product</Text>
-              <Text
-                numberOfLines={1}
-                className="text-[13.5px] font-semibold text-[#0f172a] flex-1 text-right ml-4"
-              >
-                {productName}
-              </Text>
-            </View>
+          <View className="mt-3 pb-3.5 border-b border-[#f1f5f9]">
+            <Text className="text-[11.5px] font-medium text-[#94a3b8] mb-1">
+              Product
+            </Text>
+            <Text
+              numberOfLines={2}
+              className="text-[15px] font-bold text-[#0f172a] leading-[21px]"
+            >
+              {productName}
+            </Text>
+          </View>
 
-            <View className="flex-row items-center justify-between py-[2px]">
+          <View className="pt-3.5 gap-3">
+            <View className="flex-row items-center justify-between">
               <Text className="text-[13.5px] text-[#64748b] font-medium">Hub Location</Text>
               <Text
                 numberOfLines={1}
@@ -124,9 +121,20 @@ export const CancelOrderView: React.FC<CancelOrderViewProps> = ({
               </Text>
             </View>
 
-            <View className="border-t border-[#f1f5f9] flex-row items-center justify-between pt-[11px] pb-[2px]">
-              <Text className="text-[13.5px] text-[#64748b] font-medium">Refundable Amount</Text>
-              <Text className="text-[15px] font-bold text-[#10b981]">{formattedAmount}</Text>
+            <View
+              className="mt-1 rounded-[12px] px-3.5 py-3 flex-row items-center justify-between"
+              style={{
+                backgroundColor: '#ecfdf5',
+                borderWidth: 1,
+                borderColor: '#d1fae5',
+              }}
+            >
+              <Text className="text-[13.5px] font-semibold text-[#065f46]">
+                Refundable Amount
+              </Text>
+              <Text className="text-[16px] font-extrabold text-[#059669]">
+                {formattedAmount}
+              </Text>
             </View>
           </View>
         </View>
