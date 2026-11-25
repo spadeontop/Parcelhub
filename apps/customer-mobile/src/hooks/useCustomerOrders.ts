@@ -83,7 +83,11 @@ export const useCustomerOrderActions = () => {
   const { orderDraft, updateOrderDraft, clearOrderDraft } = useOrderDraft();
 
   const initializeCustomerOrder = useCallback(
-    async (imageUrl: string): Promise<CustomerInitOrderRes> => {
+    async (
+      imageUrl: string,
+      options?: { navigateOnSuccess?: boolean }
+    ): Promise<CustomerInitOrderRes> => {
+      const navigateOnSuccess = options?.navigateOnSuccess ?? true;
       let token = authToken;
       if (!token) token = await v1Storage.getAuthToken();
       if (!token) {
@@ -113,8 +117,10 @@ export const useCustomerOrderActions = () => {
       });
 
       setSelectedOrderTicketCode(res.ticketCode);
-      showToast(res.statusMessage || 'Order initialized');
-      navigateTo('confirm_order');
+      showToast(res.statusMessage || 'Receipt scanned & details filled');
+      if (navigateOnSuccess) {
+        navigateTo('confirm_order');
+      }
       return res;
     },
     [
