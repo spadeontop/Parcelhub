@@ -15,6 +15,8 @@ import { StaffReadyActionSection } from './StaffReadyActionSection';
 import { StaffUnpaidActionSection } from './StaffUnpaidActionSection';
 import { StaffActiveActionSection } from './StaffActiveActionSection';
 import { StaffClaimedSummarySection } from './StaffClaimedSummarySection';
+import { ZoomableImageViewer } from '../ZoomableImageViewer';
+import { staffApi } from '../../../services/staffApi';
 
 interface StaffOrderDetailsModalProps {
   order: StaffOrder | null;
@@ -44,7 +46,52 @@ export const StaffOrderDetailsModal: React.FC<StaffOrderDetailsModalProps> = ({
   const [isPayingCourier, setIsPayingCourier] = useState<boolean>(false);
   const [isAttachingPhoto, setIsAttachingPhoto] = useState<boolean>(false);
   const [isReleasing, setIsReleasing] = useState<boolean>(false);
+  const [isPodViewerOpen, setIsPodViewerOpen] = useState<boolean>(false);
+  const [proofPhotoUrl, setProofPhotoUrl] = useState<string | null>(order?.proofImageUrl || null);
+  const [loadingPhoto, setLoadingPhoto] = useState<boolean>(false);
   const scrollViewRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
+
+  useEffect(() => {
+    setProofPhotoUrl(order?.proofImageUrl || null);
+    setLoadingPhoto(false);
+    setIsPodViewerOpen(false);
+  }, [order?.id]);
+
+  useEffect(() => {
+    if (order?.proofImageUrl) {
+      setProofPhotoUrl(order.proofImageUrl);
+      setLoadingPhoto(false);
+    }
+  }, [order?.proofImageUrl]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!isPodViewerOpen || !order) {
+      setLoadingPhoto(false);
+      return;
+    }
+    if (order.proofImageUrl || proofPhotoUrl) {
+      setLoadingPhoto(false);
+      return;
+    }
+    setLoadingPhoto(true);
+    (async () => {
+      try {
+        const photoData = await staffApi.getOrderPhoto(order.id, 'proof');
+        if (!cancelled) {
+          const url = photoData.proofImageUrl || photoData.imageUrl;
+          if (url) setProofPhotoUrl(url);
+        }
+      } catch (err) {
+        console.warn('[Staff Proof] Failed to fetch photo:', err);
+      } finally {
+        if (!cancelled) setLoadingPhoto(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isPodViewerOpen, order?.id]);
 
   const { height: SCREEN_HEIGHT } = Dimensions.get('window');
   const translateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
@@ -235,11 +282,20 @@ export const StaffOrderDetailsModal: React.FC<StaffOrderDetailsModalProps> = ({
                 <StaffClaimedSummarySection
                   order={order}
                   onReturnHome={handleClose}
+                  onViewProof={() => setIsPodViewerOpen(true)}
                 />
               )}
             </ScrollView>
           </View>
         </Animated.View>
+
+        <ZoomableImageViewer
+          visible={isPodViewerOpen}
+          imageUri={proofPhotoUrl || order.proofImageUrl}
+          loading={loadingPhoto}
+          fallbackLabel={order.trackingId || order.id}
+          onClose={() => setIsPodViewerOpen(false)}
+        />
       </View>
     </Modal>
   );
