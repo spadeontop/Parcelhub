@@ -132,39 +132,107 @@ export const ConfirmOrderScreen: React.FC = () => {
 
       {/* Screen Title & Navigation Header */}
       <AppHeader
-        title="Confirm Order Details"
+        title="Confirm Details"
         showBackButton
         centerTitle
         onBack={goBack}
       />
 
       {/* Main Sheet with Curved Transition */}
-      <View className="flex-1 bg-[#f8fafc] rounded-t-[32px] pt-4 overflow-hidden">
+      <View className="flex-1 bg-[#f8fafc] rounded-t-[32px] overflow-hidden">
+        {/* Minimalist 2-Step Progress Bar */}
+        <View className="px-5 pt-5 pb-3">
+          <View className="flex-row items-center justify-between mb-2">
+            <Text className="text-[12px] font-semibold text-[#2563eb]">
+              Step 2 of 2 · Details
+            </Text>
+            <Text className="text-[12px] font-medium text-[#10b981]">
+              Receipt scanned
+            </Text>
+          </View>
+          <View className="flex-row gap-2">
+            <View className="flex-1 h-1 rounded-full bg-[#2563eb]" />
+            <View className="flex-1 h-1 rounded-full bg-[#2563eb]" />
+          </View>
+        </View>
+
         <ScrollView
           ref={scrollViewRef}
           showsVerticalScrollIndicator={false}
-          className="flex-1 px-4"
-          contentContainerStyle={{ paddingBottom: 40 }}
+          className="flex-1 px-5"
+          contentContainerStyle={{ paddingTop: 6, paddingBottom: 36 }}
         >
-          {/* Order Summary Card */}
+          {/* Compact Receipt Strip */}
           <View
-            className="rounded-[24px] bg-white border border-[#f1f5f9] p-4 mb-4"
+            className="rounded-[18px] bg-white border border-[#e2e8f0] p-3 mb-4 flex-row items-center"
             style={{
-              shadowColor: '#000000',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.06,
-              shadowRadius: 16,
-              elevation: 3,
+              shadowColor: '#0f172a',
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: 0.03,
+              shadowRadius: 6,
+              elevation: 1,
             }}
           >
-            {/* Card Header */}
-            <View className="flex-row items-center justify-between pb-3 mb-3 border-b border-[#f1f5f9]">
-              <Text className="text-[12px] font-bold text-[#64748b] tracking-wider uppercase">
-                ORDER SUMMARY
+            <View className="w-11 h-11 rounded-[10px] bg-[#f1f5f9] border border-[#e2e8f0] items-center justify-center mr-3 shrink-0 overflow-hidden">
+              {orderDraft.previewUri || orderDraft.imageUrl ? (
+                <Image
+                  source={{ uri: (orderDraft.previewUri || orderDraft.imageUrl) as string }}
+                  style={{ width: '100%', height: '100%' }}
+                  resizeMode="cover"
+                />
+              ) : (
+                <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+                  <Path
+                    d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6"
+                    stroke="#64748b"
+                    strokeWidth={1.8}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </Svg>
+              )}
+            </View>
+
+            <View className="flex-1">
+              <Text className="text-[13px] font-bold text-[#0f172a]">
+                Order Receipt
+              </Text>
+              <Text className="text-[11px] font-semibold text-[#059669] mt-0.5">
+                Verified
               </Text>
             </View>
 
-            {/* Form Fields with Apple Minimalist FloatingInput */}
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => navigateTo('faq')}
+              className="px-2.5 py-1.5"
+            >
+              <Text className="text-[12px] font-semibold text-[#2563eb]">
+                Hub Policy
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Order Details Card */}
+          <View
+            className="rounded-[22px] bg-white border border-[#e2e8f0] p-4 mb-4"
+            style={{
+              shadowColor: '#0f172a',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.04,
+              shadowRadius: 10,
+              elevation: 2,
+            }}
+          >
+            <View className="flex-row items-center justify-between pb-3 mb-2 border-b border-[#f1f5f9]">
+              <Text className="text-[11px] font-bold text-[#64748b] tracking-wider uppercase">
+                ORDER DETAILS
+              </Text>
+              <Text className="text-[11px] font-medium text-[#94a3b8]">
+                Edit if needed
+              </Text>
+            </View>
+
             <View className="space-y-1">
               {/* 1. Product Field */}
               <FloatingInput
@@ -223,7 +291,7 @@ export const ConfirmOrderScreen: React.FC = () => {
                 }}
                 rightElement={
                   isTrackingIdLocked ? (
-                    <View className="bg-[#eff6ff] border border-[#bfdbfe] px-2 py-0.5 rounded-full">
+                    <View className="bg-[#eff6ff] px-2 py-0.5 rounded-full">
                       <Text className="text-[10px] font-bold text-[#2563eb]">Verified</Text>
                     </View>
                   ) : undefined
@@ -232,88 +300,11 @@ export const ConfirmOrderScreen: React.FC = () => {
             </View>
           </View>
 
-          {/* Receipt Info Card */}
-          <View
-            className="rounded-[20px] bg-white border border-[#f1f5f9] p-3.5 mb-4 flex-row items-center"
-            style={{
-              shadowColor: '#000000',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.04,
-              shadowRadius: 8,
-              elevation: 2,
-            }}
-          >
-            {/* Receipt Thumbnail / Document Icon Box */}
-            <View className="w-16 h-16 rounded-[14px] bg-[#f8fafc] border border-[#e2e8f0] items-center justify-center mr-3.5 shrink-0 overflow-hidden">
-              {orderDraft.previewUri || orderDraft.imageUrl ? (
-                <Image
-                  source={{ uri: (orderDraft.previewUri || orderDraft.imageUrl) as string }}
-                  style={{ width: '100%', height: '100%' }}
-                  resizeMode="cover"
-                />
-              ) : (
-                <>
-                  <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-                    <Path
-                      d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
-                      stroke="#64748b"
-                      strokeWidth={1.8}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <Path
-                      d="M14 2v6h6M16 13H8M16 17H8M10 9H8"
-                      stroke="#64748b"
-                      strokeWidth={1.8}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </Svg>
-                  <Text className="text-[9px] font-bold text-[#64748b] mt-0.5">Receipt</Text>
-                </>
-              )}
-            </View>
-
-            {/* Receipt Details & Status */}
-            <View className="flex-1 justify-center">
-              <Text className="text-[14px] font-bold text-[#1e293b]">
-                Screenshot of Receipt
-              </Text>
-              <View className="flex-row items-center gap-1.5 mt-1">
-                <View className="w-4 h-4 rounded-full bg-[#ecfdf5] items-center justify-center">
-                  <Svg width={10} height={10} viewBox="0 0 24 24" fill="none">
-                    <Path
-                      d="M20 6L9 17l-5-5"
-                      stroke="#059669"
-                      strokeWidth={2.5}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </Svg>
-                </View>
-                <Text className="text-[11px] font-bold text-[#059669]">
-                  Receipt Verified
-                </Text>
-              </View>
-
-              {/* Hub Policy Link */}
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() => navigateTo('faq')}
-                className="mt-1"
-              >
-                <Text className="text-[12px] font-bold text-[#2563eb]">
-                  View Hub Policy &amp; Cash Escrow Details
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
           {/* Confirmation & Submit Action Section */}
           <ConfirmationSubmitSection
             title="I confirm that these order details are correct"
-            subtitle="Please ensure parcel amount and tracking number match your delivery receipt."
-            buttonLabel="Submit Order & Proceed to Payment"
+            subtitle="Ensure the amount and tracking number match your delivery receipt."
+            buttonLabel="Submit & Proceed to Payment"
             errorMessage="Please check the confirmation box before submitting."
             isChecked={isConfirmed}
             onCheckedChange={setIsConfirmed}

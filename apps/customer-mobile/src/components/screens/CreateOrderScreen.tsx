@@ -132,127 +132,125 @@ export const CreateOrderScreen: React.FC = () => {
 
       {/* Screen Title & Navigation Header */}
       <AppHeader
-        title="Create an Order"
+        title="New Order"
         showBackButton
         centerTitle
         onBack={goBack}
       />
 
       {/* Main Sheet with Curved Transition */}
-      <View className="flex-1 bg-[#f8fafc] rounded-t-[32px] pt-4 overflow-hidden">
+      <View className="flex-1 bg-[#f8fafc] rounded-t-[32px] overflow-hidden">
+        {/* Minimalist 2-Step Progress Bar */}
+        <View className="px-5 pt-5 pb-3">
+          <View className="flex-row items-center justify-between mb-2">
+            <Text className="text-[12px] font-semibold text-[#2563eb]">
+              Step 1 of 2 · Receipt
+            </Text>
+            <Text className="text-[12px] font-medium text-[#94a3b8]">
+              Next: Details
+            </Text>
+          </View>
+          <View className="flex-row gap-2">
+            <View className="flex-1 h-1 rounded-full bg-[#2563eb]" />
+            <View className="flex-1 h-1 rounded-full bg-[#e2e8f0]" />
+          </View>
+        </View>
+
         <ScrollView
           showsVerticalScrollIndicator={false}
-          className="flex-1 px-4"
-          contentContainerStyle={{ paddingBottom: 40 }}
+          className="flex-1 px-5"
+          contentContainerStyle={{ paddingTop: 8, paddingBottom: 28 }}
         >
-          {/* Upload Card */}
-          <View
-            className="rounded-[24px] bg-white border border-[#f1f5f9] p-4 mb-4"
+          {/* Upload Dropzone / Preview */}
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={handleUploadPress}
+            disabled={isInitializing || isPicking}
+            className="rounded-[24px] bg-white overflow-hidden mb-4"
             style={{
-              shadowColor: '#000000',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.06,
-              shadowRadius: 16,
-              elevation: 3,
+              borderWidth: hasUploadedReceipt ? 1 : 1.5,
+              borderStyle: hasUploadedReceipt ? 'solid' : 'dashed',
+              borderColor: hasUploadedReceipt ? '#e2e8f0' : '#cbd5e1',
+              shadowColor: '#0f172a',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.04,
+              shadowRadius: 10,
+              elevation: 2,
             }}
           >
-            {/* UploadCard Header */}
-            <View className="flex-row items-center justify-between pb-3 mb-3 border-b border-[#f1f5f9]">
-              <Text className="text-[12px] font-bold text-[#64748b] tracking-wider uppercase">
-                SCREENSHOT OF RECEIPT
-              </Text>
-              {hasUploadedReceipt && (
-                <View className="flex-row items-center gap-1 bg-[#ecfdf5] px-2 py-0.5 rounded-full">
-                  <View className="w-1.5 h-1.5 rounded-full bg-[#10b981]" />
-                  <Text className="text-[10px] font-bold text-[#059669]">Attached</Text>
-                </View>
-              )}
-            </View>
+            {hasUploadedReceipt && previewSourceUri ? (
+              <View className="w-full h-[320px] bg-[#f1f5f9] relative">
+                <Image
+                  source={{ uri: previewSourceUri }}
+                  style={{ width: '100%', height: '100%' }}
+                  resizeMode="contain"
+                />
 
-            {/* Upload Dropzone */}
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={handleUploadPress}
-              disabled={isInitializing || isPicking}
-              className={`bg-[#f8fafc] border-[1.5px] border-dashed border-[#cbd5e1] rounded-[20px] items-center justify-center px-4 overflow-hidden ${
-                hasUploadedReceipt && previewSourceUri ? 'py-4' : 'py-12'
-              }`}
-            >
-              {hasUploadedReceipt && previewSourceUri ? (
-                <View className="w-full items-center">
-                  {/* Attached Image Preview */}
-                  <View className="w-full h-[220px] rounded-[14px] overflow-hidden bg-slate-100 items-center justify-center mb-3 border border-[#e2e8f0]">
-                    <Image
-                      source={{ uri: previewSourceUri }}
-                      style={{ width: '100%', height: '100%' }}
-                      resizeMode="contain"
-                    />
-                  </View>
-
-                  <View className="flex-row items-center gap-1.5">
-                    <View className="w-4 h-4 rounded-full bg-[#ecfdf5] items-center justify-center">
-                      <Svg width={10} height={10} viewBox="0 0 24 24" fill="none">
-                        <Path
-                          d="M20 6L9 17L4 12"
-                          stroke="#059669"
-                          strokeWidth={3}
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </Svg>
-                    </View>
-                    <Text className="text-[13px] font-bold text-[#1e293b]">
-                      {isPicking ? 'Selecting new image...' : 'Receipt attached'}
-                    </Text>
-                  </View>
-                  <Text className="text-[12px] font-semibold text-[#2563eb] text-center mt-1">
-                    Tap to change receipt image
+                {/* Top-left subtle attached pill */}
+                <View
+                  className="absolute top-3 left-3 px-2.5 py-1 rounded-full flex-row items-center gap-1.5"
+                  style={{ backgroundColor: 'rgba(15, 23, 42, 0.72)' }}
+                >
+                  <View className="w-1.5 h-1.5 rounded-full bg-[#34d399]" />
+                  <Text className="text-[11px] font-semibold text-white">
+                    Receipt attached
                   </Text>
                 </View>
-              ) : (
-                <>
-                  {/* Dropzone Icon Badge */}
-                  <View
-                    className="w-14 h-14 rounded-2xl bg-white border border-[#e2e8f0] items-center justify-center mb-3.5"
-                    style={{
-                      shadowColor: '#000000',
-                      shadowOffset: { width: 0, height: 2 },
-                      shadowOpacity: 0.05,
-                      shadowRadius: 6,
-                      elevation: 2,
-                    }}
-                  >
-                    {isPicking ? (
-                      <ActivityIndicator size="small" color="#2563eb" />
-                    ) : (
-                      <Svg width={28} height={28} viewBox="0 0 24 24" fill="none">
-                        <Path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={1.8}
-                          stroke="#2563eb"
-                          d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                        />
-                      </Svg>
-                    )}
-                  </View>
 
-                  <Text className="text-[16px] font-bold text-[#1e293b] text-center">
-                    {isPicking
-                      ? 'Selecting image...'
-                      : 'Tap to upload receipt image'}
+                {/* Bottom-right replace pill */}
+                <View
+                  className="absolute bottom-3 right-3 px-3 py-1.5 rounded-full flex-row items-center gap-1.5"
+                  style={{ backgroundColor: 'rgba(15, 23, 42, 0.78)' }}
+                >
+                  {isPicking ? (
+                    <ActivityIndicator size="small" color="#ffffff" />
+                  ) : (
+                    <Svg width={13} height={13} viewBox="0 0 24 24" fill="none">
+                      <Path
+                        d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"
+                        stroke="#ffffff"
+                        strokeWidth={2}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </Svg>
+                  )}
+                  <Text className="text-[12px] font-semibold text-white">
+                    {isPicking ? 'Selecting...' : 'Change photo'}
                   </Text>
-                  <Text className="text-[12px] font-normal text-[#64748b] text-center mt-1">
-                    Supports Shopee, Lazada, TikTok Shop screenshots
-                  </Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </View>
+                </View>
+              </View>
+            ) : (
+              <View className="items-center justify-center py-16 px-6">
+                <View className="mb-4 items-center justify-center">
+                  {isPicking ? (
+                    <ActivityIndicator size="large" color="#2563eb" />
+                  ) : (
+                    <Svg width={36} height={36} viewBox="0 0 24 24" fill="none">
+                      <Path
+                        d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"
+                        stroke="#2563eb"
+                        strokeWidth={1.8}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </Svg>
+                  )}
+                </View>
 
-          {/* App-Specific Tracking ID Guidance Card (shown on 422 TrackingIdMissing) */}
-          {missingTrackingApp && (
-            <View className="rounded-[20px] bg-[#fffbeb] border border-[#fde68a] p-4 mb-4">
+                <Text className="text-[16px] font-bold text-[#0f172a] text-center">
+                  {isPicking ? 'Opening photo library...' : 'Upload order screenshot'}
+                </Text>
+                <Text className="text-[13px] font-normal text-[#64748b] text-center mt-1.5">
+                  Shopee · Lazada · TikTok Shop
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+
+          {/* App-Specific Tracking ID Guidance (shown on 422 TrackingIdMissing) */}
+          {missingTrackingApp ? (
+            <View className="rounded-[18px] bg-[#fffbeb] border border-[#fde68a] p-4 mb-4">
               <Text className="text-[13px] font-bold text-[#92400e] mb-1">
                 {TRACKING_TUTORIAL_BY_APP[missingTrackingApp].title}
               </Text>
@@ -260,38 +258,56 @@ export const CreateOrderScreen: React.FC = () => {
                 {TRACKING_TUTORIAL_BY_APP[missingTrackingApp].steps}
               </Text>
             </View>
+          ) : (
+            <View className="flex-row items-start gap-2.5 px-1">
+              <View className="mt-0.5">
+                <Svg width={15} height={15} viewBox="0 0 24 24" fill="none">
+                  <Path
+                    d="M12 16v-4m0-4h.01M22 12a10 10 0 11-20 0 10 10 0 0120 0z"
+                    stroke="#64748b"
+                    strokeWidth={1.8}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </Svg>
+              </View>
+              <Text className="flex-1 text-[12px] text-[#64748b] leading-[18px]">
+                Make sure the courier tracking number is clearly visible in your screenshot so we can auto-fill your order.
+              </Text>
+            </View>
           )}
+        </ScrollView>
 
-          {/* Next Button */}
+        {/* Sticky Bottom CTA */}
+        <View className="px-5 pt-3 pb-7 bg-[#f8fafc] border-t border-[#e2e8f0]">
           <TouchableOpacity
-            activeOpacity={0.8}
+            activeOpacity={0.85}
             onPress={handleNext}
             disabled={isNextDisabled}
-            className={`w-full h-[52px] rounded-[16px] bg-[#2563eb] items-center justify-center flex-row shadow-sm mt-2 ${
-              isNextDisabled ? 'opacity-50' : ''
-            }`}
+            className="w-full h-[52px] rounded-[16px] bg-[#2563eb] items-center justify-center flex-row"
             style={{
+              opacity: isNextDisabled ? 0.45 : 1,
               shadowColor: '#2563eb',
               shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.25,
+              shadowOpacity: isNextDisabled ? 0 : 0.22,
               shadowRadius: 10,
-              elevation: 4,
+              elevation: isNextDisabled ? 0 : 4,
             }}
           >
             {isInitializing ? (
               <View className="flex-row items-center gap-2">
                 <ActivityIndicator size="small" color="#ffffff" />
-                <Text className="text-white font-bold text-[15px] tracking-wide">
-                  Initializing Order...
+                <Text className="text-white font-bold text-[15px]">
+                  Reading receipt...
                 </Text>
               </View>
             ) : (
-              <Text className="text-white font-bold text-[15px] tracking-wide">
-                Next
+              <Text className="text-white font-bold text-[15px]">
+                Continue
               </Text>
             )}
           </TouchableOpacity>
-        </ScrollView>
+        </View>
       </View>
     </View>
   );
