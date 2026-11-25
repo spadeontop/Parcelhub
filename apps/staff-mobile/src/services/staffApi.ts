@@ -141,7 +141,12 @@ export const staffApi = {
     if (data.refreshToken) {
       await staffStorage.setRefreshToken(data.refreshToken);
     }
-    await staffStorage.setStaffEmail(normalizedUsername);
+    if (data.staff) {
+      await staffStorage.setStaffProfile(data.staff);
+      await staffStorage.setStaffEmail(data.staff.username);
+    } else {
+      await staffStorage.setStaffEmail(normalizedUsername);
+    }
 
     return data;
   },

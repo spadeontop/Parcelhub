@@ -462,6 +462,7 @@ export type StaffLoginReq = {
 export type StaffLoginRes = StandardSuccessResponse & {
   readonly authToken: JWTToken;
   readonly refreshToken: JWTToken;
+  readonly staff: StaffProfile;
 };
 
 // GET /api/v1/staff/orders

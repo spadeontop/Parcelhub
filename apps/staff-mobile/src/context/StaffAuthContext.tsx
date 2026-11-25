@@ -1,4 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import type { StaffProfile } from '@parcelhub/contracts';
 import type { StaffUser } from '../types';
 import { staffApi } from '../services/staffApi';
 import { staffStorage } from '../services/staffStorage';
@@ -17,12 +18,22 @@ interface StaffAuthContextType {
 
 const StaffAuthContext = createContext<StaffAuthContextType | undefined>(undefined);
 
-function buildStaffUser(username: string, token: string): StaffUser {
+function formatStaffFullName(profile: StaffProfile): string {
+  const middle = profile.middleInitial?.trim();
+  const parts = [
+    profile.firstName?.trim(),
+    middle ? (middle.endsWith('.') ? middle : `${middle}.`) : '',
+    profile.lastName?.trim(),
+  ].filter(Boolean);
+  return parts.join(' ') || profile.username;
+}
+
+function buildStaffUser(profile: StaffProfile, token: string): StaffUser {
   return {
-    id: 'STF-001',
-    name: 'Jane Smith',
-    username,
-    email: username,
+    id: profile.id,
+    name: formatStaffFullName(profile),
+    username: profile.username,
+    email: profile.username,
     role: 'STAFF',
     hubName: "LILY'S CATERING HUB",
     token,
@@ -51,12 +62,23 @@ export const StaffAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     let isMounted = true;
     (async () => {
       try {
-        const [token, email] = await Promise.all([
+        const [token, profile, email] = await Promise.all([
           staffStorage.getAuthToken(),
+          staffStorage.getStaffProfile(),
           staffStorage.getStaffEmail(),
         ]);
-        if (token && email && isMounted) {
-          setStaffUser(buildStaffUser(email, token));
+        if (token && profile && isMounted) {
+          setStaffUser(buildStaffUser(profile, token));
+        } else if (token && email && isMounted) {
+          setStaffUser({
+            id: '',
+            name: email,
+            username: email,
+            email,
+            role: 'STAFF',
+            hubName: "LILY'S CATERING HUB",
+            token,
+          });
         }
       } finally {
         if (isMounted) setIsInitialLoading(false);
@@ -69,11 +91,8 @@ export const StaffAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const login = useCallback(async (usernameOrEmail: string, password: string) => {
     const res = await staffApi.login(usernameOrEmail, password);
-    const normalizedUsername = usernameOrEmail.trim().includes('@')
-      ? usernameOrEmail.trim().split('@')[0].toLowerCase()
-      : usernameOrEmail.trim().toLowerCase();
     setSessionExpiredMessage(null);
-    setStaffUser(buildStaffUser(normalizedUsername, res.authToken));
+    setStaffUser(buildStaffUser(res.staff, res.authToken));
   }, []);
 
   const logout = useCallback(async () => {

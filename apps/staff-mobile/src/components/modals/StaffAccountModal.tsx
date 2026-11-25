@@ -52,9 +52,9 @@ export const StaffAccountModal: React.FC<StaffAccountModalProps> = ({
     await logout();
   };
 
-  const staffName = staffUser?.name || 'John Doe';
-  const staffId = staffUser?.id || 'STF-1991';
-  const staffRole = staffUser?.role || 'Staff';
+  const staffName = staffUser?.name || staffUser?.username || 'Staff';
+  const staffId = staffUser?.id || '—';
+  const staffRole = staffUser?.role || 'STAFF';
   const hubWorkspace = staffUser?.hubName || "LILY'S CATERING HUB";
 
   return (
