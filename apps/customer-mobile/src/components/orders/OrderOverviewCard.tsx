@@ -6,6 +6,7 @@ import { OrderStatus } from '../../types/api';
 interface OrderOverviewCardProps {
   readonly productName: string;
   readonly price: number;
+  readonly amountReceived?: number | null;
   readonly recipientName: string;
   readonly trackingNumber: string;
   readonly status: OrderStatus;
@@ -20,12 +21,14 @@ interface OrderOverviewCardProps {
 export const OrderOverviewCard: React.FC<OrderOverviewCardProps> = ({
   productName,
   price,
+  amountReceived,
   recipientName,
   trackingNumber,
   status,
   change,
   onCopyTracking,
 }) => {
+  const paidDisplayAmount = amountReceived ?? price;
   return (
     <View
       className="bg-white border border-[#f1f5f9] rounded-[16px] p-[17px] mb-3.5"
@@ -100,7 +103,7 @@ export const OrderOverviewCard: React.FC<OrderOverviewCardProps> = ({
         <View className="flex-row items-center justify-between py-[2px]">
           <Text className="text-[14px] text-[#64748b] font-normal">Paid Amount</Text>
           <Text className="text-[14px] font-semibold text-[#111827]">
-            {status === 'PAYMENT_REQUIRED' ? '—' : `₱${price.toLocaleString('en-US')}`}
+            {status === 'PAYMENT_REQUIRED' ? '—' : `₱${paidDisplayAmount.toLocaleString('en-US')}`}
           </Text>
         </View>
 

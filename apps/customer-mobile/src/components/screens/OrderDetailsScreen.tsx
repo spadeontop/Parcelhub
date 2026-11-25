@@ -98,6 +98,7 @@ export const OrderDetailsScreen: React.FC = () => {
     orderDetail?.recipientName ||
     (customer?.firstName ? `${customer.firstName} ${customer.lastName || ''}`.trim() : 'Recipient');
   const price = orderDetail?.price ?? 0;
+  const amountReceived = orderDetail?.amountReceived ?? cachedSummary?.amountReceived ?? null;
   const change = orderDetail?.change ?? 0;
   const trackingNumber = orderDetail?.trackingId || cachedSummary?.trackingId || '—';
   const statusTimeline = orderDetail?.statusTimeline || [];
@@ -622,7 +623,7 @@ export const OrderDetailsScreen: React.FC = () => {
         {status === 'REFUNDED' ? (
           <OrderRefundedView
             productName={productName}
-            price={orderDetail?.refundAmount ?? price}
+            price={orderDetail?.refundAmount ?? amountReceived ?? price}
             ticketCode={ticketCode}
             orderId={orderId}
             cancellationReason={orderDetail?.refundReason || orderDetail?.cancelReason || cancelReason}
@@ -639,7 +640,7 @@ export const OrderDetailsScreen: React.FC = () => {
             orderId={orderId}
             hasOrderDetail={Boolean(orderDetail)}
             productName={productName}
-            refundAmount={orderDetail?.refundAmount ?? orderDetail?.refundableAmount ?? price}
+            refundAmount={orderDetail?.refundAmount ?? amountReceived ?? price}
             qrIdentifier={qrIdentifier}
             timeFormatted={refundTimeFormatted}
             isRefunded={Boolean(orderDetail?.isRefunded)}
@@ -662,7 +663,7 @@ export const OrderDetailsScreen: React.FC = () => {
           <CancelOrderView
             productName={productName}
             hubName="Lily’s Catering Hub"
-            refundableAmount={orderDetail?.refundableAmount ?? price}
+            refundableAmount={orderDetail?.refundAmount ?? amountReceived ?? price}
             selectedReason={cancelReason}
             onSelectReason={setCancelReason}
             additionalNotes={cancelNotes}
@@ -758,6 +759,7 @@ export const OrderDetailsScreen: React.FC = () => {
             <OrderOverviewCard
               productName={productName}
               price={price}
+              amountReceived={amountReceived}
               recipientName={recipientName}
               trackingNumber={trackingNumber}
               status={status}
