@@ -292,3 +292,19 @@ export const DownloadIcon: React.FC<{ size?: number; color?: string; strokeWidth
     />
   </Svg>
 );
+
+export const PackageIcon: React.FC<{ size?: number; color?: string; strokeWidth?: number }> = ({
+  size = 22,
+  color = '#2563eb',
+  strokeWidth = 1.9,
+}) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M20 7.5L12 3L4 7.5M20 7.5L12 12M20 7.5V16.5L12 21M12 12L4 7.5M12 12V21M4 7.5V16.5L12 21"
+      stroke={color}
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </Svg>
+);

@@ -1,37 +1,34 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  View,
+  ActivityIndicator,
+  FlatList,
+  RefreshControl,
   Text,
   TouchableOpacity,
-  FlatList,
-  ScrollView,
-  RefreshControl,
-  ActivityIndicator,
+  View,
 } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
 import { StatusBar } from 'expo-status-bar';
-import { SkeletonGroup, ShimmerBox } from '../common/Skeleton';
-import { HOME_CARD_SHADOW } from '../home/homeStyles';
-import { useNavigationUi } from '../../context/NavigationAndUiContext';
-import { useInfiniteCustomerOrders } from '../../hooks/useCustomerOrders';
-import { BottomNav } from '../layout/BottomNav';
+import { CARD_SHADOW } from '../common/cardStyles';
+import { FilterPillBar, FilterPillOption } from '../common/FilterPillBar';
+import { PackageIcon } from '../common/Icons';
 import { AppHeader } from '../layout/AppHeader';
+import { BottomNav } from '../layout/BottomNav';
 import {
-  getStatusLabel,
-  getStatusPillStyles,
-} from '../../utils/statusHelpers';
-import { CustomerOrderSummary } from '../../types/api';
+  OrderDateGroup,
+  OrderDateGroupCard,
+} from '../orders/OrderDateGroupCard';
+import { TransactionsScreenSkeleton } from '../orders/TransactionsScreenSkeleton';
+import { useAuthSession } from '../../context/AuthSessionContext';
+import { useNavigationUi } from '../../context/NavigationAndUiContext';
+import { useToast } from '../../context/ToastContext';
+import { useInfiniteCustomerOrders } from '../../hooks/useCustomerOrders';
+import { CustomerOrderSummary, TransactionFilter } from '../../types/api';
+import { getOrderDateGroupMeta } from '../../utils/date';
+import { getStatusLabel } from '../../utils/statusHelpers';
 
-export type TransactionFilter =
-  | 'ALL'
-  | 'READY_TO_CLAIM'
-  | 'AWAITING_PARCEL'
-  | 'PAYMENT_REQUIRED'
-  | 'CLAIMED'
-  | 'CANCELLED'
-  | 'REFUNDED';
+export type { TransactionFilter };
 
-const FILTERS: TransactionFilter[] = [
+const FILTERS: readonly TransactionFilter[] = [
   'ALL',
   'READY_TO_CLAIM',
   'AWAITING_PARCEL',
@@ -41,161 +38,8 @@ const FILTERS: TransactionFilter[] = [
   'REFUNDED',
 ];
 
-const SKELETON_GROUPS = [
-  { headerWidth: 54, rows: ['72%', '56%', '66%'] },
-  { headerWidth: 96, rows: ['64%', '78%'] },
-] as const;
-
-const getFilterLabel = (filter: TransactionFilter): string => {
-  switch (filter) {
-    case 'ALL':
-      return 'All';
-    case 'READY_TO_CLAIM':
-      return 'Claimable';
-    case 'AWAITING_PARCEL':
-      return 'Awaiting';
-    case 'PAYMENT_REQUIRED':
-      return 'Unpaid';
-    case 'CLAIMED':
-      return 'Claimed';
-    case 'CANCELLED':
-      return 'Cancelled';
-    case 'REFUNDED':
-      return 'Refunded';
-    default:
-      return filter;
-  }
-};
-
-interface OrderDateGroup {
-  key: string;
-  title: string;
-  isRecentDay: boolean;
-  items: CustomerOrderSummary[];
-}
-
-function getDateGroupMeta(isoTimestamp?: string | null): {
-  key: string;
-  title: string;
-  isRecentDay: boolean;
-} {
-  if (!isoTimestamp) {
-    return { key: 'recent', title: 'Recent', isRecentDay: false };
-  }
-  const date = new Date(isoTimestamp);
-  if (isNaN(date.getTime())) {
-    return { key: 'recent', title: 'Recent', isRecentDay: false };
-  }
-
-  const now = new Date();
-  const isToday =
-    date.getDate() === now.getDate() &&
-    date.getMonth() === now.getMonth() &&
-    date.getFullYear() === now.getFullYear();
-  if (isToday) {
-    return { key: 'today', title: 'Today', isRecentDay: true };
-  }
-
-  const yesterday = new Date(now);
-  yesterday.setDate(now.getDate() - 1);
-  const isYesterday =
-    date.getDate() === yesterday.getDate() &&
-    date.getMonth() === yesterday.getMonth() &&
-    date.getFullYear() === yesterday.getFullYear();
-  if (isYesterday) {
-    return { key: 'yesterday', title: 'Yesterday', isRecentDay: true };
-  }
-
-  const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-  const title = date.toLocaleDateString('en-US', {
-    month: 'long',
-    year: 'numeric',
-  });
-  return { key: monthKey, title, isRecentDay: false };
-}
-
-function formatCompactTimestamp(
-  isoTimestamp: string | null | undefined,
-  isRecentDay: boolean
-): string {
-  if (!isoTimestamp) return 'Just now';
-  const date = new Date(isoTimestamp);
-  if (isNaN(date.getTime())) return 'Recently';
-
-  if (isRecentDay) {
-    return date.toLocaleTimeString([], {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-    });
-  }
-
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-  });
-}
-
-const SKELETON_PILL_WIDTHS = [68, 96, 84, 80] as const;
-
-const TransactionsListSkeleton: React.FC = () => (
-  <SkeletonGroup enabled>
-    <View
-      accessibilityLabel="Loading orders"
-      accessibilityState={{ busy: true }}
-    >
-      {/* Filter pill placeholders */}
-      <View className="flex-row items-center gap-2 px-5 mb-4">
-        {SKELETON_PILL_WIDTHS.map((width, idx) => (
-          <ShimmerBox
-            key={idx}
-            className="h-9 rounded-full"
-            style={{ width }}
-          />
-        ))}
-      </View>
-
-      <View className="px-5">
-        {SKELETON_GROUPS.map((group, gIdx) => (
-          <View key={gIdx} className="mb-5">
-            <ShimmerBox
-              className="h-3 rounded-full mb-2.5 ml-1"
-              style={{ width: group.headerWidth }}
-            />
-            <View
-              className="bg-white rounded-[20px] border border-[#edf2f7] px-4 py-1"
-              style={HOME_CARD_SHADOW}
-            >
-              {group.rows.map((titleWidth, rIdx) => (
-                <View
-                  key={rIdx}
-                  className="py-3.5 flex-row items-center justify-between"
-                  style={
-                    rIdx !== 0
-                      ? { borderTopWidth: 1, borderTopColor: '#f1f5f9' }
-                      : undefined
-                  }
-                >
-                  <View className="flex-1 pr-3">
-                    <ShimmerBox
-                      className="h-4 rounded-md"
-                      style={{ width: titleWidth }}
-                    />
-                    <View className="flex-row items-center gap-2.5 mt-2">
-                      <ShimmerBox className="w-16 h-5 rounded-full" />
-                      <ShimmerBox className="w-14 h-3 rounded-full" />
-                    </View>
-                  </View>
-                  <ShimmerBox className="w-12 h-4 rounded-md shrink-0" />
-                </View>
-              ))}
-            </View>
-          </View>
-        ))}
-      </View>
-    </View>
-  </SkeletonGroup>
-);
+const getFilterLabel = (filter: TransactionFilter): string =>
+  filter === 'ALL' ? 'All' : getStatusLabel(filter);
 
 export const TransactionsScreen: React.FC = () => {
   const {
@@ -203,6 +47,8 @@ export const TransactionsScreen: React.FC = () => {
     transactionFilter,
     setTransactionFilter,
   } = useNavigationUi();
+  const { customer } = useAuthSession();
+  const { showToast } = useToast();
   const {
     orders,
     totalOrders,
@@ -215,6 +61,8 @@ export const TransactionsScreen: React.FC = () => {
   } = useInfiniteCustomerOrders();
   const [refreshing, setRefreshing] = useState(false);
 
+  const isBlacklisted = Boolean(customer?.blacklisted);
+
   const filteredOrders = useMemo(
     () =>
       transactionFilter === 'ALL'
@@ -223,12 +71,17 @@ export const TransactionsScreen: React.FC = () => {
     [orders, transactionFilter]
   );
 
-  const groupedOrders = useMemo<OrderDateGroup[]>(() => {
-    const groups: OrderDateGroup[] = [];
-    const byKey = new Map<string, OrderDateGroup>();
+  const groupedOrders = useMemo<readonly OrderDateGroup[]>(() => {
+    const groups: Array<{
+      key: string;
+      title: string;
+      isRecentDay: boolean;
+      items: CustomerOrderSummary[];
+    }> = [];
+    const byKey = new Map<string, (typeof groups)[number]>();
 
     for (const order of filteredOrders) {
-      const meta = getDateGroupMeta(order.timestamp);
+      const meta = getOrderDateGroupMeta(order.timestamp);
       let group = byKey.get(meta.key);
       if (!group) {
         group = {
@@ -246,7 +99,28 @@ export const TransactionsScreen: React.FC = () => {
     return groups;
   }, [filteredOrders]);
 
-  const onRefresh = async () => {
+  const handleOpenOrder = useCallback(
+    (order: CustomerOrderSummary) => {
+      navigateTo('order_details', {
+        orderId: order.id,
+        ticketCode: order.ticketCode,
+      });
+    },
+    [navigateTo]
+  );
+
+  const handleCreateOrder = useCallback(() => {
+    if (isBlacklisted) {
+      showToast(
+        customer?.blacklistReason ||
+          'Your account is suspended from creating new orders.'
+      );
+      return;
+    }
+    navigateTo('create_order');
+  }, [customer?.blacklistReason, isBlacklisted, navigateTo, showToast]);
+
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
       await refetch();
@@ -255,7 +129,7 @@ export const TransactionsScreen: React.FC = () => {
     } finally {
       setRefreshing(false);
     }
-  };
+  }, [refetch]);
 
   useEffect(() => {
     if (
@@ -267,23 +141,28 @@ export const TransactionsScreen: React.FC = () => {
     }
   }, [isLoading, statusCounts, transactionFilter, setTransactionFilter]);
 
-  const filterOptions = FILTERS.flatMap((filter) => {
-    const count = filter === 'ALL' ? totalOrders : (statusCounts[filter] ?? 0);
-    if (
-      filter !== 'ALL' &&
-      count === 0 &&
-      !(isLoading && filter === transactionFilter)
-    ) {
-      return [];
-    }
-    return [
-      {
-        value: filter,
-        label: getFilterLabel(filter),
-        count,
-      },
-    ];
-  });
+  const filterOptions = useMemo<readonly FilterPillOption<TransactionFilter>[]>(
+    () =>
+      FILTERS.flatMap((filter) => {
+        const count =
+          filter === 'ALL' ? totalOrders : (statusCounts[filter] ?? 0);
+        if (
+          filter !== 'ALL' &&
+          count === 0 &&
+          !(isLoading && filter === transactionFilter)
+        ) {
+          return [];
+        }
+        return [
+          {
+            value: filter,
+            label: getFilterLabel(filter),
+            count,
+          },
+        ];
+      }),
+    [isLoading, statusCounts, totalOrders, transactionFilter]
+  );
 
   const isInitialLoading = isLoading && orders.length === 0;
   const headerSubtitle =
@@ -306,58 +185,16 @@ export const TransactionsScreen: React.FC = () => {
       {/* Main Sheet with Curved Transition */}
       <View className="flex-1 bg-[#f8fafc] rounded-t-[32px] pt-4 overflow-hidden relative">
         {showFilterBar && (
-          <View className="mb-3.5">
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{
-                paddingHorizontal: 20,
-                gap: 8,
-              }}
-            >
-              {filterOptions.map((option) => {
-                const isSelected = transactionFilter === option.value;
-                return (
-                  <TouchableOpacity
-                    key={option.value}
-                    activeOpacity={0.8}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: isSelected }}
-                    onPress={() => setTransactionFilter(option.value)}
-                    className="h-9 px-3.5 rounded-full flex-row items-center gap-1.5"
-                    style={{
-                      backgroundColor: isSelected ? '#2563eb' : '#ffffff',
-                      borderWidth: 1,
-                      borderColor: isSelected ? '#2563eb' : '#e2e8f0',
-                    }}
-                  >
-                    <Text
-                      className="text-[13px] font-semibold"
-                      style={{
-                        color: isSelected ? '#ffffff' : '#334155',
-                      }}
-                    >
-                      {option.label}
-                    </Text>
-                    <Text
-                      className="text-[11.5px] font-semibold"
-                      style={{
-                        color: isSelected
-                          ? 'rgba(255, 255, 255, 0.78)'
-                          : '#94a3b8',
-                      }}
-                    >
-                      {option.count}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </View>
+          <FilterPillBar
+            value={transactionFilter}
+            options={filterOptions}
+            onChange={setTransactionFilter}
+            accessibilityLabel="Filter orders"
+          />
         )}
 
         {isInitialLoading ? (
-          <TransactionsListSkeleton />
+          <TransactionsScreenSkeleton />
         ) : (
           <FlatList
             data={groupedOrders}
@@ -384,19 +221,11 @@ export const TransactionsScreen: React.FC = () => {
             ListEmptyComponent={
               <View
                 className="bg-white rounded-[20px] border border-[#edf2f7] py-12 px-6 items-center justify-center"
-                style={HOME_CARD_SHADOW}
+                style={CARD_SHADOW}
               >
                 <View className="w-[68px] h-[68px] rounded-full bg-[#eff6ff] items-center justify-center mb-4">
                   <View className="w-[48px] h-[48px] rounded-full bg-[#dbeafe]/60 items-center justify-center">
-                    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-                      <Path
-                        d="M20 7.5L12 3L4 7.5M20 7.5L12 12M20 7.5V16.5L12 21M12 12L4 7.5M12 12V21M4 7.5V16.5L12 21"
-                        stroke="#2563eb"
-                        strokeWidth={1.9}
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </Svg>
+                    <PackageIcon size={22} color="#2563eb" />
                   </View>
                 </View>
 
@@ -409,8 +238,9 @@ export const TransactionsScreen: React.FC = () => {
 
                 <TouchableOpacity
                   activeOpacity={0.8}
-                  onPress={() => navigateTo('create_order')}
+                  onPress={handleCreateOrder}
                   className="mt-5 px-5 py-2.5 rounded-xl bg-[#2563eb]"
+                  style={{ opacity: isBlacklisted ? 0.5 : 1 }}
                 >
                   <Text className="text-[12.5px] font-semibold text-white">
                     Register a Parcel
@@ -426,100 +256,10 @@ export const TransactionsScreen: React.FC = () => {
               ) : undefined
             }
             renderItem={({ item: group }) => (
-              <View className="mb-5">
-                {/* Date Section Header (consistent with HomeScreen) */}
-                <Text className="text-[11.5px] font-bold text-[#64748b] uppercase tracking-[0.6px] mb-2 px-1">
-                  {group.title}
-                </Text>
-
-                {/* Grouped Minimalist Feed Card (consistent with HomeScreen Recent Activity) */}
-                <View
-                  className="bg-white rounded-[20px] border border-[#edf2f7] px-4 py-1"
-                  style={HOME_CARD_SHADOW}
-                >
-                  {group.items.map((order, idx) => {
-                    const pillStyles = getStatusPillStyles(order.status);
-                    const isPassActive =
-                      order.status === 'READY_TO_CLAIM' &&
-                      Boolean(order.isClaimActive);
-                    const statusText = isPassActive
-                      ? 'Pass Active'
-                      : getStatusLabel(order.status);
-                    const timeLabel = formatCompactTimestamp(
-                      order.timestamp,
-                      group.isRecentDay
-                    );
-                    const hasPrice =
-                      typeof order.price === 'number' && order.price > 0;
-
-                    return (
-                      <TouchableOpacity
-                        key={order.id}
-                        activeOpacity={0.72}
-                        onPress={() =>
-                          navigateTo('order_details', {
-                            orderId: order.id,
-                            ticketCode: order.ticketCode,
-                          })
-                        }
-                        className="py-3.5 flex-row items-center justify-between"
-                        style={
-                          idx !== 0
-                            ? { borderTopWidth: 1, borderTopColor: '#f1f5f9' }
-                            : undefined
-                        }
-                      >
-                        <View className="flex-1 pr-3">
-                          <Text
-                            className="text-[14px] font-semibold text-[#0f172a] leading-[19px]"
-                            numberOfLines={1}
-                            ellipsizeMode="tail"
-                          >
-                            {order.productName || 'Unknown Package'}
-                          </Text>
-                          <View className="flex-row items-center gap-2.5 mt-1.5">
-                            <View
-                              className="px-2 py-0.5 rounded-full items-center justify-center"
-                              style={pillStyles.containerStyle}
-                            >
-                              <Text
-                                className="text-[11px] font-semibold leading-[14px]"
-                                style={{ color: pillStyles.textColor }}
-                                numberOfLines={1}
-                              >
-                                {statusText}
-                              </Text>
-                            </View>
-                            <Text
-                              className="text-[11.5px] font-medium text-[#64748b] shrink"
-                              numberOfLines={1}
-                            >
-                              {timeLabel}
-                            </Text>
-                          </View>
-                        </View>
-
-                        <View className="flex-row items-center gap-2 shrink-0">
-                          {hasPrice && (
-                            <Text className="text-[14px] font-semibold text-[#0f172a]">
-                              ₱{order.price!.toLocaleString('en-US')}
-                            </Text>
-                          )}
-                          <Svg width={5} height={9} viewBox="0 0 6 10" fill="none">
-                            <Path
-                              d="M0.75 0.75L4.85 4.85L0.75 8.95"
-                              stroke="#cbd5e1"
-                              strokeWidth={1.6}
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </Svg>
-                        </View>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
+              <OrderDateGroupCard
+                group={group}
+                onPressOrder={handleOpenOrder}
+              />
             )}
           />
         )}
