@@ -30,6 +30,7 @@ import { OrderCancelledView } from '../orders/OrderCancelledView';
 import { CancelOrderView, CANCELLATION_REASONS } from '../orders/CancelOrderView';
 import { RefundPassView } from '../orders/RefundPassView';
 import { OrderRefundedView } from '../orders/OrderRefundedView';
+import { OrderRefundPendingView } from '../orders/OrderRefundPendingView';
 import { OrderOverviewCard } from '../orders/OrderOverviewCard';
 import { OrderTimelineStepper } from '../orders/OrderTimelineStepper';
 import {
@@ -77,6 +78,7 @@ export const OrderDetailsScreen: React.FC = () => {
   const [isRefreshingRefund, setIsRefreshingRefund] = useState<boolean>(false);
   const [isRefundPassDismissed, setIsRefundPassDismissed] = useState<boolean>(false);
   const [isRefundSessionActive, setIsRefundSessionActive] = useState<boolean>(false);
+  const [refundPendingConfirmed, setRefundPendingConfirmed] = useState<boolean>(false);
 
   // Hub status defaults to open
   const hubOpen = true;
@@ -139,6 +141,7 @@ export const OrderDetailsScreen: React.FC = () => {
     setIsRefreshingRefund(false);
     setIsRefundPassDismissed(false);
     setIsRefundSessionActive(false);
+    setRefundPendingConfirmed(false);
     resetCountdown();
     resetRefundCountdown();
   }, [selectedOrderId, resetCountdown, resetRefundCountdown]);
@@ -258,6 +261,12 @@ export const OrderDetailsScreen: React.FC = () => {
     !isAwaitingRefundPassView &&
     ((status === 'CANCELLED' && !orderDetail?.isRefundEligible) ||
       unpaidViewMode === 'cancelled');
+  const isCancelledRefundPendingView =
+    !isFocusedPassView &&
+    !isAwaitingRefundPassView &&
+    status === 'CANCELLED' &&
+    Boolean(orderDetail?.isRefundEligible) &&
+    !orderDetail?.isRefunded;
   const isUnpaidCancelView =
     !isFocusedPassView && !isUnpaidCancelledView && unpaidViewMode === 'cancel';
 
@@ -612,6 +621,14 @@ export const OrderDetailsScreen: React.FC = () => {
           centerTitle
           onBack={() => navigateTo('home')}
         />
+      ) : isCancelledRefundPendingView ? (
+        <AppHeader
+          title="Order Cancelled"
+          subtitle="Ready For Refund"
+          showBackButton
+          centerTitle
+          onBack={goBack}
+        />
       ) : (
         <AppHeader
           title="Complete Details"
@@ -636,6 +653,28 @@ export const OrderDetailsScreen: React.FC = () => {
             statusTimeline={statusTimeline}
             isPullRefreshing={isPullRefreshing}
             onRefresh={handlePullRefresh}
+            onReturnHome={() => navigateTo('home')}
+          />
+        ) : isCancelledRefundPendingView ? (
+          <OrderRefundPendingView
+            productName={productName}
+            price={price}
+            paidAmount={amountReceived ?? price}
+            refundAmount={orderDetail?.refundAmount ?? amountReceived ?? price}
+            ticketCode={ticketCode}
+            orderId={orderId}
+            cancellationReason={orderDetail?.refundReason || orderDetail?.cancelReason || cancelReason}
+            hubName="Lily’s Catering Hub"
+            hubAddress="Yati, Liloan, Cebu, 6002"
+            hubOpen={hubOpen}
+            statusTimeline={statusTimeline}
+            cancelledAt={orderDetail?.cancelledAt}
+            isPullRefreshing={isPullRefreshing}
+            isConfirmed={refundPendingConfirmed}
+            onConfirmedChange={setRefundPendingConfirmed}
+            isLoading={isInitiatingRefund}
+            onRefresh={handlePullRefresh}
+            onInitiateRefund={handleInitiateRefund}
             onReturnHome={() => navigateTo('home')}
           />
         ) : isAwaitingRefundPassView ? (
