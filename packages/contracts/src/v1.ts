@@ -507,6 +507,7 @@ export type PaginationMeta = {
 export type StaffListOrdersRes = {
   readonly orders: readonly StaffOrderSummary[];
   readonly pagination?: PaginationMeta;
+  readonly statusCounts?: Partial<Record<OrderStatus, number>>;
 };
 
 // GET /api/v1/staff/orders/{id}

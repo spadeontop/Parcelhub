@@ -126,6 +126,7 @@ export async function GET(request: NextRequest) {
 
     let dbOrders;
     let hasMore = false;
+    let statusCounts: Partial<Record<OrderStatus, number>> | undefined;
 
     if (useForEachBuckets) {
       const ranked = db
@@ -153,6 +154,12 @@ export async function GET(request: NextRequest) {
       hasMore = bucketedOrders.some(
         (o: (typeof bucketedOrders)[number]) => Number(o.bucketCount) > offset + limit
       );
+      statusCounts = {};
+      for (const o of bucketedOrders) {
+        if (statusCounts[o.status as OrderStatus] === undefined) {
+          statusCounts[o.status as OrderStatus] = Number(o.bucketCount);
+        }
+      }
       dbOrders = bucketedOrders;
     } else {
       dbOrders = await db
@@ -218,6 +225,7 @@ export async function GET(request: NextRequest) {
         offset,
         hasMore: useForEachBuckets ? hasMore : offset + formattedOrders.length < totalCount,
       },
+      ...(statusCounts ? { statusCounts } : {}),
     };
 
     return jsonSuccess(response);
