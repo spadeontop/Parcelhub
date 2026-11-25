@@ -2,7 +2,8 @@ import type { OrderStatus, StaffOrder } from '../types';
 
 export type StaffQrLookupResult =
   | { kind: 'found'; order: StaffOrder; hasDetails: boolean }
-  | { kind: 'not-found' | 'ambiguous' };
+  | { kind: 'ambiguous'; matches: StaffOrder[] }
+  | { kind: 'not-found' };
 
 export const PAID_ACTIVE_QR_ORDER_STATUSES: ReadonlySet<OrderStatus> = new Set<OrderStatus>([
   'READY_TO_CLAIM',
@@ -57,5 +58,5 @@ export function resolveQrOrderMatches(matches: readonly StaffOrder[]): StaffQrLo
     }
   }
 
-  return { kind: 'ambiguous' };
+  return { kind: 'ambiguous', matches: candidates };
 }

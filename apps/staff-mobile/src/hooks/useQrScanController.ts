@@ -27,6 +27,7 @@ interface UseQrScanControllerArgs {
   isOpen: boolean;
   onClose: () => void;
   onSelectOrder: (order: StaffOrder, hasDetails: boolean) => void;
+  onAmbiguousMatch?: (code: string, matches: StaffOrder[]) => void;
   findOrderByQrCode: (code: string, signal: AbortSignal) => Promise<StaffQrLookupResult>;
 }
 
@@ -34,6 +35,7 @@ export function useQrScanController({
   isOpen,
   onClose,
   onSelectOrder,
+  onAmbiguousMatch,
   findOrderByQrCode,
 }: UseQrScanControllerArgs) {
   const [rendered, setRendered] = useState(isOpen);
@@ -211,6 +213,11 @@ export function useQrScanController({
       if (result.kind === 'found') {
         handleClose();
         onSelectOrder(result.order, result.hasDetails);
+        return;
+      }
+      if (result.kind === 'ambiguous' && onAmbiguousMatch) {
+        handleClose();
+        onAmbiguousMatch(code.trim(), result.matches);
         return;
       }
       setNotice(

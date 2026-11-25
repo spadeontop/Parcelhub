@@ -23,6 +23,7 @@ export interface StaffScanQrModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelectOrder: (order: StaffOrder, hasDetails: boolean) => void;
+  onAmbiguousMatch?: (code: string, matches: StaffOrder[]) => void;
   findOrderByQrCode: (code: string, signal: AbortSignal) => Promise<StaffQrLookupResult>;
 }
 
@@ -54,6 +55,7 @@ export const StaffScanQrModal: React.FC<StaffScanQrModalProps> = ({
   isOpen,
   onClose,
   onSelectOrder,
+  onAmbiguousMatch,
   findOrderByQrCode,
 }) => {
   const {
@@ -74,7 +76,13 @@ export const StaffScanQrModal: React.FC<StaffScanQrModalProps> = ({
     handleScan,
     handleUploadQrImage,
     resetScanner,
-  } = useQrScanController({ isOpen, onClose, onSelectOrder, findOrderByQrCode });
+  } = useQrScanController({
+    isOpen,
+    onClose,
+    onSelectOrder,
+    onAmbiguousMatch,
+    findOrderByQrCode,
+  });
 
   if (!rendered) return null;
 
