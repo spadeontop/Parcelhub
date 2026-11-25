@@ -1,22 +1,10 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ActivityIndicator,
-  StyleSheet,
-} from 'react-native';
-import Svg, {
-  Circle,
-  Defs,
-  LinearGradient,
-  Path,
-  Polygon,
-  Rect,
-  Stop,
-} from 'react-native-svg';
+import { View, Text, TouchableOpacity } from 'react-native';
+import Svg, { Circle, Path, Polygon, Rect } from 'react-native-svg';
 import { getStatusLabel } from '../../utils/statusHelpers';
 import { CustomerOrderSummary, OrderStatus } from '../../types/api';
+import { ActiveParcelCardShell } from './ActiveParcelCardShell';
+import { ActiveParcelCardSkeleton } from './HomeScreenSkeleton';
 
 const PROGRESS_STAGES = ['Booked', 'In Transit', 'Ready'] as const;
 
@@ -125,11 +113,7 @@ export const ActiveParcelCard: React.FC<ActiveParcelCardProps> = ({
   onCreateOrder,
 }) => {
   if (isLoading && !order) {
-    return (
-      <View className="min-h-[168px] rounded-[24px] bg-[#2563eb] items-center justify-center p-6 mb-4">
-        <ActivityIndicator size="small" color="#ffffff" />
-      </View>
-    );
+    return <ActiveParcelCardSkeleton />;
   }
 
   const isReady = order?.status === 'READY_TO_CLAIM';
@@ -145,44 +129,8 @@ export const ActiveParcelCard: React.FC<ActiveParcelCardProps> = ({
           : 'View Details';
 
   return (
-    <View
-      className="rounded-[24px] overflow-hidden mb-4"
-      style={{
-        backgroundColor: '#2563eb',
-        shadowColor: '#2563eb',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.22,
-        shadowRadius: 18,
-        elevation: 4,
-      }}
-    >
-      {/* Inverted Deep-to-Bright Primary Blue Gradient */}
-      <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-        <Svg
-          width="100%"
-          height="100%"
-          viewBox="0 0 100 100"
-          preserveAspectRatio="none"
-        >
-          <Defs>
-            <LinearGradient id="activeCardGrad" x1="0" y1="0" x2="1" y2="1">
-              <Stop offset="0" stopColor="#172554" stopOpacity="1" />
-              <Stop offset="0.55" stopColor="#1d4ed8" stopOpacity="1" />
-              <Stop offset="1" stopColor="#2563eb" stopOpacity="1" />
-            </LinearGradient>
-          </Defs>
-          <Rect
-            x="0"
-            y="0"
-            width="100"
-            height="100"
-            fill="url(#activeCardGrad)"
-          />
-        </Svg>
-      </View>
-
-      <View className="p-5">
-        {order ? (
+    <ActiveParcelCardShell>
+      {order ? (
           <>
             <View className="flex-row items-center mb-4">
               <View className="-ml-3 mr-2.5 shrink-0">
@@ -295,8 +243,7 @@ export const ActiveParcelCard: React.FC<ActiveParcelCardProps> = ({
             </TouchableOpacity>
           </>
         )}
-      </View>
-    </View>
+    </ActiveParcelCardShell>
   );
 };
 
