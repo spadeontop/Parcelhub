@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -96,6 +96,31 @@ export const TransactionsScreen: React.FC = () => {
       : (statusCounts[transactionFilter] ?? filteredOrders.length);
   const countLabel = `${activeCount} ${activeCount === 1 ? 'Order' : 'Orders'}`;
 
+  useEffect(() => {
+    if (
+      !isLoading &&
+      transactionFilter !== 'ALL' &&
+      (statusCounts[transactionFilter] ?? 0) === 0
+    ) {
+      setTransactionFilter('ALL');
+    }
+  }, [isLoading, statusCounts, transactionFilter, setTransactionFilter]);
+
+  const filterOptions = FILTERS.flatMap((filter) => {
+    const count = filter === 'ALL' ? totalOrders : (statusCounts[filter] ?? 0);
+    if (filter !== 'ALL' && count === 0 && !(isLoading && filter === transactionFilter)) {
+      return [];
+    }
+    return [
+      {
+        value: filter,
+        label: getFilterLabel(filter),
+        count,
+        color: filter === 'ALL' ? '#4b5563' : getStatusTheme(filter).dotColor,
+      },
+    ];
+  });
+
   return (
     <View className="flex-1 bg-[#2560ea]">
       <StatusBar style="light" />
@@ -114,12 +139,7 @@ export const TransactionsScreen: React.FC = () => {
           onChange={setTransactionFilter}
           accessibilityLabel="Filter orders"
           countLabel={countLabel}
-          options={FILTERS.map((filter) => ({
-            value: filter,
-            label: getFilterLabel(filter),
-            count: filter === 'ALL' ? totalOrders : (statusCounts[filter] ?? 0),
-            color: filter === 'ALL' ? '#4b5563' : getStatusTheme(filter).dotColor,
-          }))}
+          options={filterOptions}
         />
 
         {/* Scrollable Content Container */}
