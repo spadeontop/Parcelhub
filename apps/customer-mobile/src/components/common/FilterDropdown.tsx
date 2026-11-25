@@ -40,23 +40,38 @@ export function FilterDropdown<T extends string>({ value, options, countLabel, o
 
 
   const selectedLabel = options.find((option) => option.value === value)?.label ?? value;
+  const dropdownOptions = options.filter((option) => option.value !== value);
+  const canOpen = dropdownOptions.length > 0;
+
+  useEffect(() => {
+    if (!canOpen && filterOpen) {
+      setFilterOpen(false);
+    }
+  }, [canOpen, filterOpen]);
 
   return (
     <View className="mx-5 z-10">
         <TouchableOpacity
           activeOpacity={1}
+          disabled={!canOpen}
           accessibilityRole="button"
           accessibilityLabel={accessibilityLabel}
-          accessibilityState={{ expanded: filterOpen }}
-          onPress={() => setFilterOpen((open) => !open)}
+          accessibilityState={{ expanded: filterOpen, disabled: !canOpen }}
+          onPress={() => {
+            if (canOpen) {
+              setFilterOpen((open) => !open);
+            }
+          }}
           className="mb-3 h-[50px] border border-[#e5eaf3] rounded-2xl flex-row items-center justify-between px-4 bg-white"
         >
           <Text className="text-[14px] font-semibold text-[#111827]">{selectedLabel}</Text>
           <View className="flex-row items-center gap-2">
             <Text className="text-[12px] font-medium text-[#2563eb]">{countLabel}</Text>
-            <Svg width={20} height={20} viewBox="0 0 20 20" fill="none">
-              <Path d="M5 7.5L10 12.5L15 7.5" stroke="#64748b" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" />
-            </Svg>
+            {canOpen && (
+              <Svg width={20} height={20} viewBox="0 0 20 20" fill="none">
+                <Path d="M5 7.5L10 12.5L15 7.5" stroke="#64748b" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" />
+              </Svg>
+            )}
           </View>
         </TouchableOpacity>
 
@@ -85,8 +100,7 @@ export function FilterDropdown<T extends string>({ value, options, countLabel, o
               onLayout={(event) => { dropdownHeight.value = event.nativeEvent.layout.height; }}
               style={[{ position: 'absolute', top: 0, left: 0, right: 0, backgroundColor: '#fff' }, dropdownContentStyle]}
             >
-            {options.map((option) => {
-              const selected = value === option.value;
+            {dropdownOptions.map((option) => {
               const count = option.count;
               const dotColor = option.color;
               return (
@@ -95,16 +109,15 @@ export function FilterDropdown<T extends string>({ value, options, countLabel, o
                   disabled={!filterOpen}
                   activeOpacity={1}
                   accessibilityRole="button"
-                  accessibilityState={{ selected }}
                   onPress={() => {
                     onChange(option.value);
                     setFilterOpen(false);
                   }}
-                  className={`flex-row items-center justify-between px-4 py-3 ${selected ? 'bg-[#eff6ff]' : 'bg-white'}`}
+                  className="flex-row items-center justify-between px-4 py-3 bg-white"
                 >
                   <View className="flex-row items-center gap-2.5">
                     <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: dotColor }} />
-                    <Text className={`text-[13px] text-[#111827] ${selected ? 'font-semibold' : 'font-medium'}`}>{option.label}</Text>
+                    <Text className="text-[13px] text-[#111827] font-medium">{option.label}</Text>
                   </View>
                   {typeof count === 'number' && (
                     <Text className="text-[12px] text-[#4b5563]">{count}</Text>
