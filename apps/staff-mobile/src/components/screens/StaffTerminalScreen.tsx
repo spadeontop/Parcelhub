@@ -70,16 +70,28 @@ export const StaffTerminalScreen: React.FC = () => {
     if (!selectedOrder) return;
     const fresh = allCachedOrders.find((o) => o.id === selectedOrder.id);
     if (!fresh) return;
-    setSelectedOrder((prev) =>
-      prev && prev.id === fresh.id
-        ? {
-            ...fresh,
-            notes: prev.notes,
-            proofImageUrl: prev.proofImageUrl || fresh.proofImageUrl,
-          }
-        : prev
-    );
-  }, [allCachedOrders]);
+    setSelectedOrder((prev) => {
+      if (!prev || prev.id !== fresh.id) return prev;
+      const nextProof = prev.proofImageUrl || fresh.proofImageUrl;
+      if (
+        prev.status === fresh.status &&
+        prev.timestamp === fresh.timestamp &&
+        prev.courierPaid === fresh.courierPaid &&
+        prev.isClaimActive === fresh.isClaimActive &&
+        prev.claimRemainingSeconds === fresh.claimRemainingSeconds &&
+        prev.amountReceived === fresh.amountReceived &&
+        prev.change === fresh.change &&
+        prev.proofImageUrl === nextProof
+      ) {
+        return prev;
+      }
+      return {
+        ...fresh,
+        notes: prev.notes,
+        proofImageUrl: nextProof,
+      };
+    });
+  }, [allCachedOrders, selectedOrder?.id]);
 
   const handleSelectTab = (tab: StaffTab) => {
     if (justUpdatedOrder) setJustUpdatedOrder(null);
