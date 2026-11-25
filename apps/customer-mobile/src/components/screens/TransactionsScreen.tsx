@@ -7,7 +7,7 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
-import Svg, { Path, Rect } from 'react-native-svg';
+import Svg, { Path } from 'react-native-svg';
 import { StatusBar } from 'expo-status-bar';
 import { FilterDropdown } from '../common/FilterDropdown';
 import { SkeletonGroup, ShimmerBox } from '../common/Skeleton';
@@ -16,8 +16,12 @@ import { useNavigationUi } from '../../context/NavigationAndUiContext';
 import { useInfiniteCustomerOrders } from '../../hooks/useCustomerOrders';
 import { BottomNav } from '../layout/BottomNav';
 import { AppHeader } from '../layout/AppHeader';
-import { getStatusLabel, getStatusTheme } from '../../utils/statusHelpers';
-import { CustomerOrderSummary, OrderStatus } from '../../types/api';
+import {
+  getStatusLabel,
+  getStatusPillStyles,
+  getStatusTheme,
+} from '../../utils/statusHelpers';
+import { CustomerOrderSummary } from '../../types/api';
 
 export type TransactionFilter =
   | 'ALL'
@@ -133,128 +137,6 @@ function formatCompactTimestamp(
   });
 }
 
-const OrderStatusIconTile: React.FC<{ status: OrderStatus }> = ({ status }) => {
-  switch (status) {
-    case 'READY_TO_CLAIM':
-      return (
-        <View
-          className="w-[38px] h-[38px] rounded-[12px] items-center justify-center shrink-0"
-          style={{ backgroundColor: '#ecfdf5' }}
-        >
-          <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-            <Path
-              d="M9 12.75L11.25 15L15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              stroke="#059669"
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </Svg>
-        </View>
-      );
-    case 'AWAITING_PARCEL':
-      return (
-        <View
-          className="w-[38px] h-[38px] rounded-[12px] items-center justify-center shrink-0"
-          style={{ backgroundColor: '#eff6ff' }}
-        >
-          <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-            <Path
-              d="M20 7.5L12 3L4 7.5M20 7.5L12 12M20 7.5V16.5L12 21M12 12L4 7.5M12 12V21M4 7.5V16.5L12 21"
-              stroke="#2563eb"
-              strokeWidth={1.9}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </Svg>
-        </View>
-      );
-    case 'PAYMENT_REQUIRED':
-      return (
-        <View
-          className="w-[38px] h-[38px] rounded-[12px] items-center justify-center shrink-0"
-          style={{ backgroundColor: '#fffbeb' }}
-        >
-          <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-            <Rect
-              x="2.5"
-              y="5.5"
-              width="19"
-              height="13"
-              rx="2.5"
-              stroke="#d97706"
-              strokeWidth={1.9}
-            />
-            <Path
-              d="M2.5 10h19M6.5 14.5h4"
-              stroke="#d97706"
-              strokeWidth={1.9}
-              strokeLinecap="round"
-            />
-          </Svg>
-        </View>
-      );
-    case 'CANCELLED':
-      return (
-        <View
-          className="w-[38px] h-[38px] rounded-[12px] items-center justify-center shrink-0"
-          style={{ backgroundColor: '#fef2f2' }}
-        >
-          <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-            <Path
-              d="M15 9l-6 6M9 9l6 6M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              stroke="#dc2626"
-              strokeWidth={1.9}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </Svg>
-        </View>
-      );
-    case 'REFUNDED':
-      return (
-        <View
-          className="w-[38px] h-[38px] rounded-[12px] items-center justify-center shrink-0"
-          style={{ backgroundColor: '#f0f7ff' }}
-        >
-          <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-            <Path
-              d="M9 14L4 9l5-5"
-              stroke="#4D7499"
-              strokeWidth={1.9}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <Path
-              d="M20 20v-7a4 4 0 00-4-4H4"
-              stroke="#4D7499"
-              strokeWidth={1.9}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </Svg>
-        </View>
-      );
-    default:
-      return (
-        <View
-          className="w-[38px] h-[38px] rounded-[12px] items-center justify-center shrink-0"
-          style={{ backgroundColor: '#f1f5f9' }}
-        >
-          <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-            <Path
-              d="M5 13l4 4L19 7"
-              stroke="#64748b"
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </Svg>
-        </View>
-      );
-  }
-};
-
 const TransactionsListSkeleton: React.FC = () => (
   <SkeletonGroup enabled>
     <View
@@ -282,14 +164,14 @@ const TransactionsListSkeleton: React.FC = () => (
                     : undefined
                 }
               >
-                <View className="flex-row items-center flex-1 pr-3">
-                  <ShimmerBox className="w-[38px] h-[38px] rounded-[12px] mr-3 shrink-0" />
-                  <View className="flex-1">
-                    <ShimmerBox
-                      className="h-4 rounded-md"
-                      style={{ width: titleWidth }}
-                    />
-                    <ShimmerBox className="w-28 h-3 rounded-full mt-1.5" />
+                <View className="flex-1 pr-3">
+                  <ShimmerBox
+                    className="h-4 rounded-md"
+                    style={{ width: titleWidth }}
+                  />
+                  <View className="flex-row items-center gap-2.5 mt-2">
+                    <ShimmerBox className="w-16 h-5 rounded-full" />
+                    <ShimmerBox className="w-14 h-3 rounded-full" />
                   </View>
                 </View>
                 <ShimmerBox className="w-12 h-4 rounded-md shrink-0" />
@@ -501,7 +383,7 @@ export const TransactionsScreen: React.FC = () => {
                   style={HOME_CARD_SHADOW}
                 >
                   {group.items.map((order, idx) => {
-                    const statusTheme = getStatusTheme(order.status);
+                    const pillStyles = getStatusPillStyles(order.status);
                     const isPassActive =
                       order.status === 'READY_TO_CLAIM' &&
                       Boolean(order.isClaimActive);
@@ -532,41 +414,39 @@ export const TransactionsScreen: React.FC = () => {
                             : undefined
                         }
                       >
-                        <View className="flex-row items-center flex-1 pr-3">
-                          <OrderStatusIconTile status={order.status} />
-
-                          <View className="flex-1 ml-3">
-                            <Text
-                              className="text-[14px] font-semibold text-[#0f172a] leading-[19px]"
-                              numberOfLines={1}
-                              ellipsizeMode="tail"
+                        <View className="flex-1 pr-3">
+                          <Text
+                            className="text-[14px] font-semibold text-[#0f172a] leading-[19px]"
+                            numberOfLines={1}
+                            ellipsizeMode="tail"
+                          >
+                            {order.productName || 'Unknown Package'}
+                          </Text>
+                          <View className="flex-row items-center gap-2.5 mt-1.5">
+                            <View
+                              className="px-2 py-0.5 rounded-full items-center justify-center"
+                              style={pillStyles.containerStyle}
                             >
-                              {order.productName || 'Unknown Package'}
-                            </Text>
-                            <View className="flex-row items-center mt-0.5">
                               <Text
-                                className="text-[12px] font-semibold"
-                                style={{ color: statusTheme.textColor }}
+                                className="text-[11px] font-semibold leading-[14px]"
+                                style={{ color: pillStyles.textColor }}
                                 numberOfLines={1}
                               >
                                 {statusText}
                               </Text>
-                              <Text className="text-[12px] text-[#cbd5e1] mx-1.5">
-                                ·
-                              </Text>
-                              <Text
-                                className="text-[12px] font-medium text-[#64748b] shrink"
-                                numberOfLines={1}
-                              >
-                                {timeLabel}
-                              </Text>
                             </View>
+                            <Text
+                              className="text-[11.5px] font-medium text-[#64748b] shrink"
+                              numberOfLines={1}
+                            >
+                              {timeLabel}
+                            </Text>
                           </View>
                         </View>
 
                         <View className="flex-row items-center gap-2 shrink-0">
                           {hasPrice && (
-                            <Text className="text-[13.5px] font-bold text-[#0f172a]">
+                            <Text className="text-[14px] font-semibold text-[#0f172a]">
                               ₱{order.price!.toLocaleString('en-US')}
                             </Text>
                           )}
