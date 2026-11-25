@@ -115,10 +115,18 @@ export async function GET(request: NextRequest) {
       refundedBy: orders.refundedBy,
       refundedAt: orders.refundedAt,
       timestamp: orders.timestamp,
-      courierPaidByFirstName: staff.firstName,
-      courierPaidByLastName: staff.lastName,
-      refundedByFirstName: refundedByStaff.firstName,
-      refundedByLastName: refundedByStaff.lastName,
+      courierPaidByFirstName: sql<string | null>`${staff.firstName}`.as(
+        "courier_paid_by_first_name"
+      ),
+      courierPaidByLastName: sql<string | null>`${staff.lastName}`.as(
+        "courier_paid_by_last_name"
+      ),
+      refundedByFirstName: sql<string | null>`${refundedByStaff.firstName}`.as(
+        "refunded_by_first_name"
+      ),
+      refundedByLastName: sql<string | null>`${refundedByStaff.lastName}`.as(
+        "refunded_by_last_name"
+      ),
       totalCount: sql<number>`count(*) over()`.as("total_count"),
     };
 
