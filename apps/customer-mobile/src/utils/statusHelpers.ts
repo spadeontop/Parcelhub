@@ -184,6 +184,15 @@ export function getStatusPillStyles(status: OrderStatus): {
         },
         textColor: '#b91c1c',
       };
+    case 'REFUNDED':
+      return {
+        containerStyle: {
+          backgroundColor: '#f0f7ff',
+          borderColor: '#dbeafe',
+          borderWidth: 1,
+        },
+        textColor: '#4D7499',
+      };
     default:
       return {
         containerStyle: { backgroundColor: '#f3f4f6' },
