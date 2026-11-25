@@ -1,10 +1,17 @@
-export type OrderStatus =
-  | 'PENDING_INITIALIZATION'
-  | 'PAYMENT_REQUIRED'
-  | 'AWAITING_PARCEL'
-  | 'READY_TO_CLAIM'
-  | 'CLAIMED'
-  | 'CANCELLED';
+import type {
+  OrderStatus,
+  PaginationMeta,
+  StaffActivateOrderRes,
+  StaffAttachPhotoRes,
+  StaffClaimOrderRes,
+  StaffGetOrderPhotoRes,
+  StaffLoginRes,
+  StaffOrderDetail,
+  StaffPayCourierRes,
+  StatusTimelineEntry,
+} from '@parcelhub/contracts';
+
+export type { OrderStatus, PaginationMeta, StatusTimelineEntry };
 
 export type StaffTab = 'all' | 'ready' | 'active' | 'unpaid' | 'claimed';
 
@@ -24,11 +31,6 @@ export interface StaffUser {
   role: 'STAFF' | string;
   hubName?: string;
   token: string;
-}
-
-export interface StatusTimelineEntry {
-  status: OrderStatus;
-  timestamp: string;
 }
 
 export interface StaffOrder {
@@ -52,67 +54,23 @@ export interface StaffOrder {
   courierPaidAt?: string;
   claimedAt?: string;
   createdAt?: string;
-  statusTimeline?: StatusTimelineEntry[];
+  statusTimeline?: readonly StatusTimelineEntry[];
   proofImageUrl?: string;
   notes?: string;
 }
 
-export interface StaffLoginResponse {
-  statusMessage: string;
-  authToken: string;
-  refreshToken: string;
-}
+export type StaffLoginResponse = StaffLoginRes;
 
 export interface StaffOrdersResponse {
   orders: StaffOrder[];
 }
 
-export interface StaffOrderDetailResponse {
-  orderId: string;
-  ticketCode?: string | null;
-  trackingId: string;
-  customer: string;
-  amountToPay: number;
-  amountReceived?: number | null;
-  change?: number;
-  timestamp: string;
-  status: OrderStatus;
-  statusMessage: string;
-  isClaimActive?: boolean;
-  claimRemainingSeconds?: number;
-  courierPaid?: boolean;
-  courierPaidBy?: string;
-  courierPaidByName?: string;
-  courierPaidAt?: string;
-  claimedAt?: string;
-  createdAt?: string;
-  statusTimeline?: StatusTimelineEntry[];
-  proofImageUrl?: string;
-}
-
-export interface StaffGetOrderPhotoResponse {
-  orderId: string;
-  imageUrl: string | null;
-  proofImageUrl: string | null;
-}
-
-export interface StaffActivateOrderResponse {
-  statusMessage: string;
-  change: number;
-}
-
-export interface StaffPayCourierResponse {
-  statusMessage: string;
-}
-
-export interface StaffAttachPhotoResponse {
-  statusMessage: string;
-  imageUrl: string;
-}
-
-export interface StaffClaimOrderResponse {
-  statusMessage: string;
-}
+export type StaffOrderDetailResponse = StaffOrderDetail;
+export type StaffGetOrderPhotoResponse = StaffGetOrderPhotoRes;
+export type StaffActivateOrderResponse = StaffActivateOrderRes;
+export type StaffPayCourierResponse = StaffPayCourierRes;
+export type StaffAttachPhotoResponse = StaffAttachPhotoRes;
+export type StaffClaimOrderResponse = StaffClaimOrderRes;
 
 export interface JustUpdatedOrderInfo {
   orderId: string;
