@@ -4,12 +4,12 @@ import {
   Text,
   TouchableOpacity,
   FlatList,
+  ScrollView,
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { StatusBar } from 'expo-status-bar';
-import { FilterDropdown } from '../common/FilterDropdown';
 import { SkeletonGroup, ShimmerBox } from '../common/Skeleton';
 import { HOME_CARD_SHADOW } from '../home/homeStyles';
 import { useNavigationUi } from '../../context/NavigationAndUiContext';
@@ -19,7 +19,6 @@ import { AppHeader } from '../layout/AppHeader';
 import {
   getStatusLabel,
   getStatusPillStyles,
-  getStatusTheme,
 } from '../../utils/statusHelpers';
 import { CustomerOrderSummary } from '../../types/api';
 
@@ -50,7 +49,7 @@ const SKELETON_GROUPS = [
 const getFilterLabel = (filter: TransactionFilter): string => {
   switch (filter) {
     case 'ALL':
-      return 'All Orders';
+      return 'All';
     case 'READY_TO_CLAIM':
       return 'Claimable';
     case 'AWAITING_PARCEL':
@@ -137,49 +136,63 @@ function formatCompactTimestamp(
   });
 }
 
+const SKELETON_PILL_WIDTHS = [68, 96, 84, 80] as const;
+
 const TransactionsListSkeleton: React.FC = () => (
   <SkeletonGroup enabled>
     <View
-      className="px-5"
       accessibilityLabel="Loading orders"
       accessibilityState={{ busy: true }}
     >
-      {SKELETON_GROUPS.map((group, gIdx) => (
-        <View key={gIdx} className="mb-5">
+      {/* Filter pill placeholders */}
+      <View className="flex-row items-center gap-2 px-5 mb-4">
+        {SKELETON_PILL_WIDTHS.map((width, idx) => (
           <ShimmerBox
-            className="h-3 rounded-full mb-2.5 ml-1"
-            style={{ width: group.headerWidth }}
+            key={idx}
+            className="h-9 rounded-full"
+            style={{ width }}
           />
-          <View
-            className="bg-white rounded-[20px] border border-[#edf2f7] px-4 py-1"
-            style={HOME_CARD_SHADOW}
-          >
-            {group.rows.map((titleWidth, rIdx) => (
-              <View
-                key={rIdx}
-                className="py-3.5 flex-row items-center justify-between"
-                style={
-                  rIdx !== 0
-                    ? { borderTopWidth: 1, borderTopColor: '#f1f5f9' }
-                    : undefined
-                }
-              >
-                <View className="flex-1 pr-3">
-                  <ShimmerBox
-                    className="h-4 rounded-md"
-                    style={{ width: titleWidth }}
-                  />
-                  <View className="flex-row items-center gap-2.5 mt-2">
-                    <ShimmerBox className="w-16 h-5 rounded-full" />
-                    <ShimmerBox className="w-14 h-3 rounded-full" />
+        ))}
+      </View>
+
+      <View className="px-5">
+        {SKELETON_GROUPS.map((group, gIdx) => (
+          <View key={gIdx} className="mb-5">
+            <ShimmerBox
+              className="h-3 rounded-full mb-2.5 ml-1"
+              style={{ width: group.headerWidth }}
+            />
+            <View
+              className="bg-white rounded-[20px] border border-[#edf2f7] px-4 py-1"
+              style={HOME_CARD_SHADOW}
+            >
+              {group.rows.map((titleWidth, rIdx) => (
+                <View
+                  key={rIdx}
+                  className="py-3.5 flex-row items-center justify-between"
+                  style={
+                    rIdx !== 0
+                      ? { borderTopWidth: 1, borderTopColor: '#f1f5f9' }
+                      : undefined
+                  }
+                >
+                  <View className="flex-1 pr-3">
+                    <ShimmerBox
+                      className="h-4 rounded-md"
+                      style={{ width: titleWidth }}
+                    />
+                    <View className="flex-row items-center gap-2.5 mt-2">
+                      <ShimmerBox className="w-16 h-5 rounded-full" />
+                      <ShimmerBox className="w-14 h-3 rounded-full" />
+                    </View>
                   </View>
+                  <ShimmerBox className="w-12 h-4 rounded-md shrink-0" />
                 </View>
-                <ShimmerBox className="w-12 h-4 rounded-md shrink-0" />
-              </View>
-            ))}
+              ))}
+            </View>
           </View>
-        </View>
-      ))}
+        ))}
+      </View>
     </View>
   </SkeletonGroup>
 );
@@ -244,12 +257,6 @@ export const TransactionsScreen: React.FC = () => {
     }
   };
 
-  const activeCount =
-    transactionFilter === 'ALL'
-      ? totalOrders
-      : (statusCounts[transactionFilter] ?? filteredOrders.length);
-  const countLabel = `${activeCount} ${activeCount === 1 ? 'order' : 'orders'}`;
-
   useEffect(() => {
     if (
       !isLoading &&
@@ -274,12 +281,16 @@ export const TransactionsScreen: React.FC = () => {
         value: filter,
         label: getFilterLabel(filter),
         count,
-        color: filter === 'ALL' ? '#64748b' : getStatusTheme(filter).dotColor,
       },
     ];
   });
 
   const isInitialLoading = isLoading && orders.length === 0;
+  const headerSubtitle =
+    !isInitialLoading && totalOrders > 0
+      ? `${totalOrders} ${totalOrders === 1 ? 'order' : 'orders'} total`
+      : 'Order history';
+  const showFilterBar = !isInitialLoading && filterOptions.length > 1;
 
   return (
     <View className="flex-1 bg-[#2563eb]">
@@ -288,18 +299,62 @@ export const TransactionsScreen: React.FC = () => {
       {/* Top Header */}
       <AppHeader
         title="Transactions"
-        subtitle="ORDER HISTORY"
+        subtitle={headerSubtitle}
+        subtitleUppercase={false}
       />
 
       {/* Main Sheet with Curved Transition */}
-      <View className="flex-1 bg-[#f8fafc] rounded-t-[32px] pt-5 overflow-hidden relative">
-        <FilterDropdown
-          value={transactionFilter}
-          onChange={setTransactionFilter}
-          accessibilityLabel="Filter orders"
-          countLabel={countLabel}
-          options={filterOptions}
-        />
+      <View className="flex-1 bg-[#f8fafc] rounded-t-[32px] pt-4 overflow-hidden relative">
+        {showFilterBar && (
+          <View className="mb-3.5">
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{
+                paddingHorizontal: 20,
+                gap: 8,
+              }}
+            >
+              {filterOptions.map((option) => {
+                const isSelected = transactionFilter === option.value;
+                return (
+                  <TouchableOpacity
+                    key={option.value}
+                    activeOpacity={0.8}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: isSelected }}
+                    onPress={() => setTransactionFilter(option.value)}
+                    className="h-9 px-3.5 rounded-full flex-row items-center gap-1.5"
+                    style={{
+                      backgroundColor: isSelected ? '#2563eb' : '#ffffff',
+                      borderWidth: 1,
+                      borderColor: isSelected ? '#2563eb' : '#e2e8f0',
+                    }}
+                  >
+                    <Text
+                      className="text-[13px] font-semibold"
+                      style={{
+                        color: isSelected ? '#ffffff' : '#334155',
+                      }}
+                    >
+                      {option.label}
+                    </Text>
+                    <Text
+                      className="text-[11.5px] font-semibold"
+                      style={{
+                        color: isSelected
+                          ? 'rgba(255, 255, 255, 0.78)'
+                          : '#94a3b8',
+                      }}
+                    >
+                      {option.count}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
 
         {isInitialLoading ? (
           <TransactionsListSkeleton />
