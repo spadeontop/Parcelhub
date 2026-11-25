@@ -307,10 +307,13 @@ export type CustomerListOrdersQueryParams = {
   readonly limit?: number;
   readonly offset?: number;
   readonly forEach?: boolean;
+  readonly includeOrders?: boolean;
 };
 
 export type CustomerListOrdersRes = StandardSuccessResponse & {
   readonly orders: readonly CustomerOrderSummary[];
+  readonly totalOrders: number;
+  readonly statusCounts: Partial<Record<OrderStatus, number>>;
 };
 
 export type OrderScreenshotDetail = {
@@ -508,6 +511,7 @@ export type PaginationMeta = {
 export type StaffListOrdersRes = {
   readonly orders: readonly StaffOrderSummary[];
   readonly pagination?: PaginationMeta;
+  readonly statusCounts?: Partial<Record<OrderStatus, number>>;
 };
 
 // GET /api/v1/staff/orders/{id}

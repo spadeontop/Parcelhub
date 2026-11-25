@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { and, desc, eq, getTableColumns, gt, lte, ne, sql } from "drizzle-orm";
+import { and, count, desc, eq, getTableColumns, gt, lte, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { OrderRow, orders } from "@/db/schema";
 import { authenticateCustomerRequest, customerAuthErrorResponse } from "@/app/lib/v1/auth";
@@ -45,6 +45,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const typeParam = searchParams.get("type");
     const forEach = searchParams.get("forEach") === "true";
+    const includeOrders = searchParams.get("includeOrders") !== "false";
     let statusFilter: OrderStatus | undefined;
 
     if (typeParam) {
@@ -58,52 +59,78 @@ export async function GET(request: NextRequest) {
 
     // ---------------------------------------------------------
     // 3. Logic:
-    //    Query orders strictly for this customer, omitting PENDING_INITIALIZATION
-    //    drafts at the DB level, applying optional status filter, sorting by
-    //    timestamp DESC, paginated by limit & offset.
-    //    When forEach=true (and no single status filter), apply limit & offset
-    //    independently per status bucket and return a flat timestamp-DESC list.
+    //    Query per-status counts (and account totalOrders) strictly for this
+    //    customer, omitting PENDING_INITIALIZATION drafts at the DB level.
+    //    When includeOrders=false, skip fetching order rows and return only counts.
+    //    Otherwise, also fetch orders with optional status filter, sorting by
+    //    timestamp DESC, paginated by limit & offset (or per-status buckets when
+    //    forEach=true and no single status filter).
     // ---------------------------------------------------------
-    let rows: Omit<OrderRow, "proofImageUrl">[];
+    const customerId = auth.session.userId;
+    const baseAccountWhere = and(
+      eq(orders.customerId, customerId),
+      ne(orders.status, "PENDING_INITIALIZATION")
+    );
 
-    if (forEach && !statusFilter) {
-      const { proofImageUrl: _proofImageUrl, ...nonImageColumns } = getTableColumns(orders);
-      void _proofImageUrl;
-      const ranked = db
-        .select({
-          ...nonImageColumns,
-          rn: sql<number>`row_number() over (partition by ${orders.status} order by ${orders.timestamp} desc)`.as(
-            "rn"
-          ),
-        })
-        .from(orders)
-        .where(
-          and(
-            eq(orders.customerId, auth.session.userId),
-            ne(orders.status, "PENDING_INITIALIZATION")
-          )
-        )
-        .as("ranked_orders");
+    const statusCountsQuery = db
+      .select({
+        status: orders.status,
+        count: count(),
+      })
+      .from(orders)
+      .where(baseAccountWhere)
+      .groupBy(orders.status);
 
-      rows = await db
-        .select()
-        .from(ranked)
-        .where(and(gt(ranked.rn, offset), lte(ranked.rn, offset + limit)))
-        .orderBy(desc(ranked.timestamp));
-    } else {
-      rows = await db.query.orders.findMany({
-        where: statusFilter
-          ? and(eq(orders.customerId, auth.session.userId), eq(orders.status, statusFilter))
-          : and(
-              eq(orders.customerId, auth.session.userId),
-              ne(orders.status, "PENDING_INITIALIZATION")
+    const fetchOrderRows = async (): Promise<Omit<OrderRow, "proofImageUrl">[]> => {
+      if (!includeOrders) {
+        return [];
+      }
+
+      if (forEach && !statusFilter) {
+        const { proofImageUrl: _proofImageUrl, ...nonImageColumns } = getTableColumns(orders);
+        void _proofImageUrl;
+        const ranked = db
+          .select({
+            ...nonImageColumns,
+            rn: sql<number>`row_number() over (partition by ${orders.status} order by ${orders.timestamp} desc)`.as(
+              "rn"
             ),
+          })
+          .from(orders)
+          .where(baseAccountWhere)
+          .as("ranked_orders");
+
+        return await db
+          .select()
+          .from(ranked)
+          .where(and(gt(ranked.rn, offset), lte(ranked.rn, offset + limit)))
+          .orderBy(desc(ranked.timestamp));
+      }
+
+      return await db.query.orders.findMany({
+        where: statusFilter
+          ? and(eq(orders.customerId, customerId), eq(orders.status, statusFilter))
+          : baseAccountWhere,
         orderBy: [desc(orders.timestamp)],
         limit,
         offset,
         columns: ORDER_NON_IMAGE_COLUMNS,
       });
+    };
+
+    const [statusCountRows, rows] = await Promise.all([statusCountsQuery, fetchOrderRows()]);
+
+    let totalOrders = 0;
+    const allStatusCounts: Partial<Record<OrderStatus, number>> = {};
+    for (const row of statusCountRows) {
+      const statusCount = Number(row.count);
+      totalOrders += statusCount;
+      allStatusCounts[row.status as OrderStatus] = statusCount;
     }
+
+    const statusCounts: Partial<Record<OrderStatus, number>> = statusFilter
+      ? { [statusFilter]: allStatusCounts[statusFilter] ?? 0 }
+      : allStatusCounts;
 
     const nowMs = Date.now();
 
@@ -128,11 +155,13 @@ export async function GET(request: NextRequest) {
 
     // ---------------------------------------------------------
     // 4. Response:
-    //    Return 200 OK with formatted order list
+    //    Return 200 OK with formatted order list and account/status totals
     // ---------------------------------------------------------
     const response: CustomerListOrdersRes = {
       statusMessage: "Orders retrieved",
       orders: orderSummaries,
+      totalOrders,
+      statusCounts,
     };
 
     return jsonSuccess(response);

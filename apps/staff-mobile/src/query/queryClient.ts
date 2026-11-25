@@ -34,6 +34,7 @@ export function getStatusForTab(tab: StaffTab): OrderStatus | undefined {
 export const staffQueryKeys = {
   all: ['staff'] as const,
   orders: () => [...staffQueryKeys.all, 'orders'] as const,
+  forEachPage1: () => [...staffQueryKeys.orders(), 'forEach', 1] as const,
   tab: (tab: StaffTab, page = 1) => [...staffQueryKeys.orders(), 'tab', tab, page] as const,
   search: (query: string, page = 1) => [...staffQueryKeys.orders(), 'search', query, page] as const,
   detail: (orderId: string) => [...staffQueryKeys.orders(), 'detail', orderId] as const,

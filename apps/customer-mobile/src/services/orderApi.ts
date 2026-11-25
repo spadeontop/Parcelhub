@@ -29,6 +29,7 @@ export const orderApi = {
     if (query?.limit) params.append('limit', String(query.limit));
     if (query?.offset) params.append('offset', String(query.offset));
     if (query?.forEach) params.append('forEach', 'true');
+    if (query?.includeOrders === false) params.append('includeOrders', 'false');
 
     const queryString = params.toString();
     const endpoint = `/api/v1/customer/orders${queryString ? `?${queryString}` : ''}`;
