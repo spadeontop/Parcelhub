@@ -64,6 +64,8 @@ export const TransactionsScreen: React.FC = () => {
   } = useNavigationUi();
   const {
     orders,
+    totalOrders,
+    statusCounts,
     isLoading,
     isFetchingNextPage,
     hasNextPage,
@@ -88,8 +90,11 @@ export const TransactionsScreen: React.FC = () => {
     }
   };
 
-  const countSuffix = hasNextPage ? '+' : '';
-  const countLabel = `${filteredOrders.length}${countSuffix} ${filteredOrders.length === 1 && !hasNextPage ? 'Order' : 'Orders'}`;
+  const activeCount =
+    transactionFilter === 'ALL'
+      ? totalOrders
+      : (statusCounts[transactionFilter] ?? filteredOrders.length);
+  const countLabel = `${activeCount} ${activeCount === 1 ? 'Order' : 'Orders'}`;
 
   return (
     <View className="flex-1 bg-[#2560ea]">
@@ -112,6 +117,7 @@ export const TransactionsScreen: React.FC = () => {
           options={FILTERS.map((filter) => ({
             value: filter,
             label: getFilterLabel(filter),
+            count: filter === 'ALL' ? totalOrders : (statusCounts[filter] ?? 0),
             color: filter === 'ALL' ? '#4b5563' : getStatusTheme(filter).dotColor,
           }))}
         />

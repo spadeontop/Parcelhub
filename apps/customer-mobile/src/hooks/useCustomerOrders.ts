@@ -85,7 +85,7 @@ export const useInfiniteCustomerOrders = () => {
     const deduped: CustomerOrderSummary[] = [];
 
     for (const page of pages) {
-      for (const order of page) {
+      for (const order of page.orders || []) {
         if (!seen.has(order.id)) {
           seen.add(order.id);
           deduped.push(order);
@@ -96,8 +96,14 @@ export const useInfiniteCustomerOrders = () => {
     return deduped;
   }, [query.data?.pages]);
 
+  const firstPage = query.data?.pages?.[0];
+  const totalOrders = firstPage?.totalOrders ?? orders.length;
+  const statusCounts = firstPage?.statusCounts ?? {};
+
   return {
     orders,
+    totalOrders,
+    statusCounts,
     isLoading: query.isLoading,
     isFetching: query.isFetching,
     isFetchingNextPage: query.isFetchingNextPage,

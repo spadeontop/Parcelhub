@@ -3,6 +3,7 @@ import { customerApi } from '../services/customerApi';
 import { orderApi } from '../services/orderApi';
 import {
   CustomerListOrdersQueryParams,
+  CustomerListOrdersRes,
   CustomerOrderDetail,
   CustomerOrderSummary,
   CustomerProfile,
@@ -51,7 +52,7 @@ export function useCustomerOrdersQuery(
 export function useCustomerInfiniteOrdersQuery(
   authToken: JWTToken | null
 ) {
-  return useInfiniteQuery<readonly CustomerOrderSummary[]>({
+  return useInfiniteQuery<CustomerListOrdersRes>({
     queryKey: customerQueryKeys.ordersInfinite(),
     initialPageParam: 0,
     staleTime: Infinity,
@@ -60,16 +61,15 @@ export function useCustomerInfiniteOrdersQuery(
         throw new Error('Missing auth token');
       }
       const offset = typeof pageParam === 'number' ? pageParam : 0;
-      const res = await orderApi.listOrders(authToken, {
+      return await orderApi.listOrders(authToken, {
         forEach: true,
         limit: CUSTOMER_ORDERS_PAGE_SIZE,
         offset,
       });
-      return res.orders || [];
     },
     getNextPageParam: (lastPage, allPages) => {
       const countsByStatus = new Map<OrderStatus, number>();
-      for (const order of lastPage) {
+      for (const order of lastPage.orders || []) {
         countsByStatus.set(order.status, (countsByStatus.get(order.status) ?? 0) + 1);
       }
       const hasMoreInAnyBucket = Array.from(countsByStatus.values()).some(
