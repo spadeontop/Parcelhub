@@ -25,7 +25,7 @@ import { ConfirmationSubmitSection } from '../common/ConfirmationSubmitSection';
 import { getStatusLabel } from '../../utils/statusHelpers';
 import { useClaimCountdown } from '../orders/useClaimCountdown';
 import { ClaimPassView } from '../orders/ClaimPassView';
-import { CancelOrderView } from '../orders/CancelOrderView';
+import { CancelOrderView, CANCELLATION_REASONS } from '../orders/CancelOrderView';
 import { RefundPassView } from '../orders/RefundPassView';
 import { OrderRefundedView } from '../orders/OrderRefundedView';
 import { OrderOverviewCard } from '../orders/OrderOverviewCard';
@@ -57,7 +57,7 @@ export const OrderDetailsScreen: React.FC = () => {
   const [awaitingViewMode, setAwaitingViewMode] = useState<'details' | 'cancel' | 'refund_pass'>(
     'details'
   );
-  const [cancelReason, setCancelReason] = useState<string | null>(null);
+  const [cancelReason, setCancelReason] = useState<string | null>(CANCELLATION_REASONS[0]);
   const [cancelNotes, setCancelNotes] = useState<string>('');
   const [cancelConfirmed, setCancelConfirmed] = useState<boolean>(false);
 
@@ -99,7 +99,7 @@ export const OrderDetailsScreen: React.FC = () => {
     setIsPassDismissed(false);
     setIsClaimSessionActive(false);
     setAwaitingViewMode('details');
-    setCancelReason(null);
+    setCancelReason(CANCELLATION_REASONS[0]);
     setCancelNotes('');
     setCancelConfirmed(false);
     resetCountdown();

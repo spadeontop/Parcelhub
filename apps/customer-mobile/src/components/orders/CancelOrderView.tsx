@@ -168,11 +168,26 @@ export const CancelOrderView: React.FC<CancelOrderViewProps> = ({
                     {reason}
                   </Text>
                   <View
-                    className={`w-[18px] h-[18px] rounded-full border-2 items-center justify-center ${
-                      isSelected ? 'border-[#2563eb]' : 'border-[#cbd5e1]'
-                    }`}
+                    style={{
+                      width: 18,
+                      height: 18,
+                      borderRadius: 9,
+                      borderWidth: 2,
+                      borderColor: isSelected ? '#2563eb' : '#cbd5e1',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
                   >
-                    {isSelected && <View className="w-[9px] h-[9px] rounded-full bg-[#2563eb]" />}
+                    {isSelected && (
+                      <View
+                        style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: 4,
+                          backgroundColor: '#2563eb',
+                        }}
+                      />
+                    )}
                   </View>
                 </TouchableOpacity>
               );
