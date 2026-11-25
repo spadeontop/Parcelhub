@@ -14,28 +14,18 @@ import { useCustomerOrders } from '../../hooks/useCustomerOrders';
 import { BottomNav } from '../layout/BottomNav';
 import { AppHeader } from '../layout/AppHeader';
 import { ActiveParcelCard } from '../home/ActiveParcelCard';
+import { SkeletonGroup } from '../common/Skeleton';
+import {
+  HomeFabSkeleton,
+  HomeScreenSkeleton,
+} from '../home/HomeScreenSkeleton';
+import { HOME_CARD_SHADOW, HOME_FAB_SHADOW } from '../home/homeStyles';
 import { formatOrderDate } from '../../utils/date';
 import {
   getStatusLabel,
   getStatusPillStyles,
 } from '../../utils/statusHelpers';
 import { CustomerOrderSummary, TransactionFilter } from '../../types/api';
-
-const CARD_SHADOW = {
-  shadowColor: '#0f172a',
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.05,
-  shadowRadius: 12,
-  elevation: 2,
-} as const;
-
-const FAB_SHADOW = {
-  shadowColor: '#2563eb',
-  shadowOffset: { width: 0, height: 8 },
-  shadowOpacity: 0.34,
-  shadowRadius: 14,
-  elevation: 8,
-} as const;
 
 const HOW_IT_WORKS_STEPS = [
   {
@@ -112,6 +102,7 @@ export const HomeScreen: React.FC = () => {
   };
 
   const isBlacklisted = Boolean(customer?.blacklisted);
+  const isInitialLoading = isLoading && orders.length === 0;
 
   const {
     spotlightOrder,
@@ -264,223 +255,237 @@ export const HomeScreen: React.FC = () => {
 
       {/* Main Sheet */}
       <View className="flex-1 bg-[#f8fafc] rounded-t-[32px] overflow-hidden relative">
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          className="flex-1 px-5"
-          contentContainerStyle={{ paddingTop: 20, paddingBottom: 156 }}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              colors={['#2563eb']}
-            />
-          }
-        >
-          {/* Suspension Notice (only if blacklisted) */}
-          {isBlacklisted && (
-            <View className="rounded-2xl bg-[#fef2f2] border border-[#fecaca] px-4 py-3 mb-4">
-              <Text className="text-[12px] font-medium text-[#b91c1c] leading-[18px]">
-                {customer?.blacklistReason ||
-                  'Your account is currently suspended from creating new orders.'}
-              </Text>
-            </View>
-          )}
-
-          {/* Focal Active Parcel Card */}
-          <ActiveParcelCard
-            order={spotlightOrder}
-            isLoading={isLoading && orders.length === 0}
-            isBlacklisted={isBlacklisted}
-            onPressOrder={openOrder}
-            onCreateOrder={handleCreateOrder}
-          />
-
-          {/* Unified Minimalist Parcel Status Bar */}
-          <View
-            className="flex-row rounded-[20px] bg-white border border-[#edf2f7] py-3.5 mb-5"
-            style={CARD_SHADOW}
+        <SkeletonGroup enabled={isInitialLoading}>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            className="flex-1 px-5"
+            contentContainerStyle={{ paddingTop: 20, paddingBottom: 156 }}
+            refreshControl={
+              !isInitialLoading ? (
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={onRefresh}
+                  colors={['#2563eb']}
+                />
+              ) : undefined
+            }
           >
-            {summaryBuckets.map((bucket, idx) => (
-              <TouchableOpacity
-                key={bucket.filter}
-                activeOpacity={0.75}
-                onPress={() => openFilteredOrders(bucket.filter)}
-                className="flex-1 items-center justify-center px-2"
-                style={
-                  idx !== 0
-                    ? { borderLeftWidth: 1, borderLeftColor: '#f1f5f9' }
-                    : undefined
-                }
-              >
-                <View className="flex-row items-center gap-1.5">
-                  {bucket.renderIcon()}
-                  <Text
-                    className="text-[18px] font-bold tracking-tight"
-                    style={{
-                      color: bucket.count > 0 ? '#0f172a' : '#cbd5e1',
-                    }}
-                  >
-                    {bucket.count}
-                  </Text>
-                </View>
-                <Text
-                  className="text-[11.5px] font-semibold text-[#64748b] mt-1"
-                  numberOfLines={1}
+            {isInitialLoading ? (
+              <HomeScreenSkeleton />
+            ) : (
+              <>
+                {/* Suspension Notice (only if blacklisted) */}
+                {isBlacklisted && (
+                  <View className="rounded-2xl bg-[#fef2f2] border border-[#fecaca] px-4 py-3 mb-4">
+                    <Text className="text-[12px] font-medium text-[#b91c1c] leading-[18px]">
+                      {customer?.blacklistReason ||
+                        'Your account is currently suspended from creating new orders.'}
+                    </Text>
+                  </View>
+                )}
+
+                {/* Focal Active Parcel Card */}
+                <ActiveParcelCard
+                  order={spotlightOrder}
+                  isLoading={false}
+                  isBlacklisted={isBlacklisted}
+                  onPressOrder={openOrder}
+                  onCreateOrder={handleCreateOrder}
+                />
+
+                {/* Unified Minimalist Parcel Status Bar */}
+                <View
+                  className="flex-row rounded-[20px] bg-white border border-[#edf2f7] py-3.5 mb-5"
+                  style={HOME_CARD_SHADOW}
                 >
-                  {bucket.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {/* Recent Activity or Onboarding Guide */}
-          {recentFeedOrders.length > 0 ? (
-            <View>
-              <View className="flex-row items-center justify-between mb-2.5 px-1">
-                <Text className="text-[12px] font-bold text-[#64748b] uppercase tracking-[0.6px]">
-                  Recent Activity
-                </Text>
-                <TouchableOpacity
-                  activeOpacity={0.7}
-                  onPress={() => openFilteredOrders('ALL')}
-                  className="flex-row items-center gap-1"
-                >
-                  <Text className="text-[12px] font-semibold text-[#2563eb]">
-                    See all ({orders.length})
-                  </Text>
-                  <Svg width={5} height={9} viewBox="0 0 6 10" fill="none">
-                    <Path
-                      d="M0.75 0.75L4.85 4.85L0.75 8.95"
-                      stroke="#2563eb"
-                      strokeWidth={1.7}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </Svg>
-                </TouchableOpacity>
-              </View>
-
-              <View
-                className="bg-white rounded-[20px] border border-[#edf2f7] px-4 py-1"
-                style={CARD_SHADOW}
-              >
-                {recentFeedOrders.map((order, idx) => {
-                  const pillStyles = getStatusPillStyles(order.status);
-
-                  return (
+                  {summaryBuckets.map((bucket, idx) => (
                     <TouchableOpacity
-                      key={order.id}
+                      key={bucket.filter}
                       activeOpacity={0.75}
-                      onPress={() => openOrder(order)}
-                      className="py-3 flex-row items-center justify-between"
+                      onPress={() => openFilteredOrders(bucket.filter)}
+                      className="flex-1 items-center justify-center px-2"
                       style={
                         idx !== 0
-                          ? { borderTopWidth: 1, borderTopColor: '#f1f5f9' }
+                          ? { borderLeftWidth: 1, borderLeftColor: '#f1f5f9' }
                           : undefined
                       }
                     >
-                      <View className="flex-1 pr-3">
+                      <View className="flex-row items-center gap-1.5">
+                        {bucket.renderIcon()}
                         <Text
-                          className="text-[14px] font-semibold text-[#0f172a] leading-[19px]"
-                          numberOfLines={1}
-                          ellipsizeMode="tail"
+                          className="text-[18px] font-bold tracking-tight"
+                          style={{
+                            color: bucket.count > 0 ? '#0f172a' : '#cbd5e1',
+                          }}
                         >
-                          {order.productName}
-                        </Text>
-                        <Text
-                          className="text-[11.5px] font-medium text-[#64748b] mt-0.5"
-                          numberOfLines={1}
-                          ellipsizeMode="tail"
-                        >
-                          {formatOrderDate(order.timestamp)}
+                          {bucket.count}
                         </Text>
                       </View>
+                      <Text
+                        className="text-[11.5px] font-semibold text-[#64748b] mt-1"
+                        numberOfLines={1}
+                      >
+                        {bucket.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
 
-                      <View className="flex-row items-center gap-2 shrink-0">
-                        <View
-                          className="px-2.5 py-1 rounded-full items-center justify-center"
-                          style={pillStyles.containerStyle}
-                        >
-                          <Text
-                            className="text-[11px] font-semibold leading-[14px]"
-                            style={{ color: pillStyles.textColor }}
-                          >
-                            {getStatusLabel(order.status)}
-                          </Text>
-                        </View>
+                {/* Recent Activity or Onboarding Guide */}
+                {recentFeedOrders.length > 0 ? (
+                  <View>
+                    <View className="flex-row items-center justify-between mb-2.5 px-1">
+                      <Text className="text-[12px] font-bold text-[#64748b] uppercase tracking-[0.6px]">
+                        Recent Activity
+                      </Text>
+                      <TouchableOpacity
+                        activeOpacity={0.7}
+                        onPress={() => openFilteredOrders('ALL')}
+                        className="flex-row items-center gap-1"
+                      >
+                        <Text className="text-[12px] font-semibold text-[#2563eb]">
+                          See all ({orders.length})
+                        </Text>
                         <Svg width={5} height={9} viewBox="0 0 6 10" fill="none">
                           <Path
                             d="M0.75 0.75L4.85 4.85L0.75 8.95"
-                            stroke="#cbd5e1"
-                            strokeWidth={1.6}
+                            stroke="#2563eb"
+                            strokeWidth={1.7}
                             strokeLinecap="round"
                             strokeLinejoin="round"
                           />
                         </Svg>
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
-          ) : (
-            <View>
-              <Text className="text-[12px] font-bold text-[#64748b] uppercase tracking-[0.6px] mb-2.5 px-1">
-                How Pickup Works
-              </Text>
-              <View
-                className="bg-white rounded-[20px] border border-[#edf2f7] p-4"
-                style={CARD_SHADOW}
-              >
-                {HOW_IT_WORKS_STEPS.map((item, idx) => (
-                  <View
-                    key={item.step}
-                    className="flex-row items-start"
-                    style={idx !== 0 ? { marginTop: 14 } : undefined}
-                  >
-                    <Text className="text-[12px] font-bold text-[#2563eb] w-6 mt-0.5">
-                      {item.step}
-                    </Text>
-                    <View className="flex-1 ml-1.5">
-                      <Text className="text-[13.5px] font-semibold text-[#0f172a]">
-                        {item.title}
-                      </Text>
-                      <Text className="text-[12px] text-[#64748b] mt-0.5 leading-[17px]">
-                        {item.desc}
-                      </Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    <View
+                      className="bg-white rounded-[20px] border border-[#edf2f7] px-4 py-1"
+                      style={HOME_CARD_SHADOW}
+                    >
+                      {recentFeedOrders.map((order, idx) => {
+                        const pillStyles = getStatusPillStyles(order.status);
+
+                        return (
+                          <TouchableOpacity
+                            key={order.id}
+                            activeOpacity={0.75}
+                            onPress={() => openOrder(order)}
+                            className="py-3 flex-row items-center justify-between"
+                            style={
+                              idx !== 0
+                                ? { borderTopWidth: 1, borderTopColor: '#f1f5f9' }
+                                : undefined
+                            }
+                          >
+                            <View className="flex-1 pr-3">
+                              <Text
+                                className="text-[14px] font-semibold text-[#0f172a] leading-[19px]"
+                                numberOfLines={1}
+                                ellipsizeMode="tail"
+                              >
+                                {order.productName}
+                              </Text>
+                              <Text
+                                className="text-[11.5px] font-medium text-[#64748b] mt-0.5"
+                                numberOfLines={1}
+                                ellipsizeMode="tail"
+                              >
+                                {formatOrderDate(order.timestamp)}
+                              </Text>
+                            </View>
+
+                            <View className="flex-row items-center gap-2 shrink-0">
+                              <View
+                                className="px-2.5 py-1 rounded-full items-center justify-center"
+                                style={pillStyles.containerStyle}
+                              >
+                                <Text
+                                  className="text-[11px] font-semibold leading-[14px]"
+                                  style={{ color: pillStyles.textColor }}
+                                >
+                                  {getStatusLabel(order.status)}
+                                </Text>
+                              </View>
+                              <Svg width={5} height={9} viewBox="0 0 6 10" fill="none">
+                                <Path
+                                  d="M0.75 0.75L4.85 4.85L0.75 8.95"
+                                  stroke="#cbd5e1"
+                                  strokeWidth={1.6}
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                />
+                              </Svg>
+                            </View>
+                          </TouchableOpacity>
+                        );
+                      })}
                     </View>
                   </View>
-                ))}
-              </View>
-            </View>
-          )}
-        </ScrollView>
+                ) : (
+                  <View>
+                    <Text className="text-[12px] font-bold text-[#64748b] uppercase tracking-[0.6px] mb-2.5 px-1">
+                      How Pickup Works
+                    </Text>
+                    <View
+                      className="bg-white rounded-[20px] border border-[#edf2f7] p-4"
+                      style={HOME_CARD_SHADOW}
+                    >
+                      {HOW_IT_WORKS_STEPS.map((item, idx) => (
+                        <View
+                          key={item.step}
+                          className="flex-row items-start"
+                          style={idx !== 0 ? { marginTop: 14 } : undefined}
+                        >
+                          <Text className="text-[12px] font-bold text-[#2563eb] w-6 mt-0.5">
+                            {item.step}
+                          </Text>
+                          <View className="flex-1 ml-1.5">
+                            <Text className="text-[13.5px] font-semibold text-[#0f172a]">
+                              {item.title}
+                            </Text>
+                            <Text className="text-[12px] text-[#64748b] mt-0.5 leading-[17px]">
+                              {item.desc}
+                            </Text>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                )}
+              </>
+            )}
+          </ScrollView>
 
-        {/* Lower-Right Thumb FAB for New Order */}
-        <TouchableOpacity
-          activeOpacity={0.85}
-          onPress={handleCreateOrder}
-          accessibilityLabel="New Order"
-          className="absolute w-14 h-14 rounded-full bg-[#2563eb] items-center justify-center"
-          style={[
-            FAB_SHADOW,
-            {
-              right: 20,
-              bottom: 88,
-              zIndex: 60,
-              opacity: isBlacklisted ? 0.5 : 1,
-            },
-          ]}
-        >
-          <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-            <Path
-              d="M12 5v14M5 12h14"
-              stroke="#ffffff"
-              strokeWidth={2.5}
-              strokeLinecap="round"
-            />
-          </Svg>
-        </TouchableOpacity>
+          {/* Lower-Right Thumb FAB for New Order */}
+          {isInitialLoading ? (
+            <HomeFabSkeleton />
+          ) : (
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={handleCreateOrder}
+              accessibilityLabel="New Order"
+              className="absolute w-14 h-14 rounded-full bg-[#2563eb] items-center justify-center"
+              style={[
+                HOME_FAB_SHADOW,
+                {
+                  right: 20,
+                  bottom: 88,
+                  zIndex: 60,
+                  opacity: isBlacklisted ? 0.5 : 1,
+                },
+              ]}
+            >
+              <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+                <Path
+                  d="M12 5v14M5 12h14"
+                  stroke="#ffffff"
+                  strokeWidth={2.5}
+                  strokeLinecap="round"
+                />
+              </Svg>
+            </TouchableOpacity>
+          )}
+        </SkeletonGroup>
 
         {/* Floating Bottom Nav */}
         <BottomNav activeTab="home" />
