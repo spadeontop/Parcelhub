@@ -5,6 +5,7 @@ import { OrderConfirmationCard } from './OrderConfirmationCard';
 import { OrderCardContainer } from '../../common/OrderCardContainer';
 import { PaymentSummaryCard } from './PaymentSummaryCard';
 import { StaffActionButton, ButtonActionState } from '../../common/StaffActionButton';
+import { useDeadlineCountdown } from '../../../hooks/useDeadlineCountdown';
 
 interface StaffReadyActionSectionProps {
   order: StaffOrder;
@@ -31,9 +32,10 @@ export const StaffReadyActionSection: React.FC<StaffReadyActionSectionProps> = (
     order.isClaimActive || (order.claimRemainingSeconds !== undefined && order.claimRemainingSeconds > 0)
   );
 
-  const [secondsRemaining, setSecondsRemaining] = useState<number>(
-    isInitiated && order.claimRemainingSeconds ? order.claimRemainingSeconds : 0
-  );
+  const secondsRemaining = useDeadlineCountdown({
+    isActive: isInitiated,
+    initialSeconds: order.claimRemainingSeconds,
+  });
   const [isConfirmed, setIsConfirmed] = useState<boolean>(false);
   const [isLocked, setIsLocked] = useState<boolean>(false);
   const [btnState, setBtnState] = useState<ButtonActionState>('idle');
@@ -48,23 +50,6 @@ export const StaffReadyActionSection: React.FC<StaffReadyActionSectionProps> = (
     setHasError(false);
     setErrorMessage('');
   }, [order.id]);
-
-  useEffect(() => {
-    if (order.isClaimActive || (order.claimRemainingSeconds !== undefined && order.claimRemainingSeconds > 0)) {
-      setSecondsRemaining(order.claimRemainingSeconds ?? 0);
-    } else {
-      setSecondsRemaining(0);
-    }
-  }, [order.isClaimActive, order.claimRemainingSeconds]);
-
-  // Live countdown timer only runs when initiated and time is remaining
-  useEffect(() => {
-    if (!isInitiated || secondsRemaining <= 0) return;
-    const interval = setInterval(() => {
-      setSecondsRemaining((s) => Math.max(0, s - 1));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [isInitiated, secondsRemaining]);
 
   const minutes = Math.floor(secondsRemaining / 60);
   const seconds = secondsRemaining % 60;
