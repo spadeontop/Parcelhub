@@ -306,10 +306,14 @@ export type CustomerListOrdersQueryParams = {
   readonly type?: OrderStatus;
   readonly limit?: number;
   readonly offset?: number;
+  readonly forEach?: boolean;
+  readonly includeOrders?: boolean;
 };
 
 export type CustomerListOrdersRes = StandardSuccessResponse & {
   readonly orders: readonly CustomerOrderSummary[];
+  readonly totalOrders: number;
+  readonly statusCounts: Partial<Record<OrderStatus, number>>;
 };
 
 export type OrderScreenshotDetail = {
