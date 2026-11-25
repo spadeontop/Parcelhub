@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useStaffAuth } from '../../context/StaffAuthContext';
 import { useStaffOrders } from '../../hooks/useStaffOrders';
+import { useStaffRealtimeSync } from '../../realtime/useStaffRealtimeSync';
 import { staffApi } from '../../services/staffApi';
 import { StaffHeader } from '../header/StaffHeader';
 import { StaffSearchBar } from '../header/StaffSearchBar';
@@ -64,6 +65,8 @@ export const StaffTerminalScreen: React.FC = () => {
     return () => clearTimeout(timer);
   }, [noticeMessage]);
 
+  const { isRealtimeSubscribed } = useStaffRealtimeSync();
+
   const {
     orders,
     filteredOrders,
@@ -74,7 +77,7 @@ export const StaffTerminalScreen: React.FC = () => {
     isRefreshing,
     refreshOrders,
     findOrderByQrCode,
-  } = useStaffOrders(activeTab, currentPage, searchQuery);
+  } = useStaffOrders(activeTab, currentPage, searchQuery, isRealtimeSubscribed);
 
   // Keep selectedOrder synced when background polling refreshes the active list
   useEffect(() => {

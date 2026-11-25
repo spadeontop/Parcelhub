@@ -55,4 +55,10 @@ export const ENV = {
   DEFAULT_STAFF_PASSWORD: __DEV__ ? 'password' : '',
   POLLING_INTERVAL_MS: 4000,
   HANDOFF_CUTOFF_TIME_MINS: 5,
+  SUPABASE_URL: (process.env.EXPO_PUBLIC_SUPABASE_URL || '').trim(),
+  SUPABASE_ANON_KEY: (
+    process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
+    ''
+  ).trim(),
 };
