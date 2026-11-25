@@ -80,10 +80,10 @@ export const CreateOrderScreen: React.FC = () => {
   const { initializeCustomerOrder, confirmCustomerOrder } = useCustomerOrderActions();
 
   const scrollViewRef = useRef<any>(null);
+  const isMountedRef = useRef(true);
   const receiptShakeAnim = useRef(new Animated.Value(0)).current;
   const detailsShakeAnim = useRef(new Animated.Value(0)).current;
   const confirmShakeAnim = useRef(new Animated.Value(0)).current;
-  const submitShakeAnim = useRef(new Animated.Value(0)).current;
   const feedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [isPicking, setIsPicking] = useState(false);
@@ -110,7 +110,9 @@ export const CreateOrderScreen: React.FC = () => {
   const [footerFeedback, setFooterFeedback] = useState<string | null>(null);
 
   useEffect(() => {
+    isMountedRef.current = true;
     return () => {
+      isMountedRef.current = false;
       if (feedbackTimerRef.current) {
         clearTimeout(feedbackTimerRef.current);
       }
@@ -176,6 +178,7 @@ export const CreateOrderScreen: React.FC = () => {
     try {
       await initializeCustomerOrder(imageBase64, { navigateOnSuccess: false });
     } catch (err: any) {
+      if (!isMountedRef.current) return;
       setScanFailed(true);
       if (err?.error === 'TrackingIdMissing') {
         const app: ScreenshotSourceApp =
@@ -186,9 +189,13 @@ export const CreateOrderScreen: React.FC = () => {
             : 'unknown';
         setMissingTrackingApp(app);
       }
-      showToast(err?.message || 'Failed to read receipt. Please try another screenshot.');
+      if (err?.message !== 'Please log in again') {
+        showToast(err?.message || 'Failed to read receipt. Please try another screenshot.');
+      }
     } finally {
-      setIsScanning(false);
+      if (isMountedRef.current) {
+        setIsScanning(false);
+      }
     }
   };
 
@@ -256,13 +263,18 @@ export const CreateOrderScreen: React.FC = () => {
     await runReceiptScan(orderDraft.imageUrl);
   };
 
-  const highlightNeededReceipt = (message: string) => {
+  const highlightNeededReceipt = () => {
     clearTransientFeedback();
     if (isScanning) {
       setReceiptFeedback('Scanning receipt, please wait...');
       scheduleFeedbackReset();
       return;
     }
+    const message = missingTrackingApp
+      ? 'Please upload a receipt showing the tracking number.'
+      : hasPhoto && !isOrderReady
+      ? 'Please retry scanning or replace the receipt photo.'
+      : 'Please attach a receipt photo first.';
     setReceiptHighlight(true);
     setReceiptFeedback(message);
     runHorizontalShake(receiptShakeAnim);
@@ -271,14 +283,14 @@ export const CreateOrderScreen: React.FC = () => {
   };
 
   const handleLockedDetailsPress = () => {
-    highlightNeededReceipt('Please attach a receipt photo first.');
+    highlightNeededReceipt();
   };
 
   const handleToggleConfirm = () => {
     if (isSubmitting) return;
 
     if (!isDetailsActive) {
-      highlightNeededReceipt('Please attach a receipt photo first.');
+      highlightNeededReceipt();
       return;
     }
 
@@ -324,7 +336,7 @@ export const CreateOrderScreen: React.FC = () => {
     if (isSubmitting) return;
 
     if (!isDetailsActive) {
-      highlightNeededReceipt('Please attach a receipt photo first.');
+      highlightNeededReceipt();
       return;
     }
 
@@ -358,6 +370,7 @@ export const CreateOrderScreen: React.FC = () => {
         price: rawAmountNumber,
       });
     } catch (err: any) {
+      if (!isMountedRef.current) return;
       if (
         err?.statusCode === 409 ||
         err?.status === 409 ||
@@ -369,11 +382,20 @@ export const CreateOrderScreen: React.FC = () => {
           err?.message || 'Tracking number is already registered to a paid active parcel'
         );
         runHorizontalShake(detailsShakeAnim);
-      } else {
+      } else if (
+        !(
+          err?.statusCode === 400 &&
+          (err?.error === 'OrderNotEditable' ||
+            err?.message?.includes('Only PENDING_INITIALIZATION'))
+        ) &&
+        err?.message !== 'Please log in again'
+      ) {
         showToast(err?.message || 'Failed to submit order.');
       }
     } finally {
-      setIsSubmitting(false);
+      if (isMountedRef.current) {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -537,17 +559,20 @@ export const CreateOrderScreen: React.FC = () => {
                         </View>
 
                         <View className="flex-row items-center gap-1.5">
-                          {scanFailed && !missingTrackingApp && !isScanning && (
-                            <TouchableOpacity
-                              activeOpacity={0.7}
-                              onPress={handleRetryScan}
-                              className="px-2.5 py-1.5 rounded-[8px] bg-[#eff6ff]"
-                            >
-                              <Text className="text-[11.5px] font-semibold text-[#215cd4]">
-                                Retry
-                              </Text>
-                            </TouchableOpacity>
-                          )}
+                          {(scanFailed || (hasPhoto && !isOrderReady)) &&
+                            !missingTrackingApp &&
+                            !isScanning &&
+                            Boolean(orderDraft.imageUrl) && (
+                              <TouchableOpacity
+                                activeOpacity={0.7}
+                                onPress={handleRetryScan}
+                                className="px-2.5 py-1.5 rounded-[8px] bg-[#eff6ff]"
+                              >
+                                <Text className="text-[11.5px] font-semibold text-[#215cd4]">
+                                  Retry
+                                </Text>
+                              </TouchableOpacity>
+                            )}
                           <TouchableOpacity
                             activeOpacity={0.7}
                             onPress={handleUploadPress}
@@ -884,12 +909,7 @@ export const CreateOrderScreen: React.FC = () => {
             ) : null}
 
             {/* Complete Order Button */}
-            <Animated.View
-              style={{
-                transform: [{ translateX: submitShakeAnim }],
-                marginTop: 10,
-              }}
-            >
+            <View style={{ marginTop: 10 }}>
               <TouchableOpacity
                 activeOpacity={0.85}
                 onPress={handleCompleteOrder}
@@ -918,7 +938,7 @@ export const CreateOrderScreen: React.FC = () => {
                   </Text>
                 )}
               </TouchableOpacity>
-            </Animated.View>
+            </View>
           </View>
         </KeyboardAvoidingView>
       </View>
