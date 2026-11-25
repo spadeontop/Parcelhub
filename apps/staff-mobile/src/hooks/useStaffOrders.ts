@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { PaginationMeta, StaffBadgeCounts, StaffOrder, StaffTab } from '../types';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import type { OrderStatus, PaginationMeta, StaffBadgeCounts, StaffOrder, StaffTab } from '../types';
 import { staffApi, StaffApiError, type StaffQrLookupResult } from '../services/staffApi';
 import { useStaffAuth } from '../context/StaffAuthContext';
 import { ENV } from '../config/env';
-import { getStatusForTab, STAFF_TABS, staffQueryKeys } from '../query/queryClient';
+import { getStatusForTab, staffQueryKeys } from '../query/queryClient';
 
 export interface StaffOrdersPageData {
   orders: StaffOrder[];
   pagination: PaginationMeta;
+  statusCounts?: Partial<Record<OrderStatus, number>>;
 }
 
 const ITEMS_PER_PAGE = 20;
@@ -38,17 +39,25 @@ export function useStaffOrders(
 
   const isSearching = debouncedSearch.length > 0;
 
-  // Keep page 1 of all tabs warm for instant tab switching and badge counts.
+  // Fetch page 1 of all status buckets in a single forEach=true request
+  // for instant tab switching and badge counts.
   // Disable polling while Supabase Realtime is subscribed; fall back automatically on disconnect/503.
   const pollingInterval = isRealtimeSubscribed ? false : ENV.POLLING_INTERVAL_MS;
-  const tabPage1Queries = useQueries({
-    queries: STAFF_TABS.map((tab) => ({
-      queryKey: staffQueryKeys.tab(tab, 1),
-      queryFn: ({ signal }: { signal: AbortSignal }) =>
-        staffApi.getOrders(getStatusForTab(tab), ITEMS_PER_PAGE, 0, token, undefined, signal),
-      enabled: !!token,
-      refetchInterval: !isSearching && activeTab === tab && currentPage === 1 ? pollingInterval : false,
-    })),
+  const forEachPage1Query = useQuery<StaffOrdersPageData>({
+    queryKey: staffQueryKeys.forEachPage1(),
+    queryFn: ({ signal }) =>
+      staffApi.getOrders(
+        undefined,
+        ITEMS_PER_PAGE,
+        0,
+        token,
+        undefined,
+        signal,
+        undefined,
+        true
+      ),
+    enabled: !!token,
+    refetchInterval: !isSearching && currentPage === 1 ? pollingInterval : false,
   });
 
   // Separate query for pages > 1 on the active tab (prevents BUG-05 pagination races).
@@ -82,58 +91,65 @@ export function useStaffOrders(
     enabled: !!token && isSearching,
   });
 
-  const activeTabIndex = STAFF_TABS.indexOf(activeTab);
-  const activeTabPage1Query = tabPage1Queries[activeTabIndex >= 0 ? activeTabIndex : 0];
   const activeQuery = isSearching
     ? searchQueryResult
     : currentPage === 1
-      ? activeTabPage1Query
+      ? forEachPage1Query
       : pagedTabQuery;
 
-  const orders = activeQuery.data?.orders ?? [];
-  const totalCount = activeQuery.data?.pagination.totalCount ?? orders.length;
+  const forEachData = forEachPage1Query.data;
+
+  const badgeCounts: StaffBadgeCounts = useMemo(() => {
+    const counts = forEachData?.statusCounts;
+    const allOrders = forEachData?.orders ?? [];
+    const countFor = (status: OrderStatus) =>
+      counts?.[status] ?? allOrders.filter((o) => o.status === status).length;
+
+    return {
+      all: forEachData?.pagination.totalCount ?? allOrders.length,
+      ready: countFor('READY_TO_CLAIM'),
+      active: countFor('AWAITING_PARCEL'),
+      unpaid: countFor('PAYMENT_REQUIRED'),
+      claimed: countFor('CLAIMED'),
+      cancelled: countFor('CANCELLED'),
+      refunded: countFor('REFUNDED'),
+    };
+  }, [forEachData]);
+
+  const orders = useMemo(() => {
+    if (isSearching) {
+      return searchQueryResult.data?.orders ?? [];
+    }
+    if (currentPage > 1) {
+      return pagedTabQuery.data?.orders ?? [];
+    }
+    const allPage1Orders = forEachData?.orders ?? [];
+    const targetStatus = getStatusForTab(activeTab);
+    if (!targetStatus) {
+      return allPage1Orders.slice(0, ITEMS_PER_PAGE);
+    }
+    return allPage1Orders.filter((o) => o.status === targetStatus);
+  }, [isSearching, searchQueryResult.data, currentPage, pagedTabQuery.data, forEachData, activeTab]);
+
+  const totalCount = useMemo(() => {
+    if (isSearching) {
+      return searchQueryResult.data?.pagination.totalCount ?? orders.length;
+    }
+    if (currentPage > 1) {
+      return pagedTabQuery.data?.pagination.totalCount ?? orders.length;
+    }
+    return badgeCounts[activeTab] ?? orders.length;
+  }, [isSearching, searchQueryResult.data, currentPage, pagedTabQuery.data, badgeCounts, activeTab, orders.length]);
+
   const isLoadingOrders = activeQuery.isPending && !activeQuery.data;
-
-  const tab0Data = tabPage1Queries[0]?.data;
-  const tab1Data = tabPage1Queries[1]?.data;
-  const tab2Data = tabPage1Queries[2]?.data;
-  const tab3Data = tabPage1Queries[3]?.data;
-  const tab4Data = tabPage1Queries[4]?.data;
-  const tab5Data = tabPage1Queries[5]?.data;
-  const tab6Data = tabPage1Queries[6]?.data;
-
-  const badgeCounts: StaffBadgeCounts = useMemo(
-    () => ({
-      all: tab0Data?.pagination.totalCount ?? 0,
-      ready: tab1Data?.pagination.totalCount ?? 0,
-      active: tab2Data?.pagination.totalCount ?? 0,
-      unpaid: tab3Data?.pagination.totalCount ?? 0,
-      claimed: tab4Data?.pagination.totalCount ?? 0,
-      cancelled: tab5Data?.pagination.totalCount ?? 0,
-      refunded: tab6Data?.pagination.totalCount ?? 0,
-    }),
-    [tab0Data, tab1Data, tab2Data, tab3Data, tab4Data, tab5Data, tab6Data]
-  );
 
   const allCachedOrders = useMemo(() => {
     const map = new Map<string, StaffOrder>();
-    for (const data of [tab0Data, tab1Data, tab2Data, tab3Data, tab4Data, tab5Data, tab6Data]) {
-      data?.orders.forEach((o) => map.set(o.id, o));
-    }
+    forEachData?.orders.forEach((o) => map.set(o.id, o));
     pagedTabQuery.data?.orders.forEach((o) => map.set(o.id, o));
     searchQueryResult.data?.orders.forEach((o) => map.set(o.id, o));
     return Array.from(map.values());
-  }, [
-    tab0Data,
-    tab1Data,
-    tab2Data,
-    tab3Data,
-    tab4Data,
-    tab5Data,
-    tab6Data,
-    pagedTabQuery.data,
-    searchQueryResult.data,
-  ]);
+  }, [forEachData, pagedTabQuery.data, searchQueryResult.data]);
 
   const refreshOrders = useCallback(async () => {
     if (!token) return;

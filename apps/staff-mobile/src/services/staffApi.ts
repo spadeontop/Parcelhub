@@ -158,17 +158,27 @@ export const staffApi = {
     explicitToken?: string,
     search?: string,
     signal?: AbortSignal,
-    refundEligible?: boolean
-  ): Promise<{ orders: StaffOrder[]; pagination: PaginationMeta }> {
+    refundEligible?: boolean,
+    forEach?: boolean
+  ): Promise<{
+    orders: StaffOrder[];
+    pagination: PaginationMeta;
+    statusCounts?: Partial<Record<OrderStatus, number>>;
+  }> {
     const queryParams = new URLSearchParams();
     if (status) queryParams.append('status', status);
     if (limit !== undefined) queryParams.append('limit', limit.toString());
     if (offset !== undefined) queryParams.append('offset', offset.toString());
     if (search && search.trim()) queryParams.append('search', search.trim());
     if (refundEligible !== undefined) queryParams.append('refundEligible', String(refundEligible));
+    if (forEach) queryParams.append('forEach', 'true');
 
     const qs = queryParams.toString() ? `?${queryParams.toString()}` : '';
-    const data = await staffFetch<{ orders?: any[]; pagination?: Partial<PaginationMeta> }>(
+    const data = await staffFetch<{
+      orders?: any[];
+      pagination?: Partial<PaginationMeta>;
+      statusCounts?: Partial<Record<OrderStatus, number>>;
+    }>(
       `/api/v1/staff/orders${qs}`,
       {
         method: 'GET',
@@ -188,6 +198,7 @@ export const staffApi = {
         offset: data?.pagination?.offset ?? offset ?? 0,
         hasMore: Boolean(data?.pagination?.hasMore),
       },
+      ...(data?.statusCounts ? { statusCounts: data.statusCounts } : {}),
     };
   },
 
