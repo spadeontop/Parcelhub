@@ -92,6 +92,8 @@ export function useStaffOrders(activeTab: StaffTab, currentPage: number, searchQ
   const tab2Data = tabPage1Queries[2]?.data;
   const tab3Data = tabPage1Queries[3]?.data;
   const tab4Data = tabPage1Queries[4]?.data;
+  const tab5Data = tabPage1Queries[5]?.data;
+  const tab6Data = tabPage1Queries[6]?.data;
 
   const badgeCounts: StaffBadgeCounts = useMemo(
     () => ({
@@ -100,19 +102,31 @@ export function useStaffOrders(activeTab: StaffTab, currentPage: number, searchQ
       active: tab2Data?.pagination.totalCount ?? 0,
       unpaid: tab3Data?.pagination.totalCount ?? 0,
       claimed: tab4Data?.pagination.totalCount ?? 0,
+      cancelled: tab5Data?.pagination.totalCount ?? 0,
+      refunded: tab6Data?.pagination.totalCount ?? 0,
     }),
-    [tab0Data, tab1Data, tab2Data, tab3Data, tab4Data]
+    [tab0Data, tab1Data, tab2Data, tab3Data, tab4Data, tab5Data, tab6Data]
   );
 
   const allCachedOrders = useMemo(() => {
     const map = new Map<string, StaffOrder>();
-    for (const data of [tab0Data, tab1Data, tab2Data, tab3Data, tab4Data]) {
+    for (const data of [tab0Data, tab1Data, tab2Data, tab3Data, tab4Data, tab5Data, tab6Data]) {
       data?.orders.forEach((o) => map.set(o.id, o));
     }
     pagedTabQuery.data?.orders.forEach((o) => map.set(o.id, o));
     searchQueryResult.data?.orders.forEach((o) => map.set(o.id, o));
     return Array.from(map.values());
-  }, [tab0Data, tab1Data, tab2Data, tab3Data, tab4Data, pagedTabQuery.data, searchQueryResult.data]);
+  }, [
+    tab0Data,
+    tab1Data,
+    tab2Data,
+    tab3Data,
+    tab4Data,
+    tab5Data,
+    tab6Data,
+    pagedTabQuery.data,
+    searchQueryResult.data,
+  ]);
 
   const refreshOrders = useCallback(async () => {
     if (!token) return;

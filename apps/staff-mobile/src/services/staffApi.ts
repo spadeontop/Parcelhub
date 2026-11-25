@@ -9,6 +9,7 @@ import {
   StaffOrder,
   StaffOrderDetailResponse,
   StaffPayCourierResponse,
+  StaffRefundOrderResponse,
 } from '../types';
 import { ENV } from '../config/env';
 import { StaffApiError, staffFetch } from './apiClient';
@@ -45,6 +46,24 @@ function mapSummaryOrder(o: any): StaffOrder {
     statusTimeline: o.statusTimeline,
     proofImageUrl: o.proofImageUrl || o.imageUrl,
     notes: o.notes,
+    cancelledBy: o.cancelledBy ?? null,
+    cancelledByRole: o.cancelledByRole ?? null,
+    cancelReasonCode: o.cancelReasonCode ?? null,
+    cancelReason: o.cancelReason ?? null,
+    cancelledAt: o.cancelledAt ?? null,
+    isRefundEligible: o.isRefundEligible,
+    refundAmount: typeof o.refundAmount === 'number' ? o.refundAmount : undefined,
+    refundRequested: o.refundRequested,
+    refundInitiatedAt: o.refundInitiatedAt ?? null,
+    refundExpiresAt: o.refundExpiresAt ?? null,
+    isRefundActive: o.isRefundActive,
+    refundRemainingSeconds: o.refundRemainingSeconds,
+    refundReasonCode: o.refundReasonCode ?? null,
+    refundReason: o.refundReason ?? null,
+    isRefunded: o.isRefunded,
+    refundedBy: o.refundedBy ?? null,
+    refundedByName: o.refundedByName,
+    refundedAt: o.refundedAt ?? null,
   };
 }
 
@@ -133,13 +152,15 @@ export const staffApi = {
     offset?: number,
     explicitToken?: string,
     search?: string,
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    refundEligible?: boolean
   ): Promise<{ orders: StaffOrder[]; pagination: PaginationMeta }> {
     const queryParams = new URLSearchParams();
     if (status) queryParams.append('status', status);
     if (limit !== undefined) queryParams.append('limit', limit.toString());
     if (offset !== undefined) queryParams.append('offset', offset.toString());
     if (search && search.trim()) queryParams.append('search', search.trim());
+    if (refundEligible !== undefined) queryParams.append('refundEligible', String(refundEligible));
 
     const qs = queryParams.toString() ? `?${queryParams.toString()}` : '';
     const data = await staffFetch<{ orders?: any[]; pagination?: Partial<PaginationMeta> }>(
@@ -230,6 +251,24 @@ export const staffApi = {
       createdAt: o.createdAt || o.statusTimeline?.[0]?.timestamp || o.timestamp,
       statusTimeline: o.statusTimeline,
       proofImageUrl,
+      cancelledBy: o.cancelledBy ?? null,
+      cancelledByRole: o.cancelledByRole ?? null,
+      cancelReasonCode: o.cancelReasonCode ?? null,
+      cancelReason: o.cancelReason ?? null,
+      cancelledAt: o.cancelledAt ?? null,
+      isRefundEligible: o.isRefundEligible,
+      refundAmount: typeof o.refundAmount === 'number' ? o.refundAmount : undefined,
+      refundRequested: o.refundRequested,
+      refundInitiatedAt: o.refundInitiatedAt ?? null,
+      refundExpiresAt: o.refundExpiresAt ?? null,
+      isRefundActive: o.isRefundActive,
+      refundRemainingSeconds: o.refundRemainingSeconds,
+      refundReasonCode: o.refundReasonCode ?? null,
+      refundReason: o.refundReason ?? null,
+      isRefunded: o.isRefunded,
+      refundedBy: o.refundedBy ?? null,
+      refundedByName: o.refundedByName,
+      refundedAt: o.refundedAt ?? null,
     };
   },
 
@@ -277,6 +316,18 @@ export const staffApi = {
         token: explicitToken,
         body: {},
         fallbackErrorMessage: 'Claim failed',
+      }
+    );
+  },
+
+  refundOrder(orderId: string, explicitToken?: string) {
+    return staffFetch<StaffRefundOrderResponse>(
+      `/api/v1/staff/orders/${encodeURIComponent(orderId)}/refund`,
+      {
+        method: 'POST',
+        token: explicitToken,
+        body: {},
+        fallbackErrorMessage: 'Refund failed',
       }
     );
   },

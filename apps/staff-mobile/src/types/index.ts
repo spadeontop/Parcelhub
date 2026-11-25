@@ -1,4 +1,6 @@
 import type {
+  CancelReasonCode,
+  OrderActorRole,
   OrderStatus,
   PaginationMeta,
   StaffActivateOrderRes,
@@ -8,12 +10,13 @@ import type {
   StaffLoginRes,
   StaffOrderDetail,
   StaffPayCourierRes,
+  StaffRefundOrderRes,
   StatusTimelineEntry,
 } from '@parcelhub/contracts';
 
-export type { OrderStatus, PaginationMeta, StatusTimelineEntry };
+export type { CancelReasonCode, OrderActorRole, OrderStatus, PaginationMeta, StatusTimelineEntry };
 
-export type StaffTab = 'all' | 'ready' | 'active' | 'unpaid' | 'claimed';
+export type StaffTab = 'all' | 'ready' | 'active' | 'unpaid' | 'claimed' | 'cancelled' | 'refunded';
 
 export interface StaffBadgeCounts {
   all?: number;
@@ -21,6 +24,8 @@ export interface StaffBadgeCounts {
   ready: number;
   unpaid: number;
   claimed: number;
+  cancelled: number;
+  refunded: number;
 }
 
 export interface StaffUser {
@@ -57,6 +62,24 @@ export interface StaffOrder {
   statusTimeline?: readonly StatusTimelineEntry[];
   proofImageUrl?: string;
   notes?: string;
+  cancelledBy?: string | null;
+  cancelledByRole?: OrderActorRole | null;
+  cancelReasonCode?: CancelReasonCode | null;
+  cancelReason?: string | null;
+  cancelledAt?: string | null;
+  isRefundEligible?: boolean;
+  refundAmount?: number;
+  refundRequested?: boolean;
+  refundInitiatedAt?: string | null;
+  refundExpiresAt?: string | null;
+  isRefundActive?: boolean;
+  refundRemainingSeconds?: number;
+  refundReasonCode?: CancelReasonCode | null;
+  refundReason?: string | null;
+  isRefunded?: boolean;
+  refundedBy?: string | null;
+  refundedByName?: string;
+  refundedAt?: string | null;
 }
 
 export type StaffLoginResponse = StaffLoginRes;
@@ -71,6 +94,7 @@ export type StaffActivateOrderResponse = StaffActivateOrderRes;
 export type StaffPayCourierResponse = StaffPayCourierRes;
 export type StaffAttachPhotoResponse = StaffAttachPhotoRes;
 export type StaffClaimOrderResponse = StaffClaimOrderRes;
+export type StaffRefundOrderResponse = StaffRefundOrderRes;
 
 export interface JustUpdatedOrderInfo {
   orderId: string;
