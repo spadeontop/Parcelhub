@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { and, desc, eq, ne } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, gt, lte, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { OrderRow, orders } from "@/db/schema";
 import { authenticateCustomerRequest, customerAuthErrorResponse } from "@/app/lib/v1/auth";
@@ -44,6 +44,7 @@ export async function GET(request: NextRequest) {
     // ---------------------------------------------------------
     const { searchParams } = new URL(request.url);
     const typeParam = searchParams.get("type");
+    const forEach = searchParams.get("forEach") === "true";
     let statusFilter: OrderStatus | undefined;
 
     if (typeParam) {
@@ -60,19 +61,49 @@ export async function GET(request: NextRequest) {
     //    Query orders strictly for this customer, omitting PENDING_INITIALIZATION
     //    drafts at the DB level, applying optional status filter, sorting by
     //    timestamp DESC, paginated by limit & offset.
+    //    When forEach=true (and no single status filter), apply limit & offset
+    //    independently per status bucket and return a flat timestamp-DESC list.
     // ---------------------------------------------------------
-    const rows = await db.query.orders.findMany({
-      where: statusFilter
-        ? and(eq(orders.customerId, auth.session.userId), eq(orders.status, statusFilter))
-        : and(
+    let rows: Omit<OrderRow, "proofImageUrl">[];
+
+    if (forEach && !statusFilter) {
+      const { proofImageUrl: _proofImageUrl, ...nonImageColumns } = getTableColumns(orders);
+      void _proofImageUrl;
+      const ranked = db
+        .select({
+          ...nonImageColumns,
+          rn: sql<number>`row_number() over (partition by ${orders.status} order by ${orders.timestamp} desc)`.as(
+            "rn"
+          ),
+        })
+        .from(orders)
+        .where(
+          and(
             eq(orders.customerId, auth.session.userId),
             ne(orders.status, "PENDING_INITIALIZATION")
-          ),
-      orderBy: [desc(orders.timestamp)],
-      limit,
-      offset,
-      columns: ORDER_NON_IMAGE_COLUMNS,
-    });
+          )
+        )
+        .as("ranked_orders");
+
+      rows = await db
+        .select()
+        .from(ranked)
+        .where(and(gt(ranked.rn, offset), lte(ranked.rn, offset + limit)))
+        .orderBy(desc(ranked.timestamp));
+    } else {
+      rows = await db.query.orders.findMany({
+        where: statusFilter
+          ? and(eq(orders.customerId, auth.session.userId), eq(orders.status, statusFilter))
+          : and(
+              eq(orders.customerId, auth.session.userId),
+              ne(orders.status, "PENDING_INITIALIZATION")
+            ),
+        orderBy: [desc(orders.timestamp)],
+        limit,
+        offset,
+        columns: ORDER_NON_IMAGE_COLUMNS,
+      });
+    }
 
     const nowMs = Date.now();
 

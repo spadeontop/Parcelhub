@@ -107,7 +107,7 @@
 
 ### `GET /api/customer/orders`
 - **Headers**: `Authorization: Bearer <authToken>`
-- **Query**: `type` (optional string), `limit` (optional integer)
+- **Query**: `type` (optional string), `limit` (optional integer), `offset` (optional integer), `forEach` (optional boolean, `"true"` applies `limit` & `offset` independently per order status bucket)
 - **Response**:
 ```json
 {
@@ -227,7 +227,7 @@
 
 ### `GET /api/staff/orders`
 - **Headers**: `Authorization: Bearer <authToken>`
-- **Query**: `status` (optional string), `limit` (optional integer)
+- **Query**: `status` (optional string), `search` (optional string), `refundEligible` (optional boolean), `limit` (optional integer), `offset` (optional integer), `forEach` (optional boolean, `"true"` applies `limit` & `offset` independently per order status bucket)
 - **Response**:
 ```json
 {

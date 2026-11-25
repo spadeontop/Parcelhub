@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { desc, eq, ne, count, and, or, ilike, sql, gt, gte, isNotNull } from "drizzle-orm";
+import { desc, eq, ne, count, and, or, ilike, sql, gt, gte, lte, isNotNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/db";
 import { orders, staff } from "@/db/schema";
@@ -41,6 +41,7 @@ export async function GET(request: NextRequest) {
     const rawStatus = searchParams.get("status");
     const rawSearch = searchParams.get("search")?.trim();
     const refundEligibleOnly = searchParams.get("refundEligible") === "true";
+    const forEach = searchParams.get("forEach") === "true";
 
     if (rawStatus && !VALID_ORDER_STATUSES.includes(rawStatus as OrderStatus)) {
       return jsonError(
@@ -81,53 +82,89 @@ export async function GET(request: NextRequest) {
 
     const refundedByStaff = alias(staff, "refunded_by_staff");
 
-    const dbOrders = await db
-      .select({
-        id: orders.id,
-        ticketCode: orders.ticketCode,
-        trackingId: orders.trackingId,
-        recipientName: orders.recipientName,
-        price: orders.price,
-        amountReceived: orders.amountReceived,
-        change: orders.change,
-        status: orders.status,
-        statusTimeline: orders.statusTimeline,
-        modifiedBy: orders.modifiedBy,
-        claimRequested: orders.claimRequested,
-        claimInitiatedAt: orders.claimInitiatedAt,
-        claimExpiresAt: orders.claimExpiresAt,
-        courierPaid: orders.courierPaid,
-        courierPaidBy: orders.courierPaidBy,
-        courierPaidAt: orders.courierPaidAt,
-        activatedAt: orders.activatedAt,
-        cancelledBy: orders.cancelledBy,
-        cancelledByRole: orders.cancelledByRole,
-        cancelReasonCode: orders.cancelReasonCode,
-        cancelReason: orders.cancelReason,
-        cancelledAt: orders.cancelledAt,
-        refundRequested: orders.refundRequested,
-        refundInitiatedAt: orders.refundInitiatedAt,
-        refundExpiresAt: orders.refundExpiresAt,
-        refundReasonCode: orders.refundReasonCode,
-        refundReason: orders.refundReason,
-        isRefunded: orders.isRefunded,
-        refundAmount: orders.refundAmount,
-        refundedBy: orders.refundedBy,
-        refundedAt: orders.refundedAt,
-        timestamp: orders.timestamp,
-        courierPaidByFirstName: staff.firstName,
-        courierPaidByLastName: staff.lastName,
-        refundedByFirstName: refundedByStaff.firstName,
-        refundedByLastName: refundedByStaff.lastName,
-        totalCount: sql<number>`count(*) over()`,
-      })
-      .from(orders)
-      .leftJoin(staff, eq(orders.courierPaidBy, staff.id))
-      .leftJoin(refundedByStaff, eq(orders.refundedBy, refundedByStaff.id))
-      .where(whereClause)
-      .orderBy(desc(orders.timestamp))
-      .limit(limit)
-      .offset(offset);
+    const baseSelect = {
+      id: orders.id,
+      ticketCode: orders.ticketCode,
+      trackingId: orders.trackingId,
+      recipientName: orders.recipientName,
+      price: orders.price,
+      amountReceived: orders.amountReceived,
+      change: orders.change,
+      status: orders.status,
+      statusTimeline: orders.statusTimeline,
+      modifiedBy: orders.modifiedBy,
+      claimRequested: orders.claimRequested,
+      claimInitiatedAt: orders.claimInitiatedAt,
+      claimExpiresAt: orders.claimExpiresAt,
+      courierPaid: orders.courierPaid,
+      courierPaidBy: orders.courierPaidBy,
+      courierPaidAt: orders.courierPaidAt,
+      activatedAt: orders.activatedAt,
+      cancelledBy: orders.cancelledBy,
+      cancelledByRole: orders.cancelledByRole,
+      cancelReasonCode: orders.cancelReasonCode,
+      cancelReason: orders.cancelReason,
+      cancelledAt: orders.cancelledAt,
+      refundRequested: orders.refundRequested,
+      refundInitiatedAt: orders.refundInitiatedAt,
+      refundExpiresAt: orders.refundExpiresAt,
+      refundReasonCode: orders.refundReasonCode,
+      refundReason: orders.refundReason,
+      isRefunded: orders.isRefunded,
+      refundAmount: orders.refundAmount,
+      refundedBy: orders.refundedBy,
+      refundedAt: orders.refundedAt,
+      timestamp: orders.timestamp,
+      courierPaidByFirstName: staff.firstName,
+      courierPaidByLastName: staff.lastName,
+      refundedByFirstName: refundedByStaff.firstName,
+      refundedByLastName: refundedByStaff.lastName,
+      totalCount: sql<number>`count(*) over()`.as("total_count"),
+    };
+
+    const useForEachBuckets = forEach && !statusFilter;
+
+    let dbOrders;
+    let hasMore = false;
+
+    if (useForEachBuckets) {
+      const ranked = db
+        .select({
+          ...baseSelect,
+          rn: sql<number>`row_number() over (partition by ${orders.status} order by ${orders.timestamp} desc)`.as(
+            "rn"
+          ),
+          bucketCount: sql<number>`count(*) over (partition by ${orders.status})`.as(
+            "bucket_count"
+          ),
+        })
+        .from(orders)
+        .leftJoin(staff, eq(orders.courierPaidBy, staff.id))
+        .leftJoin(refundedByStaff, eq(orders.refundedBy, refundedByStaff.id))
+        .where(whereClause)
+        .as("ranked_orders");
+
+      const bucketedOrders = await db
+        .select()
+        .from(ranked)
+        .where(and(gt(ranked.rn, offset), lte(ranked.rn, offset + limit)))
+        .orderBy(desc(ranked.timestamp));
+
+      hasMore = bucketedOrders.some(
+        (o: (typeof bucketedOrders)[number]) => Number(o.bucketCount) > offset + limit
+      );
+      dbOrders = bucketedOrders;
+    } else {
+      dbOrders = await db
+        .select(baseSelect)
+        .from(orders)
+        .leftJoin(staff, eq(orders.courierPaidBy, staff.id))
+        .leftJoin(refundedByStaff, eq(orders.refundedBy, refundedByStaff.id))
+        .where(whereClause)
+        .orderBy(desc(orders.timestamp))
+        .limit(limit)
+        .offset(offset);
+    }
 
     let totalCount = Number(dbOrders[0]?.totalCount || 0);
     if (dbOrders.length === 0 && offset > 0) {
@@ -179,7 +216,7 @@ export async function GET(request: NextRequest) {
         totalCount,
         limit,
         offset,
-        hasMore: offset + formattedOrders.length < totalCount,
+        hasMore: useForEachBuckets ? hasMore : offset + formattedOrders.length < totalCount,
       },
     };
 
