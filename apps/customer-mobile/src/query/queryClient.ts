@@ -1,7 +1,7 @@
 import { AppState, AppStateStatus, Platform } from 'react-native';
 import { QueryClient, focusManager } from '@tanstack/react-query';
 import { V1ApiError } from '../services/apiClient';
-import { CustomerListOrdersQueryParams } from '../types/api';
+import { CustomerListOrdersQueryParams, OrderStatus } from '../types/api';
 
 export const customerQueryKeys = {
   all: ['customer'] as const,
@@ -9,6 +9,8 @@ export const customerQueryKeys = {
   orders: () => [...customerQueryKeys.all, 'orders'] as const,
   ordersList: (query?: CustomerListOrdersQueryParams) =>
     [...customerQueryKeys.orders(), query ?? 'all'] as const,
+  ordersInfinite: (type?: OrderStatus) =>
+    [...customerQueryKeys.orders(), 'infinite', type ?? 'ALL'] as const,
   orderDetail: (idOrCode: string) =>
     [...customerQueryKeys.all, 'order', idOrCode] as const,
 };

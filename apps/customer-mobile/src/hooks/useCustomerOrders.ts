@@ -12,10 +12,14 @@ import {
   CustomerOrderDetail,
   CustomerOrderSummary,
   CustomerListOrdersQueryParams,
+  OrderStatus,
 } from '../types/api';
 import { orderApi } from '../services/orderApi';
 import { customerQueryKeys } from '../query/queryClient';
-import { useCustomerOrdersQuery } from '../query/useCustomerQueries';
+import {
+  useCustomerInfiniteOrdersQuery,
+  useCustomerOrdersQuery,
+} from '../query/useCustomerQueries';
 import { v1Storage } from '../utils/storage';
 import { useAuthSession } from '../context/AuthSessionContext';
 import { useNavigationUi } from '../context/NavigationAndUiContext';
@@ -65,6 +69,41 @@ export const useCustomerOrders = () => {
     isLoading: ordersQuery.isLoading,
     isFetching: ordersQuery.isFetching,
     refetchOrders,
+  };
+};
+
+/**
+ * Paginated infinite-scroll orders list (20 items per page) for TransactionsScreen.
+ */
+export const useInfiniteCustomerOrders = (type?: OrderStatus) => {
+  const { authToken } = useAuthSession();
+  const query = useCustomerInfiniteOrdersQuery(authToken, type);
+
+  const orders = useMemo<readonly CustomerOrderSummary[]>(() => {
+    const pages = query.data?.pages ?? [];
+    const seen = new Set<string>();
+    const deduped: CustomerOrderSummary[] = [];
+
+    for (const page of pages) {
+      for (const order of page) {
+        if (!seen.has(order.id)) {
+          seen.add(order.id);
+          deduped.push(order);
+        }
+      }
+    }
+
+    return deduped;
+  }, [query.data?.pages]);
+
+  return {
+    orders,
+    isLoading: query.isLoading,
+    isFetching: query.isFetching,
+    isFetchingNextPage: query.isFetchingNextPage,
+    hasNextPage: Boolean(query.hasNextPage),
+    fetchNextPage: query.fetchNextPage,
+    refetch: query.refetch,
   };
 };
 

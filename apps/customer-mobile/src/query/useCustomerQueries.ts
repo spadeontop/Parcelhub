@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { customerApi } from '../services/customerApi';
 import { orderApi } from '../services/orderApi';
 import {
@@ -7,8 +7,11 @@ import {
   CustomerOrderSummary,
   CustomerProfile,
   JWTToken,
+  OrderStatus,
 } from '../types/api';
 import { customerQueryKeys, queryClient } from './queryClient';
+
+export const CUSTOMER_ORDERS_PAGE_SIZE = 20;
 
 export function useCustomerProfileQuery(authToken: JWTToken | null) {
   return useQuery<CustomerProfile>({
@@ -42,6 +45,35 @@ export function useCustomerOrdersQuery(
     },
     enabled: Boolean(authToken),
     refetchInterval: options?.refetchInterval ?? false,
+  });
+}
+
+export function useCustomerInfiniteOrdersQuery(
+  authToken: JWTToken | null,
+  type?: OrderStatus
+) {
+  return useInfiniteQuery<readonly CustomerOrderSummary[]>({
+    queryKey: customerQueryKeys.ordersInfinite(type),
+    initialPageParam: 0,
+    queryFn: async ({ pageParam }) => {
+      if (!authToken) {
+        throw new Error('Missing auth token');
+      }
+      const offset = typeof pageParam === 'number' ? pageParam : 0;
+      const res = await orderApi.listOrders(authToken, {
+        type,
+        limit: CUSTOMER_ORDERS_PAGE_SIZE,
+        offset,
+      });
+      return res.orders || [];
+    },
+    getNextPageParam: (lastPage, allPages) => {
+      if (lastPage.length < CUSTOMER_ORDERS_PAGE_SIZE) {
+        return undefined;
+      }
+      return allPages.reduce((sum, page) => sum + page.length, 0);
+    },
+    enabled: Boolean(authToken),
   });
 }
 
