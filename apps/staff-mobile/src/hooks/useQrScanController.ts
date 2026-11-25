@@ -9,10 +9,11 @@ import {
   Dimensions,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { Camera, scanFromURLAsync } from 'expo-camera';
+import { Camera } from 'expo-camera';
 import type { BarcodeType } from 'expo-camera';
 import type { StaffQrLookupResult } from '../services/staffApi';
 import type { StaffOrder } from '../types';
+import { scanQrImageFromAsset } from '../utils/qrImageScanner';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height || 800;
 export const QR_TYPES: BarcodeType[] = ['qr'];
@@ -252,10 +253,9 @@ export function useQrScanController({
         return;
       }
 
-      const barcodes = await scanFromURLAsync(selection.assets[0].uri, QR_TYPES);
+      const codes = await scanQrImageFromAsset(selection.assets[0], QR_TYPES, attempt.signal);
       if (attempt.signal.aborted) return;
 
-      const codes = [...new Set(barcodes.map(({ data }) => data.trim()).filter(Boolean))];
       if (codes.length === 1) {
         await searchScannedCode(codes[0], attempt);
         return;
