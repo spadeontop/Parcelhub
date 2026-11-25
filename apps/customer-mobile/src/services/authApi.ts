@@ -11,6 +11,12 @@ import {
   CustomerVerifyMpinRes,
   CustomerRefreshTokenReq,
   CustomerRefreshTokenRes,
+  CustomerForgotPasswordReq,
+  CustomerForgotPasswordRes,
+  CustomerVerifyPasswordResetOtpReq,
+  CustomerVerifyPasswordResetOtpRes,
+  CustomerResetPasswordReq,
+  CustomerResetPasswordRes,
   CustomerForgotMpinReq,
   CustomerForgotMpinRes,
   CustomerVerifyMpinResetOtpReq,
@@ -136,6 +142,49 @@ export const authApi = {
     }
 
     return res;
+  },
+
+  /**
+   * POST /api/v1/customer/forgot-password
+   * Requests a 6-digit password reset OTP for the given email
+   */
+  async forgotPassword(payload: CustomerForgotPasswordReq): Promise<CustomerForgotPasswordRes> {
+    return v1Fetch<CustomerForgotPasswordRes>('/api/v1/customer/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({
+        email: payload.email.trim().toLowerCase(),
+      }),
+    });
+  },
+
+  /**
+   * POST /api/v1/customer/forgot-password/verify
+   * Verifies the 6-digit password reset OTP and returns a short-lived resetToken
+   */
+  async verifyPasswordResetOtp(
+    payload: CustomerVerifyPasswordResetOtpReq
+  ): Promise<CustomerVerifyPasswordResetOtpRes> {
+    return v1Fetch<CustomerVerifyPasswordResetOtpRes>('/api/v1/customer/forgot-password/verify', {
+      method: 'POST',
+      body: JSON.stringify({
+        email: payload.email.trim().toLowerCase(),
+        code: payload.code.trim(),
+      }),
+    });
+  },
+
+  /**
+   * POST /api/v1/customer/forgot-password/reset
+   * Resets the customer password using the verified resetToken
+   */
+  async resetPassword(payload: CustomerResetPasswordReq): Promise<CustomerResetPasswordRes> {
+    return v1Fetch<CustomerResetPasswordRes>('/api/v1/customer/forgot-password/reset', {
+      method: 'POST',
+      body: JSON.stringify({
+        resetToken: payload.resetToken,
+        newPassword: payload.newPassword,
+      }),
+    });
   },
 
   /**

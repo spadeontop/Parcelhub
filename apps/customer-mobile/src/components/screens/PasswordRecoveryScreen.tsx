@@ -5,6 +5,7 @@ import { FloatingInput } from '../common/FloatingInput';
 import { FormCardHeader } from '../common/FormCardHeader';
 import { PasswordRequirements } from '../common/PasswordRequirements';
 import { getPasswordRequirements } from '../../utils/authValidation';
+import { authApi } from '../../services/authApi';
 import { AuthSheetLayout } from '../layout/AuthSheetLayout';
 import { RecoveryFlow, type RecoveryCopy } from './RecoveryFlow';
 
@@ -23,12 +24,29 @@ const copy: RecoveryCopy = {
 };
 
 export function PasswordRecoveryScreen({ onSignIn }: { onSignIn: () => void }) {
-  return <RecoveryFlow copy={copy} onExit={onSignIn} renderReset={(actions) => <PasswordStep {...actions} />} />;
+  return (
+    <RecoveryFlow
+      copy={copy}
+      onExit={onSignIn}
+      onRequestCode={(email) => authApi.forgotPassword({ email })}
+      onVerifyCode={(email, code) => authApi.verifyPasswordResetOtp({ email, code })}
+      renderReset={(actions) => <PasswordStep {...actions} />}
+    />
+  );
 }
 
-function PasswordStep({ onBack, onComplete }: { onBack: () => void; onComplete: () => void }) {
+function PasswordStep({
+  resetToken,
+  onBack,
+  onComplete,
+}: {
+  resetToken: string;
+  onBack: () => void;
+  onComplete: () => void;
+}) {
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<{ field: 'password' | 'confirmation'; message: string } | null>(null);
 
   useEffect(() => {
@@ -39,7 +57,8 @@ function PasswordStep({ onBack, onComplete }: { onBack: () => void; onComplete: 
     return () => subscription.remove();
   }, [onBack]);
 
-  const updatePassword = () => {
+  const updatePassword = async () => {
+    if (isSubmitting) return;
     if (!Object.values(getPasswordRequirements(password)).every(Boolean)) {
       setError({ field: 'password', message: 'Use at least 8 characters with uppercase and lowercase letters, a number, and a symbol.' });
       return;
@@ -49,7 +68,19 @@ function PasswordStep({ onBack, onComplete }: { onBack: () => void; onComplete: 
       return;
     }
 
-    onComplete();
+    setError(null);
+    setIsSubmitting(true);
+    try {
+      await authApi.resetPassword({ resetToken, newPassword: password });
+      onComplete();
+    } catch (err) {
+      setError({
+        field: 'confirmation',
+        message: err instanceof Error ? err.message : 'Unable to update password. Please try again.',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -89,7 +120,7 @@ function PasswordStep({ onBack, onComplete }: { onBack: () => void; onComplete: 
           />
         </View>
         <View style={styles.passwordAction}>
-          <AuthButton label="Update Password" onPress={updatePassword} />
+          <AuthButton label="Update Password" onPress={updatePassword} isLoading={isSubmitting} />
         </View>
       </View>
     </AuthSheetLayout>

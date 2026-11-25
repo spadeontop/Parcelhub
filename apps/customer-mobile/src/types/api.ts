@@ -36,6 +36,11 @@ export type CustomerApiRoutes =
   // Screen: MpinLoginScreen (4-Digit MPIN Authorization)
   | readonly ["POST", "/api/v1/customer/mpin"]
 
+  // Screen: PasswordRecoveryScreen (Forgot Password OTP & Reset)
+  | readonly ["POST", "/api/v1/customer/forgot-password"]
+  | readonly ["POST", "/api/v1/customer/forgot-password/verify"]
+  | readonly ["POST", "/api/v1/customer/forgot-password/reset"]
+
   // Screen: MpinRecoveryScreen (Forgot MPIN OTP & Reset)
   | readonly ["POST", "/api/v1/customer/forgot-mpin"]
   | readonly ["POST", "/api/v1/customer/forgot-mpin/verify"]
