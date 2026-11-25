@@ -27,6 +27,12 @@ export interface ConfirmationSubmitSectionProps {
   onValidate?: () => boolean;
   /** Loading state indicator */
   isLoading?: boolean;
+  /** Visually mutes checkbox & button while keeping both tappable via onLockedPress */
+  isLocked?: boolean;
+  /** Called when checkbox or submit button is pressed while isLocked is true */
+  onLockedPress?: () => void;
+  /** When true, stops before highlighting the checkbox if onValidate returns false */
+  validateBeforeCheck?: boolean;
   /** Optional container class or style */
   className?: string;
   /** Primary button theme color (defaults to #215cd4) */
@@ -44,6 +50,9 @@ export const ConfirmationSubmitSection: React.FC<ConfirmationSubmitSectionProps>
   onSubmit,
   onValidate,
   isLoading = false,
+  isLocked = false,
+  onLockedPress,
+  validateBeforeCheck = false,
   className = '',
   themeColor = '#215cd4',
   buttonColor,
@@ -56,12 +65,12 @@ export const ConfirmationSubmitSection: React.FC<ConfirmationSubmitSectionProps>
   // Horizontal shake animation value
   const shakeAnim = useRef(new Animated.Value(0)).current;
 
-  // Clear error whenever checked state becomes true
+  // Clear error whenever checked state becomes true or section becomes locked
   useEffect(() => {
-    if (isChecked && hasError) {
+    if ((isChecked || isLocked) && hasError) {
       setHasError(false);
     }
-  }, [isChecked, hasError]);
+  }, [isChecked, isLocked, hasError]);
 
   const triggerShake = () => {
     setHasError(true);
@@ -78,6 +87,10 @@ export const ConfirmationSubmitSection: React.FC<ConfirmationSubmitSectionProps>
 
   const handleToggle = () => {
     if (isLoading) return;
+    if (isLocked) {
+      onLockedPress?.();
+      return;
+    }
     const nextVal = !isChecked;
     if (controlledChecked === undefined) {
       setInternalChecked(nextVal);
@@ -89,10 +102,18 @@ export const ConfirmationSubmitSection: React.FC<ConfirmationSubmitSectionProps>
 
   const handlePressSubmit = () => {
     if (isLoading) return;
+    if (isLocked) {
+      onLockedPress?.();
+      return;
+    }
 
     let isFormValid = true;
     if (onValidate) {
       isFormValid = onValidate();
+    }
+
+    if (validateBeforeCheck && !isFormValid) {
+      return;
     }
 
     if (!isChecked) {
@@ -111,7 +132,12 @@ export const ConfirmationSubmitSection: React.FC<ConfirmationSubmitSectionProps>
   return (
     <View className={`w-full gap-3 ${className}`}>
       {/* Tappable Confirmation Card */}
-      <Animated.View style={{ transform: [{ translateX: shakeAnim }] }}>
+      <Animated.View
+        style={{
+          transform: [{ translateX: shakeAnim }],
+          opacity: isLocked ? 0.6 : 1,
+        }}
+      >
         <TouchableOpacity
           activeOpacity={isLoading ? 1 : 0.85}
           onPress={handleToggle}
@@ -187,12 +213,12 @@ export const ConfirmationSubmitSection: React.FC<ConfirmationSubmitSectionProps>
         className="w-full h-[48px] rounded-[12px] items-center justify-center flex-row shadow-sm"
         style={{
           backgroundColor: buttonColor ?? themeColor,
-          opacity: isLoading ? 0.85 : 1,
+          opacity: isLocked ? 0.45 : isLoading ? 0.85 : 1,
           shadowColor: buttonColor ?? themeColor,
           shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.25,
+          shadowOpacity: isLocked ? 0 : 0.25,
           shadowRadius: 10,
-          elevation: 3,
+          elevation: isLocked ? 0 : 3,
         }}
       >
         {isLoading ? (
