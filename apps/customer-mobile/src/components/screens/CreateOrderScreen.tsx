@@ -1,7 +1,12 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Image } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import {
+  View,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  Animated,
+} from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import Svg, { Path } from 'react-native-svg';
 import * as ImagePicker from 'expo-image-picker';
 import { useNavigationUi } from '../../context/NavigationAndUiContext';
 import { useToast } from '../../context/ToastContext';
@@ -10,50 +15,155 @@ import { useOrderDraft } from '../../context/OrderDraftContext';
 import { useCustomerOrderActions } from '../../hooks/useCustomerOrders';
 import { compressCustomerScreenshot } from '../../utils/imageCompression';
 import { ScreenshotSourceApp } from '../../types/api';
+import { parseCurrency } from '../../utils/currency';
 import { AppHeader } from '../layout/AppHeader';
+import { ConfirmationSubmitSection } from '../common/ConfirmationSubmitSection';
+import { CreateOrderStepRow } from '../orders/CreateOrderStepRow';
+import { CreateOrderReceiptCard } from '../orders/CreateOrderReceiptCard';
+import {
+  CreateOrderDetailsCard,
+  CreateOrderFieldErrors,
+} from '../orders/CreateOrderDetailsCard';
 
-const TRACKING_TUTORIAL_BY_APP: Record<
-  ScreenshotSourceApp,
-  { title: string; steps: string }
-> = {
-  shopee: {
-    title: 'Shopee Tracking Number Not Found',
-    steps:
-      'Open Shopee → Me → To Receive → tap your order → tap "Shipping Information" so the SPX/courier tracking number is visible, then take a screenshot.',
-  },
-  lazada: {
-    title: 'Lazada Tracking Number Not Found',
-    steps:
-      'Open Lazada → Account → To Receive → tap your order → tap "Track Package" so the LEX/courier tracking number is visible, then take a screenshot.',
-  },
-  tiktok: {
-    title: 'TikTok Shop Tracking Number Not Found',
-    steps:
-      'Open TikTok → Profile → Your Orders → tap your order → tap "Shipping details" so the courier tracking number is visible, then take a screenshot.',
-  },
-  unknown: {
-    title: 'Tracking Number Not Visible',
-    steps:
-      'Please upload a clear order or shipping details screenshot from Shopee, Lazada, or TikTok Shop that clearly shows the courier tracking number.',
-  },
-};
+const BRAND_BLUE = '#215cd4';
+
+function runHorizontalShake(anim: Animated.Value) {
+  anim.setValue(0);
+  Animated.sequence([
+    Animated.timing(anim, { toValue: -6, duration: 55, useNativeDriver: true }),
+    Animated.timing(anim, { toValue: 6, duration: 55, useNativeDriver: true }),
+    Animated.timing(anim, { toValue: -5, duration: 55, useNativeDriver: true }),
+    Animated.timing(anim, { toValue: 5, duration: 55, useNativeDriver: true }),
+    Animated.timing(anim, { toValue: -2, duration: 45, useNativeDriver: true }),
+    Animated.timing(anim, { toValue: 0, duration: 45, useNativeDriver: true }),
+  ]).start();
+}
 
 export const CreateOrderScreen: React.FC = () => {
   const { navigateTo, goBack } = useNavigationUi();
   const { showToast } = useToast();
   const { customer } = useAuthSession();
   const { orderDraft, updateOrderDraft } = useOrderDraft();
-  const { initializeCustomerOrder } = useCustomerOrderActions();
+  const { initializeCustomerOrder, confirmCustomerOrder } = useCustomerOrderActions();
 
-  const [isInitializing, setIsInitializing] = useState(false);
+  const scrollViewRef = useRef<any>(null);
+  const isMountedRef = useRef(true);
+  const receiptShakeAnim = useRef(new Animated.Value(0)).current;
+  const detailsShakeAnim = useRef(new Animated.Value(0)).current;
+  const feedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const [isPicking, setIsPicking] = useState(false);
-  const [missingTrackingApp, setMissingTrackingApp] = useState<ScreenshotSourceApp | null>(null);
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanFailed, setScanFailed] = useState(false);
+  const [missingTrackingApp, setMissingTrackingApp] =
+    useState<ScreenshotSourceApp | null>(null);
+
+  const [isConfirmed, setIsConfirmed] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [trackingError, setTrackingError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<CreateOrderFieldErrors>({});
+
+  // Subtle red highlight & feedback states (always targeting the needed section only)
+  const [receiptHighlight, setReceiptHighlight] = useState(false);
+  const [receiptFeedback, setReceiptFeedback] = useState<string | null>(null);
+  const [detailsHighlight, setDetailsHighlight] = useState(false);
+  const [detailsFeedback, setDetailsFeedback] = useState<string | null>(null);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      if (feedbackTimerRef.current) {
+        clearTimeout(feedbackTimerRef.current);
+      }
+    };
+  }, []);
+
+  const clearTransientFeedback = () => {
+    if (feedbackTimerRef.current) {
+      clearTimeout(feedbackTimerRef.current);
+      feedbackTimerRef.current = null;
+    }
+    setReceiptHighlight(false);
+    setReceiptFeedback(null);
+    setDetailsHighlight(false);
+    setDetailsFeedback(null);
+  };
+
+  const scheduleFeedbackReset = () => {
+    if (feedbackTimerRef.current) {
+      clearTimeout(feedbackTimerRef.current);
+    }
+    feedbackTimerRef.current = setTimeout(() => {
+      setReceiptHighlight(false);
+      setReceiptFeedback(null);
+      setDetailsHighlight(false);
+      setDetailsFeedback(null);
+      feedbackTimerRef.current = null;
+    }, 2800);
+  };
 
   const previewSourceUri = orderDraft.previewUri || orderDraft.imageUrl || null;
-  const hasUploadedReceipt = Boolean(previewSourceUri);
+  const hasPhoto = Boolean(previewSourceUri);
+  const isOrderReady = Boolean(orderDraft.orderId);
+  const isDetailsActive = isOrderReady && !isScanning && !isPicking;
+
+  const product = orderDraft.productName || '';
+  const recipient = orderDraft.recipientName || '';
+  const totalAmount = orderDraft.totalAmount || '';
+  const trackingId = orderDraft.trackingId || '';
+
+  const rawAmountNumber = parseCurrency(totalAmount);
+  const isAmountValid =
+    totalAmount.trim().length > 0 && rawAmountNumber >= 0 && !isNaN(rawAmountNumber);
+  const isAmountFilled = totalAmount.trim().length > 0;
+  const amountError =
+    isDetailsActive && isAmountFilled && !isAmountValid
+      ? 'Please enter a valid amount (e.g. 0 or 500)'
+      : '';
+  const isTrackingIdLocked = Boolean(orderDraft.trackingIdLocked && trackingId.trim());
+
+  const runReceiptScan = async (imageBase64: string) => {
+    clearTransientFeedback();
+    setMissingTrackingApp(null);
+    setScanFailed(false);
+    setTrackingError(null);
+    setFieldErrors({});
+    setIsScanning(true);
+
+    try {
+      await initializeCustomerOrder(imageBase64, { navigateOnSuccess: false });
+    } catch (err: any) {
+      if (!isMountedRef.current) return;
+      setScanFailed(true);
+      if (err?.error === 'TrackingIdMissing') {
+        const app: ScreenshotSourceApp =
+          err?.sourceApp === 'shopee' ||
+          err?.sourceApp === 'lazada' ||
+          err?.sourceApp === 'tiktok'
+            ? err.sourceApp
+            : 'unknown';
+        setMissingTrackingApp(app);
+      }
+      if (err?.message !== 'Please log in again') {
+        showToast(err?.message || 'Failed to read receipt. Please try another screenshot.');
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setIsScanning(false);
+      }
+    }
+  };
 
   const handleUploadPress = async () => {
-    if (isInitializing || isPicking) return;
+    if (isScanning || isPicking || isSubmitting) return;
+
+    if (customer?.blacklisted) {
+      showToast(
+        customer.blacklistReason || 'Your account is suspended from creating new orders.'
+      );
+      return;
+    }
 
     try {
       setIsPicking(true);
@@ -71,18 +181,31 @@ export const CreateOrderScreen: React.FC = () => {
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const asset = result.assets[0];
-        showToast('Compressing receipt image...');
         const compressed = await compressCustomerScreenshot(
           asset.uri,
           asset.width,
           asset.height
         );
+
+        clearTransientFeedback();
+        setIsConfirmed(false);
         updateOrderDraft({
+          orderId: null,
+          ticketCode: null,
           imageUrl: compressed.base64,
           previewUri: compressed.uri,
+          trackingId: '',
+          productName: '',
+          recipientName: '',
+          price: 0,
+          totalAmount: '',
+          trackingIdLocked: false,
+          sourceApp: undefined,
         });
-        setMissingTrackingApp(null);
-        showToast('Receipt attached successfully!');
+
+        setIsPicking(false);
+        await runReceiptScan(compressed.base64);
+        return;
       }
     } catch (err: any) {
       showToast(err?.message || 'Failed to select image.');
@@ -91,207 +214,237 @@ export const CreateOrderScreen: React.FC = () => {
     }
   };
 
-  const handleNext = async () => {
-    if (!hasUploadedReceipt || !orderDraft.imageUrl) {
-      showToast('Please attach a receipt screenshot first.');
+  const handleRetryScan = async () => {
+    if (!orderDraft.imageUrl || isScanning || isPicking || isSubmitting) return;
+    await runReceiptScan(orderDraft.imageUrl);
+  };
+
+  const highlightNeededReceipt = () => {
+    clearTransientFeedback();
+    if (isScanning) {
+      setReceiptFeedback('Scanning receipt, please wait...');
+      scheduleFeedbackReset();
       return;
     }
+    const message = missingTrackingApp
+      ? 'Please upload a receipt showing the tracking number.'
+      : hasPhoto && !isOrderReady
+      ? 'Please retry scanning or replace the receipt photo.'
+      : 'Please attach a receipt photo first.';
+    setReceiptHighlight(true);
+    setReceiptFeedback(message);
+    runHorizontalShake(receiptShakeAnim);
+    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+    scheduleFeedbackReset();
+  };
 
-    if (customer?.blacklisted) {
-      showToast(
-        customer.blacklistReason || 'Your account is suspended from creating new orders.'
-      );
-      return;
+  const validateForm = (): boolean => {
+    const errors: CreateOrderFieldErrors = {};
+
+    if (!product.trim()) {
+      errors.product = 'Please enter the product name.';
+    }
+    if (!recipient.trim()) {
+      errors.recipient = "Please enter the receiver's name.";
+    }
+    if (!totalAmount.trim()) {
+      errors.amount = 'Please enter the total amount.';
+    } else if (!isAmountValid) {
+      errors.amount = 'Please enter a valid amount (e.g. 500)';
+    }
+    if (!trackingId.trim()) {
+      errors.trackingId = 'Please enter the tracking ID.';
     }
 
-    setMissingTrackingApp(null);
-    setIsInitializing(true);
+    setFieldErrors(errors);
+
+    if (Object.keys(errors).length > 0) {
+      clearTransientFeedback();
+      setDetailsHighlight(true);
+      setDetailsFeedback('Please fill in all required order details.');
+      runHorizontalShake(detailsShakeAnim);
+      scheduleFeedbackReset();
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleCompleteOrder = async () => {
+    if (!isDetailsActive || isSubmitting) return;
+
+    clearTransientFeedback();
+    setTrackingError(null);
+    setIsSubmitting(true);
     try {
-      await initializeCustomerOrder(orderDraft.imageUrl);
+      await confirmCustomerOrder({
+        trackingId: trackingId.trim(),
+        productName: product.trim(),
+        recipientName: recipient.trim(),
+        price: rawAmountNumber,
+      });
     } catch (err: any) {
-      if (err?.error === 'TrackingIdMissing') {
-        const app: ScreenshotSourceApp =
-          err?.sourceApp === 'shopee' ||
-          err?.sourceApp === 'lazada' ||
-          err?.sourceApp === 'tiktok'
-            ? err.sourceApp
-            : 'unknown';
-        setMissingTrackingApp(app);
+      if (!isMountedRef.current) return;
+      if (
+        err?.statusCode === 409 ||
+        err?.status === 409 ||
+        err?.error === 'Conflict' ||
+        err?.message?.toLowerCase().includes('duplicate') ||
+        err?.message?.toLowerCase().includes('already registered')
+      ) {
+        setTrackingError(
+          err?.message || 'Tracking number is already registered to a paid active parcel'
+        );
+        runHorizontalShake(detailsShakeAnim);
+      } else if (
+        !(
+          err?.statusCode === 400 &&
+          (err?.error === 'OrderNotEditable' ||
+            err?.message?.includes('Only PENDING_INITIALIZATION'))
+        ) &&
+        err?.message !== 'Please log in again'
+      ) {
+        showToast(err?.message || 'Failed to submit order.');
       }
-      showToast(err?.message || 'Failed to initialize order.');
     } finally {
-      setIsInitializing(false);
+      if (isMountedRef.current) {
+        setIsSubmitting(false);
+      }
     }
   };
 
-  const isNextDisabled = !hasUploadedReceipt || isInitializing || isPicking;
+  const connectorColor = isOrderReady ? BRAND_BLUE : '#e2e8f0';
+  const canRetryScan =
+    (scanFailed || (hasPhoto && !isOrderReady)) &&
+    !missingTrackingApp &&
+    !isScanning &&
+    Boolean(orderDraft.imageUrl);
 
   return (
-    <View className="flex-1 bg-[#2563eb]">
+    <View className="flex-1 bg-[#215cd4]">
       <StatusBar style="light" />
 
-      {/* Screen Title & Navigation Header */}
       <AppHeader
-        title="Create an Order"
+        title="Create Order"
+        subtitle="Lily's Catering Hub"
+        subtitleUppercase={false}
         showBackButton
         centerTitle
+        backgroundColor={BRAND_BLUE}
         onBack={goBack}
+        onHelp={() => navigateTo('faq')}
       />
 
-      {/* Main Sheet with Curved Transition */}
-      <View className="flex-1 bg-[#f8fafc] rounded-t-[32px] pt-4 overflow-hidden">
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          className="flex-1 px-4"
-          contentContainerStyle={{ paddingBottom: 40 }}
+      {/* Main Curved Sheet */}
+      <View className="flex-1 bg-[#f8fafc] rounded-t-[32px] overflow-hidden">
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          className="flex-1"
         >
-          {/* Upload Card */}
-          <View
-            className="rounded-[24px] bg-white border border-[#f1f5f9] p-4 mb-4"
-            style={{
-              shadowColor: '#000000',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.06,
-              shadowRadius: 16,
-              elevation: 3,
-            }}
+          {/* Scrollable Vertical (1) -> (2) Flow */}
+          <ScrollView
+            ref={scrollViewRef}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            className="flex-1 px-4"
+            contentContainerStyle={{ paddingTop: 14, paddingBottom: 12 }}
           >
-            {/* UploadCard Header */}
-            <View className="flex-row items-center justify-between pb-3 mb-3 border-b border-[#f1f5f9]">
-              <Text className="text-[12px] font-bold text-[#64748b] tracking-wider uppercase">
-                SCREENSHOT OF RECEIPT
-              </Text>
-              {hasUploadedReceipt && (
-                <View className="flex-row items-center gap-1 bg-[#ecfdf5] px-2 py-0.5 rounded-full">
-                  <View className="w-1.5 h-1.5 rounded-full bg-[#10b981]" />
-                  <Text className="text-[10px] font-bold text-[#059669]">Attached</Text>
-                </View>
-              )}
-            </View>
-
-            {/* Upload Dropzone */}
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={handleUploadPress}
-              disabled={isInitializing || isPicking}
-              className={`bg-[#f8fafc] border-[1.5px] border-dashed border-[#cbd5e1] rounded-[20px] items-center justify-center px-4 overflow-hidden ${
-                hasUploadedReceipt && previewSourceUri ? 'py-4' : 'py-12'
-              }`}
+            {/* Step 1: Receipt Screenshot */}
+            <CreateOrderStepRow
+              stepNumber={1}
+              isDone={isOrderReady}
+              isActive={!isOrderReady}
+              isError={receiptHighlight}
+              bottomLineColor={connectorColor}
+              contentPaddingBottom={10}
             >
-              {hasUploadedReceipt && previewSourceUri ? (
-                <View className="w-full items-center">
-                  {/* Attached Image Preview */}
-                  <View className="w-full h-[220px] rounded-[14px] overflow-hidden bg-slate-100 items-center justify-center mb-3 border border-[#e2e8f0]">
-                    <Image
-                      source={{ uri: previewSourceUri }}
-                      style={{ width: '100%', height: '100%' }}
-                      resizeMode="contain"
-                    />
-                  </View>
+              <CreateOrderReceiptCard
+                previewSourceUri={previewSourceUri}
+                isOrderReady={isOrderReady}
+                isPicking={isPicking}
+                isScanning={isScanning}
+                isSubmitting={isSubmitting}
+                canRetry={canRetryScan}
+                missingTrackingApp={missingTrackingApp}
+                isHighlighted={receiptHighlight}
+                feedbackMessage={receiptFeedback}
+                shakeAnim={receiptShakeAnim}
+                onUploadPress={handleUploadPress}
+                onRetryScan={handleRetryScan}
+              />
+            </CreateOrderStepRow>
 
-                  <View className="flex-row items-center gap-1.5">
-                    <View className="w-4 h-4 rounded-full bg-[#ecfdf5] items-center justify-center">
-                      <Svg width={10} height={10} viewBox="0 0 24 24" fill="none">
-                        <Path
-                          d="M20 6L9 17L4 12"
-                          stroke="#059669"
-                          strokeWidth={3}
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </Svg>
-                    </View>
-                    <Text className="text-[13px] font-bold text-[#1e293b]">
-                      {isPicking ? 'Selecting new image...' : 'Receipt attached'}
-                    </Text>
-                  </View>
-                  <Text className="text-[12px] font-semibold text-[#2563eb] text-center mt-1">
-                    Tap to change receipt image
-                  </Text>
-                </View>
-              ) : (
-                <>
-                  {/* Dropzone Icon Badge */}
-                  <View
-                    className="w-14 h-14 rounded-2xl bg-white border border-[#e2e8f0] items-center justify-center mb-3.5"
-                    style={{
-                      shadowColor: '#000000',
-                      shadowOffset: { width: 0, height: 2 },
-                      shadowOpacity: 0.05,
-                      shadowRadius: 6,
-                      elevation: 2,
-                    }}
-                  >
-                    {isPicking ? (
-                      <ActivityIndicator size="small" color="#2563eb" />
-                    ) : (
-                      <Svg width={28} height={28} viewBox="0 0 24 24" fill="none">
-                        <Path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={1.8}
-                          stroke="#2563eb"
-                          d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                        />
-                      </Svg>
-                    )}
-                  </View>
+            {/* Step 2: Order Details */}
+            <CreateOrderStepRow
+              stepNumber={2}
+              isActive={isDetailsActive}
+              isError={detailsHighlight}
+              topLineColor={connectorColor}
+            >
+              <CreateOrderDetailsCard
+                isActive={isDetailsActive}
+                isScanning={isScanning}
+                isHighlighted={detailsHighlight}
+                feedbackMessage={detailsFeedback}
+                shakeAnim={detailsShakeAnim}
+                product={product}
+                recipient={recipient}
+                totalAmount={totalAmount}
+                trackingId={trackingId}
+                isTrackingIdLocked={isTrackingIdLocked}
+                fieldErrors={fieldErrors}
+                amountError={amountError}
+                trackingError={trackingError}
+                onChangeProduct={(text) => {
+                  if (fieldErrors.product) {
+                    setFieldErrors((prev) => ({ ...prev, product: undefined }));
+                  }
+                  updateOrderDraft({ productName: text });
+                }}
+                onChangeRecipient={(text) => {
+                  if (fieldErrors.recipient) {
+                    setFieldErrors((prev) => ({ ...prev, recipient: undefined }));
+                  }
+                  updateOrderDraft({ recipientName: text });
+                }}
+                onChangeAmount={(text) => {
+                  if (fieldErrors.amount) {
+                    setFieldErrors((prev) => ({ ...prev, amount: undefined }));
+                  }
+                  updateOrderDraft({ totalAmount: text });
+                }}
+                onChangeTrackingId={(text) => {
+                  if (isTrackingIdLocked) return;
+                  if (fieldErrors.trackingId) {
+                    setFieldErrors((prev) => ({ ...prev, trackingId: undefined }));
+                  }
+                  if (trackingError) setTrackingError(null);
+                  updateOrderDraft({ trackingId: text });
+                }}
+                onLockedPress={highlightNeededReceipt}
+              />
+            </CreateOrderStepRow>
+          </ScrollView>
 
-                  <Text className="text-[16px] font-bold text-[#1e293b] text-center">
-                    {isPicking
-                      ? 'Selecting image...'
-                      : 'Tap to upload receipt image'}
-                  </Text>
-                  <Text className="text-[12px] font-normal text-[#64748b] text-center mt-1">
-                    Supports Shopee, Lazada, TikTok Shop screenshots
-                  </Text>
-                </>
-              )}
-            </TouchableOpacity>
+          {/* Sticky Bottom Action Area using shared ConfirmationSubmitSection */}
+          <View className="px-4 pt-2 pb-5">
+            <ConfirmationSubmitSection
+              title="I confirm that these order details are correct"
+              subtitle="Please ensure parcel amount and tracking number match your delivery receipt."
+              buttonLabel="Complete Order"
+              errorMessage="Please check the confirmation box before submitting."
+              isChecked={isConfirmed}
+              onCheckedChange={setIsConfirmed}
+              onValidate={validateForm}
+              onSubmit={handleCompleteOrder}
+              isLoading={isSubmitting}
+              isLocked={!isDetailsActive}
+              onLockedPress={highlightNeededReceipt}
+              validateBeforeCheck
+              themeColor={BRAND_BLUE}
+            />
           </View>
-
-          {/* App-Specific Tracking ID Guidance Card (shown on 422 TrackingIdMissing) */}
-          {missingTrackingApp && (
-            <View className="rounded-[20px] bg-[#fffbeb] border border-[#fde68a] p-4 mb-4">
-              <Text className="text-[13px] font-bold text-[#92400e] mb-1">
-                {TRACKING_TUTORIAL_BY_APP[missingTrackingApp].title}
-              </Text>
-              <Text className="text-[12px] font-normal text-[#78350f] leading-5">
-                {TRACKING_TUTORIAL_BY_APP[missingTrackingApp].steps}
-              </Text>
-            </View>
-          )}
-
-          {/* Next Button */}
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={handleNext}
-            disabled={isNextDisabled}
-            className={`w-full h-[52px] rounded-[16px] bg-[#2563eb] items-center justify-center flex-row shadow-sm mt-2 ${
-              isNextDisabled ? 'opacity-50' : ''
-            }`}
-            style={{
-              shadowColor: '#2563eb',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.25,
-              shadowRadius: 10,
-              elevation: 4,
-            }}
-          >
-            {isInitializing ? (
-              <View className="flex-row items-center gap-2">
-                <ActivityIndicator size="small" color="#ffffff" />
-                <Text className="text-white font-bold text-[15px] tracking-wide">
-                  Initializing Order...
-                </Text>
-              </View>
-            ) : (
-              <Text className="text-white font-bold text-[15px] tracking-wide">
-                Next
-              </Text>
-            )}
-          </TouchableOpacity>
-        </ScrollView>
+        </KeyboardAvoidingView>
       </View>
     </View>
   );
