@@ -15,6 +15,8 @@ import {
   CustomerLoginReq,
   CustomerLoginRes,
   CustomerCreateMpinRes,
+  CustomerResetMpinReq,
+  CustomerResetMpinRes,
   CustomerProfile,
   JWTToken,
 } from '../types/api';
@@ -41,6 +43,7 @@ export type AuthSessionContextType = {
   readonly loginCustomer: (payload: CustomerLoginReq) => Promise<CustomerLoginRes>;
   readonly createCustomerMpin: (mpin: string) => Promise<CustomerCreateMpinRes>;
   readonly verifyCustomerMpin: (mpin: string) => Promise<void>;
+  readonly resetCustomerMpin: (payload: CustomerResetMpinReq) => Promise<CustomerResetMpinRes>;
   readonly refetchProfile: () => Promise<void>;
   readonly switchAccount: () => Promise<void>;
   readonly signOutCustomer: () => Promise<void>;
@@ -272,6 +275,20 @@ export const AuthSessionProvider: React.FC<{ children: ReactNode }> = ({ childre
     [preAuthToken, showToast, setActiveScreen]
   );
 
+  const resetCustomerMpin = useCallback(
+    async (payload: CustomerResetMpinReq): Promise<CustomerResetMpinRes> => {
+      const res = await authApi.resetMpin(payload);
+      setAuthToken(res.authToken);
+      setSessionStatus('authenticated');
+      if (res.customer) {
+        setCustomer(res.customer);
+      }
+      setPreAuthToken(null);
+      return res;
+    },
+    []
+  );
+
   const resetSessionState = useCallback(async () => {
     if (authToken) {
       try {
@@ -309,6 +326,7 @@ export const AuthSessionProvider: React.FC<{ children: ReactNode }> = ({ childre
       loginCustomer,
       createCustomerMpin,
       verifyCustomerMpin,
+      resetCustomerMpin,
       refetchProfile,
       switchAccount,
       signOutCustomer,
@@ -322,6 +340,7 @@ export const AuthSessionProvider: React.FC<{ children: ReactNode }> = ({ childre
       loginCustomer,
       createCustomerMpin,
       verifyCustomerMpin,
+      resetCustomerMpin,
       refetchProfile,
       switchAccount,
       signOutCustomer,

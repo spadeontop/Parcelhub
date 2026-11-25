@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
-import { BackHandler, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, BackHandler, StyleSheet, Text, View } from 'react-native';
 import { FieldError } from '../common/FieldError';
 import { MpinDots, MPIN_LENGTH } from '../common/MpinDots';
 import { NumericKeypad } from '../common/NumericKeypad';
+import { useAuthSession } from '../../context/AuthSessionContext';
+import { authApi } from '../../services/authApi';
+import type { MPIN } from '../../types/api';
 import { AuthSheetLayout } from '../layout/AuthSheetLayout';
 import { RecoveryFlow, type RecoveryCopy } from './RecoveryFlow';
 
@@ -20,11 +23,20 @@ const copy: RecoveryCopy = {
   doneLabel: 'Continue',
 };
 
-export function MpinRecoveryScreen({ onExit }: { onExit: () => void }) {
+export function MpinRecoveryScreen({
+  onExit,
+  onDone,
+}: {
+  onExit: () => void;
+  onDone?: () => void;
+}) {
   return (
     <RecoveryFlow
       copy={copy}
       onExit={onExit}
+      onDone={onDone}
+      onRequestCode={(email) => authApi.forgotMpin({ email })}
+      onVerifyCode={(email, code) => authApi.verifyMpinResetOtp({ email, code })}
       renderReset={(actions) => <MpinResetStep {...actions} onExit={onExit} />}
     />
   );
@@ -32,35 +44,40 @@ export function MpinRecoveryScreen({ onExit }: { onExit: () => void }) {
 
 interface MpinResetStepProps {
   email: string;
+  resetToken: string;
   onBack: () => void;
   onComplete: () => void;
   onExit: () => void;
 }
 
-function MpinResetStep({ email, onBack, onComplete, onExit }: MpinResetStepProps) {
+function MpinResetStep({ email, resetToken, onBack, onComplete, onExit }: MpinResetStepProps) {
+  const { resetCustomerMpin } = useAuthSession();
   const [newPin, setNewPin] = useState('');
   const [entry, setEntry] = useState('');
-  const [hasMismatch, setHasMismatch] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const isConfirming = newPin.length === MPIN_LENGTH;
 
   const resetEntry = () => {
     setNewPin('');
     setEntry('');
-    setHasMismatch(false);
+    setErrorMessage(null);
   };
 
   useEffect(() => {
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (isSubmitting) return true;
       if (isConfirming) resetEntry();
       else onBack();
       return true;
     });
     return () => subscription.remove();
-  }, [isConfirming, onBack]);
+  }, [isConfirming, isSubmitting, onBack]);
 
-  const pressDigit = (digit: string) => {
+  const pressDigit = async (digit: string) => {
+    if (isSubmitting) return;
     const next = entry + digit;
-    setHasMismatch(false);
+    setErrorMessage(null);
 
     if (next.length < MPIN_LENGTH) {
       setEntry(next);
@@ -70,20 +87,35 @@ function MpinResetStep({ email, onBack, onComplete, onExit }: MpinResetStepProps
     setEntry('');
     if (!isConfirming) {
       setNewPin(next);
-    } else if (next === newPin) {
+      return;
+    }
+
+    if (next !== newPin) {
+      setErrorMessage('MPINs do not match. Try again.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await resetCustomerMpin({ resetToken, newMpin: next as MPIN });
       onComplete();
-    } else {
-      setHasMismatch(true);
+    } catch (err) {
+      setErrorMessage(
+        err instanceof Error ? err.message : 'Unable to reset MPIN. Please try again.'
+      );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const editEntry = (value: string) => {
+    if (isSubmitting) return;
     setEntry(value);
-    setHasMismatch(false);
+    setErrorMessage(null);
   };
 
   return (
-    <AuthSheetLayout onBack={isConfirming ? undefined : onBack}>
+    <AuthSheetLayout onBack={isConfirming || isSubmitting ? undefined : onBack}>
       <View style={styles.content}>
         <View style={styles.account}>
           <Text style={styles.email}>{email}</Text>
@@ -96,18 +128,24 @@ function MpinResetStep({ email, onBack, onComplete, onExit }: MpinResetStepProps
           {isConfirming ? 'Re-enter your new MPIN to save changes' : 'Avoid sequential numbers like 1234'}
         </Text>
         <MpinDots filledCount={entry.length} style={styles.dots} />
-        {hasMismatch && (
+        {isSubmitting && <ActivityIndicator color="#2563eb" size="small" style={styles.loader} />}
+        {errorMessage && (
           <View style={styles.error}>
-            <FieldError message="MPINs do not match. Try again." />
+            <FieldError message={errorMessage} />
           </View>
         )}
         <NumericKeypad
+          disabled={isSubmitting}
           onPressDigit={pressDigit}
           onPressBackspace={() => editEntry(entry.slice(0, -1))}
           onPressClear={() => editEntry('')}
           style={styles.keypad}
         />
-        <Text accessibilityRole="button" style={styles.link} onPress={isConfirming ? resetEntry : onExit}>
+        <Text
+          accessibilityRole="button"
+          style={styles.link}
+          onPress={isSubmitting ? undefined : isConfirming ? resetEntry : onExit}
+        >
           {isConfirming ? 'Re-enter new MPIN' : 'Cancel Reset'}
         </Text>
       </View>
@@ -126,6 +164,7 @@ const styles = StyleSheet.create({
   title: { marginTop: 20, textAlign: 'center', color: '#0f172a', fontFamily: 'GoogleSans-Bold', fontSize: 20 },
   subtitle: { textAlign: 'center', color: '#64748b', fontFamily: 'GoogleSans-Regular', fontSize: 13 },
   dots: { marginVertical: 22 },
+  loader: { marginBottom: 8 },
   error: { alignItems: 'center', paddingRight: 4 },
   keypad: { marginTop: 12 },
   link: { alignSelf: 'center', padding: 12, marginTop: 20, color: '#2563eb', fontFamily: 'GoogleSans-Bold' },
