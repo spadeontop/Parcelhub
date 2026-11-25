@@ -1,3 +1,5 @@
+import { CARD_SHADOW } from '../common/cardStyles';
+
 export const HOME_HERO_SHADOW = {
   backgroundColor: '#2563eb',
   shadowColor: '#2563eb',
@@ -7,13 +9,7 @@ export const HOME_HERO_SHADOW = {
   elevation: 4,
 } as const;
 
-export const HOME_CARD_SHADOW = {
-  shadowColor: '#0f172a',
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.05,
-  shadowRadius: 12,
-  elevation: 2,
-} as const;
+export const HOME_CARD_SHADOW = CARD_SHADOW;
 
 export const HOME_FAB_SHADOW = {
   shadowColor: '#2563eb',

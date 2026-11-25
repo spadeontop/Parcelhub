@@ -1,31 +1,34 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  View,
-  Text,
-  TouchableOpacity,
+  ActivityIndicator,
   FlatList,
   RefreshControl,
-  ActivityIndicator,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { FilterDropdown } from '../common/FilterDropdown';
 import { StatusBar } from 'expo-status-bar';
-import { useNavigationUi } from '../../context/NavigationAndUiContext';
-import { useInfiniteCustomerOrders } from '../../hooks/useCustomerOrders';
-import { BottomNav } from '../layout/BottomNav';
+import { CARD_SHADOW } from '../common/cardStyles';
+import { FilterPillBar, FilterPillOption } from '../common/FilterPillBar';
+import { PackageIcon } from '../common/Icons';
 import { AppHeader } from '../layout/AppHeader';
-import { getStatusTheme } from '../../utils/statusHelpers';
-import { formatOrderDate } from '../../utils/date';
+import { BottomNav } from '../layout/BottomNav';
+import {
+  OrderDateGroup,
+  OrderDateGroupCard,
+} from '../orders/OrderDateGroupCard';
+import { TransactionsScreenSkeleton } from '../orders/TransactionsScreenSkeleton';
+import { useAuthSession } from '../../context/AuthSessionContext';
+import { useNavigationUi } from '../../context/NavigationAndUiContext';
+import { useToast } from '../../context/ToastContext';
+import { useInfiniteCustomerOrders } from '../../hooks/useCustomerOrders';
+import { CustomerOrderSummary, TransactionFilter } from '../../types/api';
+import { getOrderDateGroupMeta } from '../../utils/date';
+import { getStatusLabel } from '../../utils/statusHelpers';
 
-export type TransactionFilter =
-  | 'ALL'
-  | 'READY_TO_CLAIM'
-  | 'AWAITING_PARCEL'
-  | 'PAYMENT_REQUIRED'
-  | 'CLAIMED'
-  | 'CANCELLED'
-  | 'REFUNDED';
+export type { TransactionFilter };
 
-const FILTERS: TransactionFilter[] = [
+const FILTERS: readonly TransactionFilter[] = [
   'ALL',
   'READY_TO_CLAIM',
   'AWAITING_PARCEL',
@@ -35,26 +38,8 @@ const FILTERS: TransactionFilter[] = [
   'REFUNDED',
 ];
 
-const getFilterLabel = (filter: TransactionFilter): string => {
-  switch (filter) {
-    case 'ALL':
-      return 'All Orders';
-    case 'READY_TO_CLAIM':
-      return 'Claimable';
-    case 'AWAITING_PARCEL':
-      return 'Awaiting';
-    case 'PAYMENT_REQUIRED':
-      return 'Unpaid';
-    case 'CLAIMED':
-      return 'Claimed';
-    case 'CANCELLED':
-      return 'Cancelled';
-    case 'REFUNDED':
-      return 'Refunded';
-    default:
-      return filter;
-  }
-};
+const getFilterLabel = (filter: TransactionFilter): string =>
+  filter === 'ALL' ? 'All' : getStatusLabel(filter);
 
 export const TransactionsScreen: React.FC = () => {
   const {
@@ -62,6 +47,8 @@ export const TransactionsScreen: React.FC = () => {
     transactionFilter,
     setTransactionFilter,
   } = useNavigationUi();
+  const { customer } = useAuthSession();
+  const { showToast } = useToast();
   const {
     orders,
     totalOrders,
@@ -74,12 +61,66 @@ export const TransactionsScreen: React.FC = () => {
   } = useInfiniteCustomerOrders();
   const [refreshing, setRefreshing] = useState(false);
 
-  const filteredOrders =
-    transactionFilter === 'ALL'
-      ? orders
-      : orders.filter((o) => o.status === transactionFilter);
+  const isBlacklisted = Boolean(customer?.blacklisted);
 
-  const onRefresh = async () => {
+  const filteredOrders = useMemo(
+    () =>
+      transactionFilter === 'ALL'
+        ? orders
+        : orders.filter((o) => o.status === transactionFilter),
+    [orders, transactionFilter]
+  );
+
+  const groupedOrders = useMemo<readonly OrderDateGroup[]>(() => {
+    const groups: Array<{
+      key: string;
+      title: string;
+      isRecentDay: boolean;
+      items: CustomerOrderSummary[];
+    }> = [];
+    const byKey = new Map<string, (typeof groups)[number]>();
+
+    for (const order of filteredOrders) {
+      const meta = getOrderDateGroupMeta(order.timestamp);
+      let group = byKey.get(meta.key);
+      if (!group) {
+        group = {
+          key: meta.key,
+          title: meta.title,
+          isRecentDay: meta.isRecentDay,
+          items: [],
+        };
+        byKey.set(meta.key, group);
+        groups.push(group);
+      }
+      group.items.push(order);
+    }
+
+    return groups;
+  }, [filteredOrders]);
+
+  const handleOpenOrder = useCallback(
+    (order: CustomerOrderSummary) => {
+      navigateTo('order_details', {
+        orderId: order.id,
+        ticketCode: order.ticketCode,
+      });
+    },
+    [navigateTo]
+  );
+
+  const handleCreateOrder = useCallback(() => {
+    if (isBlacklisted) {
+      showToast(
+        customer?.blacklistReason ||
+          'Your account is suspended from creating new orders.'
+      );
+      return;
+    }
+    navigateTo('create_order');
+  }, [customer?.blacklistReason, isBlacklisted, navigateTo, showToast]);
+
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
       await refetch();
@@ -88,48 +129,82 @@ export const TransactionsScreen: React.FC = () => {
     } finally {
       setRefreshing(false);
     }
-  };
+  }, [refetch]);
 
-  const activeCount =
-    transactionFilter === 'ALL'
-      ? totalOrders
-      : (statusCounts[transactionFilter] ?? filteredOrders.length);
-  const countLabel = `${activeCount} ${activeCount === 1 ? 'Order' : 'Orders'}`;
+  useEffect(() => {
+    if (
+      !isLoading &&
+      transactionFilter !== 'ALL' &&
+      (statusCounts[transactionFilter] ?? 0) === 0
+    ) {
+      setTransactionFilter('ALL');
+    }
+  }, [isLoading, statusCounts, transactionFilter, setTransactionFilter]);
+
+  const filterOptions = useMemo<readonly FilterPillOption<TransactionFilter>[]>(
+    () =>
+      FILTERS.flatMap((filter) => {
+        const count =
+          filter === 'ALL' ? totalOrders : (statusCounts[filter] ?? 0);
+        if (
+          filter !== 'ALL' &&
+          count === 0 &&
+          !(isLoading && filter === transactionFilter)
+        ) {
+          return [];
+        }
+        return [
+          {
+            value: filter,
+            label: getFilterLabel(filter),
+            count,
+          },
+        ];
+      }),
+    [isLoading, statusCounts, totalOrders, transactionFilter]
+  );
+
+  const isInitialLoading = isLoading && orders.length === 0;
+  const headerSubtitle =
+    !isInitialLoading && totalOrders > 0
+      ? `${totalOrders} ${totalOrders === 1 ? 'order' : 'orders'} total`
+      : 'Order history';
+  const showFilterBar = !isInitialLoading && filterOptions.length > 1;
 
   return (
-    <View className="flex-1 bg-[#2560ea]">
+    <View className="flex-1 bg-[#2563eb]">
       <StatusBar style="light" />
 
       {/* Top Header */}
       <AppHeader
         title="Transactions"
-        subtitle="ORDER HISTORY"
-        backgroundColor="#2560ea"
+        subtitle={headerSubtitle}
+        subtitleUppercase={false}
       />
 
       {/* Main Sheet with Curved Transition */}
-      <View className="flex-1 bg-white rounded-t-[32px] pt-5 relative">
-        <FilterDropdown
-          value={transactionFilter}
-          onChange={setTransactionFilter}
-          accessibilityLabel="Filter orders"
-          countLabel={countLabel}
-          options={FILTERS.map((filter) => ({
-            value: filter,
-            label: getFilterLabel(filter),
-            count: filter === 'ALL' ? totalOrders : (statusCounts[filter] ?? 0),
-            color: filter === 'ALL' ? '#4b5563' : getStatusTheme(filter).dotColor,
-          }))}
-        />
+      <View className="flex-1 bg-[#f8fafc] rounded-t-[32px] pt-4 overflow-hidden relative">
+        {showFilterBar && (
+          <FilterPillBar
+            value={transactionFilter}
+            options={filterOptions}
+            onChange={setTransactionFilter}
+            accessibilityLabel="Filter orders"
+          />
+        )}
 
-        {/* Scrollable Content Container */}
-        <View className="mx-5 mb-24 bg-white border border-[#e5eaf3] rounded-[24px] overflow-hidden" style={{ flexShrink: 1 }}>
+        {isInitialLoading ? (
+          <TransactionsScreenSkeleton />
+        ) : (
           <FlatList
-            data={filteredOrders}
-            keyExtractor={(item) => item.id}
+            data={groupedOrders}
+            keyExtractor={(group) => group.key}
             showsVerticalScrollIndicator={false}
-            style={{ flexGrow: 0 }}
-            contentContainerStyle={{ paddingHorizontal: 16 }}
+            className="flex-1"
+            contentContainerStyle={{
+              paddingHorizontal: 20,
+              paddingBottom: 112,
+            }}
             onEndReached={() => {
               if (hasNextPage && !isFetchingNextPage) {
                 void fetchNextPage();
@@ -144,17 +219,34 @@ export const TransactionsScreen: React.FC = () => {
               />
             }
             ListEmptyComponent={
-              isLoading ? (
-                <View className="py-14 items-center justify-center">
-                  <ActivityIndicator size="small" color="#2563eb" />
+              <View
+                className="bg-white rounded-[20px] border border-[#edf2f7] py-12 px-6 items-center justify-center"
+                style={CARD_SHADOW}
+              >
+                <View className="w-[68px] h-[68px] rounded-full bg-[#eff6ff] items-center justify-center mb-4">
+                  <View className="w-[48px] h-[48px] rounded-full bg-[#dbeafe]/60 items-center justify-center">
+                    <PackageIcon size={22} color="#2563eb" />
+                  </View>
                 </View>
-              ) : (
-                <View className="py-14 items-center justify-center px-4">
-                  <Text className="text-sm font-medium text-[#94a3b8] text-center">
-                    No orders found matching this filter.
+
+                <Text className="text-[16px] font-bold text-[#0f172a] text-center">
+                  No orders yet
+                </Text>
+                <Text className="text-[12.5px] font-normal text-[#64748b] text-center mt-1.5 max-w-[240px] leading-[18px]">
+                  Your registered parcels and pickup history will appear here.
+                </Text>
+
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={handleCreateOrder}
+                  className="mt-5 px-5 py-2.5 rounded-xl bg-[#2563eb]"
+                  style={{ opacity: isBlacklisted ? 0.5 : 1 }}
+                >
+                  <Text className="text-[12.5px] font-semibold text-white">
+                    Register a Parcel
                   </Text>
-                </View>
-              )
+                </TouchableOpacity>
+              </View>
             }
             ListFooterComponent={
               isFetchingNextPage ? (
@@ -163,61 +255,14 @@ export const TransactionsScreen: React.FC = () => {
                 </View>
               ) : undefined
             }
-            renderItem={({ item: order, index }) => {
-              const statusTheme = getStatusTheme(order.status);
-              const isLast = index === filteredOrders.length - 1;
-
-              return (
-                <TouchableOpacity
-                  activeOpacity={0.7}
-                  onPress={() =>
-                    navigateTo('order_details', {
-                      orderId: order.id,
-                      ticketCode: order.ticketCode,
-                    })
-                  }
-                  className={`flex-row items-center justify-between ${
-                    !isLast ? 'border-b border-[#e8ebf2]' : ''
-                  }`}
-                  style={{
-                    minHeight: 60,
-                    paddingVertical: 8,
-                    paddingRight: 12,
-                  }}
-                >
-                  {/* Left: Product Name & Date */}
-                  <View className="flex-1 pr-3">
-                    <Text
-                      className="text-[13px] font-semibold text-[#172033] leading-[18px]"
-                      numberOfLines={1}
-                      ellipsizeMode="tail"
-                    >
-                      {order.productName || 'Unknown Package'}
-                    </Text>
-                    <Text className="text-[10px] font-normal text-[#667184] leading-[15px] mt-1">
-                      {formatOrderDate(order.timestamp) || 'Recent Order'}
-                    </Text>
-                  </View>
-
-                  {/* Right: Status Dot + Label */}
-                  <View className="flex-row items-center gap-2 shrink-0">
-                    <Text className="text-[11.5px] font-medium text-[#18181b] leading-[16px]">
-                      {statusTheme.label}
-                    </Text>
-                    <View
-                      style={{
-                        width: 6,
-                        height: 6,
-                        borderRadius: 3,
-                        backgroundColor: statusTheme.dotColor,
-                      }}
-                    />
-                  </View>
-                </TouchableOpacity>
-              );
-            }}
+            renderItem={({ item: group }) => (
+              <OrderDateGroupCard
+                group={group}
+                onPressOrder={handleOpenOrder}
+              />
+            )}
           />
-        </View>
+        )}
 
         {/* Floating Bottom Nav inside the Main Sheet */}
         <BottomNav activeTab="transactions" />
