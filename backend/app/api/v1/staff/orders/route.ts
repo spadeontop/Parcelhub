@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
 
     const refundedByStaff = alias(staff, "refunded_by_staff");
 
-    const baseSelect = {
+    const orderBaseSelect = {
       id: orders.id,
       ticketCode: orders.ticketCode,
       trackingId: orders.trackingId,
@@ -115,6 +115,10 @@ export async function GET(request: NextRequest) {
       refundedBy: orders.refundedBy,
       refundedAt: orders.refundedAt,
       timestamp: orders.timestamp,
+      totalCount: sql<number>`count(*) over()`.as("total_count"),
+    };
+
+    const staffJoinSelect = {
       courierPaidByFirstName: sql<string | null>`${staff.firstName}`.as(
         "courier_paid_by_first_name"
       ),
@@ -127,7 +131,6 @@ export async function GET(request: NextRequest) {
       refundedByLastName: sql<string | null>`${refundedByStaff.lastName}`.as(
         "refunded_by_last_name"
       ),
-      totalCount: sql<number>`count(*) over()`.as("total_count"),
     };
 
     const useForEachBuckets = forEach && !statusFilter;
@@ -137,10 +140,12 @@ export async function GET(request: NextRequest) {
     let statusCounts: Partial<Record<OrderStatus, number>> | undefined;
 
     if (useForEachBuckets) {
+      // Rank orders before joining staff so the derived table has no duplicate joined
+      // column names and staff joins only run on the sliced per-status buckets.
       const ranked = db
         .select({
-          ...baseSelect,
-          rn: sql<number>`row_number() over (partition by ${orders.status} order by ${orders.timestamp} desc)`.as(
+          ...orderBaseSelect,
+          rn: sql<number>`row_number() over (partition by ${orders.status} order by ${orders.timestamp} desc, ${orders.id} desc)`.as(
             "rn"
           ),
           bucketCount: sql<number>`count(*) over (partition by ${orders.status})`.as(
@@ -148,46 +153,100 @@ export async function GET(request: NextRequest) {
           ),
         })
         .from(orders)
-        .leftJoin(staff, eq(orders.courierPaidBy, staff.id))
-        .leftJoin(refundedByStaff, eq(orders.refundedBy, refundedByStaff.id))
         .where(whereClause)
         .as("ranked_orders");
 
       const bucketedOrders = await db
-        .select()
+        .select({
+          id: ranked.id,
+          ticketCode: ranked.ticketCode,
+          trackingId: ranked.trackingId,
+          recipientName: ranked.recipientName,
+          price: ranked.price,
+          amountReceived: ranked.amountReceived,
+          change: ranked.change,
+          status: ranked.status,
+          statusTimeline: ranked.statusTimeline,
+          modifiedBy: ranked.modifiedBy,
+          claimRequested: ranked.claimRequested,
+          claimInitiatedAt: ranked.claimInitiatedAt,
+          claimExpiresAt: ranked.claimExpiresAt,
+          courierPaid: ranked.courierPaid,
+          courierPaidBy: ranked.courierPaidBy,
+          courierPaidAt: ranked.courierPaidAt,
+          activatedAt: ranked.activatedAt,
+          cancelledBy: ranked.cancelledBy,
+          cancelledByRole: ranked.cancelledByRole,
+          cancelReasonCode: ranked.cancelReasonCode,
+          cancelReason: ranked.cancelReason,
+          cancelledAt: ranked.cancelledAt,
+          refundRequested: ranked.refundRequested,
+          refundInitiatedAt: ranked.refundInitiatedAt,
+          refundExpiresAt: ranked.refundExpiresAt,
+          refundReasonCode: ranked.refundReasonCode,
+          refundReason: ranked.refundReason,
+          isRefunded: ranked.isRefunded,
+          refundAmount: ranked.refundAmount,
+          refundedBy: ranked.refundedBy,
+          refundedAt: ranked.refundedAt,
+          timestamp: ranked.timestamp,
+          totalCount: ranked.totalCount,
+          bucketCount: ranked.bucketCount,
+          ...staffJoinSelect,
+        })
         .from(ranked)
+        .leftJoin(staff, eq(ranked.courierPaidBy, staff.id))
+        .leftJoin(refundedByStaff, eq(ranked.refundedBy, refundedByStaff.id))
         .where(and(gt(ranked.rn, offset), lte(ranked.rn, offset + limit)))
-        .orderBy(desc(ranked.timestamp));
+        .orderBy(desc(ranked.timestamp), desc(ranked.id));
 
       hasMore = bucketedOrders.some(
         (o: (typeof bucketedOrders)[number]) => Number(o.bucketCount) > offset + limit
       );
       statusCounts = {};
-      for (const o of bucketedOrders) {
-        if (statusCounts[o.status as OrderStatus] === undefined) {
-          statusCounts[o.status as OrderStatus] = Number(o.bucketCount);
+      if (offset === 0) {
+        for (const o of bucketedOrders) {
+          if (statusCounts[o.status as OrderStatus] === undefined) {
+            statusCounts[o.status as OrderStatus] = Number(o.bucketCount);
+          }
+        }
+      } else {
+        const groupedCounts = await db
+          .select({ status: orders.status, count: count() })
+          .from(orders)
+          .where(whereClause)
+          .groupBy(orders.status);
+        for (const row of groupedCounts) {
+          statusCounts[row.status as OrderStatus] = Number(row.count);
         }
       }
       dbOrders = bucketedOrders;
     } else {
       dbOrders = await db
-        .select(baseSelect)
+        .select({
+          ...orderBaseSelect,
+          ...staffJoinSelect,
+        })
         .from(orders)
         .leftJoin(staff, eq(orders.courierPaidBy, staff.id))
         .leftJoin(refundedByStaff, eq(orders.refundedBy, refundedByStaff.id))
         .where(whereClause)
-        .orderBy(desc(orders.timestamp))
+        .orderBy(desc(orders.timestamp), desc(orders.id))
         .limit(limit)
         .offset(offset);
     }
 
     let totalCount = Number(dbOrders[0]?.totalCount || 0);
     if (dbOrders.length === 0 && offset > 0) {
-      const [countResult] = await db
-        .select({ count: count() })
-        .from(orders)
-        .where(whereClause);
-      totalCount = Number(countResult?.count || 0);
+      if (statusCounts) {
+        totalCount = Object.values(statusCounts).reduce((sum, n) => sum + (n ?? 0), 0);
+      } else {
+        const [countResult] = await db
+          .select({ count: count() })
+          .from(orders)
+          .where(whereClause);
+        totalCount = Number(countResult?.count || 0);
+      }
     }
     const nowMs = Date.now();
 
