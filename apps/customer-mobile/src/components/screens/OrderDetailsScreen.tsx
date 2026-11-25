@@ -335,6 +335,12 @@ export const OrderDetailsScreen: React.FC = () => {
     setAwaitingViewMode('details');
   }, []);
 
+  const handleCloseRefundPass = useCallback(() => {
+    setIsRefundPassDismissed(true);
+    setIsRefundSessionActive(false);
+    setAwaitingViewMode('details');
+  }, []);
+
   const activateRefundWindow = useCallback(
     async (targetOrderId: string) => {
       const payload = buildCancelReasonPayload(cancelReason, cancelNotes);
@@ -391,9 +397,7 @@ export const OrderDetailsScreen: React.FC = () => {
   useEffect(() => {
     const onBackPress = () => {
       if (isAwaitingRefundPassView) {
-        setIsRefundPassDismissed(true);
-        setIsRefundSessionActive(false);
-        setAwaitingViewMode('details');
+        handleCloseRefundPass();
         return true;
       }
       if (isAwaitingCancelView) {
@@ -517,7 +521,7 @@ export const OrderDetailsScreen: React.FC = () => {
             <TouchableOpacity
               activeOpacity={0.7}
               onPress={
-                isAwaitingRefundPassView ? handleKeepOrder : handleCloseFocusedPass
+                isAwaitingRefundPassView ? handleCloseRefundPass : handleCloseFocusedPass
               }
               style={{
                 width: 40,
@@ -653,9 +657,7 @@ export const OrderDetailsScreen: React.FC = () => {
             onRefresh={handlePullRefresh}
             onRefreshRefund={handleRefreshRefundWindow}
             onReturnHome={() => {
-              setIsRefundPassDismissed(true);
-              setIsRefundSessionActive(false);
-              setAwaitingViewMode('details');
+              handleCloseRefundPass();
               navigateTo('home');
             }}
           />
