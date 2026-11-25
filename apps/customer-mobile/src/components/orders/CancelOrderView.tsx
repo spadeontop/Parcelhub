@@ -29,6 +29,7 @@ interface CancelOrderViewProps {
   readonly onConfirmedChange: (checked: boolean) => void;
   readonly onInitiateRefund: () => void;
   readonly onKeepOrder: () => void;
+  readonly isLoading?: boolean;
   readonly slideAnim: Animated.Value;
   readonly fadeAnim: Animated.Value;
 }
@@ -49,6 +50,7 @@ export const CancelOrderView: React.FC<CancelOrderViewProps> = ({
   onConfirmedChange,
   onInitiateRefund,
   onKeepOrder,
+  isLoading = false,
   slideAnim,
   fadeAnim,
 }) => {
@@ -216,18 +218,21 @@ export const CancelOrderView: React.FC<CancelOrderViewProps> = ({
         <View className="pt-1 gap-3">
           <ConfirmationSubmitSection
             title="I confirm that these order details are correct"
-            subtitle={`Since your parcel is still in Awaiting status, presenting your Refund Pass QR at the hub counter will authorize staff to release your ${formattedAmount} refund.`}
-            buttonLabel="Initiate Refund"
-            errorMessage="Please check the confirmation box before initiating refund."
+            subtitle={`Since your parcel is still in Awaiting status, cancelling will make your ${formattedAmount} refund available to claim at the hub counter.`}
+            buttonLabel="Confirm Cancellation"
+            errorMessage="Please check the confirmation box before cancelling order."
             isChecked={isConfirmed}
             onCheckedChange={onConfirmedChange}
             onValidate={handleValidate}
             onSubmit={onInitiateRefund}
+            isLoading={isLoading}
             themeColor="#2563eb"
+            buttonColor="#ef4444"
           />
 
           <TouchableOpacity
             activeOpacity={0.7}
+            disabled={isLoading}
             onPress={onKeepOrder}
             className="items-center justify-center py-2"
           >

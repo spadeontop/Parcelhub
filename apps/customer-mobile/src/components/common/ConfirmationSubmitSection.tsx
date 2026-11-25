@@ -31,6 +31,7 @@ export interface ConfirmationSubmitSectionProps {
   className?: string;
   /** Primary button theme color (defaults to #215cd4) */
   themeColor?: string;
+  buttonColor?: string;
 }
 
 export const ConfirmationSubmitSection: React.FC<ConfirmationSubmitSectionProps> = ({
@@ -45,6 +46,7 @@ export const ConfirmationSubmitSection: React.FC<ConfirmationSubmitSectionProps>
   isLoading = false,
   className = '',
   themeColor = '#215cd4',
+  buttonColor,
 }) => {
   const [internalChecked, setInternalChecked] = useState(false);
   const [hasError, setHasError] = useState(false);
@@ -184,9 +186,9 @@ export const ConfirmationSubmitSection: React.FC<ConfirmationSubmitSectionProps>
         disabled={isLoading}
         className="w-full h-[48px] rounded-[12px] items-center justify-center flex-row shadow-sm"
         style={{
-          backgroundColor: themeColor,
+          backgroundColor: buttonColor ?? themeColor,
           opacity: isLoading ? 0.85 : 1,
-          shadowColor: themeColor,
+          shadowColor: buttonColor ?? themeColor,
           shadowOffset: { width: 0, height: 4 },
           shadowOpacity: 0.25,
           shadowRadius: 10,

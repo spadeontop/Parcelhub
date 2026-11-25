@@ -5,6 +5,10 @@ import {
   CustomerUpdateOrderReq,
   CustomerUpdateOrderRes,
   CustomerClaimOrderRes,
+  CustomerCancelOrderReq,
+  CustomerCancelOrderRes,
+  CustomerInitiateRefundReq,
+  CustomerInitiateRefundRes,
   CustomerOrderDetail,
   CustomerOrderSummary,
   CustomerListOrdersQueryParams,
@@ -206,10 +210,46 @@ export const useCustomerOrderActions = () => {
     [authToken, setActiveScreen, showToast]
   );
 
+  const cancelCustomerOrder = useCallback(
+    async (
+      orderId: string,
+      payload?: CustomerCancelOrderReq
+    ): Promise<CustomerCancelOrderRes> => {
+      const token = authToken || (await v1Storage.getAuthToken());
+      if (!token) {
+        setActiveScreen('login');
+        throw new Error('Please log in again');
+      }
+      const res = await orderApi.cancelOrder(token, orderId, payload);
+      showToast(res.statusMessage || 'Order cancelled');
+      return res;
+    },
+    [authToken, setActiveScreen, showToast]
+  );
+
+  const initiateCustomerRefund = useCallback(
+    async (
+      orderId: string,
+      payload?: CustomerInitiateRefundReq
+    ): Promise<CustomerInitiateRefundRes> => {
+      const token = authToken || (await v1Storage.getAuthToken());
+      if (!token) {
+        setActiveScreen('login');
+        throw new Error('Please log in again');
+      }
+      const res = await orderApi.initiateRefund(token, orderId, payload);
+      showToast(res.statusMessage || 'Refund pass ready');
+      return res;
+    },
+    [authToken, setActiveScreen, showToast]
+  );
+
   return {
     initializeCustomerOrder,
     confirmCustomerOrder,
     fetchOrderDetail,
     claimCustomerOrder,
+    cancelCustomerOrder,
+    initiateCustomerRefund,
   };
 };

@@ -60,6 +60,10 @@ export type CustomerApiRoutes =
   // Screen: OrderDetailsScreen (Unlock Counter Pickup Pass)
   | readonly ["POST", `/api/v1/customer/orders/${string}/claim`]
 
+  // Screen: OrderDetailsScreen (Cancel Unpaid Order & Initiate Awaiting Refund Pass)
+  | readonly ["POST", `/api/v1/customer/orders/${string}/cancel`]
+  | readonly ["POST", `/api/v1/customer/orders/${string}/refund`]
+
   // Push Notifications Registration & Deregistration
   | readonly ["POST", "/api/v1/notification/upload-token"]
   | readonly ["DELETE", "/api/v1/notification/token"]

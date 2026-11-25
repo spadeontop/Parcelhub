@@ -23,12 +23,14 @@ import { QrCodeIcon } from '../common/Icons';
 import { AppHeader } from '../layout/AppHeader';
 import { ConfirmationSubmitSection } from '../common/ConfirmationSubmitSection';
 import { getStatusLabel } from '../../utils/statusHelpers';
+import { buildCancelReasonPayload } from '../../utils/cancelReasonMapper';
 import { useClaimCountdown } from '../orders/useClaimCountdown';
 import { ClaimPassView } from '../orders/ClaimPassView';
 import { OrderCancelledView } from '../orders/OrderCancelledView';
 import { CancelOrderView, CANCELLATION_REASONS } from '../orders/CancelOrderView';
 import { RefundPassView } from '../orders/RefundPassView';
 import { OrderRefundedView } from '../orders/OrderRefundedView';
+import { OrderRefundPendingView } from '../orders/OrderRefundPendingView';
 import { OrderOverviewCard } from '../orders/OrderOverviewCard';
 import { OrderTimelineStepper } from '../orders/OrderTimelineStepper';
 import {
@@ -49,7 +51,8 @@ export const OrderDetailsScreen: React.FC = () => {
   const { showToast } = useToast();
   const { authToken, customer } = useAuthSession();
   const { orders } = useCustomerOrders();
-  const { claimCustomerOrder } = useCustomerOrderActions();
+  const { claimCustomerOrder, cancelCustomerOrder, initiateCustomerRefund } =
+    useCustomerOrderActions();
 
   const queryClient = useQueryClient();
   const { data: orderDetail, refetch } = useCustomerOrderDetailQuery(authToken, selectedOrderId);
@@ -70,6 +73,12 @@ export const OrderDetailsScreen: React.FC = () => {
   const [cancelReason, setCancelReason] = useState<string | null>(CANCELLATION_REASONS[0]);
   const [cancelNotes, setCancelNotes] = useState<string>('');
   const [cancelConfirmed, setCancelConfirmed] = useState<boolean>(false);
+  const [isCancellingOrder, setIsCancellingOrder] = useState<boolean>(false);
+  const [isInitiatingRefund, setIsInitiatingRefund] = useState<boolean>(false);
+  const [isRefreshingRefund, setIsRefreshingRefund] = useState<boolean>(false);
+  const [isRefundPassDismissed, setIsRefundPassDismissed] = useState<boolean>(false);
+  const [isRefundSessionActive, setIsRefundSessionActive] = useState<boolean>(false);
+  const [refundPendingConfirmed, setRefundPendingConfirmed] = useState<boolean>(false);
 
   // Hub status defaults to open
   const hubOpen = true;
@@ -91,6 +100,7 @@ export const OrderDetailsScreen: React.FC = () => {
     orderDetail?.recipientName ||
     (customer?.firstName ? `${customer.firstName} ${customer.lastName || ''}`.trim() : 'Recipient');
   const price = orderDetail?.price ?? 0;
+  const amountReceived = orderDetail?.amountReceived ?? cachedSummary?.amountReceived ?? null;
   const change = orderDetail?.change ?? 0;
   const trackingNumber = orderDetail?.trackingId || cachedSummary?.trackingId || '—';
   const statusTimeline = orderDetail?.statusTimeline || [];
@@ -99,6 +109,17 @@ export const OrderDetailsScreen: React.FC = () => {
     isClaimActive: orderDetail?.isClaimActive,
     claimExpiresAt: orderDetail?.claimExpiresAt,
     claimRemainingSeconds: orderDetail?.claimRemainingSeconds,
+  });
+
+  const {
+    remainingSecs: refundRemainingSecs,
+    timeFormatted: refundTimeFormatted,
+    startLocalWindow: startRefundLocalWindow,
+    resetCountdown: resetRefundCountdown,
+  } = useClaimCountdown({
+    isClaimActive: orderDetail?.isRefundActive,
+    claimExpiresAt: orderDetail?.refundExpiresAt,
+    claimRemainingSeconds: orderDetail?.refundRemainingSeconds,
   });
 
   // Reset local interaction state and countdown whenever the viewed order changes
@@ -115,8 +136,15 @@ export const OrderDetailsScreen: React.FC = () => {
     setCancelReason(CANCELLATION_REASONS[0]);
     setCancelNotes('');
     setCancelConfirmed(false);
+    setIsCancellingOrder(false);
+    setIsInitiatingRefund(false);
+    setIsRefreshingRefund(false);
+    setIsRefundPassDismissed(false);
+    setIsRefundSessionActive(false);
+    setRefundPendingConfirmed(false);
     resetCountdown();
-  }, [selectedOrderId, resetCountdown]);
+    resetRefundCountdown();
+  }, [selectedOrderId, resetCountdown, resetRefundCountdown]);
 
   const qrIdentifier = ticketCode || orderId || 'PARCELHUB-RELEASE';
   const isClaimed = status === 'CLAIMED';
@@ -145,13 +173,23 @@ export const OrderDetailsScreen: React.FC = () => {
   const refundPassFadeAnim = useRef(new Animated.Value(0)).current;
   const refundPassSlideAnim = useRef(new Animated.Value(36)).current;
 
-  const isAwaitingCancelView = status === 'AWAITING_PARCEL' && awaitingViewMode === 'cancel';
+  const isServerRefundActive = Boolean(orderDetail?.isRefundActive) && refundRemainingSecs > 0;
+  const isRefundCapableStatus =
+    status === 'AWAITING_PARCEL' ||
+    (status === 'CANCELLED' && Boolean(orderDetail?.isRefundEligible));
   const isAwaitingRefundPassView =
-    status === 'AWAITING_PARCEL' && awaitingViewMode === 'refund_pass';
+    isRefundCapableStatus &&
+    (awaitingViewMode === 'refund_pass' ||
+      ((isServerRefundActive || isRefundSessionActive) && !isRefundPassDismissed));
+  const isAwaitingCancelView =
+    status === 'AWAITING_PARCEL' && !isAwaitingRefundPassView && awaitingViewMode === 'cancel';
   const isRefundExpired =
-    isAwaitingRefundPassView && remainingSecs === 0;
+    isAwaitingRefundPassView &&
+    refundRemainingSecs === 0 &&
+    !isInitiatingRefund &&
+    !isRefreshingRefund;
   const isRefundExpiringSoon =
-    isAwaitingRefundPassView && !isRefundExpired && remainingSecs <= 60;
+    isAwaitingRefundPassView && !isRefundExpired && refundRemainingSecs <= 60;
 
   useEffect(() => {
     if (isAwaitingCancelView) {
@@ -219,7 +257,16 @@ export const OrderDetailsScreen: React.FC = () => {
   }, []);
 
   const isUnpaidCancelledView =
-    !isFocusedPassView && (status === 'CANCELLED' || unpaidViewMode === 'cancelled');
+    !isFocusedPassView &&
+    !isAwaitingRefundPassView &&
+    ((status === 'CANCELLED' && !orderDetail?.isRefundEligible) ||
+      unpaidViewMode === 'cancelled');
+  const isCancelledRefundPendingView =
+    !isFocusedPassView &&
+    !isAwaitingRefundPassView &&
+    status === 'CANCELLED' &&
+    Boolean(orderDetail?.isRefundEligible) &&
+    !orderDetail?.isRefunded;
   const isUnpaidCancelView =
     !isFocusedPassView && !isUnpaidCancelledView && unpaidViewMode === 'cancel';
 
@@ -256,16 +303,38 @@ export const OrderDetailsScreen: React.FC = () => {
     animateUnpaidTransition('back');
   }, [animateUnpaidTransition]);
 
-  const handleConfirmUnpaidCancel = useCallback(() => {
-    const now = new Date().toLocaleTimeString([], {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    });
-    setCancelledTimeFallback(now);
-    setUnpaidViewMode('cancelled');
-    animateUnpaidTransition('forward');
-  }, [animateUnpaidTransition]);
+  const handleConfirmUnpaidCancel = useCallback(async () => {
+    if (isCancellingOrder || !orderId) return;
+    setIsCancellingOrder(true);
+    try {
+      const payload = buildCancelReasonPayload(unpaidCancelReason, cancelNotes);
+      await cancelCustomerOrder(orderId, payload);
+      const now = new Date().toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      });
+      setCancelledTimeFallback(now);
+      await queryClient.invalidateQueries({ queryKey: customerQueryKeys.orders() });
+      await refetch();
+      setUnpaidViewMode('cancelled');
+      animateUnpaidTransition('forward');
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to cancel order.');
+    } finally {
+      setIsCancellingOrder(false);
+    }
+  }, [
+    isCancellingOrder,
+    orderId,
+    unpaidCancelReason,
+    cancelNotes,
+    cancelCustomerOrder,
+    queryClient,
+    refetch,
+    animateUnpaidTransition,
+    showToast,
+  ]);
 
   const handleOpenCancelOrder = useCallback(() => {
     setAwaitingViewMode('cancel');
@@ -275,19 +344,92 @@ export const OrderDetailsScreen: React.FC = () => {
     setAwaitingViewMode('details');
   }, []);
 
-  const handleInitiateRefund = useCallback(() => {
-    startLocalWindow(5 * 60);
-    setAwaitingViewMode('refund_pass');
-  }, [startLocalWindow]);
+  const handleCloseRefundPass = useCallback(() => {
+    setIsRefundPassDismissed(true);
+    setIsRefundSessionActive(false);
+    setAwaitingViewMode('details');
+  }, []);
 
-  const handleRefreshRefundWindow = useCallback(() => {
-    startLocalWindow(5 * 60);
-  }, [startLocalWindow]);
+  const activateRefundWindow = useCallback(
+    async (targetOrderId: string) => {
+      const payload = buildCancelReasonPayload(cancelReason, cancelNotes);
+      const res = await initiateCustomerRefund(targetOrderId, payload);
+      const initialSeconds = (res.durationMinutes || 5) * 60;
+      startRefundLocalWindow(initialSeconds);
+      setIsRefundPassDismissed(false);
+      setIsRefundSessionActive(true);
+      setAwaitingViewMode('refund_pass');
+      await queryClient.invalidateQueries({ queryKey: customerQueryKeys.orders() });
+      await refetch();
+    },
+    [
+      cancelReason,
+      cancelNotes,
+      initiateCustomerRefund,
+      startRefundLocalWindow,
+      queryClient,
+      refetch,
+    ]
+  );
+
+  const handleCancelAwaitingOrder = useCallback(async () => {
+    if (isCancellingOrder || !orderId) return;
+    setIsCancellingOrder(true);
+    try {
+      const payload = buildCancelReasonPayload(cancelReason, cancelNotes);
+      await cancelCustomerOrder(orderId, payload);
+      await queryClient.invalidateQueries({ queryKey: customerQueryKeys.orders() });
+      await refetch();
+      setAwaitingViewMode('details');
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to cancel order.');
+    } finally {
+      setIsCancellingOrder(false);
+    }
+  }, [
+    isCancellingOrder,
+    orderId,
+    cancelReason,
+    cancelNotes,
+    cancelCustomerOrder,
+    queryClient,
+    refetch,
+    showToast,
+  ]);
+
+  const handleInitiateRefund = useCallback(async () => {
+    if (isInitiatingRefund || !orderId) return;
+    setIsInitiatingRefund(true);
+    try {
+      await activateRefundWindow(orderId);
+    } catch (err: any) {
+      setIsRefundSessionActive(false);
+      showToast(err?.message || 'Failed to initiate refund.');
+    } finally {
+      setIsInitiatingRefund(false);
+    }
+  }, [isInitiatingRefund, orderId, activateRefundWindow, showToast]);
+
+  const handleRefreshRefundWindow = useCallback(async () => {
+    if (isRefreshingRefund || !orderId) return;
+    setIsRefreshingRefund(true);
+    try {
+      await activateRefundWindow(orderId);
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to refresh refund window.');
+    } finally {
+      setIsRefreshingRefund(false);
+    }
+  }, [isRefreshingRefund, orderId, activateRefundWindow, showToast]);
 
   // Handle hardware back on Android: dismiss the pass and return to Complete Details or previous screen
   useEffect(() => {
     const onBackPress = () => {
-      if (isAwaitingRefundPassView || isAwaitingCancelView) {
+      if (isAwaitingRefundPassView) {
+        handleCloseRefundPass();
+        return true;
+      }
+      if (isAwaitingCancelView) {
         setAwaitingViewMode('details');
         return true;
       }
@@ -408,7 +550,7 @@ export const OrderDetailsScreen: React.FC = () => {
             <TouchableOpacity
               activeOpacity={0.7}
               onPress={
-                isAwaitingRefundPassView ? handleKeepOrder : handleCloseFocusedPass
+                isAwaitingRefundPassView ? handleCloseRefundPass : handleCloseFocusedPass
               }
               style={{
                 width: 40,
@@ -499,6 +641,14 @@ export const OrderDetailsScreen: React.FC = () => {
           centerTitle
           onBack={() => navigateTo('home')}
         />
+      ) : isCancelledRefundPendingView ? (
+        <AppHeader
+          title="Order Cancelled"
+          subtitle="Ready For Refund"
+          showBackButton
+          centerTitle
+          onBack={goBack}
+        />
       ) : (
         <AppHeader
           title="Complete Details"
@@ -514,15 +664,37 @@ export const OrderDetailsScreen: React.FC = () => {
         {status === 'REFUNDED' ? (
           <OrderRefundedView
             productName={productName}
-            price={price}
+            price={orderDetail?.refundAmount ?? amountReceived ?? price}
             ticketCode={ticketCode}
             orderId={orderId}
-            cancellationReason={cancelReason}
+            cancellationReason={orderDetail?.refundReason || orderDetail?.cancelReason || cancelReason}
             hubName="Lily’s Catering Hub"
             hubAddress="Yati, Liloan, Cebu, 6002"
             statusTimeline={statusTimeline}
             isPullRefreshing={isPullRefreshing}
             onRefresh={handlePullRefresh}
+            onReturnHome={() => navigateTo('home')}
+          />
+        ) : isCancelledRefundPendingView ? (
+          <OrderRefundPendingView
+            productName={productName}
+            price={price}
+            paidAmount={amountReceived ?? price}
+            refundAmount={orderDetail?.refundAmount ?? amountReceived ?? price}
+            ticketCode={ticketCode}
+            orderId={orderId}
+            cancellationReason={orderDetail?.refundReason || orderDetail?.cancelReason || cancelReason}
+            hubName="Lily’s Catering Hub"
+            hubAddress="Yati, Liloan, Cebu, 6002"
+            hubOpen={hubOpen}
+            statusTimeline={statusTimeline}
+            cancelledAt={orderDetail?.cancelledAt}
+            isPullRefreshing={isPullRefreshing}
+            isConfirmed={refundPendingConfirmed}
+            onConfirmedChange={setRefundPendingConfirmed}
+            isLoading={isInitiatingRefund}
+            onRefresh={handlePullRefresh}
+            onInitiateRefund={handleInitiateRefund}
             onReturnHome={() => navigateTo('home')}
           />
         ) : isAwaitingRefundPassView ? (
@@ -531,18 +703,20 @@ export const OrderDetailsScreen: React.FC = () => {
             orderId={orderId}
             hasOrderDetail={Boolean(orderDetail)}
             productName={productName}
-            refundAmount={price}
+            refundAmount={orderDetail?.refundAmount ?? amountReceived ?? price}
             qrIdentifier={qrIdentifier}
-            timeFormatted={timeFormatted}
+            timeFormatted={refundTimeFormatted}
+            isRefunded={Boolean(orderDetail?.isRefunded)}
             isRefundExpired={isRefundExpired}
             isExpiringSoon={isRefundExpiringSoon}
+            isRefreshingRefund={isRefreshingRefund}
             isPullRefreshing={isPullRefreshing}
             passFadeAnim={refundPassFadeAnim}
             passSlideAnim={refundPassSlideAnim}
             onRefresh={handlePullRefresh}
             onRefreshRefund={handleRefreshRefundWindow}
             onReturnHome={() => {
-              setAwaitingViewMode('details');
+              handleCloseRefundPass();
               navigateTo('home');
             }}
           />
@@ -550,15 +724,16 @@ export const OrderDetailsScreen: React.FC = () => {
           <CancelOrderView
             productName={productName}
             hubName="Lily’s Catering Hub"
-            refundableAmount={price}
+            refundableAmount={orderDetail?.refundAmount ?? amountReceived ?? price}
             selectedReason={cancelReason}
             onSelectReason={setCancelReason}
             additionalNotes={cancelNotes}
             onChangeNotes={setCancelNotes}
             isConfirmed={cancelConfirmed}
             onConfirmedChange={setCancelConfirmed}
-            onInitiateRefund={handleInitiateRefund}
+            onInitiateRefund={handleCancelAwaitingOrder}
             onKeepOrder={handleKeepOrder}
+            isLoading={isCancellingOrder}
             slideAnim={cancelSlideAnim}
             fadeAnim={cancelFadeAnim}
           />
@@ -598,6 +773,7 @@ export const OrderDetailsScreen: React.FC = () => {
               onChangeNotes={setCancelNotes}
               onConfirmCancel={handleConfirmUnpaidCancel}
               onKeepOrder={handleKeepUnpaidOrder}
+              isLoading={isCancellingOrder}
             />
           </Animated.View>
         ) : isUnpaidCancelledView ? (
@@ -612,7 +788,7 @@ export const OrderDetailsScreen: React.FC = () => {
               trackingNumber={trackingNumber}
               productName={productName}
               price={price}
-              reason={unpaidCancelReason}
+              reason={orderDetail?.cancelReason || unpaidCancelReason}
               hubOpen={hubOpen}
               statusTimeline={statusTimeline}
               cancelledTimeFallback={cancelledTimeFallback}
@@ -644,6 +820,7 @@ export const OrderDetailsScreen: React.FC = () => {
             <OrderOverviewCard
               productName={productName}
               price={price}
+              amountReceived={amountReceived}
               recipientName={recipientName}
               trackingNumber={trackingNumber}
               status={status}
@@ -787,8 +964,8 @@ export const OrderDetailsScreen: React.FC = () => {
         )}
       </View>
 
-      {/* Full-Screen Loading Overlay for Claim Initiation / Refresh */}
-      {(isInitiatingClaim || isRefreshingRelease) && (
+      {/* Full-Screen Loading Overlay for Claim / Refund Initiation & Refresh */}
+      {(isInitiatingClaim || isRefreshingRelease || isInitiatingRefund || isRefreshingRefund) && (
         <View
           style={{
             position: 'absolute',
@@ -827,7 +1004,13 @@ export const OrderDetailsScreen: React.FC = () => {
                 textAlign: 'center',
               }}
             >
-              {isRefreshingRelease ? 'Refreshing Pass...' : 'Preparing Pickup Pass...'}
+              {isRefreshingRefund
+                ? 'Refreshing Refund Pass...'
+                : isInitiatingRefund
+                ? 'Preparing Refund Pass...'
+                : isRefreshingRelease
+                ? 'Refreshing Pass...'
+                : 'Preparing Pickup Pass...'}
             </Text>
             <Text
               style={{
@@ -838,7 +1021,9 @@ export const OrderDetailsScreen: React.FC = () => {
                 textAlign: 'center',
               }}
             >
-              Securing claim release timer...
+              {isInitiatingRefund || isRefreshingRefund
+                ? 'Securing refund pass timer...'
+                : 'Securing claim release timer...'}
             </Text>
           </View>
         </View>

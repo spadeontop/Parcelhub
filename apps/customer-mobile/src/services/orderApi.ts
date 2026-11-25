@@ -7,6 +7,10 @@ import {
   CustomerUpdateOrderRes,
   CustomerGetOrderRes,
   CustomerClaimOrderRes,
+  CustomerCancelOrderReq,
+  CustomerCancelOrderRes,
+  CustomerInitiateRefundReq,
+  CustomerInitiateRefundRes,
   CustomerGetOrderPhotoRes,
   OrderPhotoType,
 } from '../types/api';
@@ -100,6 +104,44 @@ export const orderApi = {
         method: 'POST',
         token: authToken,
         body: JSON.stringify({}),
+      }
+    );
+  },
+
+  /**
+   * POST /api/v1/customer/orders/{id}/cancel
+   * Cancels/voids an unpaid order (PAYMENT_REQUIRED)
+   */
+  async cancelOrder(
+    authToken: string,
+    orderId: string,
+    payload: CustomerCancelOrderReq = {}
+  ): Promise<CustomerCancelOrderRes> {
+    return await v1Fetch<CustomerCancelOrderRes>(
+      `/api/v1/customer/orders/${encodeURIComponent(orderId)}/cancel`,
+      {
+        method: 'POST',
+        token: authToken,
+        body: JSON.stringify(payload),
+      }
+    );
+  },
+
+  /**
+   * POST /api/v1/customer/orders/{id}/refund
+   * Initiates or refreshes a 5-minute refund pass window for AWAITING_PARCEL order
+   */
+  async initiateRefund(
+    authToken: string,
+    orderId: string,
+    payload: CustomerInitiateRefundReq = {}
+  ): Promise<CustomerInitiateRefundRes> {
+    return await v1Fetch<CustomerInitiateRefundRes>(
+      `/api/v1/customer/orders/${encodeURIComponent(orderId)}/refund`,
+      {
+        method: 'POST',
+        token: authToken,
+        body: JSON.stringify(payload),
       }
     );
   },
