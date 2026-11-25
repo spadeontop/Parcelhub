@@ -35,6 +35,7 @@ export interface RecoveryCopy {
 interface RecoveryFlowProps {
   copy: RecoveryCopy;
   onExit: () => void;
+  onDone?: () => void;
   onRequestCode?: (email: string) => Promise<{ retryAfterSeconds?: number } | void>;
   onVerifyCode?: (email: string, code: string) => Promise<{ resetToken?: string } | void>;
   renderReset: (actions: {
@@ -51,6 +52,7 @@ const RESEND_DELAY_SECONDS = 60;
 export function RecoveryFlow({
   copy,
   onExit,
+  onDone,
   onRequestCode,
   onVerifyCode,
   renderReset,
@@ -202,7 +204,7 @@ export function RecoveryFlow({
           </Text>
         </View>
         <View style={styles.successAction}>
-          <AuthButton label={copy.doneLabel} onPress={onExit} />
+          <AuthButton label={copy.doneLabel} onPress={onDone ?? onExit} />
         </View>
       </AuthSheetLayout>
     );

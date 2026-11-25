@@ -41,6 +41,11 @@ export type CustomerApiRoutes =
   | readonly ["POST", "/api/v1/customer/forgot-password/verify"]
   | readonly ["POST", "/api/v1/customer/forgot-password/reset"]
 
+  // Screen: MpinRecoveryScreen (Forgot MPIN OTP & Reset)
+  | readonly ["POST", "/api/v1/customer/forgot-mpin"]
+  | readonly ["POST", "/api/v1/customer/forgot-mpin/verify"]
+  | readonly ["POST", "/api/v1/customer/forgot-mpin/reset"]
+
   // App Lifecycle / Session Resume (Silent MPIN Token Renewal)
   | readonly ["POST", "/api/v1/customer/refresh"]
 

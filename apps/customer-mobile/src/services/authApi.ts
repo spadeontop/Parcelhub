@@ -17,6 +17,12 @@ import {
   CustomerVerifyPasswordResetOtpRes,
   CustomerResetPasswordReq,
   CustomerResetPasswordRes,
+  CustomerForgotMpinReq,
+  CustomerForgotMpinRes,
+  CustomerVerifyMpinResetOtpReq,
+  CustomerVerifyMpinResetOtpRes,
+  CustomerResetMpinReq,
+  CustomerResetMpinRes,
 } from '../types/api';
 
 export const authApi = {
@@ -179,5 +185,61 @@ export const authApi = {
         newPassword: payload.newPassword,
       }),
     });
+  },
+
+  /**
+   * POST /api/v1/customer/forgot-mpin
+   * Requests a 6-digit MPIN reset OTP for the given email
+   */
+  async forgotMpin(payload: CustomerForgotMpinReq): Promise<CustomerForgotMpinRes> {
+    return v1Fetch<CustomerForgotMpinRes>('/api/v1/customer/forgot-mpin', {
+      method: 'POST',
+      body: JSON.stringify({
+        email: payload.email.trim().toLowerCase(),
+      }),
+    });
+  },
+
+  /**
+   * POST /api/v1/customer/forgot-mpin/verify
+   * Verifies the 6-digit MPIN reset OTP and returns a short-lived resetToken
+   */
+  async verifyMpinResetOtp(
+    payload: CustomerVerifyMpinResetOtpReq
+  ): Promise<CustomerVerifyMpinResetOtpRes> {
+    return v1Fetch<CustomerVerifyMpinResetOtpRes>('/api/v1/customer/forgot-mpin/verify', {
+      method: 'POST',
+      body: JSON.stringify({
+        email: payload.email.trim().toLowerCase(),
+        code: payload.code.trim(),
+      }),
+    });
+  },
+
+  /**
+   * POST /api/v1/customer/forgot-mpin/reset
+   * Resets the customer 4-digit MPIN using resetToken and stores renewed session tokens
+   */
+  async resetMpin(payload: CustomerResetMpinReq): Promise<CustomerResetMpinRes> {
+    const res = await v1Fetch<CustomerResetMpinRes>('/api/v1/customer/forgot-mpin/reset', {
+      method: 'POST',
+      body: JSON.stringify({
+        resetToken: payload.resetToken,
+        newMpin: payload.newMpin,
+      }),
+    });
+
+    if (res?.authToken) {
+      await v1Storage.setAuthToken(res.authToken);
+    }
+    if (res?.refreshToken) {
+      await v1Storage.setRefreshToken(res.refreshToken);
+    }
+    if (res?.customer) {
+      await v1Storage.setCustomerProfile(res.customer);
+    }
+    await v1Storage.clearPreAuthToken();
+
+    return res;
   },
 };
