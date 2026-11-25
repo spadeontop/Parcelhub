@@ -3,13 +3,14 @@ import {
   View,
   Text,
   TouchableOpacity,
-  ScrollView,
+  FlatList,
   RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
 import { FilterDropdown } from '../common/FilterDropdown';
 import { StatusBar } from 'expo-status-bar';
 import { useNavigationUi } from '../../context/NavigationAndUiContext';
-import { useCustomerOrders } from '../../hooks/useCustomerOrders';
+import { useInfiniteCustomerOrders } from '../../hooks/useCustomerOrders';
 import { BottomNav } from '../layout/BottomNav';
 import { AppHeader } from '../layout/AppHeader';
 import { getStatusTheme } from '../../utils/statusHelpers';
@@ -61,12 +62,27 @@ export const TransactionsScreen: React.FC = () => {
     transactionFilter,
     setTransactionFilter,
   } = useNavigationUi();
-  const { orders, refetchOrders } = useCustomerOrders();
+  const {
+    orders,
+    totalOrders,
+    statusCounts,
+    isLoading,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+    refetch,
+  } = useInfiniteCustomerOrders();
   const [refreshing, setRefreshing] = useState(false);
+
+  const filteredOrders =
+    transactionFilter === 'ALL'
+      ? orders
+      : orders.filter((o) => o.status === transactionFilter);
+
   const onRefresh = async () => {
     setRefreshing(true);
     try {
-      await refetchOrders();
+      await refetch();
     } catch {
       // Ignored for pull to refresh
     } finally {
@@ -74,10 +90,11 @@ export const TransactionsScreen: React.FC = () => {
     }
   };
 
-  const filteredOrders =
+  const activeCount =
     transactionFilter === 'ALL'
-      ? orders
-      : orders.filter((o) => o.status === transactionFilter);
+      ? totalOrders
+      : (statusCounts[transactionFilter] ?? filteredOrders.length);
+  const countLabel = `${activeCount} ${activeCount === 1 ? 'Order' : 'Orders'}`;
 
   return (
     <View className="flex-1 bg-[#2560ea]">
@@ -96,21 +113,29 @@ export const TransactionsScreen: React.FC = () => {
           value={transactionFilter}
           onChange={setTransactionFilter}
           accessibilityLabel="Filter orders"
-          countLabel={`${filteredOrders.length} ${filteredOrders.length === 1 ? 'Order' : 'Orders'}`}
+          countLabel={countLabel}
           options={FILTERS.map((filter) => ({
             value: filter,
             label: getFilterLabel(filter),
-            count: filter === 'ALL' ? orders.length : orders.filter((order) => order.status === filter).length,
+            count: filter === 'ALL' ? totalOrders : (statusCounts[filter] ?? 0),
             color: filter === 'ALL' ? '#4b5563' : getStatusTheme(filter).dotColor,
           }))}
         />
 
         {/* Scrollable Content Container */}
         <View className="mx-5 mb-24 bg-white border border-[#e5eaf3] rounded-[24px] overflow-hidden" style={{ flexShrink: 1 }}>
-          <ScrollView
+          <FlatList
+            data={filteredOrders}
+            keyExtractor={(item) => item.id}
             showsVerticalScrollIndicator={false}
             style={{ flexGrow: 0 }}
             contentContainerStyle={{ paddingHorizontal: 16 }}
+            onEndReached={() => {
+              if (hasNextPage && !isFetchingNextPage) {
+                void fetchNextPage();
+              }
+            }}
+            onEndReachedThreshold={0.3}
             refreshControl={
               <RefreshControl
                 refreshing={refreshing}
@@ -118,70 +143,80 @@ export const TransactionsScreen: React.FC = () => {
                 colors={['#2563eb']}
               />
             }
-          >
-            {/* Transactions Container - Full Width */}
-            <View>
-              {/* Header */}
-
-              {/* List Rows */}
-              {filteredOrders.length === 0 ? (
+            ListEmptyComponent={
+              isLoading ? (
+                <View className="py-14 items-center justify-center">
+                  <ActivityIndicator size="small" color="#2563eb" />
+                </View>
+              ) : (
                 <View className="py-14 items-center justify-center px-4">
                   <Text className="text-sm font-medium text-[#94a3b8] text-center">
                     No orders found matching this filter.
                   </Text>
                 </View>
-              ) : (
-                filteredOrders.map((order, idx) => {
-                  const statusTheme = getStatusTheme(order.status);
-                  const isLast = idx === filteredOrders.length - 1;
+              )
+            }
+            ListFooterComponent={
+              isFetchingNextPage ? (
+                <View className="py-4 items-center justify-center">
+                  <ActivityIndicator size="small" color="#2563eb" />
+                </View>
+              ) : undefined
+            }
+            renderItem={({ item: order, index }) => {
+              const statusTheme = getStatusTheme(order.status);
+              const isLast = index === filteredOrders.length - 1;
 
-                  return (
-                    <TouchableOpacity
-                      key={order.id}
-                      activeOpacity={0.7}
-                      onPress={() =>
-                        navigateTo('order_details', {
-                          orderId: order.id,
-                          ticketCode: order.ticketCode,
-                        })
-                      }
-                      className={`flex-row items-center justify-between ${!isLast ? 'border-b border-[#e8ebf2]' : ''
-                        }`}
-                      style={{
-                        minHeight: 60,
-                        paddingVertical: 8,
-                        paddingRight: 12,
-                      }}
+              return (
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() =>
+                    navigateTo('order_details', {
+                      orderId: order.id,
+                      ticketCode: order.ticketCode,
+                    })
+                  }
+                  className={`flex-row items-center justify-between ${
+                    !isLast ? 'border-b border-[#e8ebf2]' : ''
+                  }`}
+                  style={{
+                    minHeight: 60,
+                    paddingVertical: 8,
+                    paddingRight: 12,
+                  }}
+                >
+                  {/* Left: Product Name & Date */}
+                  <View className="flex-1 pr-3">
+                    <Text
+                      className="text-[13px] font-semibold text-[#172033] leading-[18px]"
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
                     >
-                      {/* Left: Product Name & Date */}
-                      <View className="flex-1 pr-3">
-                        <Text
-                          className="text-[13px] font-semibold text-[#172033] leading-[18px]"
-                          numberOfLines={1}
-                          ellipsizeMode="tail"
-                        >
-                          {order.productName || 'Unknown Package'}
-                        </Text>
-                        <Text className="text-[10px] font-normal text-[#667184] leading-[15px] mt-1">
-                          {formatOrderDate(order.timestamp) || 'Recent Order'}
-                        </Text>
-                      </View>
+                      {order.productName || 'Unknown Package'}
+                    </Text>
+                    <Text className="text-[10px] font-normal text-[#667184] leading-[15px] mt-1">
+                      {formatOrderDate(order.timestamp) || 'Recent Order'}
+                    </Text>
+                  </View>
 
-                      {/* Right: Status Dot + Label + Chevron */}
-                      <View className="flex-row items-center gap-2 shrink-0">
-                        <Text
-                          className="text-[11.5px] font-medium text-[#18181b] leading-[16px]"
-                        >
-                          {statusTheme.label}
-                        </Text>
-                        <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: statusTheme.dotColor }} />
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })
-              )}
-            </View>
-          </ScrollView>
+                  {/* Right: Status Dot + Label */}
+                  <View className="flex-row items-center gap-2 shrink-0">
+                    <Text className="text-[11.5px] font-medium text-[#18181b] leading-[16px]">
+                      {statusTheme.label}
+                    </Text>
+                    <View
+                      style={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: 3,
+                        backgroundColor: statusTheme.dotColor,
+                      }}
+                    />
+                  </View>
+                </TouchableOpacity>
+              );
+            }}
+          />
         </View>
 
         {/* Floating Bottom Nav inside the Main Sheet */}

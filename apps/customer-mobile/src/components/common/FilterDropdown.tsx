@@ -6,7 +6,7 @@ import Animated, { Easing, ReduceMotion, useAnimatedStyle, useSharedValue, withT
 export interface FilterOption<T extends string> {
   value: T;
   label: string;
-  count: number;
+  count?: number;
   color: string;
 }
 
@@ -106,7 +106,9 @@ export function FilterDropdown<T extends string>({ value, options, countLabel, o
                     <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: dotColor }} />
                     <Text className={`text-[13px] text-[#111827] ${selected ? 'font-semibold' : 'font-medium'}`}>{option.label}</Text>
                   </View>
-                  <Text className="text-[12px] text-[#4b5563]">{count}</Text>
+                  {typeof count === 'number' && (
+                    <Text className="text-[12px] text-[#4b5563]">{count}</Text>
+                  )}
                 </TouchableOpacity>
               );
             })}
