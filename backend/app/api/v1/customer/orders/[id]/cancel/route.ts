@@ -5,7 +5,7 @@ import { orders } from "@/db/schema";
 import { authenticateCustomerRequest, customerAuthErrorResponse } from "@/app/lib/v1/auth";
 import {
   appendStatusTimelineSql,
-  computeRefundableAmount,
+  computeRefundInfo,
   matchOrderByIdOrTicket,
   ORDER_NON_IMAGE_COLUMNS,
   parseOptionalCancelOrRefundReason,
@@ -120,6 +120,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         price: orders.price,
         courierPaid: orders.courierPaid,
         isRefunded: orders.isRefunded,
+        refundAmount: orders.refundAmount,
+        cancelledBy: orders.cancelledBy,
+        cancelledByRole: orders.cancelledByRole,
+        cancelReasonCode: orders.cancelReasonCode,
+        cancelReason: orders.cancelReason,
+        cancelledAt: orders.cancelledAt,
       });
 
     if (!updatedOrder) {
@@ -130,7 +136,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const refundableAmount = computeRefundableAmount(updatedOrder);
+    const { isRefundEligible, refundAmount } = computeRefundInfo(updatedOrder);
     const channels =
       order.status === "PENDING_INITIALIZATION"
         ? [`customer:${auth.session.userId}`]
@@ -148,8 +154,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       statusMessage: "Order cancelled successfully",
       orderId: updatedOrder.id as OrderId,
       status: "CANCELLED",
-      isRefundEligible: refundableAmount > 0,
-      refundableAmount,
+      cancelledBy: updatedOrder.cancelledBy ?? auth.session.userId,
+      cancelledByRole: updatedOrder.cancelledByRole ?? "CUSTOMER",
+      cancelReasonCode: updatedOrder.cancelReasonCode ?? null,
+      cancelReason: updatedOrder.cancelReason ?? null,
+      cancelledAt: (updatedOrder.cancelledAt ?? now).toISOString(),
+      isRefundEligible,
+      refundAmount,
     };
 
     return jsonSuccess(response);
