@@ -1,0 +1,259 @@
+name: Build Mobile APK
+
+# Triggered on-demand via the GitHub Actions tab ("Run workflow" button).
+# Supports building Customer Mobile, Staff Mobile, or both without hardcoded endpoints.
+on:
+  workflow_dispatch:
+    inputs:
+      app:
+        description: 'Mobile app to build'
+        required: true
+        type: choice
+        default: 'customer'
+        options:
+          - customer
+          - staff
+          - both
+      android_abi:
+        description: 'Target Android ABI (arm64-v8a is fastest & standard for modern phones)'
+        required: true
+        type: choice
+        default: 'arm64-v8a'
+        options:
+          - arm64-v8a
+          - armeabi-v7a
+          - arm64-v8a,armeabi-v7a
+          - x86_64
+          - universal
+      build_variant:
+        description: 'Android Gradle build variant'
+        required: true
+        type: choice
+        default: 'release'
+        options:
+          - release
+          - debug
+      api_url:
+        description: 'Backend API URL (leave blank to use repo variable EXPO_PUBLIC_API_URL)'
+        required: false
+        type: string
+        default: ''
+      supabase_url:
+        description: 'Supabase URL (leave blank to use repo variable EXPO_PUBLIC_SUPABASE_URL)'
+        required: false
+        type: string
+        default: ''
+      supabase_publishable_key:
+        description: 'Supabase publishable key (leave blank to use repo var/secret EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY)'
+        required: false
+        type: string
+        default: ''
+      use_cache:
+        description: 'Enable npm, Gradle, and Android build caching'
+        required: false
+        type: boolean
+        default: true
+      publish_release:
+        description: 'Publish built APK to GitHub Releases'
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    name: Prepare Build Matrix
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Resolve target apps
+        id: set-matrix
+        run: |
+          case "${{ inputs.app }}" in
+            customer)
+              MATRIX='[{"id":"customer","dir":"apps/customer-mobile"}]'
+              ;;
+            staff)
+              MATRIX='[{"id":"staff","dir":"apps/staff-mobile"}]'
+              ;;
+            both)
+              MATRIX='[{"id":"customer","dir":"apps/customer-mobile"},{"id":"staff","dir":"apps/staff-mobile"}]'
+              ;;
+            *)
+              echo "::error::Unsupported app selection: ${{ inputs.app }}"
+              exit 1
+              ;;
+          esac
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+
+  build-android:
+    name: Build ${{ matrix.target.id }} APK (${{ inputs.android_abi }} / ${{ inputs.build_variant }})
+    needs: prepare
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{ fromJson(needs.prepare.outputs.matrix) }}
+
+    steps:
+      - name: 1. Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 2. Resolve App Metadata & Build Inputs
+        id: config
+        env:
+          INPUT_API_URL: ${{ inputs.api_url }}
+          VAR_API_URL: ${{ vars.EXPO_PUBLIC_API_URL }}
+          INPUT_SUPABASE_URL: ${{ inputs.supabase_url }}
+          VAR_SUPABASE_URL: ${{ vars.EXPO_PUBLIC_SUPABASE_URL }}
+          INPUT_SUPABASE_KEY: ${{ inputs.supabase_publishable_key }}
+          VAR_SUPABASE_KEY: ${{ vars.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+          SECRET_SUPABASE_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          API_URL="${INPUT_API_URL:-$VAR_API_URL}"
+          API_URL="${API_URL%/}"
+          if [ -z "$API_URL" ]; then
+            echo "::error::Missing Backend API URL. Provide the 'api_url' workflow input or set repository variable EXPO_PUBLIC_API_URL."
+            exit 1
+          fi
+
+          SUPABASE_URL="${INPUT_SUPABASE_URL:-$VAR_SUPABASE_URL}"
+          SUPABASE_KEY="${INPUT_SUPABASE_KEY:-${VAR_SUPABASE_KEY:-$SECRET_SUPABASE_KEY}}"
+
+          if [ -n "$SUPABASE_KEY" ]; then
+            echo "::add-mask::$SUPABASE_KEY"
+          fi
+
+          APP_NAME=$(node -p "require('./${{ matrix.target.dir }}/app.json').expo.name")
+          APP_VERSION=$(node -p "require('./${{ matrix.target.dir }}/app.json').expo.version")
+          ANDROID_PACKAGE=$(node -p "require('./${{ matrix.target.dir }}/app.json').expo.android.package")
+
+          if [ "${{ inputs.android_abi }}" = "universal" ]; then
+            GRADLE_ABIS="armeabi-v7a,arm64-v8a,x86,x86_64"
+            ABI_SLUG="universal"
+          else
+            GRADLE_ABIS="${{ inputs.android_abi }}"
+            ABI_SLUG="${GRADLE_ABIS//,/-}"
+          fi
+
+          if [ "${{ inputs.build_variant }}" = "debug" ]; then
+            GRADLE_TASK="assembleDebug"
+          else
+            GRADLE_TASK="assembleRelease"
+          fi
+
+          APK_FILENAME="parcelhub-${{ matrix.target.id }}-${ABI_SLUG}-${{ inputs.build_variant }}.apk"
+
+          {
+            echo "EXPO_PUBLIC_API_URL=$API_URL"
+            echo "EXPO_PUBLIC_SUPABASE_URL=$SUPABASE_URL"
+            echo "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$SUPABASE_KEY"
+          } >> "$GITHUB_ENV"
+
+          {
+            echo "api_url=$API_URL"
+            echo "app_name=$APP_NAME"
+            echo "app_version=$APP_VERSION"
+            echo "android_package=$ANDROID_PACKAGE"
+            echo "gradle_abis=$GRADLE_ABIS"
+            echo "abi_slug=$ABI_SLUG"
+            echo "gradle_task=$GRADLE_TASK"
+            echo "apk_filename=$APK_FILENAME"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: 3. Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: ${{ inputs.use_cache && 'npm' || '' }}
+          cache-dependency-path: ${{ matrix.target.dir }}/package-lock.json
+
+      - name: 4. Setup Java 17 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: 5. Setup Gradle & Build Cache
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-disabled: ${{ !inputs.use_cache }}
+          cache-read-only: false
+
+      - name: 6. Cache Android Build Cache
+        if: inputs.use_cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.android/build-cache
+            ${{ matrix.target.dir }}/.expo
+          key: android-build-${{ runner.os }}-${{ matrix.target.id }}-${{ steps.config.outputs.abi_slug }}-${{ hashFiles(format('{0}/package-lock.json', matrix.target.dir), format('{0}/app.json', matrix.target.dir)) }}
+          restore-keys: |
+            android-build-${{ runner.os }}-${{ matrix.target.id }}-${{ steps.config.outputs.abi_slug }}-
+            android-build-${{ runner.os }}-${{ matrix.target.id }}-
+
+      - name: 7. Accept Android SDK Licenses
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses || true
+
+      - name: 8. Install App Dependencies
+        run: npm --prefix "${{ matrix.target.dir }}" ci
+
+      - name: 9. Prebuild Native Android Project
+        working-directory: ${{ matrix.target.dir }}
+        run: npx expo prebuild --platform android --clean
+
+      - name: 10. Build Standalone APK via Gradle
+        working-directory: ${{ matrix.target.dir }}/android
+        run: |
+          chmod +x ./gradlew
+          CACHE_FLAG=""
+          if [ "${{ inputs.use_cache }}" = "true" ]; then
+            CACHE_FLAG="--build-cache"
+          fi
+          ./gradlew "${{ steps.config.outputs.gradle_task }}" \
+            -PreactNativeArchitectures="${{ steps.config.outputs.gradle_abis }}" \
+            $CACHE_FLAG \
+            --no-daemon
+
+      - name: 11. Package Built APK
+        run: |
+          mkdir -p build-output
+          APK_SOURCE=$(find "${{ matrix.target.dir }}/android/app/build/outputs/apk/${{ inputs.build_variant }}" -maxdepth 2 -name "*.apk" | head -n 1)
+          if [ -z "$APK_SOURCE" ]; then
+            echo "::error::No APK found in ${{ matrix.target.dir }}/android/app/build/outputs/apk/${{ inputs.build_variant }}"
+            exit 1
+          fi
+          cp "$APK_SOURCE" "build-output/${{ steps.config.outputs.apk_filename }}"
+          ls -lh "build-output/${{ steps.config.outputs.apk_filename }}"
+
+      - name: 12. Upload APK to Workflow Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: parcelhub-${{ matrix.target.id }}-${{ steps.config.outputs.abi_slug }}-${{ inputs.build_variant }}-apk
+          path: build-output/${{ steps.config.outputs.apk_filename }}
+          retention-days: 14
+
+      - name: 13. Publish Direct APK Download to GitHub Releases
+        if: inputs.publish_release
+        uses: softprops/action-gh-release@v2
+        continue-on-error: true
+        with:
+          tag_name: apk-${{ matrix.target.id }}-latest
+          name: ${{ steps.config.outputs.app_name }} Standalone APK (v${{ steps.config.outputs.app_version }})
+          body: |
+            ### ${{ steps.config.outputs.app_name }} Standalone Android Build
+            - **Package**: `${{ steps.config.outputs.android_package }}`
+            - **Version**: `${{ steps.config.outputs.app_version }}`
+            - **Variant**: `${{ inputs.build_variant }}`
+            - **ABI**: `${{ steps.config.outputs.gradle_abis }}`
+            - **Backend Endpoint**: `${{ steps.config.outputs.api_url }}`
+
+            Tap `${{ steps.config.outputs.apk_filename }}` below on your Android device to install.
+          files: build-output/${{ steps.config.outputs.apk_filename }}
+          draft: false
+          prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
