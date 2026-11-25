@@ -1,9 +1,21 @@
 import React from 'react';
-import { RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
-import { OrderStatus, OrderStatusHistoryTuple } from '../../types/api';
-import { CARD_SHADOW } from '../common/cardStyles';
+import { RefreshControl, ScrollView, View } from 'react-native';
+import { OrderStatusHistoryTuple } from '../../types/api';
+import { formatPesoOrDash } from '../../utils/currency';
+import {
+  OrderAmountRow,
+  OrderCodeBadge,
+  OrderDetailRow,
+  OrderProductBlock,
+  OrderSectionCard,
+  ReturnHomeLink,
+} from './OrderDetailPrimitives';
 import { OrderHubCard } from './OrderHubCard';
+import {
+  getTimelineEntryTime,
+  OrderStatusTimeline,
+  OrderTimelineStepItem,
+} from './OrderStatusTimeline';
 
 interface OrderRefundedViewProps {
   readonly productName: string;
@@ -21,24 +33,9 @@ interface OrderRefundedViewProps {
   readonly onReturnHome: () => void;
 }
 
-function formatTimelineTimestamp(
-  statusTimeline: OrderStatusHistoryTuple,
-  statusKey: OrderStatus
-): string | null {
-  if (!Array.isArray(statusTimeline)) return null;
-  const entry = statusTimeline.find((e) => e.status === statusKey);
-  if (!entry?.timestamp) return null;
-  const d = new Date(entry.timestamp);
-  if (Number.isNaN(d.getTime())) return null;
-  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
-
-const formatPesoOrDash = (amount: number): string =>
-  amount > 0 ? `₱${amount.toLocaleString('en-US')}` : '—';
-
 /**
- * Completed refund summary screen for REFUNDED orders, displaying grouped
- * order details, refund breakdown, hub badge, and cancellation/refund timeline.
+ * Completed refund summary screen for REFUNDED orders, composed from
+ * shared order detail, hub, and status timeline primitives.
  */
 export const OrderRefundedView: React.FC<OrderRefundedViewProps> = ({
   productName,
@@ -55,14 +52,32 @@ export const OrderRefundedView: React.FC<OrderRefundedViewProps> = ({
   onRefresh,
   onReturnHome,
 }) => {
-  const resolvedOrderPrice = orderPrice ?? price;
-  const resolvedPaidAmount = paidAmount ?? price;
-  const formattedOrderPrice = formatPesoOrDash(resolvedOrderPrice);
-  const formattedPaidAmount = formatPesoOrDash(resolvedPaidAmount);
   const formattedRefundAmount = formatPesoOrDash(price);
   const displayTicket = ticketCode || orderId || '—';
-  const cancelledTime = formatTimelineTimestamp(statusTimeline, 'CANCELLED') || '—';
-  const refundedTime = formatTimelineTimestamp(statusTimeline, 'REFUNDED') || '—';
+  const cancelledTime = getTimelineEntryTime(statusTimeline, 'CANCELLED') || '—';
+  const refundedTime = getTimelineEntryTime(statusTimeline, 'REFUNDED') || '—';
+
+  const timelineSteps: OrderTimelineStepItem[] = [
+    {
+      key: 'cancelled',
+      title: 'Order Cancelled',
+      description: 'Refund pass verified by hub staff',
+      timestamp: cancelledTime,
+      variant: 'done',
+    },
+    {
+      key: 'refunded',
+      title: 'Refund Issued',
+      description:
+        price > 0
+          ? `${formattedRefundAmount} returned to customer`
+          : 'Refund returned to customer',
+      timestamp: refundedTime,
+      variant: 'done',
+      titleTone: 'success',
+      timestampTone: 'success',
+    },
+  ];
 
   return (
     <ScrollView
@@ -73,170 +88,56 @@ export const OrderRefundedView: React.FC<OrderRefundedViewProps> = ({
         <RefreshControl
           refreshing={isPullRefreshing}
           onRefresh={onRefresh}
-          tintColor="#2563eb"
-          colors={['#2563eb']}
+          tintColor="#215cd4"
+          colors={['#215cd4']}
         />
       }
     >
-      {/* Card 1: Order Details */}
-      <View
-        className="bg-white border border-[#edf2f7] rounded-[20px] p-5 mb-3.5"
-        style={CARD_SHADOW}
-      >
-        <Text className="text-[11px] font-bold text-[#94a3b8] uppercase tracking-[0.65px]">
-          ORDER DETAILS
-        </Text>
+      <OrderSectionCard title="ORDER DETAILS">
+        <OrderProductBlock productName={productName} />
 
-        {/* Product Title */}
-        <View className="mt-2.5 pb-4 border-b border-[#f1f5f9]">
-          <Text
-            className="text-[15.5px] font-bold text-[#0f172a] leading-[22px] tracking-[-0.25px]"
-            numberOfLines={2}
-          >
-            {productName}
-          </Text>
-        </View>
-
-        {/* Ticket & Reason */}
         <View className="pt-3.5 gap-3.5">
-          <View className="flex-row items-center justify-between">
-            <Text className="text-[13.5px] text-[#64748b] font-medium">Refund Ticket</Text>
-            <View className="bg-[#f8fafc] border border-[#e2e8f0] px-2.5 py-1 rounded-[8px]">
-              <Text className="font-mono text-[12px] font-bold text-[#1e293b]">
-                {displayTicket}
-              </Text>
-            </View>
-          </View>
-
-          <View className="flex-row items-start justify-between">
-            <Text className="text-[13.5px] text-[#64748b] font-medium">Reason</Text>
-            <Text
-              numberOfLines={2}
-              className="text-[13.5px] font-semibold text-[#0f172a] flex-1 text-right ml-4 leading-[19px]"
-            >
-              {cancellationReason || '—'}
-            </Text>
-          </View>
+          <OrderDetailRow
+            label="Refund Ticket"
+            value={<OrderCodeBadge code={displayTicket} />}
+          />
+          <OrderDetailRow
+            label="Reason"
+            value={cancellationReason || '—'}
+            alignTop
+            valueNumberOfLines={2}
+          />
         </View>
-      </View>
+      </OrderSectionCard>
 
-      {/* Card 2: Refund Summary */}
-      <View
-        className="bg-white border border-[#edf2f7] rounded-[20px] p-5 mb-3.5"
-        style={CARD_SHADOW}
-      >
-        <Text className="text-[11px] font-bold text-[#94a3b8] uppercase tracking-[0.65px] mb-3.5">
-          REFUND SUMMARY
-        </Text>
-
-        <View className="gap-3">
-          <View className="flex-row items-center justify-between">
-            <Text className="text-[13.5px] text-[#64748b] font-medium">Order Total</Text>
-            <Text className="text-[14px] font-semibold text-[#0f172a]">
-              {formattedOrderPrice}
-            </Text>
-          </View>
-
-          <View className="flex-row items-center justify-between">
-            <Text className="text-[13.5px] text-[#64748b] font-medium">Amount Paid</Text>
-            <Text className="text-[14px] font-semibold text-[#0f172a]">
-              {formattedPaidAmount}
-            </Text>
-          </View>
-
-          <View className="border-t border-[#f1f5f9] pt-3 flex-row items-baseline justify-between">
-            <Text className="text-[14px] font-semibold text-[#0f172a]">
-              Refund Returned
-            </Text>
-            <Text className="text-[16px] font-bold text-[#0f172a]">
-              {formattedRefundAmount}
-            </Text>
-          </View>
+      <OrderSectionCard title="REFUND SUMMARY">
+        <View className="mt-3.5 gap-3">
+          <OrderAmountRow
+            label="Order Total"
+            value={formatPesoOrDash(orderPrice ?? price)}
+          />
+          <OrderAmountRow
+            label="Amount Paid"
+            value={formatPesoOrDash(paidAmount ?? price)}
+          />
+          <OrderAmountRow
+            label="Refund Returned"
+            value={formattedRefundAmount}
+            emphasized
+            withTopDivider
+          />
         </View>
-      </View>
+      </OrderSectionCard>
 
-      {/* Card 3: Hub Location */}
       <OrderHubCard
         hubName={hubName}
         hubAddress={hubAddress}
         statusOverride="refunded"
       />
 
-      {/* Card 4: Status Timeline */}
-      <View
-        className="bg-white border border-[#edf2f7] rounded-[20px] p-5 mb-5"
-        style={CARD_SHADOW}
-      >
-        <Text className="text-[11px] font-bold text-[#94a3b8] uppercase tracking-[0.65px] mb-4">
-          STATUS TIMELINE
-        </Text>
+      <OrderStatusTimeline steps={timelineSteps} style={{ marginBottom: 16 }} />
 
-        {/* Step 1: Order Cancelled */}
-        <View className="flex-row">
-          <View className="items-center mr-3.5" style={{ width: 24 }}>
-            <View className="w-6 h-6 rounded-full bg-[#10b981] items-center justify-center mt-0.5">
-              <Svg width={13} height={13} viewBox="0 0 24 24" fill="none">
-                <Path
-                  d="M20 6L9 17L4 12"
-                  stroke="#ffffff"
-                  strokeWidth={2.8}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </Svg>
-            </View>
-            <View className="flex-1 w-[2px] bg-[#e2e8f0] my-1.5" />
-          </View>
-          <View className="flex-1 pb-5">
-            <View className="flex-row items-center justify-between">
-              <Text className="text-[14px] font-bold text-[#0f172a]">Order Cancelled</Text>
-              <Text className="text-[11.5px] font-semibold text-[#94a3b8]">{cancelledTime}</Text>
-            </View>
-            <Text className="text-[12.5px] text-[#64748b] mt-0.5">
-              Refund pass verified by hub staff
-            </Text>
-          </View>
-        </View>
-
-        {/* Step 2: Refund Issued */}
-        <View className="flex-row">
-          <View className="items-center mr-3.5" style={{ width: 24 }}>
-            <View className="w-6 h-6 rounded-full bg-[#10b981] items-center justify-center mt-0.5">
-              <Svg width={13} height={13} viewBox="0 0 24 24" fill="none">
-                <Path
-                  d="M20 6L9 17L4 12"
-                  stroke="#ffffff"
-                  strokeWidth={2.8}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </Svg>
-            </View>
-          </View>
-          <View className="flex-1">
-            <View className="flex-row items-center justify-between">
-              <Text className="text-[14px] font-bold text-[#059669]">Refund Issued</Text>
-              <Text className="text-[11.5px] font-semibold text-[#059669]">{refundedTime}</Text>
-            </View>
-            <Text className="text-[12.5px] text-[#64748b] mt-0.5">
-              {price > 0
-                ? `${formattedRefundAmount} returned to customer`
-                : 'Refund returned to customer'}
-            </Text>
-          </View>
-        </View>
-      </View>
-
-      {/* Bottom Action */}
-      <TouchableOpacity
-        activeOpacity={0.7}
-        onPress={onReturnHome}
-        className="items-center justify-center py-2"
-      >
-        <Text className="text-[12.5px] font-semibold text-[#475569] text-center">
-          Return to Home
-        </Text>
-      </TouchableOpacity>
+      <ReturnHomeLink onPress={onReturnHome} />
     </ScrollView>
   );
 };

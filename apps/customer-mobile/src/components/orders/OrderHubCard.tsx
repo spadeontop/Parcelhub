@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, View } from 'react-native';
+import { StyleProp, Text, View, ViewStyle } from 'react-native';
 import { CARD_SHADOW } from '../common/cardStyles';
 
 interface OrderHubCardProps {
@@ -7,7 +7,7 @@ interface OrderHubCardProps {
   readonly hubAddress?: string;
   readonly hubOpen?: boolean;
   readonly statusOverride?: 'refunded';
-  readonly containerClassName?: string;
+  readonly style?: StyleProp<ViewStyle>;
 }
 
 /**
@@ -19,7 +19,7 @@ export const OrderHubCard: React.FC<OrderHubCardProps> = ({
   hubAddress = 'Yati, Liloan, Cebu, 6002',
   hubOpen = true,
   statusOverride,
-  containerClassName = 'mb-3.5',
+  style,
 }) => {
   const pillLabel =
     statusOverride === 'refunded' ? 'Refunded' : hubOpen ? 'Open' : 'Closed';
@@ -40,8 +40,8 @@ export const OrderHubCard: React.FC<OrderHubCardProps> = ({
 
   return (
     <View
-      className={`bg-white border border-[#edf2f7] rounded-[20px] px-5 py-4 flex-row items-center justify-between ${containerClassName}`}
-      style={CARD_SHADOW}
+      className="bg-white border border-[#edf2f7] rounded-[20px] px-5 py-4 mb-3.5 flex-row items-center justify-between"
+      style={[CARD_SHADOW, style]}
     >
       <View className="flex-1 pr-3">
         <Text

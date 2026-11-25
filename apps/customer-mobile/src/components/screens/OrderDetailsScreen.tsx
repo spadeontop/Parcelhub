@@ -33,6 +33,7 @@ import { OrderRefundedView } from '../orders/OrderRefundedView';
 import { OrderRefundPendingView } from '../orders/OrderRefundPendingView';
 import { OrderOverviewCard } from '../orders/OrderOverviewCard';
 import { OrderHubCard } from '../orders/OrderHubCard';
+import { ReturnHomeLink } from '../orders/OrderDetailPrimitives';
 import { OrderTimelineStepper } from '../orders/OrderTimelineStepper';
 import {
   UNPAID_CANCELLATION_REASONS,
@@ -914,15 +915,7 @@ export const OrderDetailsScreen: React.FC = () => {
                 </TouchableOpacity>
               )}
 
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() => navigateTo('home')}
-                className="items-center justify-center py-2"
-              >
-                <Text className="text-[12px] font-semibold text-[#475569] text-center">
-                  Return to Home
-                </Text>
-              </TouchableOpacity>
+              <ReturnHomeLink onPress={() => navigateTo('home')} />
             </View>
           </ScrollView>
           </Animated.View>

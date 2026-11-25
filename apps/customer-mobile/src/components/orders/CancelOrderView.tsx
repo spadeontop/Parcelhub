@@ -7,9 +7,15 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { CARD_SHADOW } from '../common/cardStyles';
+import { formatPeso } from '../../utils/currency';
 import { ConfirmationSubmitSection } from '../common/ConfirmationSubmitSection';
 import { FieldError } from '../common/FieldError';
+import {
+  OrderAmountRow,
+  OrderDetailRow,
+  OrderProductBlock,
+  OrderSectionCard,
+} from './OrderDetailPrimitives';
 
 export const CANCELLATION_REASONS = [
   'Changed my mind',
@@ -73,7 +79,7 @@ export const CancelOrderView: React.FC<CancelOrderViewProps> = ({
     return true;
   };
 
-  const formattedAmount = `₱${refundableAmount.toLocaleString('en-US')}`;
+  const formattedAmount = formatPeso(refundableAmount);
 
   return (
     <Animated.View
@@ -90,44 +96,19 @@ export const CancelOrderView: React.FC<CancelOrderViewProps> = ({
         contentContainerStyle={{ paddingBottom: 40 }}
       >
         {/* Item Summary Card */}
-        <View
-          className="bg-white border border-[#edf2f7] rounded-[20px] p-5 mb-3.5"
-          style={CARD_SHADOW}
-        >
-          <Text className="text-[11px] font-bold text-[#94a3b8] uppercase tracking-[0.65px]">
-            ITEM TO CANCEL
-          </Text>
-
-          <View className="mt-2.5 pb-4 border-b border-[#f1f5f9]">
-            <Text
-              numberOfLines={2}
-              className="text-[15.5px] font-bold text-[#0f172a] leading-[22px] tracking-[-0.25px]"
-            >
-              {productName}
-            </Text>
-          </View>
+        <OrderSectionCard title="ITEM TO CANCEL">
+          <OrderProductBlock productName={productName} />
 
           <View className="pt-3.5 gap-3">
-            <View className="flex-row items-center justify-between">
-              <Text className="text-[13.5px] text-[#64748b] font-medium">Hub Location</Text>
-              <Text
-                numberOfLines={1}
-                className="text-[13.5px] font-semibold text-[#0f172a] flex-1 text-right ml-4"
-              >
-                {hubName}
-              </Text>
-            </View>
-
-            <View className="border-t border-[#f1f5f9] pt-3 flex-row items-baseline justify-between">
-              <Text className="text-[14px] font-semibold text-[#0f172a]">
-                Refundable Amount
-              </Text>
-              <Text className="text-[16px] font-bold text-[#0f172a]">
-                {formattedAmount}
-              </Text>
-            </View>
+            <OrderDetailRow label="Hub Location" value={hubName} />
+            <OrderAmountRow
+              label="Refundable Amount"
+              value={formattedAmount}
+              emphasized
+              withTopDivider
+            />
           </View>
-        </View>
+        </OrderSectionCard>
 
         {/* Reason Selection Card */}
         <View

@@ -8,7 +8,6 @@ import {
   BackHandler,
   RefreshControl,
 } from 'react-native';
-import QRCode from 'react-native-qrcode-svg';
 import * as Clipboard from 'expo-clipboard';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as MediaLibrary from 'expo-media-library';
@@ -20,6 +19,8 @@ import { useCustomerOrders } from '../../hooks/useCustomerOrders';
 import { useCustomerOrderDetailQuery } from '../../query/useCustomerQueries';
 import { ArrowLeftIcon, DownloadIcon } from '../common/Icons';
 import { CARD_SHADOW } from '../common/cardStyles';
+import { ReturnHomeLink } from '../orders/OrderDetailPrimitives';
+import { QrCodeFrame } from '../orders/QrCodeFrame';
 
 export const QrScreen: React.FC = () => {
   const { authToken } = useAuthSession();
@@ -254,23 +255,13 @@ export const QrScreen: React.FC = () => {
               </Text>
             </TouchableOpacity>
 
-            {/* Padded Square QR Frame (208x208 with 20px quiet zone around 168px QR) */}
-            <View className="w-full items-center justify-center py-5">
-              <View
-                style={{ width: 208, height: 208 }}
-                className="bg-white rounded-[16px] border border-[#edf2f7] p-5 items-center justify-center"
-              >
-                <QRCode
-                  getRef={(c) => {
-                    qrSvgRef.current = c;
-                  }}
-                  value={qrValue}
-                  size={168}
-                  color="#0f172a"
-                  backgroundColor="#ffffff"
-                />
-              </View>
-            </View>
+            {/* Padded Square QR Frame */}
+            <QrCodeFrame
+              value={qrValue}
+              getRef={(c) => {
+                qrSvgRef.current = c;
+              }}
+            />
 
             {/* Explanatory Instructions */}
             <Text className="text-[12.5px] font-normal text-[#64748b] text-center leading-[18px] max-w-[260px]">
@@ -325,28 +316,7 @@ export const QrScreen: React.FC = () => {
             </TouchableOpacity>
 
             {/* Return to Home Navigation Link */}
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() => navigateTo('home')}
-              style={{
-                paddingVertical: 10,
-                paddingHorizontal: 16,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Text
-                style={{
-                  fontWeight: '500',
-                  fontSize: 14,
-                  lineHeight: 20,
-                  color: '#6B7280',
-                  textAlign: 'center',
-                }}
-              >
-                Return to Home
-              </Text>
-            </TouchableOpacity>
+            <ReturnHomeLink onPress={() => navigateTo('home')} />
           </View>
         </ScrollView>
       </View>

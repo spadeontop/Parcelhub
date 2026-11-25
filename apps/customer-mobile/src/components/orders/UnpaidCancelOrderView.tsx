@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { CARD_SHADOW } from '../common/cardStyles';
+import { OrderProductBlock, OrderSectionCard } from './OrderDetailPrimitives';
 
 export const UNPAID_CANCELLATION_REASONS = [
   'Changed my mind',
@@ -49,21 +49,9 @@ export const UnpaidCancelOrderView: React.FC<UnpaidCancelOrderViewProps> = ({
       contentContainerStyle={{ paddingBottom: 32, paddingTop: 4, gap: 14 }}
     >
       {/* Order Summary Card */}
-      <View
-        className="bg-white border border-[#edf2f7] rounded-[20px] p-5"
-        style={CARD_SHADOW}
-      >
-        <Text className="text-[11px] font-bold text-[#94a3b8] uppercase tracking-[0.65px]">
-          ITEM TO CANCEL
-        </Text>
-
-        <Text
-          className="text-[15.5px] font-bold text-[#0f172a] leading-[22px] tracking-[-0.25px] mt-2.5"
-          numberOfLines={2}
-        >
-          {productName}
-        </Text>
-      </View>
+      <OrderSectionCard title="ITEM TO CANCEL" style={{ marginBottom: 0 }}>
+        <OrderProductBlock productName={productName} withDivider={false} />
+      </OrderSectionCard>
 
       {/* Reason Selection & Additional Notes Card */}
       <View
