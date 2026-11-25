@@ -46,7 +46,7 @@ export default function IndexPage() {
     case 'mpin_login':
       return <MpinLoginScreen />;
     case 'mpin_recovery':
-      return <MpinRecoveryScreen onExit={goBack} />;
+      return <MpinRecoveryScreen onExit={goBack} onDone={() => resetNavigationTo('home')} />;
     case 'mpin_create':
       return <MpinCreateScreen />;
     case 'profile':
