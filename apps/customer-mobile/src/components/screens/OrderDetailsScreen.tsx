@@ -170,8 +170,11 @@ export const OrderDetailsScreen: React.FC = () => {
   const refundPassSlideAnim = useRef(new Animated.Value(36)).current;
 
   const isServerRefundActive = Boolean(orderDetail?.isRefundActive) && refundRemainingSecs > 0;
+  const isRefundCapableStatus =
+    status === 'AWAITING_PARCEL' ||
+    (status === 'CANCELLED' && Boolean(orderDetail?.isRefundEligible));
   const isAwaitingRefundPassView =
-    status === 'AWAITING_PARCEL' &&
+    isRefundCapableStatus &&
     (awaitingViewMode === 'refund_pass' ||
       ((isServerRefundActive || isRefundSessionActive) && !isRefundPassDismissed));
   const isAwaitingCancelView =
@@ -250,7 +253,10 @@ export const OrderDetailsScreen: React.FC = () => {
   }, []);
 
   const isUnpaidCancelledView =
-    !isFocusedPassView && (status === 'CANCELLED' || unpaidViewMode === 'cancelled');
+    !isFocusedPassView &&
+    !isAwaitingRefundPassView &&
+    ((status === 'CANCELLED' && !orderDetail?.isRefundEligible) ||
+      unpaidViewMode === 'cancelled');
   const isUnpaidCancelView =
     !isFocusedPassView && !isUnpaidCancelledView && unpaidViewMode === 'cancel';
 
@@ -331,6 +337,9 @@ export const OrderDetailsScreen: React.FC = () => {
   const activateRefundWindow = useCallback(
     async (targetOrderId: string) => {
       const payload = buildCancelReasonPayload(cancelReason, cancelNotes);
+      if (status !== 'CANCELLED') {
+        await cancelCustomerOrder(targetOrderId, payload);
+      }
       const res = await initiateCustomerRefund(targetOrderId, payload);
       const initialSeconds = (res.durationMinutes || 5) * 60;
       startRefundLocalWindow(initialSeconds);
@@ -341,8 +350,10 @@ export const OrderDetailsScreen: React.FC = () => {
       await refetch();
     },
     [
+      status,
       cancelReason,
       cancelNotes,
+      cancelCustomerOrder,
       initiateCustomerRefund,
       startRefundLocalWindow,
       queryClient,
