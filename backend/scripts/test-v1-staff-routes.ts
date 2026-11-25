@@ -710,6 +710,33 @@ async function runV1StaffSuite() {
     assert.strictEqual(staffDetailAfterRefundJson.refundedByName, "Test Staff");
     console.log("   ✅ Staff refund pass guards, CANCELLED -> REFUNDED, statusTimeline, double-refund 409, ?refundEligible=true, and ?status=REFUNDED verified.");
 
+    // F) GET /staff/orders?limit=20&offset=0&forEach=true (bucketed query with dual staff joins)
+    const forEachRes = await listStaffOrders(
+      makeReq("/api/v1/staff/orders?limit=20&offset=0&forEach=true", { token: authToken })
+    );
+    assert.strictEqual(forEachRes.status, 200, "forEach=true staff orders list must return 200");
+    const forEachJson = await forEachRes.json();
+    assert.ok(Array.isArray(forEachJson.orders), "forEach=true orders must be an array");
+    assert.ok(forEachJson.statusCounts && typeof forEachJson.statusCounts === "object", "forEach=true must return statusCounts");
+    assert.ok(
+      forEachJson.pagination.totalCount >= 4,
+      "forEach=true totalCount must include all non-draft orders"
+    );
+    const forEachClaimed = forEachJson.orders.find((o: { id: string }) => o.id === testOrderId);
+    const forEachRefunded = forEachJson.orders.find((o: { id: string }) => o.id === autoWinOrderId);
+    assert.ok(forEachClaimed, "forEach=true must include CLAIMED order");
+    assert.strictEqual(forEachClaimed.courierPaidByName, "Test Staff");
+    assert.ok(forEachRefunded, "forEach=true must include REFUNDED order");
+    assert.strictEqual(forEachRefunded.refundedByName, "Test Staff");
+    assert.ok(
+      (forEachJson.statusCounts.CLAIMED ?? 0) >= 1 &&
+        (forEachJson.statusCounts.REFUNDED ?? 0) >= 1 &&
+        (forEachJson.statusCounts.CANCELLED ?? 0) >= 1 &&
+        (forEachJson.statusCounts.PAYMENT_REQUIRED ?? 0) >= 1,
+      "forEach=true statusCounts must cover all populated buckets"
+    );
+    console.log("   ✅ GET /api/v1/staff/orders?limit=20&offset=0&forEach=true verified (bucketed staff joins + statusCounts).");
+
     console.log("\n🎉 ALL V1 STAFF API TESTS PASSED SUCCESSFULLY (100% GREEN)!\n");
   } finally {
     console.log("🧹 Cleaning up ephemeral test database records...");

@@ -14,12 +14,13 @@ import {
 import { ENV } from '../config/env';
 import { StaffApiError, staffFetch } from './apiClient';
 import { staffStorage } from './staffStorage';
+import {
+  resolveQrOrderMatches,
+  type StaffQrLookupResult,
+} from '../utils/qrOrderResolution';
 
 export { StaffApiError };
-
-export type StaffQrLookupResult =
-  | { kind: 'found'; order: StaffOrder; hasDetails: boolean }
-  | { kind: 'not-found' | 'ambiguous' };
+export type { StaffQrLookupResult };
 
 function mapSummaryOrder(o: any): StaffOrder {
   return {
@@ -90,7 +91,7 @@ export const staffApi = {
 
     const pageSize = 20;
     let offset = 0;
-    let match: StaffOrder | undefined;
+    const exactMatches: StaffOrder[] = [];
     // Staff search returns partial matches, and an exact tracking ID can belong to multiple orders.
     while (!signal.aborted) {
       const { orders, pagination } = await this.getOrders(
@@ -105,15 +106,15 @@ export const staffApi = {
         const isExactMatch = [order.ticketCode, order.trackingId].some(
           (value) => value?.trim().toLowerCase() === normalizedCode
         );
-        if (!isExactMatch) continue;
-        if (match && match.id !== order.id) return { kind: 'ambiguous' };
-        match = order;
+        if (isExactMatch) {
+          exactMatches.push(order);
+        }
       }
       if (!pagination.hasMore || orders.length === 0) break;
       offset += orders.length;
     }
 
-    return match ? { kind: 'found', order: match, hasDetails: false } : { kind: 'not-found' };
+    return resolveQrOrderMatches(exactMatches);
   },
 
   getStoredAuthToken: () => staffStorage.getAuthToken(),

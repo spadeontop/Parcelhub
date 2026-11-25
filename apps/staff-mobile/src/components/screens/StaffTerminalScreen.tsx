@@ -72,6 +72,8 @@ export const StaffTerminalScreen: React.FC = () => {
     filteredOrders,
     allCachedOrders,
     isLoadingOrders,
+    isOrdersError,
+    ordersErrorMessage,
     totalCount,
     badgeCounts,
     isRefreshing,
@@ -295,6 +297,27 @@ export const StaffTerminalScreen: React.FC = () => {
                   </>
                 );
               })()
+            ) : isOrdersError ? (
+              <View className="items-center justify-center py-12 px-4">
+                <View className="w-12 h-12 rounded-2xl bg-[#FEF2F2] items-center justify-center mb-2.5">
+                  <Inbox size={22} color="#DC2626" />
+                </View>
+                <Text className="text-sm font-bold text-[#0F172A]">
+                  Unable to load orders
+                </Text>
+                <Text className="text-xs text-[#64748B] text-center mt-1 mb-4">
+                  {ordersErrorMessage || 'Could not reach the server. Please try again.'}
+                </Text>
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={refreshOrders}
+                  className="bg-[#2563EB] px-4 py-2 rounded-xl"
+                >
+                  <Text className="text-xs font-semibold text-white">
+                    Retry
+                  </Text>
+                </TouchableOpacity>
+              </View>
             ) : searchQuery.trim() ? (
               <View className="items-center justify-center py-12 px-4">
                 <View className="w-12 h-12 rounded-2xl bg-[#F1F5F9] items-center justify-center mb-2.5">

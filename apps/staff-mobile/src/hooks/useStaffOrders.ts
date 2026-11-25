@@ -43,6 +43,15 @@ export function useStaffOrders(
   // for instant tab switching and badge counts.
   // Disable polling while Supabase Realtime is subscribed; fall back automatically on disconnect/503.
   const pollingInterval = isRealtimeSubscribed ? false : ENV.POLLING_INTERVAL_MS;
+  const resolveRefetchInterval = useCallback(
+    (query: { state: { status: string } }) => {
+      if (pollingInterval === false) return false;
+      return query.state.status === 'error'
+        ? Math.max(pollingInterval, 15_000)
+        : pollingInterval;
+    },
+    [pollingInterval]
+  );
   const forEachPage1Query = useQuery<StaffOrdersPageData>({
     queryKey: staffQueryKeys.forEachPage1(),
     queryFn: ({ signal }) =>
@@ -57,7 +66,7 @@ export function useStaffOrders(
         true
       ),
     enabled: !!token,
-    refetchInterval: !isSearching && currentPage === 1 ? pollingInterval : false,
+    refetchInterval: !isSearching && currentPage === 1 ? resolveRefetchInterval : false,
   });
 
   // Separate query for pages > 1 on the active tab (prevents BUG-05 pagination races).
@@ -73,7 +82,7 @@ export function useStaffOrders(
         signal
       ),
     enabled: !!token && !isSearching && currentPage > 1,
-    refetchInterval: !isSearching && currentPage > 1 ? pollingInterval : false,
+    refetchInterval: !isSearching && currentPage > 1 ? resolveRefetchInterval : false,
   });
 
   // Dedicated search query (never pollutes tab caches).
@@ -142,6 +151,12 @@ export function useStaffOrders(
   }, [isSearching, searchQueryResult.data, currentPage, pagedTabQuery.data, badgeCounts, activeTab, orders.length]);
 
   const isLoadingOrders = activeQuery.isPending && !activeQuery.data;
+  const isOrdersError = activeQuery.isError;
+  const ordersErrorMessage = activeQuery.isError
+    ? activeQuery.error instanceof Error
+      ? activeQuery.error.message
+      : 'Unable to load orders.'
+    : null;
 
   const allCachedOrders = useMemo(() => {
     const map = new Map<string, StaffOrder>();
@@ -184,6 +199,8 @@ export function useStaffOrders(
     totalCount,
     badgeCounts,
     isLoadingOrders,
+    isOrdersError,
+    ordersErrorMessage,
     isRefreshing,
     refreshOrders,
     findOrderByQrCode,
