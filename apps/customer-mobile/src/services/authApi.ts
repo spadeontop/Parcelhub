@@ -3,6 +3,10 @@ import { v1Storage } from '../utils/storage';
 import {
   CustomerRegisterReq,
   CustomerRegisterRes,
+  CustomerSendEmailVerificationReq,
+  CustomerSendEmailVerificationRes,
+  CustomerVerifyEmailReq,
+  CustomerVerifyEmailRes,
   CustomerLoginReq,
   CustomerLoginRes,
   CustomerCreateMpinReq,
@@ -40,6 +44,41 @@ export const authApi = {
         lastName: payload.lastName,
         middleInitial: payload.middleInitial || undefined,
         phoneNumber: payload.phoneNumber,
+      }),
+    });
+
+    if (res?.preAuthToken) {
+      await v1Storage.setPreAuthToken(res.preAuthToken);
+    }
+
+    return res;
+  },
+
+  /**
+   * POST /api/v1/customer/email/send-verification
+   * Requests a new 6-digit email verification OTP for an unverified customer account
+   */
+  async sendEmailVerification(
+    payload: CustomerSendEmailVerificationReq
+  ): Promise<CustomerSendEmailVerificationRes> {
+    return v1Fetch<CustomerSendEmailVerificationRes>('/api/v1/customer/email/send-verification', {
+      method: 'POST',
+      body: JSON.stringify({
+        email: payload.email.trim().toLowerCase(),
+      }),
+    });
+  },
+
+  /**
+   * POST /api/v1/customer/email/verify
+   * Verifies the 6-digit email OTP and stores preAuthToken for MPIN setup
+   */
+  async verifyEmail(payload: CustomerVerifyEmailReq): Promise<CustomerVerifyEmailRes> {
+    const res = await v1Fetch<CustomerVerifyEmailRes>('/api/v1/customer/email/verify', {
+      method: 'POST',
+      body: JSON.stringify({
+        email: payload.email.trim().toLowerCase(),
+        code: payload.code.trim(),
       }),
     });
 

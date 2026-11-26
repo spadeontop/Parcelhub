@@ -19,11 +19,14 @@ import { PasswordRequirements } from '../common/PasswordRequirements';
 import { VerificationCodeInput } from '../common/VerificationCodeInput';
 import { FieldError } from '../common/FieldError';
 import { getPasswordRequirements, isValidEmail } from '../../utils/authValidation';
+import { authApi } from '../../services/authApi';
+
+const DEFAULT_RESEND_DELAY_SECONDS = 60;
 
 export const RegisterScreen: React.FC = () => {
   const { navigateTo } = useNavigationUi();
   const { showToast } = useToast();
-  const { registerCustomer } = useAuthSession();
+  const { registerCustomer, verifyCustomerEmail } = useAuthSession();
 
   const { height } = useWindowDimensions();
   const isCompact = height < 700;
@@ -44,6 +47,31 @@ export const RegisterScreen: React.FC = () => {
   const [passwordError, setPasswordError] = useState('');
   const [confirmPasswordError, setConfirmPasswordError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isResending, setIsResending] = useState(false);
+  const [resendDeadline, setResendDeadline] = useState(0);
+  const [resendSeconds, setResendSeconds] = useState(0);
+
+  useEffect(() => {
+    if (currentStep !== 3 || resendDeadline === 0) return;
+
+    const update = () => {
+      const seconds = Math.max(0, Math.ceil((resendDeadline - Date.now()) / 1000));
+      setResendSeconds(seconds);
+      if (seconds === 0) setResendDeadline(0);
+    };
+    const interval = setInterval(update, 1000);
+    update();
+    return () => clearInterval(interval);
+  }, [currentStep, resendDeadline]);
+
+  const startResendCooldown = (retryAfterSeconds?: number) => {
+    const delaySeconds =
+      typeof retryAfterSeconds === 'number' && retryAfterSeconds > 0
+        ? retryAfterSeconds
+        : DEFAULT_RESEND_DELAY_SECONDS;
+    setResendSeconds(delaySeconds);
+    setResendDeadline(Date.now() + delaySeconds * 1000);
+  };
 
   // Validation rules for Step 1
   const isFirstNameValid = firstName.trim().length >= 1;
@@ -73,25 +101,80 @@ export const RegisterScreen: React.FC = () => {
     setCurrentStep(2);
   };
 
-  const handleAccountNext = () => {
+  const handleAccountNext = async () => {
     Keyboard.dismiss();
+    if (isLoading) return;
+
+    setEmailError('');
+    setPasswordError('');
+    setConfirmPasswordError('');
+
     if (!isEmailValid) {
       setEmailError('Please enter a valid email.');
       showToast('Please enter a valid email.');
-    } else if (emailError) {
-      showToast(emailError);
-    } else if (!isPhoneValid) {
+      return;
+    }
+    if (!isPhoneValid) {
       showToast('Please enter a valid phone number.');
-    } else if (!isPasswordValid) {
+      return;
+    }
+    if (!isPasswordValid) {
       setPasswordError('Password must have uppercase, lowercase, number & symbol.');
       showToast('Password must have uppercase, lowercase, number & symbol.');
-    } else if (!isConfirmPasswordValid) {
+      return;
+    }
+    if (!isConfirmPasswordValid) {
       setConfirmPasswordError('Passwords do not match.');
       showToast('Passwords do not match.');
-    } else {
-      setVerificationCode('');
-      setVerificationCodeError('');
-      setCurrentStep(3);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const res = await registerCustomer({
+        email: email.trim(),
+        password,
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        middleInitial: middleInitial.trim() || undefined,
+        phoneNumber: phone.trim(),
+      });
+
+      if (res.emailVerificationRequired) {
+        setVerificationCode('');
+        setVerificationCodeError('');
+        if (res.verificationEmailSent !== false) {
+          startResendCooldown(res.retryAfterSeconds);
+        } else {
+          setResendDeadline(0);
+          setResendSeconds(0);
+        }
+        setCurrentStep(3);
+      }
+    } catch (err: any) {
+      const statusCode = err?.statusCode;
+      const message = err?.message || 'Registration failed';
+      const isPendingVerification = err?.error === 'EmailPendingVerification';
+      const isConflict =
+        statusCode === 409 ||
+        err?.error === 'Conflict' ||
+        message.toLowerCase().includes('already exists');
+
+      if (isPendingVerification) {
+        setVerificationCode('');
+        setVerificationCodeError('');
+        setResendDeadline(0);
+        setResendSeconds(0);
+        showToast(message);
+        setCurrentStep(3);
+      } else if (isConflict) {
+        setEmailError(message);
+        setCurrentStep(2);
+      } else {
+        showToast(message);
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -110,76 +193,49 @@ export const RegisterScreen: React.FC = () => {
     setEmailError('');
     setPasswordError('');
     setConfirmPasswordError('');
+    setResendDeadline(0);
+    setResendSeconds(0);
     navigateTo('login');
   };
 
-  const handleRegister = async () => {
+  const handleVerifyCode = async () => {
     Keyboard.dismiss();
-    setEmailError('');
-    setPasswordError('');
-    setConfirmPasswordError('');
-
-    if (!isStep2Valid) {
-      if (!isEmailValid) {
-        setEmailError('Please enter a valid email.');
-        showToast('Please enter a valid email.');
-        return;
-      }
-      if (!isPhoneValid) {
-        showToast('Please enter a valid phone number.');
-        return;
-      }
-      if (!isPasswordValid) {
-        setPasswordError('Password must have uppercase, lowercase, number & symbol.');
-        showToast('Password must have uppercase, lowercase, number & symbol.');
-        return;
-      }
-      if (!isConfirmPasswordValid) {
-        setConfirmPasswordError('Passwords do not match.');
-        showToast('Passwords do not match.');
-        return;
-      }
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      await registerCustomer({
-        email: email.trim(),
-        password,
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        middleInitial: middleInitial.trim() || undefined,
-        phoneNumber: phone.trim(),
-      });
-    } catch (err: any) {
-      // Backend-authoritative error handling (Rule #9)
-      const statusCode = err?.statusCode;
-      const message = err?.message || 'Registration failed';
-      const isConflict =
-        statusCode === 409 ||
-        err?.error === 'Conflict' ||
-        message.toLowerCase().includes('already exists');
-
-      if (isConflict) {
-        setEmailError(message);
-        setCurrentStep(2);
-      } else {
-        showToast(message);
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleVerifyCode = () => {
     if (isLoading) return;
     if (verificationCode.length !== 6) {
       setVerificationCodeError('Enter the 6-digit verification code.');
       return;
     }
+
     setVerificationCodeError('');
-    void handleRegister();
+    setIsLoading(true);
+    try {
+      await verifyCustomerEmail({
+        email: email.trim(),
+        code: verificationCode.trim(),
+      });
+    } catch (err: any) {
+      const message = err?.message || 'Invalid or expired verification code.';
+      setVerificationCodeError(message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendCode = async () => {
+    if (isLoading || isResending || resendSeconds > 0) return;
+
+    setIsResending(true);
+    try {
+      const res = await authApi.sendEmailVerification({ email: email.trim() });
+      setVerificationCode('');
+      setVerificationCodeError('');
+      startResendCooldown(res.retryAfterSeconds);
+      showToast(res.statusMessage || 'Verification code sent.');
+    } catch (err: any) {
+      showToast(err?.message || 'Unable to resend verification code.');
+    } finally {
+      setIsResending(false);
+    }
   };
 
   return (
@@ -364,6 +420,7 @@ export const RegisterScreen: React.FC = () => {
                       label="Next"
                       variant="primary"
                       onPress={handleAccountNext}
+                      isLoading={isLoading}
                       showArrow
                     />
                     <AuthButton
@@ -383,10 +440,14 @@ export const RegisterScreen: React.FC = () => {
                       Didn&apos;t receive a code?{' '}
                       <Text
                         accessibilityRole="button"
-                        className="font-bold text-[#2563eb]"
-                        onPress={() => showToast('Email verification is not available yet.')}
+                        className={`font-bold ${resendSeconds > 0 || isResending ? 'text-[#94a3b8]' : 'text-[#2563eb]'}`}
+                        onPress={handleResendCode}
                       >
-                        Resend code
+                        {isResending
+                          ? 'Sending...'
+                          : resendSeconds > 0
+                            ? `Resend in ${resendSeconds}s`
+                            : 'Resend code'}
                       </Text>
                     </Text>
                   </>
