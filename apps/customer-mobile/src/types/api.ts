@@ -24,8 +24,10 @@ export type TransactionFilter =
  * Grouped and commented per customer UI screen
  */
 export type CustomerApiRoutes =
-  // Screen: RegisterScreen & MpinCreateScreen (Account Registration)
+  // Screen: RegisterScreen & MpinCreateScreen (Account Registration & Email Verification)
   | readonly ["POST", "/api/v1/customer/register"]
+  | readonly ["POST", "/api/v1/customer/email/send-verification"]
+  | readonly ["POST", "/api/v1/customer/email/verify"]
 
   // Screen: LoginScreen (Email/Password Verification)
   | readonly ["POST", "/api/v1/customer/login"]

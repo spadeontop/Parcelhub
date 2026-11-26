@@ -12,6 +12,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import {
   CustomerRegisterReq,
   CustomerRegisterRes,
+  CustomerVerifyEmailReq,
+  CustomerVerifyEmailRes,
   CustomerLoginReq,
   CustomerLoginRes,
   CustomerCreateMpinRes,
@@ -40,6 +42,7 @@ export type AuthSessionContextType = {
   readonly authToken: JWTToken | null;
   readonly customer: Partial<CustomerProfile> | null;
   readonly registerCustomer: (payload: CustomerRegisterReq) => Promise<CustomerRegisterRes>;
+  readonly verifyCustomerEmail: (payload: CustomerVerifyEmailReq) => Promise<CustomerVerifyEmailRes>;
   readonly loginCustomer: (payload: CustomerLoginReq) => Promise<CustomerLoginRes>;
   readonly createCustomerMpin: (mpin: string) => Promise<CustomerCreateMpinRes>;
   readonly verifyCustomerMpin: (mpin: string) => Promise<void>;
@@ -167,7 +170,7 @@ export const AuthSessionProvider: React.FC<{ children: ReactNode }> = ({ childre
 
       setPreAuthToken(res.preAuthToken ?? null);
       setCustomer({
-        email: payload.email,
+        email: payload.email.trim().toLowerCase(),
         firstName: payload.firstName,
         lastName: payload.lastName,
         middleInitial: payload.middleInitial,
@@ -175,7 +178,26 @@ export const AuthSessionProvider: React.FC<{ children: ReactNode }> = ({ childre
       });
 
       showToast(res.statusMessage || 'Registration successful');
-      setActiveScreen('mpin_create');
+      if (res.preAuthToken && !res.emailVerificationRequired) {
+        setActiveScreen('mpin_create');
+      }
+      return res;
+    },
+    [showToast, setActiveScreen]
+  );
+
+  const verifyCustomerEmail = useCallback(
+    async (payload: CustomerVerifyEmailReq): Promise<CustomerVerifyEmailRes> => {
+      const res = await authApi.verifyEmail(payload);
+
+      setPreAuthToken(res.preAuthToken ?? null);
+      setCustomer((prev) => ({
+        ...prev,
+        email: payload.email.trim().toLowerCase(),
+      }));
+
+      showToast(res.statusMessage || 'Email verified successfully');
+      setActiveScreen(res.hasMpin ? 'mpin_login' : 'mpin_create');
       return res;
     },
     [showToast, setActiveScreen]
@@ -323,6 +345,7 @@ export const AuthSessionProvider: React.FC<{ children: ReactNode }> = ({ childre
       authToken,
       customer,
       registerCustomer,
+      verifyCustomerEmail,
       loginCustomer,
       createCustomerMpin,
       verifyCustomerMpin,
@@ -337,6 +360,7 @@ export const AuthSessionProvider: React.FC<{ children: ReactNode }> = ({ childre
       authToken,
       customer,
       registerCustomer,
+      verifyCustomerEmail,
       loginCustomer,
       createCustomerMpin,
       verifyCustomerMpin,
