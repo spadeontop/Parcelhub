@@ -74,7 +74,7 @@ Tracks parcel lifecycle, pricing, COD payment, claim passes, and audit trails.
 
 #### Partial Unique Index on `orders`:
 * **`orders_paid_tracking_id_unique`**:
-  Enforces uniqueness on `tracking_id` only when `tracking_id IS NOT NULL` and `status IN ('AWAITING_PARCEL', 'READY_TO_CLAIM', 'CLAIMED')`. Allows non-conflicting draft or cancelled orders while protecting against duplicate paid parcels.
+  Enforces uniqueness on `tracking_id` only when `tracking_id IS NOT NULL` and `status IN ('AWAITING_PARCEL', 'READY_TO_CLAIM')`. Allows non-conflicting draft, claimed, or cancelled orders while protecting against duplicate active paid parcels.
 
 #### Order Lifecycle Statuses:
 * `PENDING_INITIALIZATION` — Customer initialized parcel draft with screenshot; awaits OCR/manual confirmation.

@@ -25,7 +25,6 @@ export const ORDER_NON_IMAGE_COLUMNS = {
 export const PAID_ACTIVE_ORDER_STATUSES: readonly OrderStatus[] = [
   "AWAITING_PARCEL",
   "READY_TO_CLAIM",
-  "CLAIMED",
 ] as const;
 
 export const VALID_ORDER_PHOTO_TYPES: readonly OrderPhotoType[] = [
@@ -50,9 +49,10 @@ export function matchOrderByIdOrTicket(identifier: string): SQL {
 }
 
 /**
- * Checks whether a canonicalized tracking ID is already bound to a paid active parcel
- * (`AWAITING_PARCEL`, `READY_TO_CLAIM`, `CLAIMED`). Uses exact equality so PostgreSQL
- * hits `orders_paid_tracking_id_unique` directly in O(log N).
+ * Checks whether a canonicalized tracking ID is already bound to an active paid parcel
+ * (`AWAITING_PARCEL`, `READY_TO_CLAIM`). `CLAIMED` and `CANCELLED` parcels are excluded so
+ * their tracking IDs can be reused. Uses exact equality so PostgreSQL hits
+ * `orders_paid_tracking_id_unique` directly in O(log N).
  */
 export async function hasActivePaidTrackingId(
   normalizedTrackingId: string,
