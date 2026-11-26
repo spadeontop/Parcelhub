@@ -36,6 +36,13 @@
       "when": 1795350400000,
       "tag": "0004_email_verification_and_cancel_refund",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1795436800000,
+      "tag": "0005_allow_claimed_tracking_id_reuse",
+      "breakpoints": true
     }
   ]
 }

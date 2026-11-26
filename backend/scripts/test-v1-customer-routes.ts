@@ -486,7 +486,65 @@ async function runV1CustomerTests() {
     );
     assert.strictEqual(paidDupPutRes.status, 409, "Paid AWAITING_PARCEL order must lock trackingId with 409");
 
-    // 3) CANCELLED order releases trackingNumber so it can be reused
+    // 2b) Paid READY_TO_CLAIM order ALSO locks trackingNumber (409)
+    await db
+      .update(orders)
+      .set({ status: "READY_TO_CLAIM" })
+      .where(eq(orders.id, secondOrderId));
+
+    const readyDupPutRes = await updateCustomerOrder(
+      makeReq(`http://localhost:3000/api/v1/customer/orders/${thirdOrderId}`, {
+        method: "PUT",
+        token: authToken,
+        body: {
+          order: {
+            trackingId: trackingNumber,
+            productName: "Ready Dup",
+            recipientName: "Test Recipient",
+            price: 200,
+          },
+        },
+      }),
+      { params: Promise.resolve({ id: thirdOrderId }) }
+    );
+    assert.strictEqual(readyDupPutRes.status, 409, "Paid READY_TO_CLAIM order must lock trackingId with 409");
+
+    // 3a) CLAIMED order releases trackingNumber so it can be reused and activated
+    await db
+      .update(orders)
+      .set({ status: "CLAIMED" })
+      .where(eq(orders.id, secondOrderId));
+
+    const claimedReusePutRes = await updateCustomerOrder(
+      makeReq(`http://localhost:3000/api/v1/customer/orders/${thirdOrderId}`, {
+        method: "PUT",
+        token: authToken,
+        body: {
+          order: {
+            trackingId: trackingNumber,
+            productName: "Reused After Claim",
+            recipientName: "Test Recipient",
+            price: 200,
+          },
+        },
+      }),
+      { params: Promise.resolve({ id: thirdOrderId }) }
+    );
+    assert.strictEqual(claimedReusePutRes.status, 200, "CLAIMED order must release trackingId");
+
+    // Verify DB partial unique index also allows activating the reused trackingId alongside a CLAIMED order
+    await db
+      .update(orders)
+      .set({ status: "AWAITING_PARCEL" })
+      .where(eq(orders.id, thirdOrderId));
+
+    // Reset thirdOrderId back to PENDING_INITIALIZATION for the CANCELLED reuse check
+    await db
+      .update(orders)
+      .set({ status: "PENDING_INITIALIZATION", trackingId: null })
+      .where(eq(orders.id, thirdOrderId));
+
+    // 3b) CANCELLED order releases trackingNumber so it can be reused
     await db
       .update(orders)
       .set({ status: "CANCELLED" })
@@ -508,7 +566,7 @@ async function runV1CustomerTests() {
       { params: Promise.resolve({ id: thirdOrderId }) }
     );
     assert.strictEqual(cancelledReusePutRes.status, 200, "CANCELLED order must release trackingId");
-    console.log("   ✅ One-shot PUT, AI_VERIFICATION gate, and paid trackingId lock checks passed.");
+    console.log("   ✅ One-shot PUT, AI_VERIFICATION gate, and active paid trackingId lock checks passed.");
 
     // ==========================================
     // 9c. Dedicated Order Photo Retrieval (GET /api/v1/customer/orders/[id]/photo)

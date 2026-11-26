@@ -130,7 +130,7 @@ export const orders = pgTable(
     uniqueIndex("orders_paid_tracking_id_unique")
       .on(table.trackingId)
       .where(
-        sql`${table.trackingId} IS NOT NULL AND ${table.status} IN ('AWAITING_PARCEL', 'READY_TO_CLAIM', 'CLAIMED')`
+        sql`${table.trackingId} IS NOT NULL AND ${table.status} IN ('AWAITING_PARCEL', 'READY_TO_CLAIM')`
       ),
     index("orders_unpaid_tracking_id_idx")
       .on(table.trackingId)
